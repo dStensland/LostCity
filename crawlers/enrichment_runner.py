@@ -11,7 +11,6 @@ Usage:
     python enrichment_runner.py --type description --max-score 60 --limit 50
 """
 
-import os
 import sys
 import json
 import argparse

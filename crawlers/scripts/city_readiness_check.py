@@ -263,7 +263,7 @@ def check_city_readiness(city: str, state: str) -> bool:
     # 2. Active sources
     passing, data = check_active_sources(client, venue_ids, events)
     count = data["active_source_count"]
-    label = f"50+ active source crawlers"
+    label = "50+ active source crawlers"
     summary = f"{count} active sources with city events (need {SOURCE_MIN_ACTIVE})"
     results.append((label, passing, summary))
 
@@ -284,7 +284,7 @@ def check_city_readiness(city: str, state: str) -> bool:
     summary = "all present" if not missing else f"missing: {', '.join(sorted(missing))}"
     results.append((label, passing, summary))
 
-    print(f"3. Core categories")
+    print("3. Core categories")
     print("-" * 50)
     for line in detail_lines:
         print(line)

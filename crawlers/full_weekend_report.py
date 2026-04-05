@@ -5,7 +5,7 @@ from config import get_config
 from db import get_client
 
 def main():
-    config = get_config()
+    get_config()
     client = get_client()
     
     print("="*100)

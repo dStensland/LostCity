@@ -14,7 +14,12 @@ from typing import Optional
 import requests
 from bs4 import BeautifulSoup
 
-from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
+from db import (
+    get_or_create_place,
+    insert_event,
+    find_event_by_hash,
+    smart_update_existing_event,
+)
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -79,7 +84,6 @@ def create_monthly_meetings(source_id: int, venue_id: int) -> tuple[int, int]:
 
         content_hash = generate_content_hash(title, "Peoplestown", start_date)
 
-
         description = (
             "Peoplestown neighborhood community meeting. "
             "Discuss neighborhood issues, development updates, safety concerns, "
@@ -98,7 +102,13 @@ def create_monthly_meetings(source_id: int, venue_id: int) -> tuple[int, int]:
             "is_all_day": False,
             "category": "community",
             "subcategory": None,
-            "tags": ["peoplestown", "civic", "neighborhood-meeting", "community", "southwest-atlanta"],
+            "tags": [
+                "peoplestown",
+                "civic",
+                "neighborhood-meeting",
+                "community",
+                "southwest-atlanta",
+            ],
             "price_min": None,
             "price_max": None,
             "price_note": None,
@@ -158,7 +168,7 @@ def parse_date(date_str: str) -> Optional[str]:
     match = re.search(
         r"(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2})",
         date_str,
-        re.IGNORECASE
+        re.IGNORECASE,
     )
     if match:
         month_str = match.group(1)[:3]
@@ -201,7 +211,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 soup = BeautifulSoup(response.text, "html.parser")
 
                 # Look for event elements
-                event_elements = soup.select(".event, .calendar-event, article, [class*='event'], .post")
+                event_elements = soup.select(
+                    ".event, .calendar-event, article, [class*='event'], .post"
+                )
 
                 for element in event_elements:
                     try:
@@ -220,7 +232,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         date_match = re.search(
                             r"(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2}",
                             text,
-                            re.IGNORECASE
+                            re.IGNORECASE,
                         )
                         if not date_match:
                             continue
@@ -229,25 +241,29 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         if not start_date:
                             continue
 
-                        if datetime.strptime(start_date, "%Y-%m-%d").date() < datetime.now().date():
+                        if (
+                            datetime.strptime(start_date, "%Y-%m-%d").date()
+                            < datetime.now().date()
+                        ):
                             continue
 
                         events_found += 1
 
-                        content_hash = generate_content_hash(title, "Peoplestown", start_date)
-
-                        existing = find_event_by_hash(content_hash)
-                        if existing:
-                            smart_update_existing_event(existing, event_record)
-                            events_updated += 1
-                            continue
+                        content_hash = generate_content_hash(
+                            title, "Peoplestown", start_date
+                        )
 
                         # Determine category
                         title_lower = title.lower()
-                        if any(w in title_lower for w in ["cleanup", "volunteer", "garden"]):
+                        if any(
+                            w in title_lower for w in ["cleanup", "volunteer", "garden"]
+                        ):
                             category = "community"
                             tags = ["peoplestown", "volunteer", "community"]
-                        elif any(w in title_lower for w in ["block party", "festival", "celebration"]):
+                        elif any(
+                            w in title_lower
+                            for w in ["block party", "festival", "celebration"]
+                        ):
                             category = "community"
                             tags = ["peoplestown", "festival", "family-friendly"]
                         else:
@@ -258,7 +274,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             "source_id": source_id,
                             "place_id": venue_id,
                             "title": title,
-                            "description": f"Community event in Peoplestown neighborhood",
+                            "description": "Community event in Peoplestown neighborhood",
                             "start_date": start_date,
                             "start_time": None,
                             "end_date": None,
@@ -281,6 +297,12 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             "content_hash": content_hash,
                         }
 
+                        existing = find_event_by_hash(content_hash)
+                        if existing:
+                            smart_update_existing_event(existing, event_record)
+                            events_updated += 1
+                            continue
+
                         try:
                             insert_event(event_record)
                             events_new += 1
@@ -297,7 +319,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
             except requests.RequestException:
                 continue
 
-        logger.info(f"Peoplestown crawl complete: {events_found} found, {events_new} new, {events_updated} updated")
+        logger.info(
+            f"Peoplestown crawl complete: {events_found} found, {events_new} new, {events_updated} updated"
+        )
 
     except Exception as e:
         logger.error(f"Failed to crawl Peoplestown: {e}")

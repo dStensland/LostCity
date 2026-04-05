@@ -365,7 +365,6 @@ def main():
 
     enriched = 0
     skipped_no_desc = 0
-    skipped_boilerplate = 0
     errors = 0
 
     for i, venue in enumerate(venues, 1):

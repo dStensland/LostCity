@@ -328,7 +328,7 @@ def _extract_listings(session: requests.Session) -> list[dict]:
             start_date = time_el.get("datetime")
             start_text_el = time_el.select_one(".tribe-event-date-start")
             end_text_el = time_el.select_one(".tribe-event-date-end")
-            start_text = _clean_text(start_text_el.get_text(" ", strip=True)) if start_text_el else ""
+            _clean_text(start_text_el.get_text(" ", strip=True)) if start_text_el else ""
             end_text = _clean_text(end_text_el.get_text(" ", strip=True)) if end_text_el else ""
             date_text = _clean_text(time_el.get_text(" ", strip=True))
 

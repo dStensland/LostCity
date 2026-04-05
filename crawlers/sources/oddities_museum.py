@@ -182,7 +182,6 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     date_text = None
                     start_time_text = None
                     end_time_text = None
-                    location_text = None
 
                     for li in list_items:
                         text = li.inner_text().strip()
@@ -200,7 +199,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                                 end_time_text = times[1]
                         # Check for location
                         elif 'museum' in text.lower() or 'map' in text.lower():
-                            location_text = text
+                            pass
 
                     start_date = parse_date(date_text)
                     if not start_date:

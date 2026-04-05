@@ -25,7 +25,6 @@ import re
 from datetime import datetime, date
 from typing import Optional
 
-from bs4 import BeautifulSoup
 from playwright.sync_api import sync_playwright
 
 from db import (

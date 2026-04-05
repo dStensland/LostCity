@@ -76,7 +76,7 @@ def migrate_special_to_events(
     stype = special.get("type", "daily_special")
     genres = _TYPE_GENRES.get(stype, [])
     time_start = special.get("time_start")
-    time_end = special.get("time_end")
+    special.get("time_end")
 
     # Build description: fold price_note + original description
     desc_parts = []

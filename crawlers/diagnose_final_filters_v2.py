@@ -11,84 +11,109 @@ sys.path.insert(0, str(Path(__file__).parent))
 
 from db import get_client
 
+
 def main():
     client = get_client()
     print("=" * 80)
     print("FINAL FILTER ANALYSIS - Matching Frontend Category View Logic")
     print("=" * 80)
     print()
-    
+
     today = datetime.now().strftime("%Y-%m-%d")
     thirty_days = (datetime.now() + timedelta(days=30)).strftime("%Y-%m-%d")
-    
+
     # Get Atlanta portal ID
-    result = client.table("portals").select("id,filters").eq("slug", "atlanta").execute()
+    result = (
+        client.table("portals").select("id,filters").eq("slug", "atlanta").execute()
+    )
     atlanta_portal_id = result.data[0]["id"] if result.data else None
     portal_filters = result.data[0].get("filters", {}) if result.data else {}
-    
+
     print(f"Atlanta portal ID: {atlanta_portal_id}")
     print(f"Portal filters: {portal_filters}")
     print(f"Date range: {today} to {thirty_days}")
     print()
-    
+
     # =========================================================================
     # STEP-BY-STEP FILTERING
     # =========================================================================
-    
+
     # Start with all events
     result = client.table("events").select("id", count="exact").execute()
     total = result.count
     print(f"1. Total events: {total:,}")
-    
+
     # Filter: future dates (next 30 days)
-    result = client.table("events").select("id", count="exact").gte(
-        "start_date", today
-    ).lte("start_date", thirty_days).execute()
+    result = (
+        client.table("events")
+        .select("id", count="exact")
+        .gte("start_date", today)
+        .lte("start_date", thirty_days)
+        .execute()
+    )
     count_after_dates = result.count
     print(f"2. After date filter (next 30 days): {count_after_dates:,}")
-    
+
     # Filter: canonical_event_id IS NULL (no duplicates)
-    result = client.table("events").select("id", count="exact").gte(
-        "start_date", today
-    ).lte("start_date", thirty_days).is_("canonical_event_id", "null").execute()
+    result = (
+        client.table("events")
+        .select("id", count="exact")
+        .gte("start_date", today)
+        .lte("start_date", thirty_days)
+        .is_("canonical_event_id", "null")
+        .execute()
+    )
     count_after_dedup = result.count
     print(f"3. After dedup (canonical_event_id IS NULL): {count_after_dedup:,}")
-    
+
     # Filter: portal_id breakdown
-    result = client.table("events").select("id,portal_id").gte(
-        "start_date", today
-    ).lte("start_date", thirty_days).is_("canonical_event_id", "null").execute()
-    
+    result = (
+        client.table("events")
+        .select("id,portal_id")
+        .gte("start_date", today)
+        .lte("start_date", thirty_days)
+        .is_("canonical_event_id", "null")
+        .execute()
+    )
+
     atlanta_only = [e for e in result.data if e.get("portal_id") == atlanta_portal_id]
     null_portal = [e for e in result.data if e.get("portal_id") is None]
-    nashville_events = [e for e in result.data if e.get("portal_id") not in [atlanta_portal_id, None]]
-    
+    nashville_events = [
+        e for e in result.data if e.get("portal_id") not in [atlanta_portal_id, None]
+    ]
+
     print(f"   - Atlanta portal events: {len(atlanta_only):,}")
     print(f"   - NULL portal events: {len(null_portal):,}")
     print(f"   - Other portals: {len(nashville_events):,}")
-    
+
     atlanta_or_null = len(atlanta_only) + len(null_portal)
     print(f"4. After portal filter (Atlanta OR NULL): {atlanta_or_null:,}")
-    
+
     # Try to check for is_chain column
     try:
-        result = client.table("places").select("id").eq("is_chain", True).limit(1).execute()
+        result = (
+            client.table("places").select("id").eq("is_chain", True).limit(1).execute()
+        )
         has_chain_column = True
-    except:
+    except Exception:
         has_chain_column = False
-    
+
     if has_chain_column:
         result = client.table("places").select("id").eq("is_chain", True).execute()
         chain_venue_ids = [v["id"] for v in result.data] if result.data else []
         print(f"   Chain venues found: {len(chain_venue_ids)}")
-        
+
         if chain_venue_ids:
-            result = client.table("events").select("id", count="exact").gte(
-                "start_date", today
-            ).lte("start_date", thirty_days).is_(
-                "canonical_event_id", "null"
-            ).in_("place_id", chain_venue_ids).execute()
-            
+            result = (
+                client.table("events")
+                .select("id", count="exact")
+                .gte("start_date", today)
+                .lte("start_date", thirty_days)
+                .is_("canonical_event_id", "null")
+                .in_("place_id", chain_venue_ids)
+                .execute()
+            )
+
             chain_event_count = result.count
             print(f"   Events at chain venues: {chain_event_count:,}")
             count_after_chain = atlanta_or_null - chain_event_count
@@ -97,42 +122,50 @@ def main():
     else:
         print("   is_chain column not found - skipping chain filter")
         count_after_chain = atlanta_or_null
-    
+
     print(f"5. After chain venue filter: {count_after_chain:,}")
-    
+
     print()
     print("=" * 80)
     print("EXPECTED COUNT IN ATLANTA CATEGORY VIEWS (no personalization)")
     print("=" * 80)
     print(f"~{count_after_chain:,} events")
     print()
-    
+
     # =========================================================================
     # CATEGORY BREAKDOWN
     # =========================================================================
     print("=" * 80)
     print("CATEGORY BREAKDOWN (Atlanta OR NULL portal, next 30 days)")
     print("=" * 80)
-    
-    result = client.table("events").select("id,category_id,portal_id").gte(
-        "start_date", today
-    ).lte("start_date", thirty_days).is_("canonical_event_id", "null").execute()
-    
+
+    result = (
+        client.table("events")
+        .select("id,category_id,portal_id")
+        .gte("start_date", today)
+        .lte("start_date", thirty_days)
+        .is_("canonical_event_id", "null")
+        .execute()
+    )
+
     atlanta_events = [
-        e for e in result.data
+        e
+        for e in result.data
         if e.get("portal_id") == atlanta_portal_id or e.get("portal_id") is None
     ]
-    
+
     category_counts = {}
     for event in atlanta_events:
         cat = event.get("category_id") or "NULL"
         category_counts[cat] = category_counts.get(cat, 0) + 1
-    
-    for cat in sorted(category_counts.keys(), key=lambda x: category_counts[x], reverse=True):
+
+    for cat in sorted(
+        category_counts.keys(), key=lambda x: category_counts[x], reverse=True
+    ):
         print(f"  {cat}: {category_counts[cat]:,}")
-    
+
     print()
-    
+
     # =========================================================================
     # WHY ONLY 1000 SHOWING?
     # =========================================================================
@@ -156,6 +189,7 @@ def main():
     print("  - /api/portals/[slug]/feed (portal-specific)")
     print("  - /api/events/search (search with filters)")
     print()
+
 
 if __name__ == "__main__":
     main()

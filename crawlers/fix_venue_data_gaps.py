@@ -19,7 +19,7 @@ logging.basicConfig(level=logging.WARNING)
 sys.path.insert(0, '/Users/coach/Projects/LostCity/crawlers')
 
 from db.client import get_client
-from neighborhood_lookup import infer_neighborhood_from_coords, NEIGHBORHOODS_BY_CITY
+from neighborhood_lookup import infer_neighborhood_from_coords
 from description_fetcher import fetch_description_from_url
 
 # ─────────────────────────────────────────────────────────────────────────────

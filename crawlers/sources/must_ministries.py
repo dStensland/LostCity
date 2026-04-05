@@ -25,7 +25,12 @@ from bs4 import BeautifulSoup
 
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeout
 
-from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
+from db import (
+    get_or_create_place,
+    insert_event,
+    find_event_by_hash,
+    smart_update_existing_event,
+)
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -131,12 +136,20 @@ def determine_venue(location: str, event_name: str) -> tuple[int, str]:
     name_lower = event_name.lower()
 
     # Check for Cherokee
-    if "cherokee" in location_lower or "cherokee" in name_lower or "due west" in location_lower:
+    if (
+        "cherokee" in location_lower
+        or "cherokee" in name_lower
+        or "due west" in location_lower
+    ):
         venue_id = get_or_create_place(CHEROKEE_VENUE)
         return venue_id, "MUST Ministries Cherokee"
 
     # Check for Smyrna
-    if "smyrna" in location_lower or "smyrna" in name_lower or "concord" in location_lower:
+    if (
+        "smyrna" in location_lower
+        or "smyrna" in name_lower
+        or "concord" in location_lower
+    ):
         venue_id = get_or_create_place(SMYRNA_VENUE)
         return venue_id, "MUST Ministries Smyrna"
 
@@ -150,7 +163,9 @@ def determine_venue(location: str, event_name: str) -> tuple[int, str]:
     return venue_id, "MUST Ministries"
 
 
-def determine_category_and_tags(title: str, description: str) -> tuple[str, Optional[str], list[str]]:
+def determine_category_and_tags(
+    title: str, description: str
+) -> tuple[str, Optional[str], list[str]]:
     """Determine category based on title and description."""
     text = f"{title} {description}".lower()
     tags = ["volunteer", "nonprofit", "social-services"]
@@ -189,7 +204,9 @@ def determine_category_and_tags(title: str, description: str) -> tuple[str, Opti
     return "community", "volunteer", tags
 
 
-def detect_recurring_shift_pattern(title: str, venue_name: str, start_time: str) -> Optional[dict]:
+def detect_recurring_shift_pattern(
+    title: str, venue_name: str, start_time: str
+) -> Optional[dict]:
     """
     Detect if this event is a recurring shift and return series metadata.
     Returns None if not a recurring shift (e.g., special events).
@@ -224,15 +241,42 @@ def detect_recurring_shift_pattern(title: str, venue_name: str, start_time: str)
     # Recurring shift patterns
     # Format: (title_pattern, description_template)
     shift_patterns = [
-        ("marietta- workforce development", "Recurring workforce development volunteer shift at MUST Ministries Marietta. Support job training and employment programs."),
-        ("cherokee- workforce development", "Recurring workforce development volunteer shift at MUST Ministries Cherokee. Support job training and employment programs."),
-        ("smyrna online signup", "Recurring volunteer shift at MUST Ministries Smyrna. General volunteer support for food pantry and community services."),
-        ("hope house workforce development", "Recurring volunteer shift at Hope House Shelter supporting workforce development programs for residents."),
-        ("donation center", "Recurring volunteer shift at the MUST Ministries donation center. Help sort clothing, furniture, and household items."),
-        ("mobile pantry", "Recurring mobile food pantry volunteer shift. Help distribute food at community locations throughout the service area."),
-        ("loaves and fishes kitchen", "Recurring kitchen volunteer shift preparing and serving meals at MUST Ministries."),
-        ("marketplace thrift store", "Recurring volunteer shift at MUST Marketplace Thrift Store. Help with sorting, pricing, and customer service."),
-        ("community service", "Recurring community service volunteer shift at MUST Ministries."),
+        (
+            "marietta- workforce development",
+            "Recurring workforce development volunteer shift at MUST Ministries Marietta. Support job training and employment programs.",
+        ),
+        (
+            "cherokee- workforce development",
+            "Recurring workforce development volunteer shift at MUST Ministries Cherokee. Support job training and employment programs.",
+        ),
+        (
+            "smyrna online signup",
+            "Recurring volunteer shift at MUST Ministries Smyrna. General volunteer support for food pantry and community services.",
+        ),
+        (
+            "hope house workforce development",
+            "Recurring volunteer shift at Hope House Shelter supporting workforce development programs for residents.",
+        ),
+        (
+            "donation center",
+            "Recurring volunteer shift at the MUST Ministries donation center. Help sort clothing, furniture, and household items.",
+        ),
+        (
+            "mobile pantry",
+            "Recurring mobile food pantry volunteer shift. Help distribute food at community locations throughout the service area.",
+        ),
+        (
+            "loaves and fishes kitchen",
+            "Recurring kitchen volunteer shift preparing and serving meals at MUST Ministries.",
+        ),
+        (
+            "marketplace thrift store",
+            "Recurring volunteer shift at MUST Marketplace Thrift Store. Help with sorting, pricing, and customer service.",
+        ),
+        (
+            "community service",
+            "Recurring community service volunteer shift at MUST Ministries.",
+        ),
     ]
 
     for pattern, description in shift_patterns:
@@ -286,7 +330,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     try:
                         api_data = response.json()
                         logger.info("Captured MUST Ministries VolunteerHub API data")
-                        logger.debug(f"API data keys: {api_data.keys() if isinstance(api_data, dict) else type(api_data)}")
+                        logger.debug(
+                            f"API data keys: {api_data.keys() if isinstance(api_data, dict) else type(api_data)}"
+                        )
                     except Exception as e:
                         logger.error(f"Failed to parse API response: {e}")
 
@@ -317,13 +363,13 @@ def crawl(source: dict) -> tuple[int, int, int]:
             seen_events = set()
 
             for day_data in days:
-                day_date = day_data.get("date", "")
+                day_data.get("date", "")
                 events_list = day_data.get("events", [])
 
                 for event_data in events_list:
                     try:
                         # Extract fields from API
-                        event_id = event_data.get("id")
+                        event_data.get("id")
                         event_guid = event_data.get("guid")
                         title = event_data.get("name", "").strip()
                         location = event_data.get("location", "").strip()
@@ -337,7 +383,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                         # Parse datetime
                         try:
-                            start_dt = datetime.fromisoformat(start_time_str.replace("Z", "+00:00"))
+                            start_dt = datetime.fromisoformat(
+                                start_time_str.replace("Z", "+00:00")
+                            )
                             start_date = start_dt.strftime("%Y-%m-%d")
                             start_time = start_dt.strftime("%H:%M")
                         except Exception as e:
@@ -348,9 +396,11 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         end_time = None
                         if end_time_str:
                             try:
-                                end_dt = datetime.fromisoformat(end_time_str.replace("Z", "+00:00"))
+                                end_dt = datetime.fromisoformat(
+                                    end_time_str.replace("Z", "+00:00")
+                                )
                                 end_time = end_dt.strftime("%H:%M")
-                            except:
+                            except Exception:
                                 pass
 
                         # Build description
@@ -380,20 +430,32 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         venue_id, venue_name = determine_venue(location, title)
 
                         # Determine category and tags
-                        category, subcategory, tags = determine_category_and_tags(title, description)
+                        category, subcategory, tags = determine_category_and_tags(
+                            title, description
+                        )
 
                         # Detect recurring shift pattern and build series hint
-                        series_hint = detect_recurring_shift_pattern(title, venue_name, start_time)
+                        series_hint = detect_recurring_shift_pattern(
+                            title, venue_name, start_time
+                        )
 
                         # If it's a recurring shift, mark as recurring
                         is_recurring = bool(series_hint)
-                        recurrence_rule = "FREQ=DAILY;BYDAY=MO,TU,WE,TH,FR" if is_recurring else None
+                        recurrence_rule = (
+                            "FREQ=DAILY;BYDAY=MO,TU,WE,TH,FR" if is_recurring else None
+                        )
 
                         # Build event URL
-                        event_url = f"{VOLUNTEERHUB_URL}?event={event_guid}" if event_guid else VOLUNTEERHUB_URL
+                        event_url = (
+                            f"{VOLUNTEERHUB_URL}?event={event_guid}"
+                            if event_guid
+                            else VOLUNTEERHUB_URL
+                        )
 
                         # Generate content hash
-                        content_hash = generate_content_hash(title, venue_name, start_date)
+                        content_hash = generate_content_hash(
+                            title, venue_name, start_date
+                        )
 
                         # Build event record
                         event_record = {
@@ -432,7 +494,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         try:
                             insert_event(event_record, series_hint=series_hint)
                             events_new += 1
-                            logger.info(f"Added: {title[:50]}... on {start_date} at {start_time}")
+                            logger.info(
+                                f"Added: {title[:50]}... on {start_date} at {start_time}"
+                            )
                         except Exception as e:
                             logger.error(f"Failed to insert: {title}: {e}")
 

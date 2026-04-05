@@ -134,7 +134,7 @@ def clean_entity_type(
             if examples_shown < args.preview:
                 print(f"\n  [{entity_label}] {name}")
                 print(f"    BEFORE: {desc[:120]}...")
-                print(f"    AFTER:  NULL (entire description was synthetic)")
+                print("    AFTER:  NULL (entire description was synthetic)")
                 examples_shown += 1
             if args.apply:
                 client.table(table).update({"description": None}).eq("id", record["id"]).execute()

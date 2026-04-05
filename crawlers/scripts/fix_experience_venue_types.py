@@ -80,12 +80,12 @@ def main():
             print(f"           {reason}")
 
     if skipped:
-        print(f"\n  Skipped (type mismatch):")
+        print("\n  Skipped (type mismatch):")
         for vid, name, expected, actual, target in skipped:
             print(f"    [{vid:5d}] {name:<45s} expected={expected} actual={actual}")
 
     if not_found:
-        print(f"\n  Not found:")
+        print("\n  Not found:")
         for vid, name in not_found:
             print(f"    [{vid:5d}] {name}")
 
@@ -101,7 +101,7 @@ def main():
                 print(f"    FAIL [{vid:5d}] {name}: {e}")
         print(f"\n  Done: {success}/{len(to_update)} updated.")
     elif not args.apply and to_update:
-        print(f"\n  Dry run — use --apply to make changes.")
+        print("\n  Dry run — use --apply to make changes.")
 
 
 if __name__ == "__main__":

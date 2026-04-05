@@ -20,14 +20,13 @@ https://www.eventbrite.com/o/block-drum-81487738023
 from __future__ import annotations
 
 import logging
-import re
 import time
 import requests
 from datetime import datetime
 from typing import Optional
 
 from config import get_config
-from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)

@@ -24,7 +24,6 @@ import blurhash
 import numpy as np
 from PIL import Image
 
-from config import get_config
 from db import get_client
 
 logging.basicConfig(

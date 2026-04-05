@@ -52,7 +52,7 @@ def parse_date_range(date_str: str) -> tuple[Optional[str], Optional[str]]:
     - "April 9th 2026" -> (2026-04-09, None)
     """
     date_str = date_str.strip()
-    now = datetime.now()
+    datetime.now()
 
     # Pattern: "Month DD, DD, and DD YYYY" (date range)
     range_match = re.search(

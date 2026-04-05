@@ -167,7 +167,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                 # Extract description
                 desc_elem = element.find(class_=re.compile(r"desc|summary|content", re.I))
-                description = desc_elem.get_text(strip=True) if desc_elem else f"Community event in Cabbagetown"
+                description = desc_elem.get_text(strip=True) if desc_elem else "Community event in Cabbagetown"
 
                 # Extract URL
                 link = element.find("a", href=True)

@@ -29,7 +29,7 @@ from __future__ import annotations
 
 import re
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Optional
 
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeout
@@ -192,7 +192,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     # Check for access denied
                     page_text = page.inner_text('body')
                     if 'Access Denied' in page_text or 'permission' in page_text.lower():
-                        logger.error(f"Bot detection triggered - Access Denied")
+                        logger.error("Bot detection triggered - Access Denied")
                         browser.close()
                         return 0, 0, 0
 
@@ -220,7 +220,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     for element in drive_elements:
                         try:
                             element_text = element.inner_text()
-                            element_html = element.inner_html()
+                            element.inner_html()
 
                             # Extract sponsor name (drive location)
                             sponsor_match = re.search(r"(?:Sponsor|Location|at):\s*(.+?)(?:\n|$)", element_text, re.IGNORECASE)
@@ -300,7 +300,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             venue_id = get_or_create_place(place_data)
 
                             # Create event title
-                            title = f"American Red Cross Blood Drive"
+                            title = "American Red Cross Blood Drive"
 
                             # Generate content hash
                             content_hash = generate_content_hash(

@@ -1,4 +1,3 @@
-import pytest
 from series import normalize_title
 
 

@@ -58,7 +58,7 @@ async def inspect_page(name: str, url: str):
 
             # Print first 100 lines
             lines = [l.strip() for l in body_text.split("\n") if l.strip()]
-            print(f"\nFirst 50 lines of text content:")
+            print("\nFirst 50 lines of text content:")
             print("-" * 60)
             for i, line in enumerate(lines[:50], 1):
                 print(f"{i:3d}: {line[:120]}")

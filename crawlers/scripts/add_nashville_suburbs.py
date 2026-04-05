@@ -71,7 +71,7 @@ def add_sources():
         if existing.data:
             print(f"✓ Source already exists: {source['slug']}")
         else:
-            result = client.table("sources").insert(source).execute()
+            client.table("sources").insert(source).execute()
             print(f"+ Added source: {source['slug']} - {source['name']}")
 
 

@@ -375,7 +375,7 @@ def extract_venue_info_from_website(website_url: str) -> Optional[dict]:
         Dict with vibes, venue_type, price_level, is_event_venue, confidence
         or None if extraction failed
     """
-    cfg = get_config()
+    get_config()
 
     try:
         # Fetch the website HTML

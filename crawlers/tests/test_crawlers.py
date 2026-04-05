@@ -288,9 +288,8 @@ class TestCrawlerIntegration:
         import inspect
 
         # Verify crawl function exists and returns tuple annotation
-        sig = inspect.signature(the_earl.crawl)
+        inspect.signature(the_earl.crawl)
         # The return type hint should be tuple[int, int, int]
-        return_annotation = sig.return_annotation
         # Just verify function exists and is callable
         assert callable(the_earl.crawl)
 

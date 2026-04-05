@@ -363,7 +363,7 @@ def main():
         if errors:
             print(f"Errors:                     {errors}")
     else:
-        print(f"\n  DRY RUN — use --allow-production-writes to apply")
+        print("\n  DRY RUN — use --allow-production-writes to apply")
 
     # Show samples
     if not write:

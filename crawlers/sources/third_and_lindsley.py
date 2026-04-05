@@ -8,7 +8,6 @@ array, not in static HTML. We extract directly from JS for reliable times.
 
 from __future__ import annotations
 
-import json
 import re
 import logging
 from typing import Optional
@@ -18,7 +17,6 @@ from bs4 import BeautifulSoup
 
 from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
-from utils import enrich_event_record
 
 logger = logging.getLogger(__name__)
 

@@ -18,7 +18,6 @@ import os
 import sys
 from dataclasses import dataclass
 from importlib import import_module
-from pathlib import Path
 from typing import Optional
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -130,7 +129,7 @@ def _target_from_source_slug(source_slug: str) -> Optional[Target]:
     module = import_module(module_path)
     place_data = getattr(module, "PLACE_DATA", None) or {}
     venue_slug = place_data.get("slug") or source_slug
-    venue_name = place_data.get("name") or source_slug
+    place_data.get("name") or source_slug
     venue_rows = _venue_rows_by_slug([venue_slug])
     venue_row = venue_rows.get(venue_slug)
     if not venue_row:

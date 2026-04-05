@@ -6,7 +6,6 @@ Run with: python3 fix_critical_crawler_issues.py (to apply fixes)
 """
 
 import argparse
-import re
 from pathlib import Path
 
 # Category fixes
@@ -64,7 +63,6 @@ def apply_fixes(file_path: str, replacements: list[tuple[str, str]], dry_run: bo
         return 0
 
     content = path.read_text()
-    original_content = content
     replacements_made = 0
 
     for old, new in replacements:

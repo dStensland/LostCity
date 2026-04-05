@@ -11,7 +11,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import sys
 from typing import Any
 
 from festival_audit_metrics import compute_festival_audit_snapshot, evaluate_positive_state

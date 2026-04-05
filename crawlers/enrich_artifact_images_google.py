@@ -150,7 +150,7 @@ def main(dry_run: bool = False):
 
         photos = search_place_photos(search_query)
         if not photos:
-            print(f"    No Google Places results")
+            print("    No Google Places results")
             failed += 1
             time.sleep(0.5)
             continue
@@ -169,7 +169,7 @@ def main(dry_run: bool = False):
                 break
 
         if not photo_url:
-            print(f"    Could not resolve photo URL")
+            print("    Could not resolve photo URL")
             failed += 1
             time.sleep(0.5)
             continue

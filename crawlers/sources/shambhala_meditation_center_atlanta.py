@@ -134,7 +134,7 @@ def determine_category_and_series(title: str, description: str) -> tuple[str, Op
         return "learning", None, tags + ["beginner", "instruction"], None
 
     # Practice sessions (recurring)
-    if "practice" in text and not "tai chi" in text:
+    if "practice" in text and "tai chi" not in text:
         if "morning" in text:
             return "wellness", None, tags + ["morning", "practice"], {
                 "series_type": "recurring_show",
@@ -334,7 +334,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             if len(description_lines) >= 2:
                                 break
 
-                    description = " ".join(description_lines) if description_lines else f"Event at Shambhala Meditation Center of Atlanta"
+                    description = " ".join(description_lines) if description_lines else "Event at Shambhala Meditation Center of Atlanta"
 
                     # Dedupe by title + date
                     event_key = f"{title}|{start_date}"

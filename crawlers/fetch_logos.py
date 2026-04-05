@@ -19,15 +19,15 @@ def _resolve_producer_table(client) -> str:
         except Exception as exc:
             if "PGRST205" not in str(exc):
                 raise
-    raise RuntimeError("Neither event_producers nor organizations exists in schema cache")
+    raise RuntimeError(
+        "Neither event_producers nor organizations exists in schema cache"
+    )
 
 
 def fetch_logo_from_website(website_url: str) -> Optional[str]:
     """Try to extract logo URL from website."""
     try:
-        headers = {
-            "User-Agent": "Mozilla/5.0 (compatible; LostCityBot/1.0)"
-        }
+        headers = {"User-Agent": "Mozilla/5.0 (compatible; LostCityBot/1.0)"}
         response = requests.get(website_url, headers=headers, timeout=10)
         if not response.ok:
             return None
@@ -68,7 +68,7 @@ def fetch_logo_from_website(website_url: str) -> Optional[str]:
             favicon_res = requests.head(favicon_url, timeout=5)
             if favicon_res.ok:
                 return favicon_url
-        except:
+        except Exception:
             pass
 
         return None
@@ -100,7 +100,7 @@ def fetch_instagram_avatar(instagram_handle: str) -> Optional[str]:
         match = re.search(
             r'<meta[^>]*property=["\']og:image["\'][^>]*content=["\']([^"\']+)["\']',
             html,
-            re.IGNORECASE
+            re.IGNORECASE,
         )
         if match:
             return match.group(1)
@@ -111,15 +111,19 @@ def fetch_instagram_avatar(instagram_handle: str) -> Optional[str]:
         return None
 
 
-def fetch_logos(overwrite: bool = False, producer_ids: list[str] = None, dry_run: bool = False):
+def fetch_logos(
+    overwrite: bool = False, producer_ids: list[str] = None, dry_run: bool = False
+):
     """Fetch logos for producers missing them."""
     client = get_client()
     producer_table = _resolve_producer_table(client)
 
     # Build query
-    query = client.table(producer_table).select(
-        "id, name, website, instagram, logo_url"
-    ).eq("hidden", False)
+    query = (
+        client.table(producer_table)
+        .select("id, name, website, instagram, logo_url")
+        .eq("hidden", False)
+    )
 
     if producer_ids:
         query = query.in_("id", producer_ids)
@@ -166,9 +170,9 @@ def fetch_logos(overwrite: bool = False, producer_ids: list[str] = None, dry_run
 
             if not dry_run:
                 try:
-                    client.table(producer_table).update({
-                        "logo_url": logo_url
-                    }).eq("id", producer["id"]).execute()
+                    client.table(producer_table).update({"logo_url": logo_url}).eq(
+                        "id", producer["id"]
+                    ).execute()
                     success += 1
                 except Exception as e:
                     print(f"  [{name}] Failed to update: {e}")
@@ -186,8 +190,12 @@ def fetch_logos(overwrite: bool = False, producer_ids: list[str] = None, dry_run
 
 def main():
     parser = argparse.ArgumentParser(description="Fetch logos for event producers")
-    parser.add_argument("--overwrite", action="store_true", help="Overwrite existing logos")
-    parser.add_argument("--dry-run", action="store_true", help="Don't actually update database")
+    parser.add_argument(
+        "--overwrite", action="store_true", help="Overwrite existing logos"
+    )
+    parser.add_argument(
+        "--dry-run", action="store_true", help="Don't actually update database"
+    )
     parser.add_argument("--producer", type=str, help="Specific producer ID to update")
 
     args = parser.parse_args()
@@ -195,9 +203,7 @@ def main():
     producer_ids = [args.producer] if args.producer else None
 
     fetch_logos(
-        overwrite=args.overwrite,
-        producer_ids=producer_ids,
-        dry_run=args.dry_run
+        overwrite=args.overwrite, producer_ids=producer_ids, dry_run=args.dry_run
     )
 
 

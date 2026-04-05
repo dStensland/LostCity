@@ -21,7 +21,6 @@ from __future__ import annotations
 import logging
 from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
-from typing import Optional
 
 from db import (
     find_event_by_hash,
@@ -223,7 +222,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 venue_id = get_or_create_place(location)
                 insert_program(build_workshop_program_record(location, venue_id, source_id))
 
-                title = f"Kids Workshop - Build & Take Home"
+                title = "Kids Workshop - Build & Take Home"
                 description = generate_workshop_description(month_name)
 
                 # Generate content hash for deduplication

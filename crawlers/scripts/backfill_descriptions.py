@@ -18,14 +18,12 @@ Usage:
 from __future__ import annotations
 
 import re
-import sys
 import time
 import logging
 import argparse
 from datetime import datetime
-from typing import Optional
 
-from db import get_client, get_venue_by_id
+from db import get_client
 from description_fetcher import fetch_description_from_url
 from posters import get_metadata_for_film_event
 from artist_images import get_info_for_music_event

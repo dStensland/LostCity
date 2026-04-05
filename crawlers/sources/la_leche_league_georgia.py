@@ -23,7 +23,6 @@ from __future__ import annotations
 import re
 import logging
 from typing import Optional
-from datetime import datetime
 
 import requests
 from bs4 import BeautifulSoup

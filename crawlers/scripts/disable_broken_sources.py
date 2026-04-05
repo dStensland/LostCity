@@ -116,7 +116,7 @@ def main():
             disabled_zero += 1
 
     action = "disabled" if not dry_run else "would disable"
-    print(f"\n=== SUMMARY ===")
+    print("\n=== SUMMARY ===")
     print(f"  Broken sources {action}: {disabled_broken if not dry_run else len(broken)}")
     print(f"  Zero-event sources {action}: {disabled_zero if not dry_run else len(zero_event)}")
     print(f"  Total: {(disabled_broken + disabled_zero) if not dry_run else len(broken) + len(zero_event)}")

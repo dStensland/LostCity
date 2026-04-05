@@ -27,7 +27,6 @@ from crawler_health import (
     get_unhealthy_sources,
     get_db,
     init_health_db,
-    classify_error,
 )
 from pipeline.loader import load_profile, find_profile_path
 
@@ -225,7 +224,7 @@ def print_report(summary: dict, runs: list[dict], regressions: list[dict],
         print(f"  Zero-event:    {len(zero_event_runs)} sources succeeded but found 0 events")
 
     # Health distribution
-    print(f"\nHealth distribution:")
+    print("\nHealth distribution:")
     print(f"  Healthy (80+):    {sources['healthy']}")
     print(f"  Degraded (50-79): {sources['degraded']}")
     print(f"  Unhealthy (<50):  {sources['unhealthy']}")
@@ -238,7 +237,7 @@ def print_report(summary: dict, runs: list[dict], regressions: list[dict],
 
     # Failure breakdown
     if failure_categories:
-        print(f"\nFailure breakdown:")
+        print("\nFailure breakdown:")
         for error_type, sources_list in sorted(failure_categories.items(), key=lambda x: -len(x[1])):
             print(f"  {error_type}: {len(sources_list)} sources")
             for s in sources_list[:3]:
@@ -248,7 +247,7 @@ def print_report(summary: dict, runs: list[dict], regressions: list[dict],
 
     # Recommendations
     if recommendations:
-        print(f"\nHealing recommendations:")
+        print("\nHealing recommendations:")
         for rec in recommendations:
             if rec["category"] == "zero_events_regression":
                 continue  # Already shown in regressions section

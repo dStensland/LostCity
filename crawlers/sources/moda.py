@@ -21,7 +21,7 @@ from entity_persistence import persist_typed_entity_envelope
 from exhibition_utils import build_exhibition_record
 from utils import (
     extract_images_from_page, extract_event_links, find_event_url,
-    enrich_event_record, parse_price, parse_date_range,
+    enrich_event_record, parse_date_range,
 )
 
 logger = logging.getLogger(__name__)
@@ -216,7 +216,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                                 continue
 
                             # Next should be full date like "Feb 3, 2026"
-                            full_date_line = lines[i + 3] if i + 3 < len(lines) else ""
+                            lines[i + 3] if i + 3 < len(lines) else ""
 
                             # Parse the date
                             start_date = parse_date_from_parts(month_abbr, day)

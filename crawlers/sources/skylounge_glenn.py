@@ -39,7 +39,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     This crawler checks for any announced special events but will usually return 0 events.
     Consider this a monitoring crawler for when they do post events.
     """
-    source_id = source["id"]
+    source["id"]
     events_found = 0
     events_new = 0
     events_updated = 0
@@ -53,7 +53,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
         response.raise_for_status()
 
         soup = BeautifulSoup(response.text, "html.parser")
-        venue_id = get_or_create_place(PLACE_DATA)
+        get_or_create_place(PLACE_DATA)
 
         # Look for any event announcements in the page content
         # This is speculative - they may not have regular events posted

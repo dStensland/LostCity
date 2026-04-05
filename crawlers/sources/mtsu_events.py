@@ -14,7 +14,12 @@ from typing import Optional
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeout
 
 from utils import slugify
-from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
+from db import (
+    get_or_create_place,
+    insert_event,
+    find_event_by_hash,
+    smart_update_existing_event,
+)
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -48,7 +53,7 @@ def parse_date(date_text: str) -> tuple[Optional[str], Optional[str]]:
             try:
                 dt = datetime.fromisoformat(date_text.replace("Z", "+00:00"))
                 return dt.strftime("%Y-%m-%d"), None
-            except:
+            except Exception:
                 pass
 
         # "Jan 15, 2026" or "January 15, 2026"
@@ -179,7 +184,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
             # Try to click "Load More" or "Show More" buttons
             for _ in range(3):
                 try:
-                    load_more = page.locator("text=/load more|show more|view more/i").first
+                    load_more = page.locator(
+                        "text=/load more|show more|view more/i"
+                    ).first
                     if load_more.is_visible(timeout=1000):
                         load_more.click()
                         page.wait_for_timeout(2000)
@@ -187,7 +194,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     break
 
             # Parse event listings - WordPress calendar might use .event, .tribe-event, etc.
-            cards = page.query_selector_all("article, .event, .event-item, .tribe-event, .calendar-event")
+            cards = page.query_selector_all(
+                "article, .event, .event-item, .tribe-event, .calendar-event"
+            )
 
             logger.info(f"Found {len(cards)} potential event cards on MTSU calendar")
 
@@ -198,7 +207,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         continue
 
                     # Title
-                    title_el = card.query_selector("h1, h2, h3, h4, .title, .event-title, .tribe-events-list-event-title")
+                    title_el = card.query_selector(
+                        "h1, h2, h3, h4, .title, .event-title, .tribe-events-list-event-title"
+                    )
                     title = title_el.inner_text().strip() if title_el else None
 
                     if not title or len(title) < 3:
@@ -210,7 +221,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             continue
 
                     # Date
-                    date_el = card.query_selector("time, .date, .event-date, .tribe-event-date-start, [itemprop='startDate']")
+                    date_el = card.query_selector(
+                        "time, .date, .event-date, .tribe-event-date-start, [itemprop='startDate']"
+                    )
                     start_date = None
                     end_date = None
                     start_time = None
@@ -220,10 +233,12 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         date_attr = date_el.get_attribute("datetime")
                         if date_attr:
                             try:
-                                dt = datetime.fromisoformat(date_attr.replace("Z", "+00:00"))
+                                dt = datetime.fromisoformat(
+                                    date_attr.replace("Z", "+00:00")
+                                )
                                 start_date = dt.strftime("%Y-%m-%d")
                                 start_time = dt.strftime("%H:%M")
-                            except:
+                            except Exception:
                                 date_text = date_el.inner_text().strip()
                                 start_date, end_date = parse_date(date_text)
                                 start_time = parse_time(date_text)
@@ -246,12 +261,19 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         continue
 
                     # Venue - could be a specific building on campus
-                    venue_el = card.query_selector(".venue, .location, .event-venue, .tribe-venue, [itemprop='location']")
-                    venue_name = venue_el.inner_text().strip() if venue_el else "MTSU Campus"
+                    venue_el = card.query_selector(
+                        ".venue, .location, .event-venue, .tribe-venue, [itemprop='location']"
+                    )
+                    venue_name = (
+                        venue_el.inner_text().strip() if venue_el else "MTSU Campus"
+                    )
 
                     if venue_name and len(venue_name) > 2:
                         # If it looks like a building/room, append MTSU
-                        if not "mtsu" in venue_name.lower() and not "middle tennessee" in venue_name.lower():
+                        if (
+                            "mtsu" not in venue_name.lower()
+                            and "middle tennessee" not in venue_name.lower()
+                        ):
                             venue_name = f"{venue_name} - MTSU"
                     else:
                         venue_name = "MTSU Campus"
@@ -267,7 +289,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     img = card.query_selector("img")
                     image_url = None
                     if img:
-                        image_url = img.get_attribute("src") or img.get_attribute("data-src")
+                        image_url = img.get_attribute("src") or img.get_attribute(
+                            "data-src"
+                        )
                         if image_url and not image_url.startswith("http"):
                             if image_url.startswith("//"):
                                 image_url = f"https:{image_url}"

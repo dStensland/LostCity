@@ -162,12 +162,10 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 line = lines[i]
 
                 # Check if line matches a date pattern
-                date_match = None
                 start_date = None
                 for pattern in date_patterns:
                     match = pattern.search(line)
                     if match:
-                        date_match = match
                         start_date = parse_date(match.group(0))
                         break
 

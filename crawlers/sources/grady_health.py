@@ -30,12 +30,11 @@ from __future__ import annotations
 import re
 import logging
 from typing import Optional
-from datetime import datetime
 
 import requests
 from bs4 import BeautifulSoup
 
-from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash
 from dedupe import generate_content_hash
 from date_utils import parse_human_date
 

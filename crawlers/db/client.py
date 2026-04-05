@@ -7,10 +7,7 @@ import time
 import logging
 import functools
 import threading
-import html
-from urllib.parse import urlparse
 from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime
 from typing import Optional
 
 from supabase import create_client, Client

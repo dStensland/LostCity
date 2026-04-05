@@ -148,7 +148,7 @@ def main() -> int:
     args = parse_args()
     py = sys.executable
     portal_slug = resolve_portal_slug(args.city, args.portal)
-    start_date = date.today().isoformat()
+    date.today().isoformat()
     started_at = datetime.now(timezone.utc).isoformat()
 
     phase_results: list[dict] = []

@@ -27,7 +27,12 @@ from typing import Optional
 
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeoutError
 
-from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
+from db import (
+    get_or_create_place,
+    insert_event,
+    find_event_by_hash,
+    smart_update_existing_event,
+)
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -154,7 +159,9 @@ def _extract_upcoming_events(body_text: str, event_links: dict) -> list[dict]:
 
     # Strip navigation noise
     upcoming_text = re.sub(
-        r"Skip to Main Content.*?Upcoming Performances", "", upcoming_text,
+        r"Skip to Main Content.*?Upcoming Performances",
+        "",
+        upcoming_text,
         flags=re.DOTALL | re.IGNORECASE,
     )
     upcoming_text = upcoming_text.strip()
@@ -169,16 +176,18 @@ def _extract_upcoming_events(body_text: str, event_links: dict) -> list[dict]:
         re.IGNORECASE,
     )
     for date_text in coming_matches:
-        events.append({
-            "title": "ACDC New Production",
-            "date_text": date_text,
-            "description": (
-                "Upcoming production by Atlanta Contemporary Dance Company. "
-                "Check website for details."
-            ),
-            "is_tba": True,
-            "detail_url": None,
-        })
+        events.append(
+            {
+                "title": "ACDC New Production",
+                "date_text": date_text,
+                "description": (
+                    "Upcoming production by Atlanta Contemporary Dance Company. "
+                    "Check website for details."
+                ),
+                "is_tba": True,
+                "detail_url": None,
+            }
+        )
 
     # Pattern 2: "DayOfWeek, M.D Title [Ticket CTA]"
     # e.g. "Thursday, 3.19 Community Performance Complimentary Ticket"
@@ -208,7 +217,9 @@ def _extract_upcoming_events(body_text: str, event_links: dict) -> list[dict]:
             maxsplit=1,
         )[0].strip()
         # Also split on "New Production Coming" if it bleeds in
-        title_block = re.split(r"\s+New\s+Production", title_block, flags=re.IGNORECASE)[0].strip()
+        title_block = re.split(
+            r"\s+New\s+Production", title_block, flags=re.IGNORECASE
+        )[0].strip()
 
         if not title_block or not (3 < len(title_block) < 120):
             continue
@@ -217,18 +228,23 @@ def _extract_upcoming_events(body_text: str, event_links: dict) -> list[dict]:
         detail_url = None
         if cta_text:
             for link_text, href in event_links.items():
-                if cta_text.lower() in link_text.lower() or link_text.lower() in cta_text.lower():
+                if (
+                    cta_text.lower() in link_text.lower()
+                    or link_text.lower() in cta_text.lower()
+                ):
                     if "/event-details" in href or "/events/" in href:
                         detail_url = href
                         break
 
-        events.append({
-            "title": title_block,
-            "date_text": date_text,
-            "description": None,
-            "is_tba": False,
-            "detail_url": detail_url,
-        })
+        events.append(
+            {
+                "title": title_block,
+                "date_text": date_text,
+                "description": None,
+                "is_tba": False,
+                "detail_url": detail_url,
+            }
+        )
 
     # Deduplicate by (title_lower, date_text)
     seen: set[tuple] = set()
@@ -242,7 +258,7 @@ def _extract_upcoming_events(body_text: str, event_links: dict) -> list[dict]:
     return unique_events
 
 
-def _parse_detail_page(page: "Page") -> dict:  # type: ignore[name-defined]
+def _parse_detail_page(page) -> dict:
     """
     Extract enriched data from a Wix event detail page.
 
@@ -293,6 +309,7 @@ def _parse_detail_page(page: "Page") -> dict:  # type: ignore[name-defined]
         re.IGNORECASE,
     )
     if time_match:
+
         def _to_24h(t: str) -> str:
             t = t.strip()
             try:
@@ -313,7 +330,9 @@ def _parse_detail_page(page: "Page") -> dict:  # type: ignore[name-defined]
     )
     if venue_match:
         result["venue_name"] = venue_match.group(1).strip()
-        result["venue_address"] = f"{venue_match.group(2).strip()}, {venue_match.group(3).strip()}"
+        result["venue_address"] = (
+            f"{venue_match.group(2).strip()}, {venue_match.group(3).strip()}"
+        )
 
     # Price: Wix renders "Price $0.00" or "Price $15.00"
     price_match = re.search(r"Price\s+\$(\d+(?:\.\d{2})?)", body_text, re.IGNORECASE)
@@ -349,10 +368,14 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             logger.info("ACDC: fetching performances page %s", PERFORMANCES_URL)
             try:
-                page.goto(PERFORMANCES_URL, wait_until="domcontentloaded", timeout=30000)
+                page.goto(
+                    PERFORMANCES_URL, wait_until="domcontentloaded", timeout=30000
+                )
                 page.wait_for_timeout(3000)
             except PlaywrightTimeoutError:
-                logger.warning("ACDC: performances page timed out, proceeding with partial load")
+                logger.warning(
+                    "ACDC: performances page timed out, proceeding with partial load"
+                )
 
             body_text = re.sub(r"\s+", " ", page.inner_text("body"))
 
@@ -369,10 +392,14 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 if "/event-details" in href or "/events/" in href:
                     event_links[text] = href
 
-            logger.info("ACDC: found %d event detail links on listing page", len(event_links))
+            logger.info(
+                "ACDC: found %d event detail links on listing page", len(event_links)
+            )
 
             upcoming_events = _extract_upcoming_events(body_text, event_links)
-            logger.info("ACDC: found %d upcoming event candidates", len(upcoming_events))
+            logger.info(
+                "ACDC: found %d upcoming event candidates", len(upcoming_events)
+            )
 
             for ev_data in upcoming_events:
                 title = ev_data["title"]
@@ -382,13 +409,20 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                 start_date, start_time = _parse_acdc_date(date_text)
                 if not start_date:
-                    logger.debug("ACDC: could not parse date '%s' for '%s'", date_text, title)
+                    logger.debug(
+                        "ACDC: could not parse date '%s' for '%s'", date_text, title
+                    )
                     continue
 
                 # Skip past events
                 try:
-                    if datetime.strptime(start_date, "%Y-%m-%d").date() < datetime.now().date():
-                        logger.debug("ACDC: skipping past event '%s' on %s", title, start_date)
+                    if (
+                        datetime.strptime(start_date, "%Y-%m-%d").date()
+                        < datetime.now().date()
+                    ):
+                        logger.debug(
+                            "ACDC: skipping past event '%s' on %s", title, start_date
+                        )
                         continue
                 except ValueError:
                     continue
@@ -408,7 +442,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     logger.info("ACDC: fetching detail page %s", detail_url)
                     try:
                         detail_page = context.new_page()
-                        detail_page.goto(detail_url, wait_until="domcontentloaded", timeout=30000)
+                        detail_page.goto(
+                            detail_url, wait_until="domcontentloaded", timeout=30000
+                        )
                         detail_page.wait_for_timeout(2500)
 
                         detail = _parse_detail_page(detail_page)
@@ -442,9 +478,17 @@ def crawl(source: dict) -> tuple[int, int, int]:
                                 re.I,
                             )
                             vcity = city_match.group(1) if city_match else "Atlanta"
-                            vzip = city_match.group(3) if (city_match and city_match.group(3)) else "30308"
+                            vzip = (
+                                city_match.group(3)
+                                if (city_match and city_match.group(3))
+                                else "30308"
+                            )
                             # Street address only
-                            street = re.split(r",\s*(?:Atlanta|Marietta|Decatur|Tucker)", vaddr, flags=re.I)[0].strip()
+                            street = re.split(
+                                r",\s*(?:Atlanta|Marietta|Decatur|Tucker)",
+                                vaddr,
+                                flags=re.I,
+                            )[0].strip()
                             new_venue_data = {
                                 "name": vname,
                                 "slug": vslug,
@@ -458,14 +502,20 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             }
                             try:
                                 venue_id = get_or_create_place(new_venue_data)
-                                logger.info("ACDC: using venue '%s' for '%s'", vname, title)
+                                logger.info(
+                                    "ACDC: using venue '%s' for '%s'", vname, title
+                                )
                             except Exception as ve:
-                                logger.warning("ACDC: could not create venue '%s': %s", vname, ve)
+                                logger.warning(
+                                    "ACDC: could not create venue '%s': %s", vname, ve
+                                )
 
                     except PlaywrightTimeoutError:
                         logger.warning("ACDC: detail page timed out for %s", detail_url)
                     except Exception as de:
-                        logger.warning("ACDC: error fetching detail page %s: %s", detail_url, de)
+                        logger.warning(
+                            "ACDC: error fetching detail page %s: %s", detail_url, de
+                        )
 
                 # Use venue name for content hash (may differ from org if detail page had a specific venue)
                 events_found += 1
@@ -525,6 +575,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
     logger.info(
         "ACDC crawl complete: %d found, %d new, %d updated",
-        events_found, events_new, events_updated,
+        events_found,
+        events_new,
+        events_updated,
     )
     return events_found, events_new, events_updated

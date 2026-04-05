@@ -12,7 +12,6 @@ Covers:
 
 from datetime import date
 
-import pytest
 
 from sources.atlanta_city_council import (
     _parse_entry_title,

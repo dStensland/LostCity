@@ -17,7 +17,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from db import get_client, insert_event, find_event_by_hash
+from db import insert_event, find_event_by_hash
 from dedupe import generate_content_hash
 
 # Configuration
@@ -60,7 +60,7 @@ def seed_metalsome_events(source_id: int, weeks: int = 8, dry_run: bool = False)
 
     print(f"{'[DRY RUN] ' if dry_run else ''}Generating Metalsome events for {weeks} weeks...")
     print(f"Venue: {VENUE_NAME} (ID {VENUE_ID})")
-    print(f"Days: Thursday, Friday, Saturday at 9:00 PM")
+    print("Days: Thursday, Friday, Saturday at 9:00 PM")
     print()
 
     for week in range(weeks):

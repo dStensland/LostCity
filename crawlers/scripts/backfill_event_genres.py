@@ -18,7 +18,6 @@ from __future__ import annotations
 
 import argparse
 import logging
-import sys
 
 from db import get_client
 from tag_inference import infer_genres

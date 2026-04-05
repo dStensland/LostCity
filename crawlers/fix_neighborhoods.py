@@ -13,7 +13,7 @@ Atlanta neighborhoods are determined by:
 """
 
 import sys
-from typing import Optional, Dict, List, Tuple
+from typing import Optional, Dict, Tuple
 from db import get_client
 
 
@@ -27,7 +27,6 @@ NEIGHBORHOOD_BOUNDARIES = {
     "Virginia-Highland": (33.775, 33.795, -84.355, -84.335),
     "Little Five Points": (33.760, 33.770, -84.355, -84.340),
     "East Atlanta": (33.730, 33.750, -84.360, -84.340),
-
     # Decatur neighborhoods
     "Downtown Decatur": (33.7721, 33.7757, -84.3004, -84.2930),
     "Decatur Square": (33.7730, 33.7750, -84.2980, -84.2950),
@@ -41,7 +40,6 @@ NEIGHBORHOOD_BOUNDARIES = {
     "Glennwood Estates": (33.7750, 33.7900, -84.2850, -84.2700),
     "North Decatur": (33.7800, 33.8050, -84.2700, -84.2500),
     "Sycamore Ridge": (33.7700, 33.7850, -84.3000, -84.2850),
-
     "West Midtown": (33.775, 33.790, -84.415, -84.395),
     "Old Fourth Ward": (33.755, 33.770, -84.375, -84.355),
     "Grant Park": (33.730, 33.745, -84.380, -84.360),
@@ -53,7 +51,6 @@ NEIGHBORHOOD_BOUNDARIES = {
     "Castleberry Hill": (33.745, 33.755, -84.400, -84.385),
     "Poncey-Highland": (33.770, 33.780, -84.365, -84.350),
     "Edgewood": (33.750, 33.760, -84.360, -84.345),
-
     # Additional neighborhoods
     "Kirkwood": (33.745, 33.760, -84.320, -84.300),
     "Druid Hills": (33.765, 33.785, -84.340, -84.315),
@@ -64,7 +61,6 @@ NEIGHBORHOOD_BOUNDARIES = {
     "Sandy Springs": (33.910, 33.950, -84.395, -84.355),
     "Dunwoody": (33.935, 33.965, -84.355, -84.315),
     "Marietta": (33.945, 33.965, -84.565, -84.525),
-
     # Marietta neighborhoods
     "Marietta Square": (33.945, 33.960, -84.560, -84.540),
     "Downtown Marietta": (33.943, 33.958, -84.560, -84.545),
@@ -73,7 +69,6 @@ NEIGHBORHOOD_BOUNDARIES = {
     "Fort Hill": (33.940, 33.960, -84.585, -84.565),
     "North Landing": (33.910, 33.930, -84.525, -84.495),
     "Eastern Marietta": (33.950, 33.970, -84.495, -84.465),
-
     # East Cobb neighborhoods
     "Indian Hills": (33.990, 34.010, -84.400, -84.360),
     "Chimney Springs": (34.005, 34.025, -84.350, -84.310),
@@ -82,39 +77,32 @@ NEIGHBORHOOD_BOUNDARIES = {
     "Northampton": (34.000, 34.020, -84.430, -84.400),
     "Somerset": (33.965, 33.985, -84.385, -84.355),
     "Brookstone": (34.020, 34.040, -84.305, -84.275),
-
     # West Cobb
     "Powers Park": (33.925, 33.945, -84.495, -84.470),
-
     # Eastside
     "Candler Park": (33.750, 33.765, -84.350, -84.335),
     "Lake Claire": (33.760, 33.770, -84.340, -84.325),
     "Ormewood Park": (33.720, 33.735, -84.365, -84.350),
     "Summerhill": (33.735, 33.748, -84.385, -84.370),
-
     # Westside
     "Atlantic Station": (33.790, 33.800, -84.400, -84.390),
     "Home Park": (33.775, 33.785, -84.405, -84.390),
     "Vine City": (33.755, 33.765, -84.415, -84.400),
     "English Avenue": (33.765, 33.775, -84.425, -84.410),
-
     # Southside
     "Pittsburgh": (33.715, 33.730, -84.395, -84.380),
     "Mechanicsville": (33.735, 33.748, -84.400, -84.385),
     "Adair Park": (33.720, 33.730, -84.415, -84.400),
     "Capitol View": (33.715, 33.730, -84.435, -84.420),
-
     # North
     "Chastain Park": (33.955, 33.975, -84.395, -84.375),
     "Lindbergh": (33.815, 33.830, -84.375, -84.360),
     "Lenox": (33.840, 33.855, -84.370, -84.355),
-
     # Northeast
     "Tucker": (33.830, 33.870, -84.250, -84.200),
     "Stone Mountain": (33.780, 33.820, -84.200, -84.150),
     "Chamblee": (33.875, 33.905, -84.320, -84.280),
     "Doraville": (33.890, 33.920, -84.295, -84.255),
-
     # Extended metro areas
     "Perimeter": (33.915, 33.935, -84.355, -84.330),  # Perimeter Mall area
     "Duluth": (33.950, 34.010, -84.175, -84.120),
@@ -122,7 +110,6 @@ NEIGHBORHOOD_BOUNDARIES = {
     "Roswell": (33.995, 34.060, -84.390, -84.330),
     "Alpharetta": (34.035, 34.105, -84.325, -84.260),
     "Smyrna": (33.855, 33.905, -84.540, -84.480),
-
     # College Park neighborhoods
     "Historic College Park": (33.6420, 33.6560, -84.4650, -84.4480),
     "Downtown College Park": (33.6470, 33.6520, -84.4620, -84.4480),
@@ -132,7 +119,6 @@ NEIGHBORHOOD_BOUNDARIES = {
     "Princeton Lakes": (33.6200, 33.6350, -84.4600, -84.4350),
     "Airport District": (33.6150, 33.6380, -84.4650, -84.4100),
     "South College Park": (33.6050, 33.6250, -84.4750, -84.4300),
-
     "College Park": (33.620, 33.675, -84.480, -84.425),
     "East Point": (33.655, 33.705, -84.480, -84.425),
     "Hapeville": (33.645, 33.685, -84.430, -84.385),
@@ -190,23 +176,19 @@ ZIP_TO_NEIGHBORHOOD = {
     "30319": "Brookhaven",
     "30322": "Druid Hills",
     "30329": "Druid Hills",
-
     # Eastside
     "30307": "Little Five Points",
     "30306": "Virginia-Highland",
     "30312": "Sweet Auburn",
     "30310": "Pittsburgh",
-    "30312": "Downtown",
     "30311": "West End",
     "30331": "Cascade Heights",
-
     # Decatur
     "30030": "Downtown Decatur",
     "30031": "Downtown Decatur",
     "30032": "Decatur",
     "30033": "North Decatur",
     "30034": "Decatur",
-
     # North Atlanta
     "30328": "Sandy Springs",
     "30338": "Dunwoody",
@@ -218,11 +200,6 @@ ZIP_TO_NEIGHBORHOOD = {
     "30346": "Dunwoody",
     "30360": "Dunwoody",
     "30339": "Smyrna",
-
-    # Perimeter/Dunwoody
-    "30346": "Perimeter",
-    "30338": "Perimeter",
-
     # Suburban areas
     "30075": "Roswell",
     "30076": "Roswell",
@@ -244,7 +221,6 @@ ZIP_TO_NEIGHBORHOOD = {
     "30152": "Kennesaw",
     "30188": "Woodstock",
     "30189": "Woodstock",
-
     # South metro
     "30296": "Riverdale",
     "30274": "Riverdale",
@@ -261,7 +237,6 @@ ZIP_TO_NEIGHBORHOOD = {
     "30349": "Camp Creek",
     "30344": "East Point",
     "30354": "Hapeville",
-
     # East metro
     "30078": "Snellville",
     "30087": "Stone Mountain",
@@ -280,7 +255,6 @@ ZIP_TO_NEIGHBORHOOD = {
     "30071": "Norcross",
     "30092": "Norcross",
     "30093": "Norcross",
-
     # North suburbs
     "30101": "Acworth",
     "30102": "Acworth",
@@ -300,7 +274,12 @@ def get_neighborhood_from_coordinates(lat: float, lng: float) -> Optional[str]:
         return None
 
     # Check each neighborhood boundary
-    for neighborhood, (min_lat, max_lat, min_lng, max_lng) in NEIGHBORHOOD_BOUNDARIES.items():
+    for neighborhood, (
+        min_lat,
+        max_lat,
+        min_lng,
+        max_lng,
+    ) in NEIGHBORHOOD_BOUNDARIES.items():
         if min_lat <= lat <= max_lat and min_lng <= lng <= max_lng:
             return neighborhood
 
@@ -313,21 +292,21 @@ def get_neighborhood_from_zip(zip_code: str) -> Optional[str]:
         return None
 
     # Clean ZIP code (take first 5 digits)
-    clean_zip = zip_code.strip().split('-')[0][:5]
+    clean_zip = zip_code.strip().split("-")[0][:5]
     return ZIP_TO_NEIGHBORHOOD.get(clean_zip)
 
 
 def get_neighborhood_for_venue(venue: Dict) -> Optional[str]:
     """Determine the neighborhood for a venue using available data."""
-    venue_name = venue.get('name', '').lower()
+    venue_name = venue.get("name", "").lower()
 
     # Skip virtual venues - they shouldn't have a neighborhood
-    if 'online' in venue_name or 'virtual' in venue_name:
+    if "online" in venue_name or "virtual" in venue_name:
         return None
 
     # Try lat/lng first (most accurate)
-    lat = venue.get('lat')
-    lng = venue.get('lng')
+    lat = venue.get("lat")
+    lng = venue.get("lng")
     if lat and lng:
         neighborhood = get_neighborhood_from_coordinates(lat, lng)
         if neighborhood:
@@ -340,42 +319,42 @@ def get_neighborhood_for_venue(venue: Dict) -> Optional[str]:
             return None
 
     # Fall back to ZIP code
-    zip_code = venue.get('zip')
+    zip_code = venue.get("zip")
     if zip_code:
         neighborhood = get_neighborhood_from_zip(zip_code)
         if neighborhood:
             return neighborhood
 
     # Last resort: try to extract city from address
-    city = (venue.get('city') or '').lower()
+    city = (venue.get("city") or "").lower()
     if city:
         # Map common city names to neighborhoods
         city_map = {
-            'atlanta': None,  # Too generic, need more specific data
-            'decatur': 'Decatur',
-            'buckhead': 'Buckhead',
-            'midtown': 'Midtown',
-            'marietta': 'Marietta',
-            'roswell': 'Roswell',
-            'alpharetta': 'Alpharetta',
-            'sandy springs': 'Sandy Springs',
-            'dunwoody': 'Dunwoody',
-            'smyrna': 'Smyrna',
-            'chamblee': 'Chamblee',
-            'doraville': 'Doraville',
-            'tucker': 'Tucker',
-            'stone mountain': 'Stone Mountain',
-            'lithonia': 'Lithonia',
-            'conyers': 'Conyers',
-            'college park': 'College Park',
-            'east point': 'East Point',
-            'hapeville': 'Hapeville',
-            'forest park': 'Forest Park',
-            'jonesboro': 'Jonesboro',
-            'morrow': 'Morrow',
-            'riverdale': 'Riverdale',
-            'union city': 'Union City',
-            'fairburn': 'Fairburn',
+            "atlanta": None,  # Too generic, need more specific data
+            "decatur": "Decatur",
+            "buckhead": "Buckhead",
+            "midtown": "Midtown",
+            "marietta": "Marietta",
+            "roswell": "Roswell",
+            "alpharetta": "Alpharetta",
+            "sandy springs": "Sandy Springs",
+            "dunwoody": "Dunwoody",
+            "smyrna": "Smyrna",
+            "chamblee": "Chamblee",
+            "doraville": "Doraville",
+            "tucker": "Tucker",
+            "stone mountain": "Stone Mountain",
+            "lithonia": "Lithonia",
+            "conyers": "Conyers",
+            "college park": "College Park",
+            "east point": "East Point",
+            "hapeville": "Hapeville",
+            "forest park": "Forest Park",
+            "jonesboro": "Jonesboro",
+            "morrow": "Morrow",
+            "riverdale": "Riverdale",
+            "union city": "Union City",
+            "fairburn": "Fairburn",
         }
         if city in city_map and city_map[city]:
             return city_map[city]
@@ -400,9 +379,12 @@ def fix_venue_neighborhoods(dry_run: bool = False) -> Tuple[int, int, int]:
     offset = 0
 
     while True:
-        result = client.table('places').select(
-            'id, name, neighborhood, address, city, state, lat, lng, zip'
-        ).range(offset, offset + page_size - 1).execute()
+        result = (
+            client.table("places")
+            .select("id, name, neighborhood, address, city, state, lat, lng, zip")
+            .range(offset, offset + page_size - 1)
+            .execute()
+        )
 
         if not result.data:
             break
@@ -415,17 +397,19 @@ def fix_venue_neighborhoods(dry_run: bool = False) -> Tuple[int, int, int]:
         offset += page_size
 
     # Filter to venues with missing neighborhood
-    missing_venues = [v for v in all_venues if not v.get('neighborhood')]
+    missing_venues = [v for v in all_venues if not v.get("neighborhood")]
 
-    print(f"\nFound {len(missing_venues)} venues missing neighborhood data out of {len(all_venues)} total")
+    print(
+        f"\nFound {len(missing_venues)} venues missing neighborhood data out of {len(all_venues)} total"
+    )
     print(f"Percentage missing: {len(missing_venues)/len(all_venues)*100:.1f}%\n")
 
     updated = 0
     failed = 0
 
     for venue in missing_venues:
-        venue_id = venue['id']
-        venue_name = venue['name']
+        venue_id = venue["id"]
+        venue_name = venue["name"]
 
         # Determine neighborhood
         neighborhood = get_neighborhood_for_venue(venue)
@@ -433,16 +417,16 @@ def fix_venue_neighborhoods(dry_run: bool = False) -> Tuple[int, int, int]:
         if neighborhood:
             print(f"✓ {venue_name}")
             print(f"  → {neighborhood}")
-            if venue.get('lat') and venue.get('lng'):
+            if venue.get("lat") and venue.get("lng"):
                 print(f"  (lat={venue['lat']:.4f}, lng={venue['lng']:.4f})")
-            elif venue.get('zip'):
+            elif venue.get("zip"):
                 print(f"  (zip={venue['zip']})")
 
             if not dry_run:
                 try:
-                    client.table('places').update({
-                        'neighborhood': neighborhood
-                    }).eq('id', venue_id).execute()
+                    client.table("places").update({"neighborhood": neighborhood}).eq(
+                        "id", venue_id
+                    ).execute()
                     updated += 1
                 except Exception as e:
                     print(f"  ERROR: Failed to update: {e}")
@@ -451,7 +435,9 @@ def fix_venue_neighborhoods(dry_run: bool = False) -> Tuple[int, int, int]:
                 updated += 1
         else:
             print(f"✗ {venue_name}")
-            print(f"  No neighborhood match (lat={venue.get('lat')}, lng={venue.get('lng')}, zip={venue.get('zip')})")
+            print(
+                f"  No neighborhood match (lat={venue.get('lat')}, lng={venue.get('lng')}, zip={venue.get('zip')})"
+            )
             failed += 1
 
         print()
@@ -474,9 +460,13 @@ def refine_college_park_neighborhoods(dry_run: bool = False) -> Tuple[int, int, 
     offset = 0
 
     while True:
-        result = client.table('places').select(
-            'id, name, neighborhood, address, city, state, lat, lng, zip'
-        ).eq('neighborhood', 'College Park').range(offset, offset + page_size - 1).execute()
+        result = (
+            client.table("places")
+            .select("id, name, neighborhood, address, city, state, lat, lng, zip")
+            .eq("neighborhood", "College Park")
+            .range(offset, offset + page_size - 1)
+            .execute()
+        )
 
         if not result.data:
             break
@@ -488,34 +478,36 @@ def refine_college_park_neighborhoods(dry_run: bool = False) -> Tuple[int, int, 
 
         offset += page_size
 
-    print(f"\nFound {len(all_venues)} venues with generic 'College Park' neighborhood\n")
+    print(
+        f"\nFound {len(all_venues)} venues with generic 'College Park' neighborhood\n"
+    )
 
     updated = 0
     unchanged = 0
 
     for venue in all_venues:
-        venue_id = venue['id']
-        venue_name = venue['name']
+        venue_id = venue["id"]
+        venue_name = venue["name"]
 
         # Only refine if we have coordinates
-        if not venue.get('lat') or not venue.get('lng'):
+        if not venue.get("lat") or not venue.get("lng"):
             unchanged += 1
             continue
 
         # Get more specific neighborhood
-        new_neighborhood = get_neighborhood_from_coordinates(venue['lat'], venue['lng'])
+        new_neighborhood = get_neighborhood_from_coordinates(venue["lat"], venue["lng"])
 
         # Only update if we got a more specific neighborhood (not the generic College Park)
-        if new_neighborhood and new_neighborhood != 'College Park':
+        if new_neighborhood and new_neighborhood != "College Park":
             print(f"✓ {venue_name}")
             print(f"  College Park → {new_neighborhood}")
             print(f"  (lat={venue['lat']:.4f}, lng={venue['lng']:.4f})")
 
             if not dry_run:
                 try:
-                    client.table('places').update({
-                        'neighborhood': new_neighborhood
-                    }).eq('id', venue_id).execute()
+                    client.table("places").update(
+                        {"neighborhood": new_neighborhood}
+                    ).eq("id", venue_id).execute()
                     updated += 1
                 except Exception as e:
                     print(f"  ERROR: Failed to update: {e}")
@@ -533,8 +525,8 @@ def refine_college_park_neighborhoods(dry_run: bool = False) -> Tuple[int, int, 
 
 def main():
     """Main entry point."""
-    dry_run = '--dry-run' in sys.argv
-    refine_only = '--refine-college-park' in sys.argv
+    dry_run = "--dry-run" in sys.argv
+    refine_only = "--refine-college-park" in sys.argv
 
     if dry_run:
         print("=== DRY RUN MODE ===")
@@ -542,11 +534,13 @@ def main():
 
     if refine_only:
         print("=== REFINING COLLEGE PARK NEIGHBORHOODS ===\n")
-        total_candidates, updated, unchanged = refine_college_park_neighborhoods(dry_run=dry_run)
+        total_candidates, updated, unchanged = refine_college_park_neighborhoods(
+            dry_run=dry_run
+        )
 
-        print("\n" + "="*60)
+        print("\n" + "=" * 60)
         print("COLLEGE PARK REFINEMENT SUMMARY")
-        print("="*60)
+        print("=" * 60)
         print(f"Total venues with generic College Park: {total_candidates}")
         print(f"Successfully {'would be ' if dry_run else ''}updated: {updated}")
         print(f"Kept as College Park: {unchanged}")
@@ -557,17 +551,21 @@ def main():
 
     total_missing, updated, failed = fix_venue_neighborhoods(dry_run=dry_run)
 
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("SUMMARY")
-    print("="*60)
+    print("=" * 60)
     print(f"Total venues missing neighborhood: {total_missing}")
     print(f"Successfully {'would be ' if dry_run else ''}updated: {updated}")
     print(f"Could not determine neighborhood: {failed}")
-    print(f"Success rate: {updated/total_missing*100:.1f}%" if total_missing > 0 else "N/A")
+    print(
+        f"Success rate: {updated/total_missing*100:.1f}%"
+        if total_missing > 0
+        else "N/A"
+    )
 
     if dry_run:
         print("\nRun without --dry-run to apply changes")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

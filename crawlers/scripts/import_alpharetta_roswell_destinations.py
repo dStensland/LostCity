@@ -253,7 +253,7 @@ def main():
 
     for dest in DESTINATIONS:
         try:
-            result = client.table("places").upsert(dest, on_conflict="slug").execute()
+            client.table("places").upsert(dest, on_conflict="slug").execute()
             added += 1
             print(f"✓ {dest['name']} ({dest['neighborhood']})")
         except Exception as e:

@@ -23,7 +23,7 @@ from pathlib import Path
 from typing import Optional
 from dotenv import load_dotenv
 from db import get_client
-from hours_utils import format_hours_display, prepare_hours_update, should_update_hours
+from hours_utils import prepare_hours_update, should_update_hours
 
 # Load .env file from project root
 env_path = Path(__file__).parent.parent / ".env"

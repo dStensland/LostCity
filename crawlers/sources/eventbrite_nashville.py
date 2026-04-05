@@ -263,7 +263,7 @@ def process_event(event_data: dict, source_id: int, producer_id: Optional[int], 
 
         # Get organizer info
         organizer = event_data.get("organizer") or {}
-        organizer_name = organizer.get("name", "") if organizer else ""
+        organizer.get("name", "") if organizer else ""
 
         event_record = {
             "source_id": source_id,

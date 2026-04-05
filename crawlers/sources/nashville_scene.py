@@ -198,7 +198,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     title = title_el.inner_text().strip() if title_el else None
 
                     if not title or len(title) < 3:
-                        logger.warning(f"No title found for event")
+                        logger.warning("No title found for event")
                         continue
 
                     # Venue from .cityVenue - get first span

@@ -3,7 +3,7 @@ Analyze events for Feb 13-15, 2026 (Friday the 13th through Sunday).
 """
 
 import sys
-from datetime import datetime, timedelta
+from datetime import datetime
 from collections import defaultdict
 from config import get_config
 from db import get_client
@@ -19,7 +19,7 @@ MAJOR_VENUES = {
 
 def analyze_weekend():
     """Query and analyze events for Feb 13-15, 2026."""
-    config = get_config()
+    get_config()
     client = get_client()
     
     # Query all weekend events with venue details

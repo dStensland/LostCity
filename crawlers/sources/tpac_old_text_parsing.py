@@ -185,25 +185,19 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     # Determine category based on content
                     event_category = "theater"
-                    subcategory = "performing_arts"
                     tags = ["tpac", "performing-arts", "downtown-nashville"]
 
                     title_lower = title.lower()
                     if category_line and "broadway" in category_line.lower():
-                        subcategory = "broadway"
                         tags.append("broadway")
                     elif any(w in title_lower for w in ["musical", "broadway"]):
-                        subcategory = "musical"
                         tags.append("broadway")
                     elif any(w in title_lower for w in ["symphony", "orchestra", "concert"]):
                         event_category = "music"
-                        subcategory = "classical"
                         tags.append("classical")
                     elif any(w in title_lower for w in ["ballet", "dance"]):
-                        subcategory = "dance"
                         tags.append("dance")
                     elif any(w in title_lower for w in ["opera"]):
-                        subcategory = "opera"
                         tags.append("opera")
 
                     # Get specific event URL

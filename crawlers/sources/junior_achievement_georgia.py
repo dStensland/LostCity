@@ -462,7 +462,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     #   Register
     #   ...
     # ----------------------------------------------------------------
-    today = date.today()
+    date.today()
 
     # Find the section with "Multiple locations are available" or similar
     # Then parse each location block

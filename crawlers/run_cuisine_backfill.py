@@ -3,7 +3,6 @@ One-shot script: run the specials scraper with OpenAI on venues missing cuisine.
 Queries for cuisine-NULL food venues, then calls scrape_venue_specials in batches.
 """
 import os
-import sys
 import logging
 
 os.environ["LLM_PROVIDER"] = "openai"
@@ -56,7 +55,7 @@ def main():
         try:
             data = scrape_venue(venue, use_playwright=False)
             if not data:
-                logger.info(f"  No data extracted")
+                logger.info("  No data extracted")
                 stats["no_data"] += 1
                 continue
 

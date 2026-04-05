@@ -147,7 +147,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     # Extract description from entry content
                     desc_elem = article.query_selector(".entry-content p, .entry-summary p")
-                    description = desc_elem.inner_text().strip() if desc_elem else f"Event at Little Five Points Community Center"
+                    description = desc_elem.inner_text().strip() if desc_elem else "Event at Little Five Points Community Center"
 
                     # Limit description length
                     if len(description) > 500:

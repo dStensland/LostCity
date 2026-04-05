@@ -141,7 +141,7 @@ def pick_best_future_date(candidates: list[str]) -> Optional[str]:
 def parse_parade_date_from_text(text: str) -> Optional[str]:
     """Extract the current parade date from page text."""
     candidates: list[str] = []
-    patterns = [rf"(?:SATURDAY,\s*)?MARCH\s+(\d{{1,2}})(?:st|nd|rd|th)?[, ]+\s*(20\d{{2}})"]
+    patterns = [r"(?:SATURDAY,\s*)?MARCH\s+(\d{1,2})(?:st|nd|rd|th)?[, ]+\s*(20\d{2})"]
 
     for pattern in patterns:
         for match in re.finditer(pattern, text, flags=re.IGNORECASE):

@@ -16,7 +16,7 @@ from dotenv import load_dotenv
 env_path = Path(__file__).parent.parent.parent / ".env"
 load_dotenv(env_path)
 
-from db import get_or_create_place, get_venue_by_slug, get_client
+from db import get_or_create_place, get_venue_by_slug
 import logging
 
 logging.basicConfig(level=logging.INFO)

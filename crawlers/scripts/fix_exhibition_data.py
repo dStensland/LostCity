@@ -29,7 +29,7 @@ def fix_serial_killer_exhibit():
     }).eq("id", event_id).execute()
 
     if result.data:
-        print(f"  Updated event: is_recurring=False, subcategory=exhibition")
+        print("  Updated event: is_recurring=False, subcategory=exhibition")
     else:
         print(f"  Warning: event {event_id} not found or not updated")
 
@@ -46,7 +46,7 @@ def fix_serial_killer_exhibit():
         }).eq("id", series_id).execute()
 
         if result.data:
-            print(f"  Updated series: series_type=exhibition")
+            print("  Updated series: series_type=exhibition")
         else:
             print(f"  Warning: series {series_id} not found or not updated")
     else:

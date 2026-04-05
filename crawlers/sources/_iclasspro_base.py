@@ -474,7 +474,7 @@ def _build_event_record(
     content_hash = generate_content_hash(title, venue_name, hash_key)
 
     # Series hint: each distinct class is a weekly series
-    class_id = cls.get("id")
+    cls.get("id")
     series_hint = {
         "series_type": "class_series",
         "series_title": title,

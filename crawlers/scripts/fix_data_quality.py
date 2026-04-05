@@ -7,7 +7,6 @@ Fixes duplicates, permanent attractions, invalid categories, and garbage titles.
 from db import get_client
 from collections import defaultdict, Counter
 import re
-import sys
 
 def main():
     supabase = get_client()
@@ -49,7 +48,7 @@ def main():
 
     for key, events in duplicate_groups.items():
         sorted_events = sorted(events, key=lambda x: x["created_at"])
-        keeper = sorted_events[0]
+        sorted_events[0]
         dupes = sorted_events[1:]
 
         for dupe in dupes:
@@ -87,7 +86,7 @@ def main():
         all_events.extend(batch.data)
         offset += 1000
 
-    title_counts = Counter(e["title"] for e in all_events)
+    Counter(e["title"] for e in all_events)
 
     # Permanent attractions to delete (based on analysis)
     permanent_attractions = [
@@ -210,7 +209,7 @@ def main():
     print("\n" + "=" * 80)
     print("FIXES APPLIED SUCCESSFULLY")
     print("=" * 80)
-    print(f"\nSummary:")
+    print("\nSummary:")
     print(f"  - Deleted {deleted_dupes} duplicate events")
     print(f"  - Deleted {deleted_permanent} permanent attraction events")
     print(f"  - Fixed {fixed_cats} invalid categories")

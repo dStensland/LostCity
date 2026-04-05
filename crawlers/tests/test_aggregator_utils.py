@@ -2,7 +2,6 @@
 Tests for aggregator_utils.py — shared utilities for aggregator crawlers.
 """
 
-import pytest
 import sys
 import os
 

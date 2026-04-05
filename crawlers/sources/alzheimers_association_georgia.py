@@ -24,7 +24,7 @@ from __future__ import annotations
 
 import re
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Optional
 
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeout
@@ -324,7 +324,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 for event_elem in events:
                     try:
                         event_text = event_elem.inner_text()
-                        event_html = event_elem.inner_html()
+                        event_elem.inner_html()
 
                         # Extract title (usually first/largest text or h2/h3)
                         title_elem = event_elem.query_selector("h1, h2, h3, h4, .title, .event-title, [class*='title'], a[href*='event']")

@@ -16,11 +16,9 @@ Usage:
 
 import argparse
 import logging
-import sys
 from typing import Any
 
 from db import get_client
-from tag_inference import infer_tags
 
 logging.basicConfig(
     level=logging.INFO,

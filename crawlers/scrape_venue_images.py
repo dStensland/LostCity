@@ -13,7 +13,6 @@ Usage:
     python scrape_venue_images.py --dry-run
 """
 
-import os
 import sys
 import time
 import logging
@@ -49,18 +48,43 @@ MIN_HEIGHT = 300
 
 # Skip these domains (CDNs without useful images, social media, etc.)
 SKIP_DOMAINS = {
-    "facebook.com", "twitter.com", "instagram.com", "linkedin.com",
-    "google.com", "gstatic.com", "googleusercontent.com",
-    "gravatar.com", "wp.com", "wordpress.com",
+    "facebook.com",
+    "twitter.com",
+    "instagram.com",
+    "linkedin.com",
+    "google.com",
+    "gstatic.com",
+    "googleusercontent.com",
+    "gravatar.com",
+    "wp.com",
+    "wordpress.com",
 }
 
 # Skip images with these patterns (logos, icons, etc.)
 SKIP_PATTERNS = [
-    "logo", "icon", "favicon", "sprite", "button", "arrow",
-    "facebook", "twitter", "instagram", "linkedin", "pinterest",
-    "share", "social", "email", "print", "rss",
-    "placeholder", "default", "blank", "spacer",
-    "1x1", "pixel", "tracking",
+    "logo",
+    "icon",
+    "favicon",
+    "sprite",
+    "button",
+    "arrow",
+    "facebook",
+    "twitter",
+    "instagram",
+    "linkedin",
+    "pinterest",
+    "share",
+    "social",
+    "email",
+    "print",
+    "rss",
+    "placeholder",
+    "default",
+    "blank",
+    "spacer",
+    "1x1",
+    "pixel",
+    "tracking",
 ]
 
 
@@ -86,13 +110,17 @@ def is_valid_image_url(url: str) -> bool:
         for skip in SKIP_DOMAINS:
             if skip in domain:
                 return False
-    except:
+    except Exception:
         return False
 
     # Should look like an image
     image_extensions = (".jpg", ".jpeg", ".png", ".webp", ".gif")
-    has_extension = any(url_lower.endswith(ext) or f"{ext}?" in url_lower for ext in image_extensions)
-    has_image_path = "/image" in url_lower or "/photo" in url_lower or "/img" in url_lower
+    has_extension = any(
+        url_lower.endswith(ext) or f"{ext}?" in url_lower for ext in image_extensions
+    )
+    has_image_path = (
+        "/image" in url_lower or "/photo" in url_lower or "/img" in url_lower
+    )
 
     return has_extension or has_image_path or "cdn" in url_lower
 
@@ -149,7 +177,7 @@ def get_hero_image(soup: BeautifulSoup, base_url: str) -> Optional[str]:
                     absolute = urljoin(base_url, src)
                     if is_valid_image_url(absolute):
                         return absolute
-        except:
+        except Exception:
             continue
 
     return None
@@ -177,7 +205,7 @@ def get_large_image(soup: BeautifulSoup, base_url: str) -> Optional[str]:
             h = int(str(height).replace("px", ""))
             if w >= MIN_WIDTH and h >= MIN_HEIGHT:
                 return absolute
-        except:
+        except Exception:
             pass
 
         # If no dimensions, check if it looks like a content image
@@ -189,8 +217,10 @@ def get_large_image(soup: BeautifulSoup, base_url: str) -> Optional[str]:
                 break
             parent_class = " ".join(parent.get("class", []))
             parent_id = parent.get("id", "")
-            if any(x in parent_class.lower() or x in parent_id.lower()
-                   for x in ["nav", "footer", "sidebar", "menu", "widget"]):
+            if any(
+                x in parent_class.lower() or x in parent_id.lower()
+                for x in ["nav", "footer", "sidebar", "menu", "widget"]
+            ):
                 skip = True
                 break
             parent = parent.parent
@@ -204,12 +234,7 @@ def get_large_image(soup: BeautifulSoup, base_url: str) -> Optional[str]:
 def scrape_image_from_website(url: str) -> Optional[str]:
     """Scrape a hero/og image from a website."""
     try:
-        response = requests.get(
-            url,
-            headers=HEADERS,
-            timeout=10,
-            allow_redirects=True
-        )
+        response = requests.get(url, headers=HEADERS, timeout=10, allow_redirects=True)
         response.raise_for_status()
 
         soup = BeautifulSoup(response.text, "html.parser")
@@ -247,9 +272,11 @@ def get_venues_needing_images(
     """Get venues that have websites but no images."""
     client = get_client()
 
-    query = client.table("places").select(
-        "id, name, slug, website, image_url, venue_type"
-    ).eq("is_active", True)
+    query = (
+        client.table("places")
+        .select("id, name, slug, website, image_url, venue_type")
+        .eq("is_active", True)
+    )
 
     # Must have website
     query = query.not_.is_("website", "null")
@@ -273,7 +300,9 @@ def update_venue_image(venue_id: int, image_url: str, dry_run: bool = False) -> 
 
     client = get_client()
     try:
-        client.table("places").update({"image_url": image_url}).eq("id", venue_id).execute()
+        client.table("places").update({"image_url": image_url}).eq(
+            "id", venue_id
+        ).execute()
         return True
     except Exception as e:
         logger.error(f"    Update error: {e}")
@@ -282,9 +311,13 @@ def update_venue_image(venue_id: int, image_url: str, dry_run: bool = False) -> 
 
 def main():
     parser = argparse.ArgumentParser(description="Scrape images from venue websites")
-    parser.add_argument("--venue-type", help="Filter by venue type (bar, restaurant, etc.)")
+    parser.add_argument(
+        "--venue-type", help="Filter by venue type (bar, restaurant, etc.)"
+    )
     parser.add_argument("--limit", type=int, default=50, help="Max venues to process")
-    parser.add_argument("--dry-run", action="store_true", help="Preview without updating")
+    parser.add_argument(
+        "--dry-run", action="store_true", help="Preview without updating"
+    )
     args = parser.parse_args()
 
     logger.info("=" * 60)

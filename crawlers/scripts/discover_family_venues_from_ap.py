@@ -21,7 +21,7 @@ import argparse
 import logging
 import re
 import time
-from collections import Counter, defaultdict
+from collections import Counter
 from datetime import date
 from html import unescape
 from typing import Optional
@@ -264,7 +264,7 @@ def print_report(venues: dict[str, dict], existing: dict[str, Optional[str]]):
     new_leads = total - covered
 
     print(f"\n{'='*70}")
-    print(f"ATLANTA PARENT VENUE DISCOVERY REPORT")
+    print("ATLANTA PARENT VENUE DISCOVERY REPORT")
     print(f"{'='*70}")
     print(f"Total unique venues: {total}")
     print(f"Already covered:     {covered}")
@@ -277,7 +277,7 @@ def print_report(venues: dict[str, dict], existing: dict[str, Optional[str]]):
     # New leads (not yet covered)
     new_venues = [v for v in sorted_venues if existing.get(v["slug"]) is None]
     if new_venues:
-        print(f"\n--- NEW VENUE LEADS (build crawlers for these) ---\n")
+        print("\n--- NEW VENUE LEADS (build crawlers for these) ---\n")
         print(f"{'Venue':<40} {'City':<20} {'Events':>6}  {'Top Categories'}")
         print(f"{'-'*40} {'-'*20} {'-'*6}  {'-'*30}")
         for v in new_venues[:50]:

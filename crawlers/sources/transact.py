@@ -88,7 +88,7 @@ def parse_homepage(html: str, today: date | None = None) -> dict:
     today = today or datetime.now().date()
     event = _parse_event_jsonld(html)
 
-    start_dt = datetime.fromisoformat(event["startDate"])
+    datetime.fromisoformat(event["startDate"])
     end_dt = datetime.fromisoformat(event["endDate"])
     if end_dt.date() < today:
         raise ValueError("TRANSACT homepage only exposes a past-dated cycle")

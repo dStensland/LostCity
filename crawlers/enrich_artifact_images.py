@@ -13,16 +13,13 @@ Usage:
     python enrich_artifact_images.py --limit 20
 """
 
-import os
 import sys
 import time
-import json
 import argparse
 import logging
 import requests
 from pathlib import Path
 from typing import Optional
-from urllib.parse import quote
 from dotenv import load_dotenv
 
 env_path = Path(__file__).parent.parent / ".env"
@@ -332,7 +329,7 @@ def enrich_images(dry_run: bool = False, limit: int = 0):
 
         # Fallback to Commons search
         if not img_url:
-            logger.info(f"    No Wikipedia image, trying Commons...")
+            logger.info("    No Wikipedia image, trying Commons...")
             img_url = search_commons_image(name)
 
         if img_url:
@@ -344,7 +341,7 @@ def enrich_images(dry_run: bool = False, limit: int = 0):
                 ).eq("id", v["id"]).execute()
                 logger.info(f"    Updated venue {v['id']}")
         else:
-            logger.info(f"    NOT FOUND")
+            logger.info("    NOT FOUND")
             not_found += 1
 
         # Rate limit: Wikipedia asks for 1 req/sec for bots

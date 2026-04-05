@@ -14,7 +14,7 @@ import argparse
 import time
 import logging
 from typing import Optional, Tuple
-from urllib.parse import urljoin, urlparse
+from urllib.parse import urljoin
 
 import requests
 from bs4 import BeautifulSoup

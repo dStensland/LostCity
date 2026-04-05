@@ -16,7 +16,12 @@ from typing import Optional
 
 from playwright.sync_api import sync_playwright
 
-from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
+from db import (
+    get_or_create_place,
+    insert_event,
+    find_event_by_hash,
+    smart_update_existing_event,
+)
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -49,8 +54,16 @@ PROGRAM_TYPES = {
     "yoga": ("fitness", "yoga", ["cancer", "yoga", "free", "wellness"]),
     "nutrition": ("learning", "workshop", ["cancer", "nutrition", "free"]),
     "cooking": ("learning", "workshop", ["cancer", "nutrition", "free", "cooking"]),
-    "stress reduction": ("wellness", None, ["cancer", "meditation", "free", "stress-relief"]),
-    "stress management": ("wellness", None, ["cancer", "meditation", "free", "stress-relief"]),
+    "stress reduction": (
+        "wellness",
+        None,
+        ["cancer", "meditation", "free", "stress-relief"],
+    ),
+    "stress management": (
+        "wellness",
+        None,
+        ["cancer", "meditation", "free", "stress-relief"],
+    ),
     "meditation": ("wellness", None, ["cancer", "meditation", "free"]),
     "mindfulness": ("wellness", None, ["cancer", "meditation", "free", "mindfulness"]),
     "education": ("learning", None, ["cancer", "education", "free"]),
@@ -65,7 +78,9 @@ PROGRAM_TYPES = {
 
 def parse_time(time_text: str) -> Optional[str]:
     """Parse time from '10:00 AM' or '10:00 a.m.' format."""
-    match = re.search(r"(\d{1,2}):(\d{2})\s*(am|pm|a\.m\.|p\.m\.)", time_text, re.IGNORECASE)
+    match = re.search(
+        r"(\d{1,2}):(\d{2})\s*(am|pm|a\.m\.|p\.m\.)", time_text, re.IGNORECASE
+    )
     if match:
         hour, minute, period = match.groups()
         hour = int(hour)
@@ -84,7 +99,7 @@ def parse_date(date_text: str) -> Optional[str]:
     match = re.search(
         r"(January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d{1,2})(?:,?\s+(\d{4}))?",
         date_text,
-        re.IGNORECASE
+        re.IGNORECASE,
     )
     if match:
         month = match.group(1)
@@ -124,33 +139,55 @@ def parse_date(date_text: str) -> Optional[str]:
     return None
 
 
-def determine_category_and_tags(title: str, description: str = "") -> tuple[str, Optional[str], list[str]]:
+def determine_category_and_tags(
+    title: str, description: str = ""
+) -> tuple[str, Optional[str], list[str]]:
     """Determine category based on program type."""
     text = f"{title} {description}".lower()
 
     # Check each program type
     for keyword, (category, subcategory, tags) in PROGRAM_TYPES.items():
-        if re.search(r'\b' + re.escape(keyword) + r'\b', text):
+        if re.search(r"\b" + re.escape(keyword) + r"\b", text):
             return category, subcategory, tags
 
     # Default to wellness
     return "wellness", None, ["cancer", "free"]
 
 
-def _extract_event_fields(lines: list[str], date_index: int) -> tuple[Optional[str], Optional[str], Optional[str]]:
+def _extract_event_fields(
+    lines: list[str], date_index: int
+) -> tuple[Optional[str], Optional[str], Optional[str]]:
     """Extract title, start_time, and description for a calendar row anchored at a date line."""
     title = None
     start_time = None
     description = None
 
     skip_keywords = [
-        "calendar", "view", "month", "week", "day",
-        "next", "previous", "today", "register",
-        "more info", "details", "location:",
-        "event requires", "presented by:", "optional equipment:",
-        "after you register", "you will receive",
-        "online", "virtual", "in person", "offsite", "all selected", "show all",
-        "csc atlanta", "register for a program",
+        "calendar",
+        "view",
+        "month",
+        "week",
+        "day",
+        "next",
+        "previous",
+        "today",
+        "register",
+        "more info",
+        "details",
+        "location:",
+        "event requires",
+        "presented by:",
+        "optional equipment:",
+        "after you register",
+        "you will receive",
+        "online",
+        "virtual",
+        "in person",
+        "offsite",
+        "all selected",
+        "show all",
+        "csc atlanta",
+        "register for a program",
     ]
     address_re = re.compile(
         r"\d{3,5}\s+\w.*(?:road|rd|street|st|ave|avenue|blvd|drive|dr|way|suite|ste|ga\s+\d{5})",
@@ -200,7 +237,9 @@ def _extract_event_fields(lines: list[str], date_index: int) -> tuple[Optional[s
                 continue
             if title and not description and 20 < len(check_line) < 300:
                 lower = check_line.lower()
-                if not any(skip in lower for skip in skip_keywords) and not address_re.search(check_line):
+                if not any(
+                    skip in lower for skip in skip_keywords
+                ) and not address_re.search(check_line):
                     description = check_line
 
     return title, start_time, description
@@ -250,7 +289,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             page.wait_for_timeout(2000)
                             logger.info("Switched to list view")
                             break
-                    except:
+                    except Exception:
                         pass
             except Exception as e:
                 logger.debug(f"Could not find list view button: {e}")
@@ -298,8 +337,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     events_found += 1
 
-                    content_hash = generate_content_hash(title, "Cancer Support Community Atlanta", date_str)
-
+                    content_hash = generate_content_hash(
+                        title, "Cancer Support Community Atlanta", date_str
+                    )
 
                     # Determine category and tags
                     category, subcategory, tags = determine_category_and_tags(
@@ -307,7 +347,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     )
 
                     # Build full description
-                    full_description = description if description else "Free cancer support program."
+                    full_description = (
+                        description if description else "Free cancer support program."
+                    )
                     if "support group" in title.lower():
                         full_description = f"Support group for people affected by cancer. {full_description}"
                     elif "exercise" in title.lower() or "yoga" in title.lower():

@@ -18,7 +18,7 @@ from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeo
 from classify import classify_rules
 from db import get_or_create_place, insert_event, find_event_by_hash
 from dedupe import generate_content_hash
-from utils import extract_images_from_page, normalize_time_format
+from utils import extract_images_from_page
 
 logger = logging.getLogger(__name__)
 

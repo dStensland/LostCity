@@ -4,7 +4,6 @@ Comprehensive crawler audit script.
 Checks for import errors, invalid categories, and common anti-patterns.
 """
 
-import os
 import re
 import sys
 import importlib

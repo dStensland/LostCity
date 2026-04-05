@@ -7,7 +7,6 @@ Uses Inffuse calendar API via Google Calendar integration.
 from __future__ import annotations
 
 import logging
-import re
 from datetime import datetime, timedelta
 from typing import Optional
 
@@ -175,7 +174,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             location = event.get("location", "").strip()
 
             # Build full description
-            full_description = f"Craft class at The Beehive ATL"
+            full_description = "Craft class at The Beehive ATL"
             if description:
                 full_description = description
             if location and location.lower() not in ["", "the beehive atl"]:

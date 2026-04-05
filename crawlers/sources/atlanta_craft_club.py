@@ -9,15 +9,13 @@ Workshops rotate between venues: 142 Mangum St SW, Lore, BrewDog, Haven Yoga, et
 from __future__ import annotations
 
 import json
-import re
 import logging
 from datetime import datetime
 from typing import Optional
-from urllib.parse import urljoin
 
 from playwright.sync_api import sync_playwright
 
-from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
+from db import insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)

@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import logging
 import re
-from datetime import datetime, date
+from datetime import date
 from typing import Optional
 
 import requests
@@ -26,7 +26,6 @@ from db import (
     find_event_by_hash,
     get_or_create_place,
     insert_event,
-    remove_stale_source_events,
     smart_update_existing_event,
 )
 from dedupe import generate_content_hash

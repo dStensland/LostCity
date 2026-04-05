@@ -174,9 +174,9 @@ def fetch_editorial_snippets(client, venue_ids: list[int]) -> dict[int, str]:
             # Keep best snippet per venue (first = most recent)
             if vid not in snippets:
                 source = row.get("source_key", "")
-                title = row.get("article_title", "")
+                row.get("article_title", "")
                 # Format as attribution
-                source_label = {
+                {
                     "eater_atlanta": "Eater Atlanta",
                     "infatuation_atlanta": "The Infatuation",
                     "rough_draft_atlanta": "Rough Draft Atlanta",
@@ -311,7 +311,7 @@ def main():
     if errors:
         print(f"Errors:                 {errors}")
     if not write:
-        print(f"\n  DRY RUN — use --allow-production-writes to apply")
+        print("\n  DRY RUN — use --allow-production-writes to apply")
 
 
 if __name__ == "__main__":

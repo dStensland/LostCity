@@ -858,7 +858,7 @@ def main():
     if total_errors:
         print(f"Errors:                           {total_errors}")
     if not write:
-        print(f"\n  DRY RUN — use --allow-production-writes to apply")
+        print("\n  DRY RUN — use --allow-production-writes to apply")
 
 
 if __name__ == "__main__":

@@ -8,7 +8,6 @@ plain article rather than a structured events feed. Parse that article directly.
 from __future__ import annotations
 
 import logging
-import re
 from typing import Optional
 
 import requests

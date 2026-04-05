@@ -69,7 +69,7 @@ def parse_show_dates(text: str, today: date | None = None) -> list[dict]:
     month_name, start_day_str, end_day_str, year_str = range_match.groups()
     month = datetime.strptime(month_name[:3], "%b").month
     year = int(year_str)
-    start_date = date(year, month, int(start_day_str))
+    date(year, month, int(start_day_str))
     end_date = date(year, month, int(end_day_str))
     if end_date < today:
         raise ValueError("Atlanta Shoe Market page only exposes a past-dated show")

@@ -24,7 +24,7 @@ from playwright.sync_api import sync_playwright
 
 from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
-from utils import extract_images_from_page, extract_event_links, find_event_url
+from utils import extract_images_from_page, extract_event_links
 
 logger = logging.getLogger(__name__)
 
@@ -252,7 +252,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             # Extract images and event links
             image_map = extract_images_from_page(page)
-            event_links = extract_event_links(page, BASE_URL)
+            extract_event_links(page, BASE_URL)
 
             # The Events Calendar uses article elements with tribe-events classes
             # Could be upcoming (.tribe-events-calendar-list__event) or past (.tribe-events-calendar-latest-past__event)

@@ -29,7 +29,7 @@ from typing import Optional
 from urllib.parse import urljoin
 
 import requests
-from bs4 import BeautifulSoup, Tag
+from bs4 import BeautifulSoup
 
 from db import get_or_create_place, insert_event, find_event_by_hash
 from dedupe import generate_content_hash

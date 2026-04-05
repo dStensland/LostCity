@@ -65,7 +65,7 @@ def parse_time(date_str: str) -> Optional[str]:
 def categorize_event(event_data: dict) -> tuple[str, str]:
     """Determine category and subcategory from event data."""
     title = event_data.get("title", "").lower()
-    description = event_data.get("description_text", "").lower()
+    event_data.get("description_text", "").lower()
 
     # Check event type filters
     filters = event_data.get("filters", {})

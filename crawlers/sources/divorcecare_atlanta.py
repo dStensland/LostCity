@@ -14,12 +14,12 @@ from __future__ import annotations
 
 import re
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Optional
 
 from playwright.sync_api import sync_playwright
 
-from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -68,7 +68,7 @@ def parse_date_string(date_str: str) -> Optional[str]:
         r"(January|February|March|April|May|June|July|August|September|October|November|December)\s+"
         r"(\d{1,2})",
         date_str,
-        re.IGNORECASE
+        re.IGNORECASE,
     )
     if match:
         month = match.group(2)
@@ -101,12 +101,14 @@ def parse_time_range(time_str: str) -> tuple[Optional[str], Optional[str]]:
     match = re.search(
         r"(\d{1,2})(?::(\d{2}))?(am|pm)?\s*[–-]\s*(\d{1,2})(?::(\d{2}))?(am|pm)",
         time_str,
-        re.IGNORECASE
+        re.IGNORECASE,
     )
     if match:
         start_hour = int(match.group(1))
         start_min = match.group(2) or "00"
-        start_period = match.group(3) or match.group(6)  # Use end period if start not specified
+        start_period = match.group(3) or match.group(
+            6
+        )  # Use end period if start not specified
         end_hour = int(match.group(4))
         end_min = match.group(5) or "00"
         end_period = match.group(6)
@@ -147,7 +149,7 @@ def parse_date_range(range_str: str) -> tuple[Optional[str], Optional[str]]:
         r"(\d{1,2}),?\s*"
         r"(\d{4})",
         range_str,
-        re.IGNORECASE
+        re.IGNORECASE,
     )
     if match:
         start_month = match.group(1)
@@ -157,7 +159,9 @@ def parse_date_range(range_str: str) -> tuple[Optional[str], Optional[str]]:
         year = int(match.group(5))
 
         try:
-            start_date = datetime.strptime(f"{start_month} {start_day} {year}", "%B %d %Y")
+            start_date = datetime.strptime(
+                f"{start_month} {start_day} {year}", "%B %d %Y"
+            )
             end_date = datetime.strptime(f"{end_month} {end_day} {year}", "%B %d %Y")
             return start_date.strftime("%Y-%m-%d"), end_date.strftime("%Y-%m-%d")
         except ValueError:
@@ -174,12 +178,12 @@ def parse_address_line(addr_line: str) -> tuple[str, str, str]:
       - "240 Maynard Terrace SE, Atlanta, GA" -> ("240 Maynard Terrace SE", "Atlanta", "GA")
     """
     # Pattern: "street, city, state" or "city, state"
-    parts = [p.strip() for p in addr_line.split(',')]
+    parts = [p.strip() for p in addr_line.split(",")]
 
     if len(parts) >= 2:
         state = parts[-1].strip()
         city = parts[-2].strip()
-        street = ', '.join(parts[:-2]).strip() if len(parts) > 2 else ""
+        street = ", ".join(parts[:-2]).strip() if len(parts) > 2 else ""
         return street, city, state
 
     return "", "", ""
@@ -290,7 +294,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 page.wait_for_timeout(3000)
 
                 # Enter zip code in search
-                search_input = page.query_selector('input[placeholder="Postal code or city/state"]')
+                search_input = page.query_selector(
+                    'input[placeholder="Postal code or city/state"]'
+                )
                 if not search_input:
                     logger.warning(f"Search input not found for {zip_code}")
                     page.close()
@@ -302,7 +308,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 # Wait for results to load
                 try:
                     page.wait_for_selector("text=DivorceCare Group", timeout=10000)
-                except:
+                except Exception:
                     logger.warning(f"No results loaded for {zip_code}")
                     page.close()
                     continue
@@ -393,10 +399,12 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 day_match = re.search(
                     r"(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)",
                     datetime_line,
-                    re.IGNORECASE
+                    re.IGNORECASE,
                 )
                 day_of_week = day_match.group(1) if day_match else None
-                recurrence_pattern = f"Weekly on {day_of_week}s" if day_of_week else None
+                recurrence_pattern = (
+                    f"Weekly on {day_of_week}s" if day_of_week else None
+                )
 
                 # Build event title
                 title = f"DivorceCare Support Group - {church_name}"
@@ -426,7 +434,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 if has_childcare:
                     description_parts.append("Childcare is available.")
                 if range_start and range_end:
-                    description_parts.append(f"This session runs from {range_start} to {range_end}.")
+                    description_parts.append(
+                        f"This session runs from {range_start} to {range_end}."
+                    )
                 description_parts.append(
                     "DivorceCare is a divorce recovery support group where you can find help and healing "
                     "for the hurt of separation and divorce. "
@@ -468,7 +478,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 logger.info(f"Added: {church_name} on {start_date}")
 
             except Exception as e:
-                logger.error(f"Failed to process group {group.get('church_name', 'unknown')}: {e}")
+                logger.error(
+                    f"Failed to process group {group.get('church_name', 'unknown')}: {e}"
+                )
                 continue
 
         logger.info(

@@ -42,7 +42,6 @@ from datetime import date, datetime, timedelta
 from typing import Optional
 
 import requests
-from bs4 import BeautifulSoup
 
 from db import (
     get_or_create_place,

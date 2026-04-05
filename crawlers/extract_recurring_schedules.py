@@ -34,7 +34,6 @@ from config import get_config
 from llm_client import generate_text
 from db import (
     get_client,
-    get_or_create_place,
     insert_event,
     find_existing_event_for_insert,
     configure_write_mode,
@@ -370,7 +369,7 @@ def insert_recurring_event(
     """
     venue_id = venue_record["id"]
     venue_name = venue_record["name"]
-    venue_slug = venue_record["slug"]
+    venue_record["slug"]
     website = venue_record.get("website", "")
 
     day = extracted["day_of_week"]

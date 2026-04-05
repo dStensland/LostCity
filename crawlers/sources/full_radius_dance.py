@@ -262,7 +262,7 @@ def _scrape_event_detail(page, event_url: str) -> Optional[dict]:
             el = page.query_selector(selector)
             if el:
                 src = el.get_attribute("src") or el.get_attribute("data-src")
-                if src and not "logo" in src.lower():
+                if src and "logo" not in src.lower():
                     image_url = src if src.startswith("http") else BASE_URL + src
                     break
 
@@ -312,7 +312,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             # Create venue records
             seven_stages_venue_id = get_or_create_place(SEVEN_STAGES_VENUE_DATA)
-            frd_venue_id = get_or_create_place(FRD_ORG_VENUE_DATA)
+            get_or_create_place(FRD_ORG_VENUE_DATA)
 
             # Try the performances page first
             logger.info(f"Full Radius Dance: fetching {PERFORMANCES_URL}")

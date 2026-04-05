@@ -220,7 +220,6 @@ def infer_age_range(
         return None
 
     age_range: Optional[tuple[int, int]] = None
-    source = "none"
 
     # 2. Venue type lookup
     if venue_type:
@@ -229,7 +228,6 @@ def infer_age_range(
             venue_result = VENUE_TYPE_AGE_DEFAULTS[vt_key]
             if venue_result is not None:
                 age_range = venue_result
-                source = f"venue_type:{vt_key}"
 
     # 3. Category fallback
     if age_range is None and category:
@@ -238,7 +236,6 @@ def infer_age_range(
             cat_result = CATEGORY_AGE_DEFAULTS[cat_key]
             if cat_result is not None:
                 age_range = cat_result
-                source = f"category:{cat_key}"
 
     if age_range is None:
         return None
@@ -498,7 +495,6 @@ def main() -> None:
     for i in range(0, len(tagged), BATCH_SIZE):
         batch = tagged[i : i + BATCH_SIZE]
         for row in batch:
-            success = False
             for attempt in range(MAX_RETRIES):
                 try:
                     result = (
@@ -511,7 +507,6 @@ def main() -> None:
                     )
                     if result.data:
                         updated += 1
-                    success = True
                     break
                 except Exception as e:
                     err_str = str(e)

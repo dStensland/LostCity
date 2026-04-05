@@ -567,7 +567,7 @@ def main():
         result = enrich_venue(venue, dry_run=args.dry_run)
 
         if not result["matched"]:
-            logger.info(f"  ✗ No Google match")
+            logger.info("  ✗ No Google match")
             stats["skipped"] += 1
         else:
             stats["matched"] += 1

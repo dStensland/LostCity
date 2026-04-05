@@ -32,7 +32,7 @@ def main():
             "is_active": True,
         }).eq("slug", old_slug).execute()
         logger.info(f"Updated source (ID: {old_result.data[0]['id']})")
-        logger.info(f"\nRun crawler with: python main.py --source furkids")
+        logger.info("\nRun crawler with: python main.py --source furkids")
         return
 
     slug = SOURCE_DATA["slug"]
@@ -43,10 +43,10 @@ def main():
     if result.data:
         logger.info(f"Source '{slug}' already exists (ID: {result.data[0]['id']})")
         # Update to ensure it's active
-        update_result = client.table("sources").update({
+        client.table("sources").update({
             "is_active": True,
         }).eq("slug", slug).execute()
-        logger.info(f"Updated source to active")
+        logger.info("Updated source to active")
     else:
         # Create new source
         result = client.table("sources").insert(SOURCE_DATA).execute()

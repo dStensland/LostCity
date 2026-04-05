@@ -202,7 +202,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     # Extract description
                     desc_elem = container.find(class_=re.compile(r"description|summary|excerpt", re.I))
-                    description = desc_elem.get_text(strip=True) if desc_elem else f"Live event at Bridgestone Arena"
+                    description = desc_elem.get_text(strip=True) if desc_elem else "Live event at Bridgestone Arena"
 
                     # Determine category
                     category, subcategory = determine_category(title, description)

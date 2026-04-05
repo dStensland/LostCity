@@ -16,7 +16,7 @@ def activate_sources():
     
     for slug in SOURCES_TO_ACTIVATE:
         # Update source to active
-        result = client.table("sources").update({"is_active": True}).eq("slug", slug).execute()
+        client.table("sources").update({"is_active": True}).eq("slug", slug).execute()
         logger.info(f"Activated source: {slug}")
 
 if __name__ == "__main__":

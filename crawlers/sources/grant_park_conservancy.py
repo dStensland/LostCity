@@ -14,7 +14,12 @@ from typing import Optional
 import requests
 from bs4 import BeautifulSoup
 
-from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
+from db import (
+    get_or_create_place,
+    insert_event,
+    find_event_by_hash,
+    smart_update_existing_event,
+)
 from dedupe import generate_content_hash
 from entity_lanes import SourceEntityCapabilities, TypedEntityEnvelope
 from entity_persistence import persist_typed_entity_envelope
@@ -179,7 +184,6 @@ def create_volunteer_workdays(source_id: int, venue_id: int) -> tuple[int, int]:
 
         content_hash = generate_content_hash(title, "Grant Park", start_date)
 
-
         description = (
             "Join the Grant Park Conservancy for monthly volunteer workdays! "
             "Help with park beautification, invasive species removal, planting, "
@@ -199,7 +203,13 @@ def create_volunteer_workdays(source_id: int, venue_id: int) -> tuple[int, int]:
             "is_all_day": False,
             "category": "community",
             "subcategory": None,
-            "tags": ["grant-park", "volunteer", "conservation", "outdoor", "family-friendly"],
+            "tags": [
+                "grant-park",
+                "volunteer",
+                "conservation",
+                "outdoor",
+                "family-friendly",
+            ],
             "price_min": None,
             "price_max": None,
             "price_note": None,
@@ -259,7 +269,7 @@ def parse_date(date_str: str) -> Optional[str]:
     match = re.search(
         r"(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2})",
         date_str,
-        re.IGNORECASE
+        re.IGNORECASE,
     )
     if match:
         month_str = match.group(1)[:3]
@@ -303,7 +313,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 soup = BeautifulSoup(response.text, "html.parser")
 
                 # Look for event elements
-                event_elements = soup.select(".event, .calendar-event, article, [class*='event']")
+                event_elements = soup.select(
+                    ".event, .calendar-event, article, [class*='event']"
+                )
 
                 for element in event_elements:
                     try:
@@ -325,7 +337,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         date_match = re.search(
                             r"(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2}",
                             text,
-                            re.IGNORECASE
+                            re.IGNORECASE,
                         )
                         if not date_match:
                             continue
@@ -334,18 +346,17 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         if not start_date:
                             continue
 
-                        if datetime.strptime(start_date, "%Y-%m-%d").date() < datetime.now().date():
+                        if (
+                            datetime.strptime(start_date, "%Y-%m-%d").date()
+                            < datetime.now().date()
+                        ):
                             continue
 
                         events_found += 1
 
-                        content_hash = generate_content_hash(title, "Grant Park", start_date)
-
-                        existing = find_event_by_hash(content_hash)
-                        if existing:
-                            smart_update_existing_event(existing, event_record)
-                            events_updated += 1
-                            continue
+                        content_hash = generate_content_hash(
+                            title, "Grant Park", start_date
+                        )
 
                         # Determine category
                         title_lower = title.lower()
@@ -366,7 +377,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             "source_id": source_id,
                             "place_id": venue_id,
                             "title": title,
-                            "description": f"Event at Grant Park, Atlanta's oldest park",
+                            "description": "Event at Grant Park, Atlanta's oldest park",
                             "start_date": start_date,
                             "start_time": None,
                             "end_date": None,
@@ -389,6 +400,12 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             "content_hash": content_hash,
                         }
 
+                        existing = find_event_by_hash(content_hash)
+                        if existing:
+                            smart_update_existing_event(existing, event_record)
+                            events_updated += 1
+                            continue
+
                         try:
                             insert_event(event_record)
                             events_new += 1
@@ -405,7 +422,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
             except requests.RequestException:
                 continue
 
-        logger.info(f"Grant Park Conservancy crawl complete: {events_found} found, {events_new} new, {events_updated} updated")
+        logger.info(
+            f"Grant Park Conservancy crawl complete: {events_found} found, {events_new} new, {events_updated} updated"
+        )
 
     except Exception as e:
         logger.error(f"Failed to crawl Grant Park Conservancy: {e}")

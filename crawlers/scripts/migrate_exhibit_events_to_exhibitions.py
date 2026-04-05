@@ -17,7 +17,6 @@ import argparse
 import logging
 import re
 import sys
-from datetime import date, datetime
 
 sys.path.insert(0, ".")
 from db.client import get_client

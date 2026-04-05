@@ -112,7 +112,7 @@ def parse_source_pages(
     start_day = int(date_match.group(1))
     end_day = int(date_match.group(2))
     year = int(date_match.group(3))
-    start_date = date(year, 8, start_day)
+    date(year, 8, start_day)
     end_date = date(year, 8, end_day)
     if end_date < today:
         raise ValueError("IWF pages only expose a past-dated cycle")

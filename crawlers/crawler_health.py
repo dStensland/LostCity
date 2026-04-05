@@ -660,7 +660,7 @@ def print_health_report():
     print("=" * 60)
 
     today = summary["today"]
-    print(f"\nToday's Crawls:")
+    print("\nToday's Crawls:")
     print(f"  Total: {today['total_crawls']}")
     print(f"  Successful: {today['successful']} ({today['success_rate']:.1%})")
     print(f"  Failed: {today['failed']}")
@@ -669,12 +669,12 @@ def print_health_report():
     print(f"  Events Found: {today['events_found']}")
 
     if today["error_breakdown"]:
-        print(f"\n  Error Breakdown:")
+        print("\n  Error Breakdown:")
         for error_type, count in today["error_breakdown"].items():
             print(f"    {error_type}: {count}")
 
     sources = summary["sources"]
-    print(f"\nSource Health Distribution:")
+    print("\nSource Health Distribution:")
     print(f"  🟢 Healthy (80-100): {sources['healthy']}")
     print(f"  🟡 Degraded (50-79): {sources['degraded']}")
     print(f"  🔴 Unhealthy (<50): {sources['unhealthy']}")
@@ -685,7 +685,7 @@ def print_health_report():
     # Show unhealthy sources
     unhealthy = get_unhealthy_sources(min_failures=3)
     if unhealthy:
-        print(f"\n⚠️  Sources with 3+ consecutive failures:")
+        print("\n⚠️  Sources with 3+ consecutive failures:")
         for h in unhealthy[:10]:  # Show top 10
             print(f"  {h.source_slug}: {h.consecutive_failures} failures, "
                   f"score={h.health_score:.0f}, last_error={h.last_error_type}")

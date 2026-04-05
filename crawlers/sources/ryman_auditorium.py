@@ -189,7 +189,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                                 image_url = BASE_URL + image_url
 
                     # Build description
-                    description = f"Live performance at the historic Ryman Auditorium"
+                    description = "Live performance at the historic Ryman Auditorium"
 
                     events_found += 1
 

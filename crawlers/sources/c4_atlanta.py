@@ -10,7 +10,6 @@ from __future__ import annotations
 import re
 import logging
 from datetime import datetime
-from typing import Optional
 
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeout
 
@@ -154,7 +153,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         logger.info(f"Found {len(elements)} elements with selector: {selector}")
                         events = elements
                         break
-                except Exception as e:
+                except Exception:
                     continue
 
             # If no structured events found, parse body text

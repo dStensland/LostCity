@@ -22,8 +22,6 @@ def test_hash_case_insensitive():
     assert h1 == h2
 
 
-import pytest
-from unittest.mock import patch
 
 
 def test_insert_exhibition_rejects_junk_titles():

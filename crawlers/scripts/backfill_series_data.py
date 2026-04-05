@@ -64,7 +64,7 @@ def backfill_descriptions(client, dry_run=False):
         else:
             skipped_count += 1
     
-    print(f"\nResults:")
+    print("\nResults:")
     print(f"  Updated: {updated_count}")
     print(f"  Skipped (no event descriptions): {skipped_count}")
     
@@ -116,7 +116,7 @@ def backfill_images(client, dry_run=False):
         else:
             skipped_count += 1
     
-    print(f"\nResults:")
+    print("\nResults:")
     print(f"  Updated: {updated_count}")
     print(f"  Skipped (no event images): {skipped_count}")
     

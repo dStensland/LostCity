@@ -15,7 +15,12 @@ from typing import Optional
 
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeout
 
-from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
+from db import (
+    get_or_create_place,
+    insert_event,
+    find_event_by_hash,
+    smart_update_existing_event,
+)
 from dedupe import generate_content_hash
 from utils import extract_images_from_page, extract_event_links, find_event_url
 
@@ -90,7 +95,7 @@ def parse_time(time_text: str) -> Optional[str]:
     - '7pm'
     - '7:30pm'
     """
-    time_match = re.search(r'(\d{1,2}):?(\d{2})?\s*(am|pm)', time_text, re.IGNORECASE)
+    time_match = re.search(r"(\d{1,2}):?(\d{2})?\s*(am|pm)", time_text, re.IGNORECASE)
     if time_match:
         hour, minute, period = time_match.groups()
         hour = int(hour)
@@ -108,7 +113,10 @@ def determine_category(title: str, description: str = "") -> str:
     text = f"{title} {description}".lower()
 
     # Giving Kitchen events are primarily community/fundraising
-    if any(word in text for word in ["fundraiser", "gala", "benefit", "auction", "campaign"]):
+    if any(
+        word in text
+        for word in ["fundraiser", "gala", "benefit", "auction", "campaign"]
+    ):
         return "community"
     if any(word in text for word in ["volunteer", "service"]):
         return "community"
@@ -148,7 +156,10 @@ def is_free_event(title: str, description: str = "") -> bool:
         return True
 
     # Check for paid indicators
-    if any(word in text for word in ["$", "ticket", "registration fee", "cost:", "price:", "donation"]):
+    if any(
+        word in text
+        for word in ["$", "ticket", "registration fee", "cost:", "price:", "donation"]
+    ):
         return False
 
     # Default to False for fundraising org
@@ -209,9 +220,11 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     elements = page.query_selector_all(selector)
                     if elements and len(elements) > 0:
                         events = elements
-                        logger.info(f"Found {len(events)} events using selector: {selector}")
+                        logger.info(
+                            f"Found {len(events)} events using selector: {selector}"
+                        )
                         break
-                except:
+                except Exception:
                     continue
 
             if not events:
@@ -233,7 +246,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         title = None
                         if i > 0:
                             potential_title = lines[i - 1]
-                            if len(potential_title) > 10 and not potential_title.startswith("http"):
+                            if len(
+                                potential_title
+                            ) > 10 and not potential_title.startswith("http"):
                                 title = potential_title
 
                         # Next lines might be description
@@ -254,13 +269,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
                                 title, "Giving Kitchen", date_data["start_date"]
                             )
 
-
                             # Get specific event URL
 
-
                             event_url = find_event_url(title, event_links, EVENTS_URL)
-
-
 
                             event_record = {
                                 "source_id": source_id,
@@ -280,9 +291,20 @@ def crawl(source: dict) -> tuple[int, int, int]:
                                 "price_note": None,
                                 "is_free": is_free,
                                 "source_url": event_url,
-                                "ticket_url": event_url if event_url != (EVENTS_URL if "EVENTS_URL" in dir() else BASE_URL) else None,
+                                "ticket_url": (
+                                    event_url
+                                    if event_url
+                                    != (
+                                        EVENTS_URL
+                                        if "EVENTS_URL" in dir()
+                                        else BASE_URL
+                                    )
+                                    else None
+                                ),
                                 "image_url": image_map.get(title),
-                                "raw_text": f"{title} | {line} | {description[:200]}"[:500],
+                                "raw_text": f"{title} | {line} | {description[:200]}"[
+                                    :500
+                                ],
                                 "extraction_confidence": 0.75,
                                 "is_recurring": False,
                                 "recurrence_rule": None,
@@ -299,7 +321,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             try:
                                 insert_event(event_record)
                                 events_new += 1
-                                logger.info(f"Added: {title} on {date_data['start_date']}")
+                                logger.info(
+                                    f"Added: {title} on {date_data['start_date']}"
+                                )
                             except Exception as e:
                                 logger.error(f"Failed to insert: {title}: {e}")
 
@@ -357,10 +381,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                             # Get specific event URL
 
-
                             event_url = find_event_url(title, event_links, EVENTS_URL)
-
-
 
                             event_record = {
                                 "source_id": source_id,
@@ -380,7 +401,16 @@ def crawl(source: dict) -> tuple[int, int, int]:
                                 "price_note": None,
                                 "is_free": is_free,
                                 "source_url": event_url,
-                                "ticket_url": event_url if event_url != (EVENTS_URL if "EVENTS_URL" in dir() else BASE_URL) else None,
+                                "ticket_url": (
+                                    event_url
+                                    if event_url
+                                    != (
+                                        EVENTS_URL
+                                        if "EVENTS_URL" in dir()
+                                        else BASE_URL
+                                    )
+                                    else None
+                                ),
                                 "image_url": image_map.get(title),
                                 "raw_text": f"{title} | {event_text[:300]}"[:500],
                                 "extraction_confidence": 0.8,

@@ -238,7 +238,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     # Determine category based on title and description
                     title_lower = title.lower()
-                    description_lower = description.lower()
+                    description.lower()
 
                     if any(w in title_lower for w in ["live music", "band", "acoustic", "jazz", "blues", "rock", "concert", "musician"]):
                         category, subcategory = "music", "live_music"
@@ -273,7 +273,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "source_id": source_id,
                         "place_id": venue_id,
                         "title": title[:200],
-                        "description": (description.strip() or f"Event at Brake Pad, College Park's neighborhood pub with live music")[:500],
+                        "description": (description.strip() or "Event at Brake Pad, College Park's neighborhood pub with live music")[:500],
                         "start_date": start_date,
                         "start_time": start_time,
                         "end_date": None,

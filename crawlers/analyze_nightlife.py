@@ -3,9 +3,8 @@ Analyze nightlife events coverage in the database.
 Identify gaps in new nightlife subcategories and recommend sources to fill them.
 """
 
-import sys
-from datetime import datetime, timedelta
-from collections import Counter, defaultdict
+from datetime import datetime
+from collections import Counter
 from db import get_client
 
 def analyze_nightlife():

@@ -83,13 +83,13 @@ def query_1_activity_type_distribution(events):
     total = len(events) or 1
     rows = sorted(category_counts.items(), key=lambda x: -x[1])
     print(f"\n  Total recurring events in next 7 days: {len(events)}")
-    print(f"\n  Category distribution:")
+    print("\n  Category distribution:")
     print_table(
         ["Category", "Count", "Pct"],
         [(cat, cnt, f"{cnt/total*100:.1f}%") for cat, cnt in rows]
     )
 
-    print(f"\n  Nightlife breakdown:")
+    print("\n  Nightlife breakdown:")
     print(f"    With genres: {nightlife_with_genres}")
     print(f"    Without genres (unmatched): {nightlife_no_genres}")
 
@@ -112,7 +112,7 @@ def query_2_nightlife_genre_coverage(events):
             genre_counts[g] += 1
 
     print(f"\n  Total nightlife recurring events: {len(nightlife_events)}")
-    print(f"\n  Genre distribution (unnested):")
+    print("\n  Genre distribution (unnested):")
     rows = sorted(genre_counts.items(), key=lambda x: -x[1])
     print_table(
         ["Genre", "Count"],
@@ -121,7 +121,7 @@ def query_2_nightlife_genre_coverage(events):
 
     print(f"\n  Nightlife events with NO genres: {len(no_genre_events)}")
     if no_genre_events:
-        print(f"  Sample events with no genres (up to 20):")
+        print("  Sample events with no genres (up to 20):")
         for e in no_genre_events[:20]:
             print(f"    - [{e.get('id')}] {e.get('title', '?')[:60]} (source_id={e.get('source_id')})")
 
@@ -148,7 +148,7 @@ def query_3_source_coverage(events, sources_map):
             info.get("crawl_frequency", "?"),
         ))
 
-    print(f"\n  Top 30 sources by recurring event count:")
+    print("\n  Top 30 sources by recurring event count:")
     print_table(
         ["ID", "Slug", "Name", "Count", "Frequency"],
         rows,
@@ -182,7 +182,7 @@ def query_4_neighborhood_coverage(events, venues_map):
     print(f"\n  Total neighborhoods with recurring events: {len(hood_counts)}")
     print(f"  Events with no venue/neighborhood: {no_venue_count}")
 
-    print(f"\n  Neighborhood distribution (all):")
+    print("\n  Neighborhood distribution (all):")
     print_table(
         ["Neighborhood", "Count", "Pct"],
         [(h, c, f"{c/total*100:.1f}%") for h, c in rows]
@@ -190,7 +190,7 @@ def query_4_neighborhood_coverage(events, venues_map):
 
     # Bottom 10
     if len(rows) > 10:
-        print(f"\n  LEAST covered neighborhoods (bottom 10):")
+        print("\n  LEAST covered neighborhoods (bottom 10):")
         print_table(
             ["Neighborhood", "Count"],
             rows[-10:]
@@ -290,7 +290,7 @@ def query_6_recurring_patterns(events):
 
     print(f"\n  Total unique normalized patterns: {len(pattern_data)}")
     print(f"  Patterns with count >= 3: {len(popular)}")
-    print(f"\n  Top 50 most common recurring event patterns:")
+    print("\n  Top 50 most common recurring event patterns:")
 
     rows = []
     for norm, d in popular[:50]:
@@ -333,7 +333,7 @@ def query_7_venue_types(events, venues_map):
 
     total = len(events) or 1
     rows = sorted(vtype_counts.items(), key=lambda x: -x[1])
-    print(f"\n  Venue type distribution:")
+    print("\n  Venue type distribution:")
     print_table(
         ["Venue Type", "Event Count", "Pct"],
         [(vt, cnt, f"{cnt/total*100:.1f}%") for vt, cnt in rows]
@@ -393,7 +393,7 @@ def query_8_crawler_inventory(sources_list):
         freq = s.get("crawl_frequency") or "not_set"
         freq_counts[freq] += 1
 
-    print(f"\n  Crawl frequency distribution (active sources):")
+    print("\n  Crawl frequency distribution (active sources):")
     print_table(
         ["Frequency", "Count"],
         sorted(freq_counts.items(), key=lambda x: -x[1])
@@ -516,7 +516,7 @@ def main():
             hood_counts[hood] += 1
     low_hoods = [(h, n) for h, n in hood_counts.items() if n < 5 and h != "Unknown"]
     if low_hoods:
-        print(f"\n  Neighborhoods with < 5 recurring events:")
+        print("\n  Neighborhoods with < 5 recurring events:")
         for h, n in sorted(low_hoods, key=lambda x: x[1]):
             print(f"    - {h}: {n}")
 

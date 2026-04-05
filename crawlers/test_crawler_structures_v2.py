@@ -3,7 +3,6 @@ Better DOM structure test - look for actual event list containers.
 """
 
 from playwright.sync_api import sync_playwright
-import json
 
 def test_tpac():
     """Check TPAC event structure."""
@@ -92,7 +91,7 @@ def test_smiths():
                 # Just dump the body text to see structure
                 text = page.inner_text("body")
                 lines = [l.strip() for l in text.split("\n") if l.strip()]
-                print(f"Body text lines (first 30):")
+                print("Body text lines (first 30):")
                 for i, line in enumerate(lines[:30]):
                     print(f"{i:3}: {line[:100]}")
 
@@ -138,7 +137,7 @@ def test_atlff():
                     resp = requests.get(json_url, timeout=10)
                     if resp.status_code == 200:
                         data = resp.json()
-                        print(f"✓ Squarespace JSON available!")
+                        print("✓ Squarespace JSON available!")
                         print(f"Keys: {list(data.keys())[:10]}")
 
                 break  # Success

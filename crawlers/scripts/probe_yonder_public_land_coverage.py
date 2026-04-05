@@ -269,7 +269,7 @@ def _is_low_signal_camp_name(name: str) -> bool:
 
 def source_status_summary() -> list[str]:
     lines = [
-        f"- `osm_overpass`: ready (no key required, cached HTTP acquisition)",
+        "- `osm_overpass`: ready (no key required, cached HTTP acquisition)",
         (
             "- `ridb_recreation_gov`: blocked until `RIDB_API_KEY` exists"
             if not os.getenv("RIDB_API_KEY")

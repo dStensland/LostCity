@@ -362,23 +362,18 @@ def crawl(source: dict) -> Tuple[int, int, int]:
 
                 # Categorize event based on title and description
                 title_lower = title.lower()
-                desc_lower = description.lower()
+                description.lower()
 
                 category = "community"
-                subcategory = "lecture"
 
                 if any(keyword in title_lower for keyword in ["book", "author", "writer"]):
                     category = "community"
-                    subcategory = "book-talk"
                 elif any(keyword in title_lower for keyword in ["film", "movie", "screening"]):
                     category = "film"
-                    subcategory = None
                 elif any(keyword in title_lower for keyword in ["music", "concert", "performance"]):
                     category = "music"
-                    subcategory = "concert"
                 elif any(keyword in title_lower for keyword in ["exhibition", "exhibit", "gallery"]):
                     category = "museums"
-                    subcategory = "exhibition"
 
                 # Build tags
                 tags = ["museum", "history", "presidential", "jimmy-carter", "old-fourth-ward"]

@@ -4,7 +4,6 @@ Weekly Data Quality Check
 Run this every Tuesday after daily crawl runs to track improvements
 """
 
-import sys
 from datetime import datetime
 from db import get_client
 
@@ -115,7 +114,7 @@ def main():
             source_issues[slug]["issues"] += 1
         if event.get("start_time") is None:
             source_issues[slug]["issues"] += 1
-        if event.get("price_min") is None and event.get("is_free") == False:
+        if event.get("price_min") is None and not event.get("is_free"):
             source_issues[slug]["issues"] += 1
     
     # Calculate issue rate and sort

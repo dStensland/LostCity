@@ -28,7 +28,6 @@ import re
 import urllib.request
 from datetime import date, datetime
 from typing import Optional
-from urllib.parse import urljoin
 
 from bs4 import BeautifulSoup
 

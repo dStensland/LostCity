@@ -31,8 +31,6 @@ from __future__ import annotations
 
 import argparse
 import logging
-import re
-import sys
 import time
 from collections import Counter
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -104,7 +102,7 @@ def enrich_single_event(event: dict) -> dict:
         return {}
 
     parsed = urlparse(detail_url)
-    domain = (parsed.netloc or "").lower().replace("www.", "")
+    (parsed.netloc or "").lower().replace("www.", "")
 
     try:
         html, error = fetch_html(detail_url)
@@ -358,7 +356,7 @@ def run(args: argparse.Namespace) -> None:
     remaining = total - stats.get("time_filled", 0)
     print(f"\n  Still actionable TBA after enrichment: {remaining}")
     if not args.apply and stats.get("enriched"):
-        print(f"\n  Run with --apply to write changes to DB")
+        print("\n  Run with --apply to write changes to DB")
 
 
 def parse_args() -> argparse.Namespace:

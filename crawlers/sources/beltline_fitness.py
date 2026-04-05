@@ -198,7 +198,7 @@ def parse_event_cards(text: str, venue_id: int, source_id: int, image_map: dict)
                     continue
 
                 # Build description
-                description = f"Free weekly fitness program along the Atlanta BeltLine."
+                description = "Free weekly fitness program along the Atlanta BeltLine."
                 if location:
                     description += f" Meets at {location}."
                 description += " All levels welcome. No registration required."

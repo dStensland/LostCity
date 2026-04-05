@@ -99,7 +99,7 @@ def parse_homepage(html: str, today: date | None = None) -> list[dict]:
         raise ValueError("Culture Collision homepage did not expose the 2026 Atlanta date range")
 
     start_day = int(range_match.group(1))
-    end_day = int(range_match.group(2))
+    int(range_match.group(2))
     year = int(range_match.group(3))
     start_date = date(year, 6, start_day)
     if start_date < today:

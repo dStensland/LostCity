@@ -21,13 +21,11 @@ from __future__ import annotations
 import logging
 import re
 import urllib.request
-from datetime import date, datetime, timedelta
+from datetime import date, datetime
 from typing import Optional
-from urllib.parse import urljoin
 
 from bs4 import BeautifulSoup
 
-from date_utils import parse_human_date
 from db import (
     find_event_by_hash,
     get_or_create_place,

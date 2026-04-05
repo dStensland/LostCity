@@ -14,8 +14,6 @@ import json
 import logging
 import re
 from datetime import date, datetime, timedelta
-from typing import Any
-from urllib.parse import urlparse
 
 import requests
 from bs4 import BeautifulSoup

@@ -608,7 +608,7 @@ def classify_festivals(dry_run: bool = False, slug: str = None):
     setting_dist: dict[str, int] = {}
     price_dist: dict[str, int] = {}
 
-    logger.info(f"Festival Classification")
+    logger.info("Festival Classification")
     logger.info(f"{'=' * 80}")
     logger.info(f"Total: {len(festivals)} | Mode: {'DRY RUN' if dry_run else 'LIVE'}")
     logger.info(f"{'=' * 80}\n")
@@ -659,33 +659,33 @@ def classify_festivals(dry_run: bool = False, slug: str = None):
 
     # Summary
     logger.info(f"\n{'=' * 80}")
-    logger.info(f"DISTRIBUTION SUMMARY")
+    logger.info("DISTRIBUTION SUMMARY")
     logger.info(f"{'=' * 80}")
 
-    logger.info(f"\nPrimary Type:")
+    logger.info("\nPrimary Type:")
     for k, v in sorted(type_dist.items(), key=lambda x: -x[1]):
         bar = "#" * v
         logger.info(f"  {k:<22} {v:>3}  {bar}")
 
-    logger.info(f"\nAudience:")
+    logger.info("\nAudience:")
     for k, v in sorted(audience_dist.items(), key=lambda x: -x[1]):
         logger.info(f"  {k:<22} {v:>3}")
 
-    logger.info(f"\nSize Tier:")
+    logger.info("\nSize Tier:")
     for k, v in sorted(size_dist.items(), key=lambda x: -x[1]):
         logger.info(f"  {k:<22} {v:>3}")
 
-    logger.info(f"\nSetting:")
+    logger.info("\nSetting:")
     for k, v in sorted(setting_dist.items(), key=lambda x: -x[1]):
         logger.info(f"  {k:<22} {v:>3}")
 
-    logger.info(f"\nPrice Tier:")
+    logger.info("\nPrice Tier:")
     for k, v in sorted(price_dist.items(), key=lambda x: -x[1]):
         logger.info(f"  {k:<22} {v:>3}")
 
     logger.info(f"\nTotal classified: {stats['classified']}")
     if dry_run:
-        logger.info(f"DRY RUN — no changes written")
+        logger.info("DRY RUN — no changes written")
 
 
 if __name__ == "__main__":

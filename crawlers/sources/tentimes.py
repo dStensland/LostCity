@@ -46,7 +46,7 @@ def parse_date(date_text: str) -> tuple[Optional[str], Optional[str]]:
     """
     try:
         date_text = date_text.strip()
-        current_year = datetime.now().year
+        datetime.now().year
 
         # Range: "23 - 25 Jan 2026"
         range_match = re.match(r"(\d+)\s*[-–]\s*(\d+)\s+(\w+)\s+(\d{4})", date_text)

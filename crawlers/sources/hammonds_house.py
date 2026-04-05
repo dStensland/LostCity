@@ -337,7 +337,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                                 "source_id": source_id,
                                 "place_id": venue_id,
                                 "title": title,
-                                "description": description or f"Event at Hammonds House Museum, showcasing African American and Haitian art",
+                                "description": description or "Event at Hammonds House Museum, showcasing African American and Haitian art",
                                 "start_date": start_date,
                                 "start_time": start_time,
                                 "end_date": range_end,

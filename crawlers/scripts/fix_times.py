@@ -21,9 +21,16 @@ def audit_times(limit: int = 500) -> dict:
     today = date.today().isoformat()
 
     # Get upcoming events
-    result = client.table("events").select(
-        "id, title, start_date, start_time, end_time, is_all_day, source_id, category"
-    ).gte("start_date", today).order("start_date").limit(limit).execute()
+    result = (
+        client.table("events")
+        .select(
+            "id, title, start_date, start_time, end_time, is_all_day, source_id, category"
+        )
+        .gte("start_date", today)
+        .order("start_date")
+        .limit(limit)
+        .execute()
+    )
 
     events = result.data or []
 
@@ -63,7 +70,7 @@ def audit_times(limit: int = 500) -> dict:
                 hour = int(e["start_time"].split(":")[0])
                 if 1 <= hour <= 5:
                     stats["suspicious_early_morning"] += 1
-            except:
+            except Exception:
                 pass
         else:
             if is_all_day:
@@ -93,9 +100,14 @@ def fix_null_times_mark_all_day(dry_run: bool = True) -> int:
     all_day_categories = {"art", "community", "family", "film", "sports"}
 
     # Get events with null time that are not marked all-day
-    result = client.table("events").select(
-        "id, title, category, is_all_day"
-    ).gte("start_date", today).is_("start_time", "null").eq("is_all_day", False).execute()
+    result = (
+        client.table("events")
+        .select("id, title, category, is_all_day")
+        .gte("start_date", today)
+        .is_("start_time", "null")
+        .eq("is_all_day", False)
+        .execute()
+    )
 
     events = result.data or []
     fixed = 0
@@ -106,9 +118,13 @@ def fix_null_times_mark_all_day(dry_run: bool = True) -> int:
         # Only fix categories that make sense as all-day
         if category in all_day_categories:
             if dry_run:
-                logger.info(f"[DRY RUN] Would mark as all-day: [{e['id']}] {e['title'][:50]}")
+                logger.info(
+                    f"[DRY RUN] Would mark as all-day: [{e['id']}] {e['title'][:50]}"
+                )
             else:
-                client.table("events").update({"is_all_day": True}).eq("id", e["id"]).execute()
+                client.table("events").update({"is_all_day": True}).eq(
+                    "id", e["id"]
+                ).execute()
                 logger.info(f"Marked as all-day: [{e['id']}] {e['title'][:50]}")
             fixed += 1
 
@@ -139,9 +155,13 @@ def set_default_times(dry_run: bool = True) -> int:
     }
 
     # Get events with null time
-    result = client.table("events").select(
-        "id, title, category, is_all_day"
-    ).gte("start_date", today).is_("start_time", "null").execute()
+    result = (
+        client.table("events")
+        .select("id, title, category, is_all_day")
+        .gte("start_date", today)
+        .is_("start_time", "null")
+        .execute()
+    )
 
     events = result.data or []
     fixed = 0
@@ -152,17 +172,25 @@ def set_default_times(dry_run: bool = True) -> int:
         if category in default_times:
             default_time = default_times[category]
             if dry_run:
-                logger.info(f"[DRY RUN] Would set {default_time} for: [{e['id']}] {e['title'][:50]}")
+                logger.info(
+                    f"[DRY RUN] Would set {default_time} for: [{e['id']}] {e['title'][:50]}"
+                )
             else:
-                client.table("events").update({"start_time": default_time}).eq("id", e["id"]).execute()
+                client.table("events").update({"start_time": default_time}).eq(
+                    "id", e["id"]
+                ).execute()
                 logger.info(f"Set {default_time} for: [{e['id']}] {e['title'][:50]}")
             fixed += 1
         elif not e.get("is_all_day"):
             # Mark remaining as all-day
             if dry_run:
-                logger.info(f"[DRY RUN] Would mark all-day: [{e['id']}] {e['title'][:50]}")
+                logger.info(
+                    f"[DRY RUN] Would mark all-day: [{e['id']}] {e['title'][:50]}"
+                )
             else:
-                client.table("events").update({"is_all_day": True}).eq("id", e["id"]).execute()
+                client.table("events").update({"is_all_day": True}).eq(
+                    "id", e["id"]
+                ).execute()
             fixed += 1
 
     return fixed
@@ -175,26 +203,26 @@ def print_audit_report(stats: dict) -> None:
     print("=" * 70)
 
     print(f"\nTotal events analyzed: {stats['total']}")
-    print(f"  With time:              {stats['has_time']} ({stats['has_time']*100//stats['total']}%)")
+    print(
+        f"  With time:              {stats['has_time']} ({stats['has_time']*100//stats['total']}%)"
+    )
     print(f"  Null time (all-day):    {stats['null_time_all_day']}")
     print(f"  Null time (NOT all-day): {stats['null_time_not_all_day']} <- PROBLEM")
     print(f"  Suspicious (1-5 AM):    {stats['suspicious_early_morning']}")
 
     print("\nBy Source (top issues):")
     sources_sorted = sorted(
-        stats["by_source"].items(),
-        key=lambda x: x[1]["missing_time"],
-        reverse=True
+        stats["by_source"].items(), key=lambda x: x[1]["missing_time"], reverse=True
     )
     for source_id, data in sources_sorted[:10]:
         if data["missing_time"] > 0:
-            print(f"  source_id={source_id}: {data['missing_time']}/{data['total']} missing time")
+            print(
+                f"  source_id={source_id}: {data['missing_time']}/{data['total']} missing time"
+            )
 
     print("\nBy Category (top issues):")
     cats_sorted = sorted(
-        stats["by_category"].items(),
-        key=lambda x: x[1]["missing_time"],
-        reverse=True
+        stats["by_category"].items(), key=lambda x: x[1]["missing_time"], reverse=True
     )
     for cat, data in cats_sorted[:10]:
         if data["missing_time"] > 0:
@@ -206,9 +234,15 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Audit and fix event time data")
     parser.add_argument("--audit", action="store_true", help="Run time audit")
-    parser.add_argument("--fix-all-day", action="store_true", help="Mark appropriate events as all-day")
-    parser.add_argument("--set-defaults", action="store_true", help="Set default times for missing")
-    parser.add_argument("--dry-run", action="store_true", help="Don't actually update database")
+    parser.add_argument(
+        "--fix-all-day", action="store_true", help="Mark appropriate events as all-day"
+    )
+    parser.add_argument(
+        "--set-defaults", action="store_true", help="Set default times for missing"
+    )
+    parser.add_argument(
+        "--dry-run", action="store_true", help="Don't actually update database"
+    )
     parser.add_argument("--limit", type=int, default=500, help="Max events to analyze")
 
     args = parser.parse_args()

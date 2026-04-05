@@ -13,7 +13,6 @@ Usage:
     python scrape_venue_hours.py --dry-run
 """
 
-import os
 import sys
 import re
 import json
@@ -35,7 +34,7 @@ load_dotenv(env_path)
 # Add parent to path for db module
 sys.path.insert(0, str(Path(__file__).parent))
 from db import get_client
-from hours_utils import format_hours_display, prepare_hours_update, should_update_hours
+from hours_utils import prepare_hours_update, should_update_hours
 
 logging.basicConfig(level=logging.INFO, format="%(message)s")
 logger = logging.getLogger(__name__)
@@ -49,13 +48,27 @@ HEADERS = {
 
 # Day name mappings
 DAY_NAMES = {
-    "monday": "mon", "mon": "mon", "mo": "mon",
-    "tuesday": "tue", "tue": "tue", "tu": "tue",
-    "wednesday": "wed", "wed": "wed", "we": "wed",
-    "thursday": "thu", "thu": "thu", "th": "thu",
-    "friday": "fri", "fri": "fri", "fr": "fri",
-    "saturday": "sat", "sat": "sat", "sa": "sat",
-    "sunday": "sun", "sun": "sun", "su": "sun",
+    "monday": "mon",
+    "mon": "mon",
+    "mo": "mon",
+    "tuesday": "tue",
+    "tue": "tue",
+    "tu": "tue",
+    "wednesday": "wed",
+    "wed": "wed",
+    "we": "wed",
+    "thursday": "thu",
+    "thu": "thu",
+    "th": "thu",
+    "friday": "fri",
+    "fri": "fri",
+    "fr": "fri",
+    "saturday": "sat",
+    "sat": "sat",
+    "sa": "sat",
+    "sunday": "sun",
+    "sun": "sun",
+    "su": "sun",
 }
 
 # Schema.org day mappings
@@ -67,8 +80,13 @@ SCHEMA_DAYS = {
     "Friday": "fri",
     "Saturday": "sat",
     "Sunday": "sun",
-    "Mo": "mon", "Tu": "tue", "We": "wed", "Th": "thu",
-    "Fr": "fri", "Sa": "sat", "Su": "sun",
+    "Mo": "mon",
+    "Tu": "tue",
+    "We": "wed",
+    "Th": "thu",
+    "Fr": "fri",
+    "Sa": "sat",
+    "Su": "sun",
 }
 
 
@@ -80,7 +98,7 @@ def normalize_time(time_str: str) -> Optional[str]:
     time_str = time_str.strip().lower()
 
     # Handle 24h format (14:00, 1400)
-    match = re.match(r'^(\d{1,2}):?(\d{2})$', time_str)
+    match = re.match(r"^(\d{1,2}):?(\d{2})$", time_str)
     if match:
         hour = int(match.group(1))
         minute = match.group(2)
@@ -88,24 +106,24 @@ def normalize_time(time_str: str) -> Optional[str]:
             return f"{hour:02d}:{minute}"
 
     # Handle 12h format (2pm, 2:30pm, 2:30 pm)
-    match = re.match(r'^(\d{1,2})(?::(\d{2}))?\s*(am|pm|a\.m\.|p\.m\.)$', time_str)
+    match = re.match(r"^(\d{1,2})(?::(\d{2}))?\s*(am|pm|a\.m\.|p\.m\.)$", time_str)
     if match:
         hour = int(match.group(1))
         minute = match.group(2) or "00"
         period = match.group(3).replace(".", "")[:1]  # 'a' or 'p'
 
-        if period == 'p' and hour != 12:
+        if period == "p" and hour != 12:
             hour += 12
-        elif period == 'a' and hour == 12:
+        elif period == "a" and hour == 12:
             hour = 0
 
         if 0 <= hour <= 23:
             return f"{hour:02d}:{minute}"
 
     # Handle noon/midnight
-    if time_str in ['noon', '12 noon']:
+    if time_str in ["noon", "12 noon"]:
         return "12:00"
-    if time_str in ['midnight', '12 midnight']:
+    if time_str in ["midnight", "12 midnight"]:
         return "00:00"
 
     return None
@@ -143,7 +161,9 @@ def parse_schema_hours(hours_spec) -> Optional[dict]:
 
         for day in days_of_week:
             # Handle full URL or short form
-            day_name = day.replace("https://schema.org/", "").replace("http://schema.org/", "")
+            day_name = day.replace("https://schema.org/", "").replace(
+                "http://schema.org/", ""
+            )
             if day_name in SCHEMA_DAYS:
                 hours[SCHEMA_DAYS[day_name]] = {"open": open_time, "close": close_time}
 
@@ -161,7 +181,7 @@ def parse_opening_hours_string(hours_str: str) -> Optional[dict]:
     hours = {}
 
     # Split multiple entries (comma or space separated)
-    parts = re.split(r'\s*,\s*|\s+(?=[A-Z])', hours_str)
+    parts = re.split(r"\s*,\s*|\s+(?=[A-Z])", hours_str)
 
     for part in parts:
         part = part.strip()
@@ -169,7 +189,9 @@ def parse_opening_hours_string(hours_str: str) -> Optional[dict]:
             continue
 
         # Match pattern: "Mo-Fr 09:00-17:00" or "Sa 10:00-14:00"
-        match = re.match(r'^([A-Za-z]{2}(?:-[A-Za-z]{2})?)\s+(\d{1,2}:\d{2})-(\d{1,2}:\d{2})$', part)
+        match = re.match(
+            r"^([A-Za-z]{2}(?:-[A-Za-z]{2})?)\s+(\d{1,2}:\d{2})-(\d{1,2}:\d{2})$", part
+        )
         if not match:
             continue
 
@@ -181,8 +203,8 @@ def parse_opening_hours_string(hours_str: str) -> Optional[dict]:
             continue
 
         # Handle day range (Mo-Fr) or single day (Sa)
-        if '-' in days_part:
-            start_day, end_day = days_part.split('-')
+        if "-" in days_part:
+            start_day, end_day = days_part.split("-")
             day_order = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"]
 
             start_idx = day_order.index(start_day) if start_day in day_order else -1
@@ -292,7 +314,7 @@ def parse_text_hours(text: str) -> Optional[dict]:
 
     # Pattern: "Day(s): time - time" or "Day(s) time-time"
     # Match: Monday - Friday: 9am - 5pm, Mon-Fri 9am-5pm, Saturday 10am-2pm
-    pattern = r'(?i)((?:mon(?:day)?|tue(?:sday)?|wed(?:nesday)?|thu(?:rsday)?|fri(?:day)?|sat(?:urday)?|sun(?:day)?)\s*(?:-|to|through)\s*(?:mon(?:day)?|tue(?:sday)?|wed(?:nesday)?|thu(?:rsday)?|fri(?:day)?|sat(?:urday)?|sun(?:day)?)|(?:mon(?:day)?|tue(?:sday)?|wed(?:nesday)?|thu(?:rsday)?|fri(?:day)?|sat(?:urday)?|sun(?:day)?))\s*:?\s*(?:from\s+)?(\d{1,2}(?::\d{2})?\s*(?:am|pm|a\.m\.|p\.m\.)?)\s*[-–to]+\s*(\d{1,2}(?::\d{2})?\s*(?:am|pm|a\.m\.|p\.m\.)?)'
+    pattern = r"(?i)((?:mon(?:day)?|tue(?:sday)?|wed(?:nesday)?|thu(?:rsday)?|fri(?:day)?|sat(?:urday)?|sun(?:day)?)\s*(?:-|to|through)\s*(?:mon(?:day)?|tue(?:sday)?|wed(?:nesday)?|thu(?:rsday)?|fri(?:day)?|sat(?:urday)?|sun(?:day)?)|(?:mon(?:day)?|tue(?:sday)?|wed(?:nesday)?|thu(?:rsday)?|fri(?:day)?|sat(?:urday)?|sun(?:day)?))\s*:?\s*(?:from\s+)?(\d{1,2}(?::\d{2})?\s*(?:am|pm|a\.m\.|p\.m\.)?)\s*[-–to]+\s*(\d{1,2}(?::\d{2})?\s*(?:am|pm|a\.m\.|p\.m\.)?)"
 
     matches = re.findall(pattern, text, re.IGNORECASE)
 
@@ -313,10 +335,10 @@ def parse_text_hours(text: str) -> Optional[dict]:
             hours[day] = {"open": open_time, "close": close_time}
 
     generic_match = re.search(
-        r'(?i)(?:museum\s+hours|hours\s+of\s+operation|open)?[^.]{0,80}?'
-        r'(\d{1,2}(?::\d{2})?\s*(?:am|pm|a\.m\.|p\.m\.))\s*[-–to]+\s*'
-        r'(\d{1,2}(?::\d{2})?\s*(?:am|pm|a\.m\.|p\.m\.))[^.]{0,120}?'
-        r'closed(?:\s+on)?\s+(monday|tuesday|wednesday|thursday|friday|saturday|sunday)s?',
+        r"(?i)(?:museum\s+hours|hours\s+of\s+operation|open)?[^.]{0,80}?"
+        r"(\d{1,2}(?::\d{2})?\s*(?:am|pm|a\.m\.|p\.m\.))\s*[-–to]+\s*"
+        r"(\d{1,2}(?::\d{2})?\s*(?:am|pm|a\.m\.|p\.m\.))[^.]{0,120}?"
+        r"closed(?:\s+on)?\s+(monday|tuesday|wednesday|thursday|friday|saturday|sunday)s?",
         text,
         re.IGNORECASE,
     )
@@ -337,7 +359,7 @@ def parse_day_range(days_str: str) -> list[str]:
     days_str = days_str.lower().strip()
 
     # Check for range
-    range_match = re.match(r'(\w+)\s*(?:-|to|through)\s*(\w+)', days_str)
+    range_match = re.match(r"(\w+)\s*(?:-|to|through)\s*(\w+)", days_str)
     if range_match:
         start = range_match.group(1)
         end = range_match.group(2)
@@ -352,8 +374,8 @@ def parse_day_range(days_str: str) -> list[str]:
             start_idx = day_order.index(start_code)
             end_idx = day_order.index(end_code)
             if start_idx <= end_idx:
-                return day_order[start_idx:end_idx + 1]
-            return day_order[start_idx:] + day_order[:end_idx + 1]
+                return day_order[start_idx : end_idx + 1]
+            return day_order[start_idx:] + day_order[: end_idx + 1]
 
     # Single day
     for name, code in DAY_NAMES.items():
@@ -367,10 +389,18 @@ def get_hours_from_text(soup: BeautifulSoup) -> Optional[dict]:
     """Try to find hours in page text using common patterns."""
     # Look in common hour containers
     hour_selectors = [
-        ".hours", ".business-hours", ".opening-hours", ".store-hours",
-        "#hours", "#business-hours", "#opening-hours",
-        "[class*='hour']", "[class*='schedule']",
-        "footer", ".contact", "#contact",
+        ".hours",
+        ".business-hours",
+        ".opening-hours",
+        ".store-hours",
+        "#hours",
+        "#business-hours",
+        "#opening-hours",
+        "[class*='hour']",
+        "[class*='schedule']",
+        "footer",
+        ".contact",
+        "#contact",
     ]
 
     for selector in hour_selectors:
@@ -381,7 +411,7 @@ def get_hours_from_text(soup: BeautifulSoup) -> Optional[dict]:
                 hours = parse_text_hours(text)
                 if hours and len(hours) >= 3:  # At least 3 days to be valid
                     return hours
-        except:
+        except Exception:
             continue
 
     hours = parse_text_hours(soup.get_text(separator=" ", strip=True))
@@ -396,10 +426,7 @@ def scrape_hours_from_website(url: str) -> Optional[dict]:
     try:
         try:
             response = requests.get(
-                url,
-                headers=HEADERS,
-                timeout=10,
-                allow_redirects=True
+                url, headers=HEADERS, timeout=10, allow_redirects=True
             )
             response.raise_for_status()
             html = response.text
@@ -451,9 +478,13 @@ def get_venues_needing_hours(
     """Get venues with websites that need hours (missing, stale, or lower-confidence)."""
     client = get_client()
 
-    query = client.table("places").select(
-        "id, name, slug, website, hours, venue_type, hours_source, hours_updated_at"
-    ).eq("is_active", True)
+    query = (
+        client.table("places")
+        .select(
+            "id, name, slug, website, hours, venue_type, hours_source, hours_updated_at"
+        )
+        .eq("is_active", True)
+    )
 
     # Must have website
     query = query.not_.is_("website", "null")
@@ -480,7 +511,9 @@ def get_venues_needing_hours(
         # Stale website hours — re-scrape
         if v.get("hours_source") == "website" and v.get("hours_updated_at"):
             try:
-                updated = datetime.fromisoformat(v["hours_updated_at"].replace("Z", "+00:00"))
+                updated = datetime.fromisoformat(
+                    v["hours_updated_at"].replace("Z", "+00:00")
+                )
                 if (now - updated).days >= max_age_days:
                     filtered.append(v)
             except (ValueError, TypeError):
@@ -493,7 +526,9 @@ def get_venues_needing_hours(
     return filtered[:limit]
 
 
-def update_venue_hours(venue_id: int, hours: dict, hours_display: str, dry_run: bool = False) -> bool:
+def update_venue_hours(
+    venue_id: int, hours: dict, hours_display: str, dry_run: bool = False
+) -> bool:
     """Update venue with scraped hours from website."""
     if dry_run:
         return True
@@ -518,17 +553,28 @@ def update_venue_hours(venue_id: int, hours: dict, hours_display: str, dry_run: 
 
 def main():
     parser = argparse.ArgumentParser(description="Scrape hours from venue websites")
-    parser.add_argument("--venue-type", help="Filter by venue type (bar, restaurant, etc.)")
+    parser.add_argument(
+        "--venue-type", help="Filter by venue type (bar, restaurant, etc.)"
+    )
     parser.add_argument("--limit", type=int, default=50, help="Max venues to process")
-    parser.add_argument("--dry-run", action="store_true", help="Preview without updating")
-    parser.add_argument("--max-age-days", type=int, default=30, help="Re-scrape hours older than this many days (default: 30)")
+    parser.add_argument(
+        "--dry-run", action="store_true", help="Preview without updating"
+    )
+    parser.add_argument(
+        "--max-age-days",
+        type=int,
+        default=30,
+        help="Re-scrape hours older than this many days (default: 30)",
+    )
     args = parser.parse_args()
 
     logger.info("=" * 60)
     logger.info("Scraping Venue Hours from Websites")
     logger.info("=" * 60)
 
-    venues = get_venues_needing_hours(args.venue_type, args.limit, max_age_days=args.max_age_days)
+    venues = get_venues_needing_hours(
+        args.venue_type, args.limit, max_age_days=args.max_age_days
+    )
     logger.info(f"Found {len(venues)} venues needing website hours")
     logger.info("")
 
@@ -550,7 +596,9 @@ def main():
 
         if raw_hours:
             hours, hours_display = prepare_hours_update(
-                raw_hours, source="website", venue_type=venue.get("place_type"),
+                raw_hours,
+                source="website",
+                venue_type=venue.get("place_type"),
             )
         else:
             hours = None

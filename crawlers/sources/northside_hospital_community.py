@@ -337,7 +337,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         event_metadata = categorize_event(title)
 
                         # Build description
-                        description = f"Community health program at Northside Hospital."
+                        description = "Community health program at Northside Hospital."
                         if "support group" in title.lower():
                             description = "Free support group for individuals and families."
                         elif "screening" in title.lower():

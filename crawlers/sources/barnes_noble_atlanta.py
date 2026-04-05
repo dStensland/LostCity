@@ -18,11 +18,9 @@ Eventbrite for each store's events.
 
 from __future__ import annotations
 
-import re
 import json
 import logging
 from datetime import datetime
-from typing import Optional
 from urllib.parse import quote
 
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeout

@@ -47,12 +47,12 @@ source_data = {
 result = supabase.table('sources').insert(source_data).execute()
 
 if result.data:
-    print(f"\nSuccessfully created source:")
+    print("\nSuccessfully created source:")
     print(f"  ID: {result.data[0]['id']}")
     print(f"  Name: {result.data[0]['name']}")
     print(f"  Slug: {result.data[0]['slug']}")
     print(f"  Active: {result.data[0]['is_active']}")
-    print(f"\nRun: python main.py --source sandler-hudson-gallery")
+    print("\nRun: python main.py --source sandler-hudson-gallery")
 else:
     print("ERROR: Failed to create source")
     exit(1)

@@ -70,7 +70,7 @@ def check_decatur_calendar_absorption(client):
         print(f"  Events without series: {len(events_without_series)}")
         
         if series_groups:
-            print(f"  Series breakdown:")
+            print("  Series breakdown:")
             for series_id, series_events in sorted(series_groups.items(), key=lambda x: len(x[1]), reverse=True):
                 # Get series info
                 series_result = client.table("series")\

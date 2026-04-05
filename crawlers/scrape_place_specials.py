@@ -50,6 +50,7 @@ from playwright.sync_api import sync_playwright
 
 env_path = Path(__file__).parent.parent / ".env"
 from dotenv import load_dotenv
+
 load_dotenv(env_path)
 
 sys.path.insert(0, str(Path(__file__).parent))
@@ -72,95 +73,189 @@ FALLBACK_SUBPAGES = ["/menu", "/happy-hour", "/specials", "/hours", "/about"]
 
 # Keyword scoring for link discovery — higher weight = more relevant to specials
 _URL_KEYWORDS = {
-    3: ["happy-hour", "happyhour", "happy_hour", "specials", "daily-specials",
-        "weekly-specials", "deals"],
-    2: ["menu", "menus", "food-menu", "drink-menu", "drinks", "cocktails",
-        "food-and-drink", "food-drink"],
-    1: ["hours", "about", "visit", "events", "brunch", "trivia", "entertainment",
-        "happenings", "promotions"],
+    3: [
+        "happy-hour",
+        "happyhour",
+        "happy_hour",
+        "specials",
+        "daily-specials",
+        "weekly-specials",
+        "deals",
+    ],
+    2: [
+        "menu",
+        "menus",
+        "food-menu",
+        "drink-menu",
+        "drinks",
+        "cocktails",
+        "food-and-drink",
+        "food-drink",
+    ],
+    1: [
+        "hours",
+        "about",
+        "visit",
+        "events",
+        "brunch",
+        "trivia",
+        "entertainment",
+        "happenings",
+        "promotions",
+    ],
 }
 _ANCHOR_KEYWORDS = {
     3: ["happy hour", "specials", "daily deals", "daily specials", "weekly specials"],
-    2: ["menu", "drinks", "food & drink", "food and drink", "cocktails", "drink menu",
-        "food menu"],
+    2: [
+        "menu",
+        "drinks",
+        "food & drink",
+        "food and drink",
+        "cocktails",
+        "drink menu",
+        "food menu",
+    ],
     1: ["hours", "about us", "visit", "events", "brunch", "trivia", "entertainment"],
 }
 
 # Known reservation platform patterns
 RESERVATION_PATTERNS = [
-    "resy.com", "opentable.com", "yelp.com/reservations",
-    "exploretock.com", "sevenrooms.com", "toast.com",
+    "resy.com",
+    "opentable.com",
+    "yelp.com/reservations",
+    "exploretock.com",
+    "sevenrooms.com",
+    "toast.com",
 ]
 
 # ISO weekday mapping for LLM output
 DAY_MAP = {
-    "monday": 1, "mon": 1,
-    "tuesday": 2, "tue": 2, "tues": 2,
-    "wednesday": 3, "wed": 3,
-    "thursday": 4, "thu": 4, "thur": 4, "thurs": 4,
-    "friday": 5, "fri": 5,
-    "saturday": 6, "sat": 6,
-    "sunday": 7, "sun": 7,
+    "monday": 1,
+    "mon": 1,
+    "tuesday": 2,
+    "tue": 2,
+    "tues": 2,
+    "wednesday": 3,
+    "wed": 3,
+    "thursday": 4,
+    "thu": 4,
+    "thur": 4,
+    "thurs": 4,
+    "friday": 5,
+    "fri": 5,
+    "saturday": 6,
+    "sat": 6,
+    "sunday": 7,
+    "sun": 7,
 }
 
 from tags import VALID_VIBES as _CANONICAL_VIBES
+
 # Filter out faith-specific and denomination vibes — not extractable from venue websites
 VALID_VIBES = {
-    v for v in _CANONICAL_VIBES
-    if not v.startswith("faith-") and v not in (
-        "episcopal", "baptist", "methodist", "presbyterian",
-        "catholic", "nondenominational", "ame",
+    v
+    for v in _CANONICAL_VIBES
+    if not v.startswith("faith-")
+    and v
+    not in (
+        "episcopal",
+        "baptist",
+        "methodist",
+        "presbyterian",
+        "catholic",
+        "nondenominational",
+        "ame",
     )
 }
 
 # Genres from ACTIVITY_GENRE_MAP (venue_enrich.py) + music sub-genres
 VALID_GENRES = {
-    "dj", "karaoke", "trivia", "game-night", "dance-party", "beer",
-    "live-music", "comedy", "drag", "open-mic", "bingo", "vinyl",
+    "dj",
+    "karaoke",
+    "trivia",
+    "game-night",
+    "dance-party",
+    "beer",
+    "live-music",
+    "comedy",
+    "drag",
+    "open-mic",
+    "bingo",
+    "vinyl",
 }
 
 # Chain restaurant/bar indicators (name-based detection)
 CHAIN_NAMES = {
-    "applebee", "chili's", "olive garden", "red lobster", "outback",
-    "buffalo wild wings", "hooters", "tgif", "fridays", "denny's",
-    "ihop", "waffle house", "mcdonald", "wendy's", "taco bell",
-    "chick-fil-a", "zaxby", "wingstop", "sweetwater", "topgolf",
-    "dave & buster", "main event", "twin peaks", "yard house",
+    "applebee",
+    "chili's",
+    "olive garden",
+    "red lobster",
+    "outback",
+    "buffalo wild wings",
+    "hooters",
+    "tgif",
+    "fridays",
+    "denny's",
+    "ihop",
+    "waffle house",
+    "mcdonald",
+    "wendy's",
+    "taco bell",
+    "chick-fil-a",
+    "zaxby",
+    "wingstop",
+    "sweetwater",
+    "topgolf",
+    "dave & buster",
+    "main event",
+    "twin peaks",
+    "yard house",
 }
 
 VALID_DIETARY_OPTIONS = {
-    "vegetarian-friendly", "vegan-options", "gluten-free-options",
-    "halal", "kosher", "allergy-aware",
+    "vegetarian-friendly",
+    "vegan-options",
+    "gluten-free-options",
+    "halal",
+    "kosher",
+    "allergy-aware",
 }
 
 VALID_PARKING = {
-    "street", "lot", "garage", "valet", "no-parking",
+    "street",
+    "lot",
+    "garage",
+    "valet",
+    "no-parking",
 }
 
 VALID_SERVICE_STYLES = {
-    "quick_service", "casual_dine_in", "full_service",
-    "tasting_menu", "bar_food", "coffee_dessert",
+    "quick_service",
+    "casual_dine_in",
+    "full_service",
+    "tasting_menu",
+    "bar_food",
+    "coffee_dessert",
 }
 
 # Regex for US phone numbers
-PHONE_RE = re.compile(
-    r"(?:\+?1[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}"
-)
+PHONE_RE = re.compile(r"(?:\+?1[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}")
 
 # Regex for Instagram handles from links
-INSTAGRAM_LINK_RE = re.compile(
-    r"instagram\.com/([A-Za-z0-9_.]{1,30})(?:[/?#]|$)"
-)
+INSTAGRAM_LINK_RE = re.compile(r"instagram\.com/([A-Za-z0-9_.]{1,30})(?:[/?#]|$)")
 
 # Regex for Facebook page URLs
-FACEBOOK_RE = re.compile(
-    r"https?://(www\.)?facebook\.com/[^/?#]+", re.I
-)
+FACEBOOK_RE = re.compile(r"https?://(www\.)?facebook\.com/[^/?#]+", re.I)
 
 # Known link-in-bio / reservation / menu URL patterns for IG bio parsing
 LINKTREE_PATTERNS = ["linktr.ee", "linkin.bio", "lnk.bio", "beacons.ai", "campsite.bio"]
 MENU_URL_PATTERNS = ["menu", "toast", "square.site", "squarespace"]
-RESERVATION_URL_PATTERNS = ["resy.com", "opentable.com", "exploretock.com", "sevenrooms.com"]
+RESERVATION_URL_PATTERNS = [
+    "resy.com",
+    "opentable.com",
+    "exploretock.com",
+    "sevenrooms.com",
+]
 
 # Day names in order for range expansion (abbreviated — matches frontend hours.ts keys)
 DAY_NAMES_ORDERED = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
@@ -255,7 +350,9 @@ _TITLE_PATTERN_MAP: list[tuple[re.Pattern, str]] = [
 _PRICE_NOTE_PATTERNS: list[re.Pattern] = [
     re.compile(r"(?:BOGO|bogo)\s+[A-Za-z][^|,.]*", re.I),
     re.compile(r"half[\s-]?(?:off|price)\s+[A-Za-z][^|,.]*", re.I),
-    re.compile(r"\$\d+(?:\.\d{2})?(?:\s*[-/]\s*\$\d+(?:\.\d{2})?)?\s+[A-Za-z][^|,.]*", re.I),
+    re.compile(
+        r"\$\d+(?:\.\d{2})?(?:\s*[-/]\s*\$\d+(?:\.\d{2})?)?\s+[A-Za-z][^|,.]*", re.I
+    ),
 ]
 
 _TITLE_SENTENCE_START_RE = re.compile(
@@ -323,13 +420,20 @@ def _normalize_day(day_str: str) -> Optional[str]:
     d = day_str.strip().lower().rstrip(".")
     # Map full names and common abbreviations to canonical 3-letter keys
     _FULL_TO_ABBREV = {
-        "monday": "mon", "mondays": "mon",
-        "tuesday": "tue", "tuesdays": "tue",
-        "wednesday": "wed", "wednesdays": "wed",
-        "thursday": "thu", "thursdays": "thu",
-        "friday": "fri", "fridays": "fri",
-        "saturday": "sat", "saturdays": "sat",
-        "sunday": "sun", "sundays": "sun",
+        "monday": "mon",
+        "mondays": "mon",
+        "tuesday": "tue",
+        "tuesdays": "tue",
+        "wednesday": "wed",
+        "wednesdays": "wed",
+        "thursday": "thu",
+        "thursdays": "thu",
+        "friday": "fri",
+        "fridays": "fri",
+        "saturday": "sat",
+        "saturdays": "sat",
+        "sunday": "sun",
+        "sundays": "sun",
     }
     if d in _FULL_TO_ABBREV:
         return _FULL_TO_ABBREV[d]
@@ -351,9 +455,9 @@ def _expand_day_range(start_day: str, end_day: str) -> list[str]:
     except ValueError:
         return []
     if ei >= si:
-        return DAY_NAMES_ORDERED[si:ei + 1]
+        return DAY_NAMES_ORDERED[si : ei + 1]
     # Wraps around (e.g., Fri-Mon)
-    return DAY_NAMES_ORDERED[si:] + DAY_NAMES_ORDERED[:ei + 1]
+    return DAY_NAMES_ORDERED[si:] + DAY_NAMES_ORDERED[: ei + 1]
 
 
 def _to_24h(hour: int, minute: int, ampm: Optional[str]) -> str:
@@ -394,8 +498,15 @@ def _normalize_special_title(title: str, text: str) -> str:
     """Normalize inferred special titles to something displayable."""
     raw_title = re.sub(r"\s+", " ", (title or "").strip(" -:|"))
     title = re.sub(r"\s+", " ", (title or "").strip(" -:|"))
-    title = re.sub(r"\s*\((?:except holidays?|holiday excluded?)\)\s*$", "", title, flags=re.I)
-    title = re.sub(r"\s+\d{1,2}(?::\d{2})?\s*(?:am|pm)\s*(?:to|[-–—])\s*\d{1,2}(?::\d{2})?\s*(?:am|pm)\s*$", "", title, flags=re.I)
+    title = re.sub(
+        r"\s*\((?:except holidays?|holiday excluded?)\)\s*$", "", title, flags=re.I
+    )
+    title = re.sub(
+        r"\s+\d{1,2}(?::\d{2})?\s*(?:am|pm)\s*(?:to|[-–—])\s*\d{1,2}(?::\d{2})?\s*(?:am|pm)\s*$",
+        "",
+        title,
+        flags=re.I,
+    )
     title = re.sub(r"^[^A-Za-z$]+", "", title)
     skip_fallback = False
     if _DAY_OR_RANGE_ONLY_RE.match(title):
@@ -407,7 +518,9 @@ def _normalize_special_title(title: str, text: str) -> str:
     if generic_title.startswith("brunch served"):
         title = "Weekend Brunch"
         generic_title = "weekend brunch"
-    if generic_title and any(token in generic_title for token in ("special", "menu", "deal", "rotating")):
+    if generic_title and any(
+        token in generic_title for token in ("special", "menu", "deal", "rotating")
+    ):
         title = ""
     if generic_title in {"restaurant", "brewery", "brewpub", "bar", "home"}:
         title = ""
@@ -417,12 +530,18 @@ def _normalize_special_title(title: str, text: str) -> str:
         title = ""
     if title and re.search(r"\bbottomless brunch\b", text, re.I):
         title = "Bottomless Brunch"
-    if title and "weekend brunch" in title.lower() and re.search(r"\bbottomless brunch\b", text, re.I):
+    if (
+        title
+        and "weekend brunch" in title.lower()
+        and re.search(r"\bbottomless brunch\b", text, re.I)
+    ):
         title = "Bottomless Brunch"
     if title and len(title.split()) > 8:
         title = ""
-    if not skip_fallback and raw_title and (
-        _TITLE_SENTENCE_START_RE.match(raw_title) or raw_title.strip().isdigit()
+    if (
+        not skip_fallback
+        and raw_title
+        and (_TITLE_SENTENCE_START_RE.match(raw_title) or raw_title.strip().isdigit())
     ):
         skip_fallback = True
     if title:
@@ -443,16 +562,15 @@ def _extract_price_note(text: str) -> Optional[str]:
         if match:
             return match.group(0).strip(" .")
     if re.search(r"\bhappy hour\b", cleaned, re.I):
-        compact = re.sub(r".*?\bhappy hour\b[:!\s-]*", "", cleaned, count=1, flags=re.I).strip(" .")
+        compact = re.sub(
+            r".*?\bhappy hour\b[:!\s-]*", "", cleaned, count=1, flags=re.I
+        ).strip(" .")
         if compact:
-            if (
-                "$" not in compact
-                and not re.search(
-                    r"\b(half|off|bogo|draft|beer|wine|cocktail|mimosa|well|appetizer|oyster|"
-                    r"taco|margarita|domestic|pitcher|flight|special)\b",
-                    compact,
-                    re.I,
-                )
+            if "$" not in compact and not re.search(
+                r"\b(half|off|bogo|draft|beer|wine|cocktail|mimosa|well|appetizer|oyster|"
+                r"taco|margarita|domestic|pitcher|flight|special)\b",
+                compact,
+                re.I,
             ):
                 return None
             return compact[:160]
@@ -467,10 +585,11 @@ def _looks_like_special_header(line: str) -> bool:
     if not _SPECIAL_TRIGGER_RE.search(cleaned):
         return False
     lowered = cleaned.lower()
-    return (
-        lowered.endswith("menu")
-        or lowered in {"happy hour", "brunch", "bottomless brunch"}
-    )
+    return lowered.endswith("menu") or lowered in {
+        "happy hour",
+        "brunch",
+        "bottomless brunch",
+    }
 
 
 def _looks_like_schedule_fragment(line: str) -> bool:
@@ -508,7 +627,10 @@ def _candidate_special_text(lines: list[str], idx: int) -> Optional[str]:
                 following_idx = next_idx + 1
                 if following_idx < len(lines):
                     following = lines[following_idx].strip()
-                    if following and (re.search(r"\$\d", following) or _SPECIAL_TRIGGER_RE.search(following)):
+                    if following and (
+                        re.search(r"\$\d", following)
+                        or _SPECIAL_TRIGGER_RE.search(following)
+                    ):
                         parts.append(following)
                 break
     elif _looks_like_special_header(line):
@@ -564,7 +686,9 @@ def _fallback_extract_specials(text: str) -> list[dict]:
         title_seed = ""
         for part in title_parts:
             if not _DAY_OR_RANGE_ONLY_RE.match(part):
-                title_seed = re.split(r"\bfrom\b|\. ", part, maxsplit=1, flags=re.I)[0].strip()
+                title_seed = re.split(r"\bfrom\b|\. ", part, maxsplit=1, flags=re.I)[
+                    0
+                ].strip()
                 break
         title = _normalize_special_title(title_seed, candidate)
         if not title:
@@ -597,17 +721,17 @@ def _fallback_extract_specials(text: str) -> list[dict]:
         key = (item["title"].lower(), tuple(item["days"]))
         current = collapsed.get(key)
         candidate_score = (
-            int(bool(item.get("time_start"))) +
-            int(bool(item.get("time_end"))) +
-            int(bool(item.get("price_note")))
+            int(bool(item.get("time_start")))
+            + int(bool(item.get("time_end")))
+            + int(bool(item.get("price_note")))
         )
         if current is None:
             collapsed[key] = item
             continue
         current_score = (
-            int(bool(current.get("time_start"))) +
-            int(bool(current.get("time_end"))) +
-            int(bool(current.get("price_note")))
+            int(bool(current.get("time_start")))
+            + int(bool(current.get("time_end")))
+            + int(bool(current.get("price_note")))
         )
         if candidate_score > current_score:
             collapsed[key] = item
@@ -701,8 +825,16 @@ def parse_bio_hours(text: str) -> Optional[dict]:
 
     # Find day ranges/individual days near each time match
     for tmatch in time_matches:
-        open_h, open_m, open_ampm = int(tmatch.group(1)), int(tmatch.group(2) or 0), tmatch.group(3)
-        close_h, close_m, close_ampm = int(tmatch.group(4)), int(tmatch.group(5) or 0), tmatch.group(6)
+        open_h, open_m, open_ampm = (
+            int(tmatch.group(1)),
+            int(tmatch.group(2) or 0),
+            tmatch.group(3),
+        )
+        close_h, close_m, close_ampm = (
+            int(tmatch.group(4)),
+            int(tmatch.group(5) or 0),
+            tmatch.group(6),
+        )
 
         # If only close has AM/PM, infer open's AM/PM
         if close_ampm and not open_ampm:
@@ -717,7 +849,7 @@ def parse_bio_hours(text: str) -> Optional[dict]:
 
         # Look for day indicators in the ~40 chars before the time match
         context_start = max(0, tmatch.start() - 40)
-        context = text[context_start:tmatch.start()]
+        context = text[context_start : tmatch.start()]
 
         days = []
 
@@ -944,7 +1076,9 @@ def fetch_facebook_bio(fb_url: str, html: Optional[str] = None) -> Optional[dict
     for a in soup.find_all("a", href=True):
         href = a["href"]
         href_lower = href.lower()
-        if not result["reservation_url"] and any(p in href_lower for p in RESERVATION_PATTERNS):
+        if not result["reservation_url"] and any(
+            p in href_lower for p in RESERVATION_PATTERNS
+        ):
             result["reservation_url"] = href
         if not result["menu_url"] and any(p in href_lower for p in MENU_URL_PATTERNS):
             result["menu_url"] = href
@@ -956,7 +1090,8 @@ def fetch_facebook_bio(fb_url: str, html: Optional[str] = None) -> Optional[dict
     return result
 
 
-EXTRACTION_PROMPT = """You are a venue data extraction system for a nightlife/restaurant guide app.
+EXTRACTION_PROMPT = (
+    """You are a venue data extraction system for a nightlife/restaurant guide app.
 Given HTML content from a venue's website, extract structured data in one pass.
 
 RULES:
@@ -1034,7 +1169,9 @@ RULES:
 10. For phone: extract venue phone number in format "(404) 555-1234".
 11. For instagram: extract the handle (no @) from any Instagram link or @mention on the page.
 12. For price_level: infer from menu prices or self-description. 1=$, 2=$$, 3=$$$, 4=$$$$. "Fine dining"=4, "dive bar"=1, typical bar/restaurant=2. Only set if evidence exists.
-13. For vibes: tag ONLY vibes with explicit evidence on the page (e.g., "dogs welcome" photo of patio, "rooftop bar" in description). Valid values: """ + ", ".join(f'"{v}"' for v in sorted(VALID_VIBES)) + """.
+13. For vibes: tag ONLY vibes with explicit evidence on the page (e.g., "dogs welcome" photo of patio, "rooftop bar" in description). Valid values: """
+    + ", ".join(f'"{v}"' for v in sorted(VALID_VIBES))
+    + """.
 14. If information is unclear or not found, use null (or [] for arrays).
 15. Times should be 24-hour format "HH:MM".
 16. Days should be lowercase 3-letter abbreviations: "mon", "tue", "wed", "thu", "fri", "sat", "sun".
@@ -1161,6 +1298,7 @@ Return valid JSON only, no markdown formatting.
 If the page has no useful venue information (e.g., it's a generic homepage with no hours/specials), return:
 {"specials": [], "holiday_hours": [], "holiday_specials": [], "hours": null, "menu_url": null, "reservation_url": null, "description": null, "short_description": null, "phone": null, "instagram": null, "price_level": null, "vibes": [], "cuisine": null, "service_style": null, "genres": [], "accepts_reservations": null, "is_event_venue": null, "is_chain": null, "dietary_options": [], "parking": [], "menu_highlights": null, "payment_notes": null}
 """
+)
 
 
 def haversine_km(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
@@ -1168,7 +1306,12 @@ def haversine_km(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
     R = 6371
     dlat = math.radians(lat2 - lat1)
     dlng = math.radians(lng2 - lng1)
-    a = math.sin(dlat/2)**2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dlng/2)**2
+    a = (
+        math.sin(dlat / 2) ** 2
+        + math.cos(math.radians(lat1))
+        * math.cos(math.radians(lat2))
+        * math.sin(dlng / 2) ** 2
+    )
     return R * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
 
 
@@ -1198,8 +1341,13 @@ def _extract_popmenu_embedded_text(html: str) -> list[str]:
         re.S,
     )
 
-    menus = {menu_id: _decode_embedded_json_string(name) for menu_id, name in menu_matches}
-    sections = {section_id: _decode_embedded_json_string(name) for section_id, name in section_matches}
+    menus = {
+        menu_id: _decode_embedded_json_string(name) for menu_id, name in menu_matches
+    }
+    sections = {
+        section_id: _decode_embedded_json_string(name)
+        for section_id, name in section_matches
+    }
     if not menus:
         return []
 
@@ -1233,7 +1381,9 @@ def _extract_popmenu_embedded_text(html: str) -> list[str]:
     return lines
 
 
-def fetch_page(url: str, timeout: int = 10, use_playwright: bool = True) -> Optional[str]:
+def fetch_page(
+    url: str, timeout: int = 10, use_playwright: bool = True
+) -> Optional[str]:
     """Fetch a URL and return HTML. Falls back to Playwright on 403."""
     global _playwright_fallback_count
     try:
@@ -1249,7 +1399,9 @@ def fetch_page(url: str, timeout: int = 10, use_playwright: bool = True) -> Opti
         return None
     except (requests.ConnectionError, requests.Timeout) as e:
         if use_playwright:
-            logger.debug(f"  Connection failed ({e.__class__.__name__}), trying browser")
+            logger.debug(
+                f"  Connection failed ({e.__class__.__name__}), trying browser"
+            )
             html = fetch_page_playwright(url)
             if html:
                 _playwright_fallback_count += 1
@@ -1265,7 +1417,9 @@ def extract_page_content(html: str, max_chars: int = 12000) -> str:
     soup = BeautifulSoup(html, "html.parser")
 
     # Remove non-content elements
-    for tag in soup.find_all(["script", "style", "nav", "footer", "header", "noscript", "iframe"]):
+    for tag in soup.find_all(
+        ["script", "style", "nav", "footer", "header", "noscript", "iframe"]
+    ):
         tag.decompose()
 
     text = soup.get_text(separator="\n", strip=True)
@@ -1349,7 +1503,11 @@ def discover_relevant_pages(html: str, base_url: str, max_pages: int = 5) -> lis
     soup = BeautifulSoup(html, "html.parser")
     for a in soup.find_all("a", href=True):
         href = a["href"]
-        if href.startswith("#") or href.startswith("mailto:") or href.startswith("tel:"):
+        if (
+            href.startswith("#")
+            or href.startswith("mailto:")
+            or href.startswith("tel:")
+        ):
             continue
 
         full_url = urljoin(base_url, href)
@@ -1432,23 +1590,43 @@ def extract_meta_and_links(html: str, base_url: str) -> dict:
             if fb_match:
                 fb_path = fb_match.group(0).split("facebook.com/", 1)[-1].lower()
                 # Skip generic FB pages
-                if fb_path not in ("sharer", "share", "dialog", "login", "help", "policies"):
+                if fb_path not in (
+                    "sharer",
+                    "share",
+                    "dialog",
+                    "login",
+                    "help",
+                    "policies",
+                ):
                     result["facebook_url"] = fb_match.group(0)
 
         # Reservation links
         if any(p in href_lower for p in RESERVATION_PATTERNS):
             result["reservation_links"].append(href)
-        elif any(kw in text_lower for kw in ["reserve", "reservation", "book a table", "book now"]):
+        elif any(
+            kw in text_lower
+            for kw in ["reserve", "reservation", "book a table", "book now"]
+        ):
             if href.startswith("http"):
                 result["reservation_links"].append(href)
 
         # Menu links
-        if any(kw in href_lower for kw in ["/menu", "/food-menu", "/drink-menu", "/drinks"]):
-            full_url = href if href.startswith("http") else base_url.rstrip("/") + "/" + href.lstrip("/")
+        if any(
+            kw in href_lower for kw in ["/menu", "/food-menu", "/drink-menu", "/drinks"]
+        ):
+            full_url = (
+                href
+                if href.startswith("http")
+                else base_url.rstrip("/") + "/" + href.lstrip("/")
+            )
             result["menu_links"].append(full_url)
         elif any(kw in text_lower for kw in ["menu", "food & drink", "food and drink"]):
             if "/menu" in href_lower or not href.startswith("#"):
-                full_url = href if href.startswith("http") else base_url.rstrip("/") + "/" + href.lstrip("/")
+                full_url = (
+                    href
+                    if href.startswith("http")
+                    else base_url.rstrip("/") + "/" + href.lstrip("/")
+                )
                 result["menu_links"].append(full_url)
 
     # Phone from tel: links
@@ -1512,14 +1690,17 @@ def parse_days(day_names: list) -> list[int]:
 
 _DAY_NAME_RE = re.compile(
     r"\b(mondays?|tuesdays?|wednesdays?|thursdays?|fridays?|saturdays?|sundays?"
-    r"|mon|tue|tues|wed|thu|thur|thurs|fri|sat|sun)\b", re.I
+    r"|mon|tue|tues|wed|thu|thur|thurs|fri|sat|sun)\b",
+    re.I,
 )
 _EVERY_DAY_RE = re.compile(r"\b(every\s*day|daily|7\s*days)\b", re.I)
-_WEEKDAY_RE = re.compile(r"\b(weekdays?|mon(?:day)?s?\s*(?:[-–—through]+|to)\s*fri(?:day)?s?)\b", re.I)
-_WEEKEND_RE = re.compile(r"\b(weekends?|sat(?:urday)?s?\s*(?:[-–—&/,]|and)\s*sun(?:day)?s?)\b", re.I)
-_TIME_EXTRACT_RE = re.compile(
-    r"\b(\d{1,2})(?::(\d{2}))?\s*(am|pm)\b", re.I
+_WEEKDAY_RE = re.compile(
+    r"\b(weekdays?|mon(?:day)?s?\s*(?:[-–—through]+|to)\s*fri(?:day)?s?)\b", re.I
 )
+_WEEKEND_RE = re.compile(
+    r"\b(weekends?|sat(?:urday)?s?\s*(?:[-–—&/,]|and)\s*sun(?:day)?s?)\b", re.I
+)
+_TIME_EXTRACT_RE = re.compile(r"\b(\d{1,2})(?::(\d{2}))?\s*(am|pm)\b", re.I)
 
 
 def _infer_days_from_text(text: str) -> Optional[list[int]]:
@@ -1598,33 +1779,52 @@ _HOLIDAY_TYPES = {"holiday_hours", "holiday_special"}
 # Content patterns that indicate entertainment events (not food/drink deals)
 _EVENT_CONTENT_RE = re.compile(
     r"\b(trivia|karaoke|open mic|live music|dj set|comedy|drag show|bingo|"
-    r"run club|jazz jam|game night|pub quiz|vinyl night)\b", re.I
+    r"run club|jazz jam|game night|pub quiz|vinyl night)\b",
+    re.I,
 )
 
 # Content patterns for recurring food/drink deal language that should remain
 # destination specials even when they have a named weekly identity.
 _DEAL_CONTENT_RE = re.compile(
     r"\b(taco|wing|oyster|burger|steak|fish fry|pizza|sushi|pasta|crawfish|bbq|hot dog|"
-    r"happy hour|brunch|ladies night|wine night|wine wednesday|margarita|industry night)\b", re.I
+    r"happy hour|brunch|ladies night|wine night|wine wednesday|margarita|industry night)\b",
+    re.I,
 )
 
 # Map event content keywords to categories for insert_event
 _EVENT_CATEGORY_MAP = {
-    "trivia": "nightlife", "pub quiz": "nightlife",
-    "karaoke": "nightlife", "dj set": "nightlife",
-    "live music": "music", "jazz jam": "music",
-    "open mic": "music", "vinyl night": "music",
-    "comedy": "comedy", "drag show": "nightlife",
-    "bingo": "nightlife", "game night": "nightlife",
+    "trivia": "nightlife",
+    "pub quiz": "nightlife",
+    "karaoke": "nightlife",
+    "dj set": "nightlife",
+    "live music": "music",
+    "jazz jam": "music",
+    "open mic": "music",
+    "vinyl night": "music",
+    "comedy": "comedy",
+    "drag show": "nightlife",
+    "bingo": "nightlife",
+    "game night": "nightlife",
     "run club": "fitness",
     # Food/drink nights → nightlife so infer_genres handles the rest
-    "taco": "nightlife", "wing": "nightlife", "oyster": "nightlife",
-    "burger": "nightlife", "steak": "nightlife", "fish fry": "nightlife",
-    "pizza": "nightlife", "sushi": "nightlife", "pasta": "nightlife",
-    "crawfish": "nightlife", "bbq": "nightlife", "hot dog": "nightlife",
-    "happy hour": "nightlife", "brunch": "nightlife",
-    "ladies night": "nightlife", "wine night": "nightlife",
-    "wine wednesday": "nightlife", "margarita": "nightlife",
+    "taco": "nightlife",
+    "wing": "nightlife",
+    "oyster": "nightlife",
+    "burger": "nightlife",
+    "steak": "nightlife",
+    "fish fry": "nightlife",
+    "pizza": "nightlife",
+    "sushi": "nightlife",
+    "pasta": "nightlife",
+    "crawfish": "nightlife",
+    "bbq": "nightlife",
+    "hot dog": "nightlife",
+    "happy hour": "nightlife",
+    "brunch": "nightlife",
+    "ladies night": "nightlife",
+    "wine night": "nightlife",
+    "wine wednesday": "nightlife",
+    "margarita": "nightlife",
     "industry night": "nightlife",
 }
 
@@ -1639,8 +1839,15 @@ _SPECIAL_TYPE_GENRES = {
 
 # ISO weekday (1=Mon) to Python weekday (0=Mon)
 _ISO_TO_PYTHON_WEEKDAY = {1: 0, 2: 1, 3: 2, 4: 3, 5: 4, 6: 5, 7: 6}
-_ISO_DAY_NAMES = {1: "monday", 2: "tuesday", 3: "wednesday", 4: "thursday",
-                  5: "friday", 6: "saturday", 7: "sunday"}
+_ISO_DAY_NAMES = {
+    1: "monday",
+    2: "tuesday",
+    3: "wednesday",
+    4: "thursday",
+    5: "friday",
+    6: "saturday",
+    7: "sunday",
+}
 
 
 def _infer_special_type(text: str) -> str:
@@ -1653,8 +1860,16 @@ def _infer_special_type(text: str) -> str:
     if any(
         phrase in lowered
         for phrase in (
-            "taco", "wing", "oyster", "wine", "margarita", "industry night",
-            "ladies night", "bogo", "half off", "half-price",
+            "taco",
+            "wing",
+            "oyster",
+            "wine",
+            "margarita",
+            "industry night",
+            "ladies night",
+            "bogo",
+            "half off",
+            "half-price",
         )
     ):
         return "recurring_deal"
@@ -1674,7 +1889,13 @@ def _coerce_special_type(s: dict) -> str:
         if _EVENT_CONTENT_RE.search(combined_text):
             return raw_type
         return _infer_special_type(combined_text or title or desc)
-    if raw_type in {"happy_hour", "daily_special", "recurring_deal", "brunch", "seasonal_menu"}:
+    if raw_type in {
+        "happy_hour",
+        "daily_special",
+        "recurring_deal",
+        "brunch",
+        "seasonal_menu",
+    }:
         return raw_type
     return _infer_special_type(combined_text or title or desc)
 
@@ -1751,7 +1972,12 @@ def validate_specials(specials: list[dict]) -> list[dict]:
         s = _fixup_common_fields(s)
 
         # Reject generic or too-short titles
-        if not s["title"] or s["title"].lower() in ("special", "specials", "deal", "deals"):
+        if not s["title"] or s["title"].lower() in (
+            "special",
+            "specials",
+            "deal",
+            "deals",
+        ):
             continue
         if len(s["title"]) < 5:
             continue
@@ -1807,7 +2033,9 @@ def extract_event_items(specials: list[dict]) -> list[dict]:
         # Attach metadata for Regular Hangs matching and series creation
         s["_category"] = category
         s["_genres"] = _SPECIAL_TYPE_GENRES.get(stype, [])
-        s["_price_note"] = price  # Preserved for series.price_note (separate from description)
+        s["_price_note"] = (
+            price  # Preserved for series.price_note (separate from description)
+        )
         events.append(s)
 
     return events
@@ -1817,15 +2045,24 @@ def _get_specials_source_id() -> int:
     """Resolve or cache the venue-specials-scraper source ID."""
     if not hasattr(_get_specials_source_id, "_cached"):
         client = get_client()
-        result = client.table("sources").select("id").eq("slug", "venue-specials-scraper").execute()
+        result = (
+            client.table("sources")
+            .select("id")
+            .eq("slug", "venue-specials-scraper")
+            .execute()
+        )
         if result.data:
             _get_specials_source_id._cached = result.data[0]["id"]
         else:
-            raise ValueError("Source 'venue-specials-scraper' not found in sources table")
+            raise ValueError(
+                "Source 'venue-specials-scraper' not found in sources table"
+            )
     return _get_specials_source_id._cached
 
 
-def upsert_event_items(venue: dict, event_items: list[dict], dry_run: bool = False) -> int:
+def upsert_event_items(
+    venue: dict, event_items: list[dict], dry_run: bool = False
+) -> int:
     """Insert event items as recurring events via insert_event(). Returns count inserted."""
     from datetime import date as date_cls, timedelta
     from dedupe import generate_content_hash, find_event_by_hash
@@ -1900,15 +2137,21 @@ def upsert_event_items(venue: dict, event_items: list[dict], dry_run: bool = Fal
                 }
 
                 if dry_run:
-                    logger.info(f"    [dry-run] Would insert event: {title} on {date_str} ({day_name})")
+                    logger.info(
+                        f"    [dry-run] Would insert event: {title} on {date_str} ({day_name})"
+                    )
                     inserted += 1
                     continue
 
                 try:
-                    insert_event(event_data, series_hint=series_hint, genres=genres or None)
+                    insert_event(
+                        event_data, series_hint=series_hint, genres=genres or None
+                    )
                     inserted += 1
                 except (ValueError, Exception) as e:
-                    logger.debug(f"    Event insert failed for '{title}' on {date_str}: {e}")
+                    logger.debug(
+                        f"    Event insert failed for '{title}' on {date_str}: {e}"
+                    )
 
         if inserted and not dry_run:
             logger.info(f"  Inserted {inserted} instances of recurring event: {title}")
@@ -1929,7 +2172,11 @@ def _merge_social_bio(data: dict, bio: dict, venue: dict) -> None:
         data["phone"] = bio["phone"]
 
     # Description: fill if missing
-    if bio.get("description") and not data.get("description") and not venue.get("description"):
+    if (
+        bio.get("description")
+        and not data.get("description")
+        and not venue.get("description")
+    ):
         data["description"] = bio["description"]
 
     # Menu URL: fill if missing
@@ -1937,7 +2184,11 @@ def _merge_social_bio(data: dict, bio: dict, venue: dict) -> None:
         data["menu_url"] = bio["menu_url"]
 
     # Reservation URL: fill if missing
-    if bio.get("reservation_url") and not data.get("reservation_url") and not venue.get("reservation_url"):
+    if (
+        bio.get("reservation_url")
+        and not data.get("reservation_url")
+        and not venue.get("reservation_url")
+    ):
         data["reservation_url"] = bio["reservation_url"]
 
     # Hours: parse from bio text and fill if missing (lowest confidence source)
@@ -1975,7 +2226,9 @@ def _fetch_fb_about_html(fb_url: str) -> Optional[str]:
         return None
 
 
-def fetch_venue_content(venue: dict, use_playwright: bool = True, include_social_bios: bool = False) -> Optional[tuple[str, dict]]:
+def fetch_venue_content(
+    venue: dict, use_playwright: bool = True, include_social_bios: bool = False
+) -> Optional[tuple[str, dict]]:
     """Fetch a venue's website content without LLM extraction.
 
     Returns (combined_text, meta_dict) or None if fetching fails.
@@ -2031,7 +2284,9 @@ def fetch_venue_content(venue: dict, use_playwright: bool = True, include_social
         html = fetch_page(url, timeout=5, use_playwright=use_playwright)
         if html:
             text = extract_page_content(html, max_chars=3000)
-            if len(text) > 100 and text != main_text[:len(text)]:  # Skip if same as main
+            if (
+                len(text) > 100 and text != main_text[: len(text)]
+            ):  # Skip if same as main
                 path = urlparse(url).path or url
                 subpage_texts.append(f"--- Page: {path} ---\n{text}")
 
@@ -2059,6 +2314,7 @@ def fetch_venue_content(venue: dict, use_playwright: bool = True, include_social
             logger.debug(f"  Fetching IG captions for @{ig_handle}")
             try:
                 from scrape_instagram_specials import fetch_instagram_captions
+
                 ig_captions = fetch_instagram_captions(ig_handle)
                 if ig_captions:
                     ig_captions = ig_captions[:3000]
@@ -2097,8 +2353,16 @@ def merge_meta_and_validate(data: dict, meta: dict, venue: dict) -> dict:
     # looks like an actual description (not SEO spam or navigation text)
     if not data.get("description") and meta.get("meta_description"):
         desc = meta["meta_description"].strip()
-        _junk = ("order directly", "expand menu", "check out", "see what's",
-                 "click here", "follow us", "sign up", "subscribe")
+        _junk = (
+            "order directly",
+            "expand menu",
+            "check out",
+            "see what's",
+            "click here",
+            "follow us",
+            "sign up",
+            "subscribe",
+        )
         if len(desc) >= 60 and not any(j in desc.lower() for j in _junk):
             data["description"] = desc
 
@@ -2131,14 +2395,18 @@ def merge_meta_and_validate(data: dict, meta: dict, venue: dict) -> dict:
         data["service_style"] = None
 
     # Clean description/short_description — strip filler adjectives that gpt-4o-mini can't resist
-    _FILLER_RE = re.compile(r'\b(vibrant|welcoming|unique|amazing|unforgettable|must-visit|hidden gem)\b\s*')
-    _FILLER_PHRASE_RE = re.compile(r'making it (a |an )?(perfect|ideal|great) spot [^.]*\.')
+    _FILLER_RE = re.compile(
+        r"\b(vibrant|welcoming|unique|amazing|unforgettable|must-visit|hidden gem)\b\s*"
+    )
+    _FILLER_PHRASE_RE = re.compile(
+        r"making it (a |an )?(perfect|ideal|great) spot [^.]*\."
+    )
     for _field in ("description", "short_description"):
         _val = data.get(_field)
         if _val:
-            _val = _FILLER_RE.sub('', _val)
-            _val = _FILLER_PHRASE_RE.sub('', _val)
-            _val = re.sub(r'\s+', ' ', _val).strip()
+            _val = _FILLER_RE.sub("", _val)
+            _val = _FILLER_PHRASE_RE.sub("", _val)
+            _val = re.sub(r"\s+", " ", _val).strip()
             data[_field] = _val if len(_val) > 20 else None
 
     # Validate price_level
@@ -2158,7 +2426,7 @@ def merge_meta_and_validate(data: dict, meta: dict, venue: dict) -> dict:
         for item in data["menu_highlights"]:
             p = item.get("price") if isinstance(item, dict) else None
             if p:
-                m = re.search(r'\$(\d+(?:\.\d+)?)', str(p))
+                m = re.search(r"\$(\d+(?:\.\d+)?)", str(p))
                 if m:
                     _prices.append(float(m.group(1)))
         if len(_prices) >= 2:  # Need at least 2 prices for a reliable signal
@@ -2213,11 +2481,13 @@ def merge_meta_and_validate(data: dict, meta: dict, venue: dict) -> dict:
         if isinstance(item, dict) and item.get("name"):
             _valid_cats = {"appetizer", "entree", "cocktail", "dessert", "beer", "wine"}
             cat = item.get("category")
-            validated_menu.append({
-                "name": str(item["name"])[:80],
-                "price": str(item["price"])[:20] if item.get("price") else None,
-                "category": cat if cat in _valid_cats else None,
-            })
+            validated_menu.append(
+                {
+                    "name": str(item["name"])[:80],
+                    "price": str(item["price"])[:20] if item.get("price") else None,
+                    "category": cat if cat in _valid_cats else None,
+                }
+            )
     data["menu_highlights"] = validated_menu or None
 
     # Validate payment_notes
@@ -2234,9 +2504,13 @@ def merge_meta_and_validate(data: dict, meta: dict, venue: dict) -> dict:
     return data
 
 
-def scrape_venue(venue: dict, use_playwright: bool = True, include_social_bios: bool = False) -> Optional[dict]:
+def scrape_venue(
+    venue: dict, use_playwright: bool = True, include_social_bios: bool = False
+) -> Optional[dict]:
     """Scrape a single venue's website and extract structured data."""
-    result = fetch_venue_content(venue, use_playwright=use_playwright, include_social_bios=include_social_bios)
+    result = fetch_venue_content(
+        venue, use_playwright=use_playwright, include_social_bios=include_social_bios
+    )
     if not result:
         return None
     combined, meta = result
@@ -2334,7 +2608,13 @@ def upsert_results(
     client = get_client()
     venue_id = venue["id"]
     now = datetime.utcnow().isoformat()
-    stats = {"specials_added": 0, "holiday_hours_added": 0, "holiday_specials_added": 0, "raw_extracted": 0, "venue_updated": False}
+    stats = {
+        "specials_added": 0,
+        "holiday_hours_added": 0,
+        "holiday_specials_added": 0,
+        "raw_extracted": 0,
+        "venue_updated": False,
+    }
 
     def should_set(field_name: str, data_key: str = None) -> bool:
         """Return True if we should write this field (has data + empty or forced)."""
@@ -2351,7 +2631,9 @@ def upsert_results(
         current_source = venue.get("hours_source")
         if should_update_hours(current_source, hours_source):
             hours_json, hours_display = prepare_hours_update(
-                data["hours"], source=hours_source, venue_type=venue.get("place_type") or venue.get("place_type"),
+                data["hours"],
+                source=hours_source,
+                venue_type=venue.get("place_type") or venue.get("place_type"),
             )
             if hours_json:
                 updates["hours"] = hours_json
@@ -2370,7 +2652,11 @@ def upsert_results(
     new_desc = data.get("description")
     if new_desc:
         existing_desc = venue.get("description") or ""
-        if force_update or not existing_desc or (len(new_desc) > len(existing_desc) * 1.5 and len(new_desc) > 80):
+        if (
+            force_update
+            or not existing_desc
+            or (len(new_desc) > len(existing_desc) * 1.5 and len(new_desc) > 80)
+        ):
             updates["description"] = new_desc
 
     if should_set("image_url", "og_image"):
@@ -2421,13 +2707,19 @@ def upsert_results(
             updates["genres"] = sorted(merged_genres)
 
     # Boolean fields: fill if empty
-    if data.get("accepts_reservations") is not None and (force_update or venue.get("accepts_reservations") is None):
+    if data.get("accepts_reservations") is not None and (
+        force_update or venue.get("accepts_reservations") is None
+    ):
         updates["accepts_reservations"] = data["accepts_reservations"]
 
-    if data.get("is_event_venue") is not None and (force_update or venue.get("is_event_venue") is None):
+    if data.get("is_event_venue") is not None and (
+        force_update or venue.get("is_event_venue") is None
+    ):
         updates["is_event_venue"] = data["is_event_venue"]
 
-    if data.get("is_chain") is not None and (force_update or venue.get("is_chain") is None):
+    if data.get("is_chain") is not None and (
+        force_update or venue.get("is_chain") is None
+    ):
         updates["is_chain"] = data["is_chain"]
 
     # Dietary options: merge (union)
@@ -2447,7 +2739,9 @@ def upsert_results(
             updates["parking"] = sorted(merged_parking)
 
     # Menu highlights: replace (LLM extraction is holistic, not incremental)
-    if data.get("menu_highlights") and (force_update or not venue.get("menu_highlights")):
+    if data.get("menu_highlights") and (
+        force_update or not venue.get("menu_highlights")
+    ):
         updates["menu_highlights"] = json.dumps(data["menu_highlights"])
 
     # Payment notes
@@ -2466,13 +2760,19 @@ def upsert_results(
         specials = validate_specials(raw_specials)
 
         if specials:
-            logger.info(f"  Specials: {len(raw_specials)} extracted → {len(specials)} validated")
+            logger.info(
+                f"  Specials: {len(raw_specials)} extracted → {len(specials)} validated"
+            )
         elif raw_specials:
-            logger.info(f"  Specials: {len(raw_specials)} extracted → 0 validated (all filtered)")
+            logger.info(
+                f"  Specials: {len(raw_specials)} extracted → 0 validated (all filtered)"
+            )
 
         if not dry_run and specials:
             # Delete existing recurring specials for this venue (start_date IS NULL)
-            client.table("place_specials").delete().eq("place_id", venue_id).is_("start_date", "null").execute()
+            client.table("place_specials").delete().eq("place_id", venue_id).is_(
+                "start_date", "null"
+            ).execute()
 
         for special in specials:
             # Days are already parsed as ints by validate_specials
@@ -2508,7 +2808,9 @@ def upsert_results(
             n_events = upsert_event_items(venue, event_items, dry_run=dry_run)
             stats["events_routed"] = n_events
             if n_events:
-                logger.info(f"  Events routed: {len(event_items)} items → {n_events} event instances")
+                logger.info(
+                    f"  Events routed: {len(event_items)} items → {n_events} event instances"
+                )
 
     return stats
 
@@ -2526,12 +2828,14 @@ def get_venues(
 
     query = (
         client.table("places")
-        .select("id, name, slug, website, place_type, description, short_description, "
-               "image_url, lat, lng, hours, menu_url, reservation_url, instagram, "
-               "facebook_url, phone, price_level, vibes, cuisine, service_style, "
-               "genres, accepts_reservations, is_event_venue, is_chain, "
-               "dietary_options, parking, menu_highlights, payment_notes, "
-               "last_verified_at, hours_source")
+        .select(
+            "id, name, slug, website, place_type, description, short_description, "
+            "image_url, lat, lng, hours, menu_url, reservation_url, instagram, "
+            "facebook_url, phone, price_level, vibes, cuisine, service_style, "
+            "genres, accepts_reservations, is_event_venue, is_chain, "
+            "dietary_options, parking, menu_highlights, payment_notes, "
+            "last_verified_at, hours_source"
+        )
         .neq("is_active", False)
         .not_.is_("website", "null")
     )
@@ -2547,36 +2851,87 @@ def get_venues(
     # Filter by distance if lat/lng provided
     if lat is not None and lng is not None:
         venues = [
-            v for v in venues
-            if v.get("lat") and v.get("lng")
+            v
+            for v in venues
+            if v.get("lat")
+            and v.get("lng")
             and haversine_km(lat, lng, float(v["lat"]), float(v["lng"])) <= radius_km
         ]
 
     # Sort by distance from center if available
     if lat is not None and lng is not None:
-        venues.sort(key=lambda v: haversine_km(lat, lng, float(v["lat"]), float(v["lng"])))
+        venues.sort(
+            key=lambda v: haversine_km(lat, lng, float(v["lat"]), float(v["lng"]))
+        )
 
     return venues[:limit]
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Scrape venue websites — extract specials, hours, phone, instagram, vibes, and more")
+    parser = argparse.ArgumentParser(
+        description="Scrape venue websites — extract specials, hours, phone, instagram, vibes, and more"
+    )
     parser.add_argument("--lat", type=float, help="Center latitude for corridor search")
-    parser.add_argument("--lng", type=float, help="Center longitude for corridor search")
-    parser.add_argument("--radius", type=float, default=2.0, help="Radius in km (default: 2)")
+    parser.add_argument(
+        "--lng", type=float, help="Center longitude for corridor search"
+    )
+    parser.add_argument(
+        "--radius", type=float, default=2.0, help="Radius in km (default: 2)"
+    )
     parser.add_argument("--venue-ids", type=str, help="Comma-separated venue IDs")
-    parser.add_argument("--venue-type", type=str, help="Filter by venue type (bar, restaurant, etc.)")
+    parser.add_argument(
+        "--venue-type", type=str, help="Filter by venue type (bar, restaurant, etc.)"
+    )
     parser.add_argument("--limit", type=int, default=200, help="Max venues to process")
-    parser.add_argument("--dry-run", action="store_true", help="Don't write to database")
-    parser.add_argument("--verbose", action="store_true", help="Show LLM extraction details")
-    parser.add_argument("--skip-specials", action="store_true", help="Skip venue_specials writes (venue enrichment only)")
-    parser.add_argument("--force-update", action="store_true", help="Overwrite existing data (default: only fill empty fields)")
-    parser.add_argument("--no-playwright", action="store_true", help="Disable Playwright fallback for bot-protected sites")
-    parser.add_argument("--include-social-bios", action="store_true", help="Also fetch IG/FB bios to fill gaps in phone, hours, description, links")
-    parser.add_argument("--max-age-days", type=int, default=14, help="Skip venues verified within this many days (default: 14)")
-    parser.add_argument("--force", action="store_true", help="Ignore freshness check — re-scrape all venues")
-    parser.add_argument("--dump", type=str, metavar="DIR", help="Dump mode: fetch venue content and save to DIR for offline LLM extraction (e.g., via Claude Code)")
-    parser.add_argument("--import-dir", type=str, metavar="DIR", help="Import mode: read pre-extracted JSON results from DIR and run validation + upsert")
+    parser.add_argument(
+        "--dry-run", action="store_true", help="Don't write to database"
+    )
+    parser.add_argument(
+        "--verbose", action="store_true", help="Show LLM extraction details"
+    )
+    parser.add_argument(
+        "--skip-specials",
+        action="store_true",
+        help="Skip venue_specials writes (venue enrichment only)",
+    )
+    parser.add_argument(
+        "--force-update",
+        action="store_true",
+        help="Overwrite existing data (default: only fill empty fields)",
+    )
+    parser.add_argument(
+        "--no-playwright",
+        action="store_true",
+        help="Disable Playwright fallback for bot-protected sites",
+    )
+    parser.add_argument(
+        "--include-social-bios",
+        action="store_true",
+        help="Also fetch IG/FB bios to fill gaps in phone, hours, description, links",
+    )
+    parser.add_argument(
+        "--max-age-days",
+        type=int,
+        default=14,
+        help="Skip venues verified within this many days (default: 14)",
+    )
+    parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Ignore freshness check — re-scrape all venues",
+    )
+    parser.add_argument(
+        "--dump",
+        type=str,
+        metavar="DIR",
+        help="Dump mode: fetch venue content and save to DIR for offline LLM extraction (e.g., via Claude Code)",
+    )
+    parser.add_argument(
+        "--import-dir",
+        type=str,
+        metavar="DIR",
+        help="Import mode: read pre-extracted JSON results from DIR and run validation + upsert",
+    )
     args = parser.parse_args()
 
     if args.verbose:
@@ -2638,7 +2993,8 @@ def main():
             data = merge_meta_and_validate(extracted, meta, venue)
 
             stats = upsert_results(
-                venue, data,
+                venue,
+                data,
                 dry_run=args.dry_run,
                 skip_specials=args.skip_specials,
                 force_update=args.force_update,
@@ -2661,8 +3017,12 @@ def main():
         venue_ids = [int(x.strip()) for x in args.venue_ids.split(",") if x.strip()]
 
     venues = get_venues(
-        lat=args.lat, lng=args.lng, radius_km=args.radius,
-        venue_ids=venue_ids, venue_type=args.venue_type, limit=args.limit,
+        lat=args.lat,
+        lng=args.lng,
+        radius_km=args.radius,
+        venue_ids=venue_ids,
+        venue_type=args.venue_type,
+        limit=args.limit,
     )
 
     use_playwright = not args.no_playwright
@@ -2683,8 +3043,11 @@ def main():
                 name = venue["name"][:45]
                 logger.info(f"[{i}/{len(venues)}] {name}")
 
-                result = fetch_venue_content(venue, use_playwright=use_playwright,
-                                             include_social_bios=args.include_social_bios)
+                result = fetch_venue_content(
+                    venue,
+                    use_playwright=use_playwright,
+                    include_social_bios=args.include_social_bios,
+                )
                 if not result:
                     logger.info("  Failed to fetch")
                     failed += 1
@@ -2692,18 +3055,26 @@ def main():
 
                 combined, meta = result
                 # Strip non-serializable keys from meta
-                serializable_meta = {k: v for k, v in meta.items() if not k.startswith("_")}
+                serializable_meta = {
+                    k: v for k, v in meta.items() if not k.startswith("_")
+                }
 
                 slug = venue.get("slug") or f"venue-{venue['id']}"
                 dump_file = dump_dir / f"{slug}.json"
-                dump_file.write_text(json.dumps({
-                    "place_id": venue["id"],
-                    "venue_slug": slug,
-                    "venue_name": venue["name"],
-                    "website": venue.get("website"),
-                    "combined_text": combined,
-                    "meta": serializable_meta,
-                }, indent=2, ensure_ascii=False))
+                dump_file.write_text(
+                    json.dumps(
+                        {
+                            "place_id": venue["id"],
+                            "venue_slug": slug,
+                            "venue_name": venue["name"],
+                            "website": venue.get("website"),
+                            "combined_text": combined,
+                            "meta": serializable_meta,
+                        },
+                        indent=2,
+                        ensure_ascii=False,
+                    )
+                )
 
                 logger.info(f"  Saved {len(combined)} chars → {dump_file.name}")
                 dumped += 1
@@ -2714,7 +3085,9 @@ def main():
 
         logger.info("=" * 60)
         logger.info(f"Done! Dumped {dumped} venues, {failed} failed")
-        logger.info(f"Next: process files in {dump_dir}/ with Claude Code, then import with --import-dir")
+        logger.info(
+            f"Next: process files in {dump_dir}/ with Claude Code, then import with --import-dir"
+        )
         return
 
     logger.info(f"Found {len(venues)} venues to scrape")
@@ -2730,14 +3103,25 @@ def main():
         logger.info("SOCIAL BIOS — enriching from Instagram and Facebook bios")
     logger.info("=" * 60)
 
-    totals = {"scraped": 0, "specials": 0, "holiday_hours": 0, "holiday_specials": 0, "venues_updated": 0, "failed": 0, "skipped": 0, "playwright_fallbacks": 0}
+    totals = {
+        "scraped": 0,
+        "specials": 0,
+        "holiday_hours": 0,
+        "holiday_specials": 0,
+        "venues_updated": 0,
+        "failed": 0,
+        "skipped": 0,
+        "playwright_fallbacks": 0,
+    }
 
     try:
         for i, venue in enumerate(venues, 1):
             name = venue["name"][:45]
             dist_str = ""
             if args.lat and args.lng and venue.get("lat") and venue.get("lng"):
-                dist = haversine_km(args.lat, args.lng, float(venue["lat"]), float(venue["lng"]))
+                dist = haversine_km(
+                    args.lat, args.lng, float(venue["lat"]), float(venue["lng"])
+                )
                 dist_str = f" ({dist:.1f}km)"
 
             logger.info(f"[{i}/{len(venues)}] {name}{dist_str}")
@@ -2745,7 +3129,9 @@ def main():
             # Freshness skip — don't re-scrape recently verified venues
             if not args.force and venue.get("last_verified_at"):
                 try:
-                    verified = datetime.fromisoformat(venue["last_verified_at"].replace("Z", "+00:00"))
+                    verified = datetime.fromisoformat(
+                        venue["last_verified_at"].replace("Z", "+00:00")
+                    )
                     age_days = (datetime.now(timezone.utc) - verified).days
                     if age_days < args.max_age_days:
                         logger.info(f"  Skipping (verified {age_days}d ago)")
@@ -2754,7 +3140,11 @@ def main():
                 except (ValueError, TypeError):
                     pass  # If parsing fails, proceed with scrape
 
-            data = scrape_venue(venue, use_playwright=use_playwright, include_social_bios=args.include_social_bios)
+            data = scrape_venue(
+                venue,
+                use_playwright=use_playwright,
+                include_social_bios=args.include_social_bios,
+            )
             if not data:
                 totals["failed"] += 1
                 continue
@@ -2772,17 +3162,28 @@ def main():
             n_vibes = len(data.get("vibes", []))
 
             details = []
-            if n_specials: details.append(f"{n_specials} specials")
-            if n_hol_hours: details.append(f"{n_hol_hours} holiday hours")
-            if n_hol_specials: details.append(f"{n_hol_specials} holiday specials")
-            if has_hours: details.append("hours")
-            if has_menu: details.append("menu")
-            if has_resy: details.append("reservations")
-            if has_phone: details.append(f"phone:{data['phone']}")
-            if has_ig: details.append(f"ig:@{data['instagram']}")
-            if has_fb: details.append("facebook")
-            if has_price: details.append(f"${'$' * data['price_level']}")
-            if n_vibes: details.append(f"{n_vibes} vibes")
+            if n_specials:
+                details.append(f"{n_specials} specials")
+            if n_hol_hours:
+                details.append(f"{n_hol_hours} holiday hours")
+            if n_hol_specials:
+                details.append(f"{n_hol_specials} holiday specials")
+            if has_hours:
+                details.append("hours")
+            if has_menu:
+                details.append("menu")
+            if has_resy:
+                details.append("reservations")
+            if has_phone:
+                details.append(f"phone:{data['phone']}")
+            if has_ig:
+                details.append(f"ig:@{data['instagram']}")
+            if has_fb:
+                details.append("facebook")
+            if has_price:
+                details.append(f"${'$' * data['price_level']}")
+            if n_vibes:
+                details.append(f"{n_vibes} vibes")
 
             if details:
                 logger.info(f"  Found: {', '.join(details)}")
@@ -2792,7 +3193,8 @@ def main():
                 continue
 
             stats = upsert_results(
-                venue, data,
+                venue,
+                data,
                 dry_run=args.dry_run,
                 skip_specials=args.skip_specials,
                 force_update=args.force_update,

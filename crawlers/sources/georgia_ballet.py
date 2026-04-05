@@ -410,7 +410,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             logger.info(f"Georgia Ballet: found {len(ovationtix_prod_ids)} OvationTix productions")
 
             # Get the events page body text for context (titles, descriptions)
-            events_page_text = page.inner_text("body")
+            page.inner_text("body")
 
             # Also check the season page for additional show info
             logger.info(f"Georgia Ballet: fetching season page {SEASON_URL}")

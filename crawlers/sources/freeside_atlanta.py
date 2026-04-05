@@ -210,7 +210,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 page.wait_for_timeout(1000)
 
             # Get page HTML for parsing
-            html_content = page.content()
+            page.content()
             body_text = page.inner_text("body")
 
             # Look for event elements (common patterns)

@@ -222,7 +222,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     # Determine category based on title
                     title_lower = title.lower()
-                    description_lower = description.lower()
+                    description.lower()
 
                     if any(w in title_lower for w in ["oktoberfest", "beer fest", "beer celebration", "tap takeover", "beer dinner"]):
                         category, subcategory = "food_drink", "beer_event"

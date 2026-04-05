@@ -1106,10 +1106,9 @@ def _build_program_record(
         except (ValueError, TypeError):
             pass
 
-    session_end = None
     if end_date_str:
         try:
-            session_end = datetime.strptime(end_date_str, "%Y-%m-%d").date()
+            datetime.strptime(end_date_str, "%Y-%m-%d").date()
         except (ValueError, TypeError):
             pass
 

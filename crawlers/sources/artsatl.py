@@ -12,7 +12,6 @@ import logging
 import re
 from datetime import datetime
 from typing import Optional
-from urllib.parse import urljoin
 
 from playwright.sync_api import sync_playwright
 

@@ -5,13 +5,9 @@ Mixed-use development at MARTA Lindbergh station with retail, dining, and commun
 
 from __future__ import annotations
 
-import re
 import logging
 from datetime import datetime, timedelta
-from typing import Optional
 
-import requests
-from bs4 import BeautifulSoup
 
 from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash

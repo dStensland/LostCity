@@ -161,7 +161,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
         response = requests.get(EVENTS_URL, headers=headers, timeout=30)
         response.raise_for_status()
 
-        soup = BeautifulSoup(response.text, "html.parser")
+        BeautifulSoup(response.text, "html.parser")
         venue_id = get_or_create_place(PLACE_DATA)
 
         event_links = parse_event_links_from_html(response.text)

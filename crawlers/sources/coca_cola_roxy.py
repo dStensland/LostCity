@@ -13,7 +13,7 @@ from datetime import datetime, timezone
 
 from playwright.sync_api import sync_playwright
 
-from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash
 from dedupe import generate_content_hash
 from description_fetcher import fetch_detail_html_playwright
 from pipeline.detail_enrich import enrich_from_detail

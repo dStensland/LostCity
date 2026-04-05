@@ -72,7 +72,7 @@ def main():
     needs_duration = [v for v in venues if v.get("is_experience") and not v.get("typical_duration_minutes")]
 
     print(f"\n{'='*60}")
-    print(f"  Experience Venue Coverage Report")
+    print("  Experience Venue Coverage Report")
     print(f"{'='*60}")
     print(f"  Already flagged:           {len(already_flagged)}")
     print(f"  Needs is_experience=true:  {len(needs_flag)}")
@@ -80,7 +80,7 @@ def main():
     print(f"  Total qualifying:          {len(venues)}")
 
     if needs_flag:
-        print(f"\n  Venues to flag:")
+        print("\n  Venues to flag:")
         by_type = {}
         for v in needs_flag:
             vt = v["venue_type"] or "unknown"
@@ -114,7 +114,7 @@ def main():
                     {"typical_duration_minutes": dur}
                 ).eq("id", v["id"]).execute()
 
-        print(f"  Set duration defaults for newly flagged venues.")
+        print("  Set duration defaults for newly flagged venues.")
 
     # Also backfill duration for previously flagged venues missing it
     if args.apply and needs_duration:
@@ -127,7 +127,7 @@ def main():
         print(f"  Backfilled duration for {len(needs_duration)} existing experience venues.")
 
     if not args.apply and (needs_flag or needs_duration):
-        print(f"\n  Dry run — use --apply to make changes.")
+        print("\n  Dry run — use --apply to make changes.")
 
     print()
 

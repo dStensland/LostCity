@@ -319,7 +319,7 @@ def analyze_gaps() -> None:
     low_yield_sources = []
     destination_first_major_sources = []
 
-    source_by_id = {source["id"]: source for source in sources if source.get("id") is not None}
+    {source["id"]: source for source in sources if source.get("id") is not None}
     for venue_name, expected_slug in EXPECTED_MAJOR_VENUES.items():
         source = source_by_slug.get(expected_slug)
         if not source:

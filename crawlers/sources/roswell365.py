@@ -22,7 +22,12 @@ from urllib.parse import urljoin
 
 from playwright.sync_api import sync_playwright
 
-from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
+from db import (
+    get_or_create_place,
+    insert_event,
+    find_event_by_hash,
+    smart_update_existing_event,
+)
 from dedupe import generate_content_hash
 from utils import enrich_event_record
 
@@ -68,7 +73,9 @@ def parse_time(time_text: str) -> Optional[str]:
         return None
 
 
-def is_future_or_current_date(start_date: Optional[str], *, today: Optional[date] = None) -> bool:
+def is_future_or_current_date(
+    start_date: Optional[str], *, today: Optional[date] = None
+) -> bool:
     """Return True when the event date is today or in the future."""
     if not start_date:
         return False
@@ -79,7 +86,9 @@ def is_future_or_current_date(start_date: Optional[str], *, today: Optional[date
     return parsed >= (today or date.today())
 
 
-def extract_price_info(text: str) -> tuple[Optional[float], Optional[float], Optional[str], bool]:
+def extract_price_info(
+    text: str,
+) -> tuple[Optional[float], Optional[float], Optional[str], bool]:
     """Extract price information from text like 'Tickets from $47.75' or 'Free'."""
     text = text.lower()
 
@@ -186,6 +195,7 @@ def parse_venue_from_text(location_text: str) -> dict:
 def _has_word(combined: str, words: list[str]) -> bool:
     """Check for whole-word matches to avoid substring false positives."""
     import re
+
     return any(re.search(rf"\b{w}\b", combined) for w in words)
 
 
@@ -197,9 +207,25 @@ def infer_category(title: str, description: str) -> str:
         return "music"
     elif _has_word(combined, ["theater", "play", "musical", "performance"]):
         return "performing-arts"
-    elif _has_word(combined, ["volleyball", "basketball", "soccer", "softball", "baseball",
-                              "football", "tennis", "pickleball", "rugby", "lacrosse",
-                              "swimming", "track and field", "tournament", "athletics"]):
+    elif _has_word(
+        combined,
+        [
+            "volleyball",
+            "basketball",
+            "soccer",
+            "softball",
+            "baseball",
+            "football",
+            "tennis",
+            "pickleball",
+            "rugby",
+            "lacrosse",
+            "swimming",
+            "track and field",
+            "tournament",
+            "athletics",
+        ],
+    ):
         return "sports"
     elif _has_word(combined, ["workshop", "class", "learn", "training"]):
         return "community"
@@ -231,7 +257,7 @@ def scrape_event_page(page, event_url: str) -> Optional[dict]:
             title_elem = page.locator("h1").first
             if title_elem:
                 title = title_elem.inner_text().strip()
-        except:
+        except Exception:
             pass
 
         if not title:
@@ -247,7 +273,7 @@ def scrape_event_page(page, event_url: str) -> Optional[dict]:
         # Extract date and time from "Feb 21, 2026 at 7:00pm" pattern
         date_match = re.search(
             r"(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2}),?\s+(\d{4})",
-            body_text
+            body_text,
         )
 
         if not date_match:
@@ -263,34 +289,52 @@ def scrape_event_page(page, event_url: str) -> Optional[dict]:
 
         # Extract time
         start_time = None
-        time_match = re.search(r"at\s+(\d{1,2}:\d{2}\s*(?:am|pm))", body_text, re.IGNORECASE)
+        time_match = re.search(
+            r"at\s+(\d{1,2}:\d{2}\s*(?:am|pm))", body_text, re.IGNORECASE
+        )
         if time_match:
             start_time = parse_time(time_match.group(1))
 
         # Extract description - look for paragraphs after the title
         description = ""
         _BANNER_PHRASES = [
-            "cookie", "consent", "we value your privacy", "privacy policy",
-            "accept all", "decline all", "essential cookies", "analytics cookies",
-            "gdpr", "data protection", "manage preferences",
+            "cookie",
+            "consent",
+            "we value your privacy",
+            "privacy policy",
+            "accept all",
+            "decline all",
+            "essential cookies",
+            "analytics cookies",
+            "gdpr",
+            "data protection",
+            "manage preferences",
         ]
         try:
             # Prefer content area over all <p> tags
             content = page.locator(".entry-content p, .event-content p, article p")
-            paragraphs = content.all() if content.count() > 0 else page.locator("p").all()
+            paragraphs = (
+                content.all() if content.count() > 0 else page.locator("p").all()
+            )
             desc_parts = []
             for p in paragraphs[:5]:
                 text = p.inner_text().strip()
                 text_lower = text.lower()
-                if len(text) > 20 and not any(bp in text_lower for bp in _BANNER_PHRASES):
+                if len(text) > 20 and not any(
+                    bp in text_lower for bp in _BANNER_PHRASES
+                ):
                     desc_parts.append(text)
             description = " ".join(desc_parts)[:500]
-        except:
+        except Exception:
             pass
 
         # Extract location/venue
         location_text = ""
-        location_match = re.search(r"at\s+([^\n]+(?:Center|Church|Library|Park|Arena|Theater))", body_text, re.IGNORECASE)
+        location_match = re.search(
+            r"at\s+([^\n]+(?:Center|Church|Library|Park|Arena|Theater))",
+            body_text,
+            re.IGNORECASE,
+        )
         if location_match:
             location_text = location_match.group(1).strip()
 
@@ -311,7 +355,12 @@ def scrape_event_page(page, event_url: str) -> Optional[dict]:
                     image_url = og_src
             # Fallback to content images
             if not image_url:
-                for sel in [".entry-content img", ".event-content img", "article img", "img[src*='roswell365']"]:
+                for sel in [
+                    ".entry-content img",
+                    ".event-content img",
+                    "article img",
+                    "img[src*='roswell365']",
+                ]:
                     img = page.locator(sel).first
                     if img:
                         src = img.get_attribute("src")
@@ -320,7 +369,7 @@ def scrape_event_page(page, event_url: str) -> Optional[dict]:
                             break
             if image_url and not image_url.startswith("http"):
                 image_url = urljoin(BASE_URL, image_url)
-        except:
+        except Exception:
             pass
 
         # Extract ticket URL
@@ -331,7 +380,7 @@ def scrape_event_page(page, event_url: str) -> Optional[dict]:
                 ticket_url = buy_link.get_attribute("href")
                 if ticket_url and not ticket_url.startswith("http"):
                     ticket_url = urljoin(BASE_URL, ticket_url)
-        except:
+        except Exception:
             pass
 
         if not ticket_url:
@@ -392,7 +441,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
             max_pages = 10  # Safety limit
 
             while page_num <= max_pages:
-                list_url = f"{EVENTS_URL}?page={page_num}" if page_num > 1 else EVENTS_URL
+                list_url = (
+                    f"{EVENTS_URL}?page={page_num}" if page_num > 1 else EVENTS_URL
+                )
 
                 logger.info(f"Fetching Roswell365 events page {page_num}: {list_url}")
                 page.goto(list_url, wait_until="domcontentloaded", timeout=30000)
@@ -422,7 +473,12 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         event_url = urljoin(BASE_URL, href)
 
                     # Skip the main events page and pagination links
-                    if event_url in [EVENTS_URL, f"{BASE_URL}/event/"] or "?page=" in event_url or "?view=" in event_url or "print_event_search_result" in event_url:
+                    if (
+                        event_url in [EVENTS_URL, f"{BASE_URL}/event/"]
+                        or "?page=" in event_url
+                        or "?view=" in event_url
+                        or "print_event_search_result" in event_url
+                    ):
                         continue
 
                     if event_url not in event_urls:
@@ -461,7 +517,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 content_hash = generate_content_hash(
                     event_data["title"],
                     event_data["venue_data"]["name"],
-                    event_data["start_date"]
+                    event_data["start_date"],
                 )
 
                 # Prepare event record
@@ -499,7 +555,10 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     desc_lower = (event_record.get("description") or "").lower()
                     title_lower = event_record.get("title", "").lower()
                     combined = f"{title_lower} {desc_lower}"
-                    if any(kw in combined for kw in ["free", "no cost", "no charge", "complimentary"]):
+                    if any(
+                        kw in combined
+                        for kw in ["free", "no cost", "no charge", "complimentary"]
+                    ):
                         event_record["is_free"] = True
                         event_record["price_min"] = event_record.get("price_min") or 0
                         event_record["price_max"] = event_record.get("price_max") or 0
@@ -516,7 +575,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 try:
                     insert_event(event_record)
                     events_new += 1
-                    logger.info(f"Added: {event_data['title']} on {event_data['start_date']}")
+                    logger.info(
+                        f"Added: {event_data['title']} on {event_data['start_date']}"
+                    )
                 except Exception as e:
                     logger.error(f"Failed to insert event '{event_data['title']}': {e}")
 

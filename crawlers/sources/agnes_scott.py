@@ -4,7 +4,6 @@ Public events only - lectures, performances, and exhibits open to the general pu
 Filters out student-only events using the Localist API.
 """
 
-import json
 import logging
 from datetime import datetime
 import requests
@@ -155,7 +154,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 "source_id": source_id,
                 "place_id": venue_id,
                 "title": title,
-                "description": (event.get("description_text") or f"Public event at Agnes Scott College")[:500],
+                "description": (event.get("description_text") or "Public event at Agnes Scott College")[:500],
                 "start_date": start_date,
                 "start_time": start_time,
                 "end_date": end_date if end_date != start_date else None,

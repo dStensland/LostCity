@@ -20,7 +20,6 @@ import argparse
 import requests
 from pathlib import Path
 from typing import Optional
-from urllib.parse import urlparse
 from dotenv import load_dotenv
 
 # Load .env files
@@ -142,7 +141,7 @@ def search_google_places(query: str, lat: float = ATLANTA_LAT, lng: float = ATLA
             return None
 
         # Return best match by name similarity
-        query_lower = query.lower()
+        query.lower()
         for place in places:
             place_name = place.get("displayName", {}).get("text", "")
             if name_similarity(query, place_name) >= 0.5:

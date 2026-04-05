@@ -142,8 +142,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
             # Then process in groups of 3: day_abbrev, day_num, content
             i = 1
             while i + 2 < len(parts):
-                day_abbrev = parts[i]
-                day_num = parts[i + 1]
+                parts[i]
+                parts[i + 1]
                 content = parts[i + 2]
                 i += 3
 

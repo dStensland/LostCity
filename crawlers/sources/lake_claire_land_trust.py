@@ -14,7 +14,12 @@ from typing import Optional
 import requests
 from bs4 import BeautifulSoup
 
-from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
+from db import (
+    get_or_create_place,
+    insert_event,
+    find_event_by_hash,
+    smart_update_existing_event,
+)
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -73,8 +78,9 @@ def create_drum_circle_events(source_id: int, venue_id: int) -> tuple[int, int]:
         title = "Lake Claire Monthly Drum Circle"
         start_date = event_date.strftime("%Y-%m-%d")
 
-        content_hash = generate_content_hash(title, "Lake Claire Land Trust", start_date)
-
+        content_hash = generate_content_hash(
+            title, "Lake Claire Land Trust", start_date
+        )
 
         description = (
             "Monthly community drum circle at Lake Claire Land Trust, a tradition since 1991. "
@@ -94,7 +100,14 @@ def create_drum_circle_events(source_id: int, venue_id: int) -> tuple[int, int]:
             "is_all_day": False,
             "category": "music",
             "subcategory": None,
-            "tags": ["lake-claire", "drum-circle", "community", "free", "outdoor", "family-friendly"],
+            "tags": [
+                "lake-claire",
+                "drum-circle",
+                "community",
+                "free",
+                "outdoor",
+                "family-friendly",
+            ],
             "price_min": None,
             "price_max": None,
             "price_note": None,
@@ -155,7 +168,7 @@ def parse_date(date_str: str) -> Optional[str]:
     match = re.search(
         r"(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2})",
         date_str,
-        re.IGNORECASE
+        re.IGNORECASE,
     )
     if match:
         month_str = match.group(1)[:3]
@@ -195,8 +208,11 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
         # Look for event elements
         event_selectors = [
-            ".eventlist-event", ".event-item", "[class*='event']",
-            ".summary-item", "article"
+            ".eventlist-event",
+            ".event-item",
+            "[class*='event']",
+            ".summary-item",
+            "article",
         ]
 
         for selector in event_selectors:
@@ -228,7 +244,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         date_match = re.search(
                             r"(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2}",
                             text,
-                            re.IGNORECASE
+                            re.IGNORECASE,
                         )
                         if date_match:
                             date_str = date_match.group()
@@ -240,7 +256,10 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         continue
 
                     # Skip past events
-                    if datetime.strptime(start_date, "%Y-%m-%d").date() < datetime.now().date():
+                    if (
+                        datetime.strptime(start_date, "%Y-%m-%d").date()
+                        < datetime.now().date()
+                    ):
                         continue
 
                     events_found += 1
@@ -248,12 +267,6 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     content_hash = generate_content_hash(
                         title, "Lake Claire Land Trust", start_date
                     )
-
-                    existing = find_event_by_hash(content_hash)
-                    if existing:
-                        smart_update_existing_event(existing, event_record)
-                        events_updated += 1
-                        continue
 
                     # Determine category
                     title_lower = title.lower()
@@ -280,7 +293,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "source_id": source_id,
                         "place_id": venue_id,
                         "title": title,
-                        "description": f"Community event at Lake Claire Land Trust",
+                        "description": "Community event at Lake Claire Land Trust",
                         "start_date": start_date,
                         "start_time": None,
                         "end_date": None,
@@ -302,6 +315,12 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "recurrence_rule": None,
                         "content_hash": content_hash,
                     }
+
+                    existing = find_event_by_hash(content_hash)
+                    if existing:
+                        smart_update_existing_event(existing, event_record)
+                        events_updated += 1
+                        continue
 
                     try:
                         insert_event(event_record)

@@ -87,7 +87,7 @@ def main():
             total_updated += r.count
 
     # Step 2: Remove non-venue entities
-    print(f"\n=== Non-Venue Entities ===")
+    print("\n=== Non-Venue Entities ===")
     for del_type in DELETE_TYPES:
         r = client.table("places").select("id,name", count="exact").eq("place_type", del_type).execute()
         if r.count > 0:
@@ -98,7 +98,7 @@ def main():
                 # Don't delete, just set to inactive — they may have events pointing to them
                 ids = [v["id"] for v in r.data]
                 client.table("places").update({"is_active": False, "place_type": "venue"}).in_("id", ids).execute()
-                print(f"    -> Deactivated and set type to 'venue'")
+                print("    -> Deactivated and set type to 'venue'")
             total_deleted += r.count
 
     # Step 3: Check remaining null types

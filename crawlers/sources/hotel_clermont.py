@@ -234,7 +234,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     # Extract location within venue
                     location_elem = item.query_selector("[class*='eapp-events-calendar-location-component']")
-                    location_detail = location_elem.inner_text().strip() if location_elem else None
+                    location_elem.inner_text().strip() if location_elem else None
 
                     # Extract event URL
                     link_elem = item.query_selector("a")

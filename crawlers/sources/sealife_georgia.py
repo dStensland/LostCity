@@ -32,7 +32,6 @@ import logging
 import re
 from datetime import datetime
 from typing import Optional
-from urllib.parse import urljoin
 
 from playwright.sync_api import sync_playwright
 
@@ -233,7 +232,7 @@ def _parse_events_from_page_text(
     excluded — they are venue features, not calendar events.
     """
     lines = [ln.strip() for ln in body_text.split("\n") if ln.strip()]
-    today_str = datetime.now().strftime("%Y-%m-%d")
+    datetime.now().strftime("%Y-%m-%d")
     today = datetime.now().date()
 
     events = []

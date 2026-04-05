@@ -3,7 +3,6 @@ Register new volunteer sources in the database.
 Run this to add Keep Atlanta Beautiful, Second Helpings Atlanta, and Grant Park Conservancy.
 """
 
-import sys
 from db import get_client
 
 def register_sources():

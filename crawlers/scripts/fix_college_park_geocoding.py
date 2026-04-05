@@ -62,7 +62,7 @@ def geocode_address(address: str, city: str, state: str) -> Optional[Tuple[float
             return (lat, lng)
 
         # Try without full address - just city
-        logger.warning(f"  -> Specific address not found, trying city center")
+        logger.warning("  -> Specific address not found, trying city center")
         response = requests.get(
             NOMINATIM_URL,
             params={
@@ -204,7 +204,7 @@ def main():
                 geocoded += 1
                 logger.info(f"  -> Updated venue {venue['id']}")
             else:
-                logger.warning(f"  -> Failed to geocode")
+                logger.warning("  -> Failed to geocode")
                 failed += 1
 
             # Rate limit: 1 request per second (Nominatim policy)
@@ -213,7 +213,7 @@ def main():
 
         logger.info("")
         logger.info("=" * 70)
-        logger.info(f"Geocoding Complete!")
+        logger.info("Geocoding Complete!")
         logger.info(f"  Successfully geocoded: {geocoded}")
         logger.info(f"  Failed: {failed}")
         logger.info("=" * 70)

@@ -126,7 +126,7 @@ def main():
 
     for i, v in enumerate(venues, 1):
         name = v["name"]
-        address = v.get("address", "")
+        v.get("address", "")
         city = v.get("city", "Atlanta")
         state = v.get("state", "GA")
 

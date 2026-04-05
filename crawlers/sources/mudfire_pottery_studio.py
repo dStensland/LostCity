@@ -18,10 +18,15 @@ from typing import Optional
 
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeout
 
-from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
+from db import (
+    get_or_create_place,
+    insert_event,
+    find_event_by_hash,
+    smart_update_existing_event,
+)
 from db.programs import insert_program
 from dedupe import generate_content_hash
-from utils import extract_images_from_page, parse_price, normalize_time_format
+from utils import normalize_time_format
 
 logger = logging.getLogger(__name__)
 
@@ -153,7 +158,7 @@ def parse_acuity_scheduling_page(page, venue_id: int, source_id: int) -> list[di
         html_content = page.content()
 
         # Find the BUSINESS object definition
-        business_match = re.search(r'var BUSINESS = ({.*?});', html_content, re.DOTALL)
+        business_match = re.search(r"var BUSINESS = ({.*?});", html_content, re.DOTALL)
         if not business_match:
             logger.warning("Could not find BUSINESS object in page HTML")
             return class_types
@@ -164,30 +169,32 @@ def parse_acuity_scheduling_page(page, venue_id: int, source_id: int) -> list[di
         logger.info(f"Found business data for: {business_data.get('name')}")
 
         # Extract appointment types (classes)
-        appointment_types = business_data.get('appointmentTypes', {})
+        appointment_types = business_data.get("appointmentTypes", {})
 
         for category, classes in appointment_types.items():
             logger.info(f"Category: {category}, Classes: {len(classes)}")
 
             for cls in classes:
-                class_name = cls.get('name', '')
-                description = cls.get('description', '')
-                price = cls.get('price', '')
-                duration = cls.get('duration', 0)
-                class_size = cls.get('classSize', 0)
-                is_active = cls.get('is_active', True)
+                class_name = cls.get("name", "")
+                description = cls.get("description", "")
+                price = cls.get("price", "")
+                duration = cls.get("duration", 0)
+                class_size = cls.get("classSize", 0)
+                is_active = cls.get("is_active", True)
 
                 if not is_active:
                     continue
 
-                class_types.append({
-                    'name': class_name,
-                    'description': description,
-                    'price': price,
-                    'duration': duration,
-                    'class_size': class_size,
-                    'category': category,
-                })
+                class_types.append(
+                    {
+                        "name": class_name,
+                        "description": description,
+                        "price": price,
+                        "duration": duration,
+                        "class_size": class_size,
+                        "category": category,
+                    }
+                )
 
         logger.info(f"Found {len(class_types)} active class types")
 
@@ -197,8 +204,6 @@ def parse_acuity_scheduling_page(page, venue_id: int, source_id: int) -> list[di
         logger.warning(f"Error parsing Acuity Scheduling page: {e}")
 
     return class_types
-
-
 
 
 def crawl(source: dict) -> tuple[int, int, int]:
@@ -241,7 +246,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                 class_types = parse_acuity_scheduling_page(page, venue_id, source_id)
                 all_class_types.extend(class_types)
-                logger.info(f"Found {len(class_types)} class types from scheduling page")
+                logger.info(
+                    f"Found {len(class_types)} class types from scheduling page"
+                )
 
             except Exception as e:
                 logger.warning(f"Could not parse Acuity Scheduling page: {e}")
@@ -254,16 +261,23 @@ def crawl(source: dict) -> tuple[int, int, int]:
             for class_data in all_class_types:
                 # Generate a few upcoming occurrences for each class type
                 # We'll create one event per week for the next 4 weeks
-                class_name = class_data['name']
-                description = class_data.get('description', '')
-                price = class_data.get('price', '65.00')
+                class_name = class_data["name"]
+                description = class_data.get("description", "")
+                price = class_data.get("price", "65.00")
 
                 # Categorize based on title
                 cat_info = categorize_class(class_name)
 
                 # Build better description
-                full_description = description if description else f"Pottery class at MudFire Studio in Decatur."
-                if "date-night" in cat_info["tags"] or "date night" in class_name.lower():
+                full_description = (
+                    description
+                    if description
+                    else "Pottery class at MudFire Studio in Decatur."
+                )
+                if (
+                    "date-night" in cat_info["tags"]
+                    or "date night" in class_name.lower()
+                ):
                     full_description += " Perfect for couples and date nights."
                 if "beginner" in class_name.lower() or "101" in class_name:
                     full_description += " No experience necessary - beginners welcome!"
@@ -272,7 +286,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 try:
                     price_val = float(price.replace("$", "").strip())
                     price_min = price_max = price_val
-                except:
+                except Exception:
                     price_min = price_max = 65.0
 
                 # Generate 4 upcoming Saturday occurrences (typical for pottery classes)
@@ -301,12 +315,16 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     if days_until_saturday == 0 and week_offset == 0:
                         days_until_saturday = 7  # Next Saturday, not today
 
-                    event_date = today + timedelta(days=days_until_saturday + (week_offset * 7))
+                    event_date = today + timedelta(
+                        days=days_until_saturday + (week_offset * 7)
+                    )
                     start_date = event_date.strftime("%Y-%m-%d")
 
                     events_found += 1
 
-                    content_hash = generate_content_hash(class_name, "MudFire Pottery Studio", start_date)
+                    content_hash = generate_content_hash(
+                        class_name, "MudFire Pottery Studio", start_date
+                    )
 
                     # Check for existing
 
@@ -325,7 +343,11 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "tags": cat_info["tags"],
                         "price_min": price_min,
                         "price_max": price_max,
-                        "price_note": f"${price_val:.0f} per person" if price_min else "See website for pricing",
+                        "price_note": (
+                            f"${price_val:.0f} per person"
+                            if price_min
+                            else "See website for pricing"
+                        ),
                         "is_free": False,
                         "source_url": CLASSES_URL,
                         "ticket_url": SCHEDULING_URL,

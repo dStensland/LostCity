@@ -9,8 +9,7 @@ Comprehensive diagnostic to identify systemic issues with festival series data:
 5. Specific known issues (Decatur, aggregators, classes)
 """
 
-import sys
-from datetime import datetime, timedelta
+from datetime import datetime
 from collections import defaultdict
 from difflib import SequenceMatcher
 from db import get_client

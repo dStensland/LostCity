@@ -22,7 +22,6 @@ import argparse
 import requests
 from pathlib import Path
 from typing import Optional
-from urllib.parse import urlparse
 from dotenv import load_dotenv
 from db import get_client
 
@@ -245,7 +244,7 @@ def validate_venue(venue: dict, fix: bool = False, find_missing: bool = False) -
     fsq_website = fsq.get("website", "")
     fsq_id = fsq.get("fsq_place_id", "")
     fsq_location = fsq.get("location", {})
-    fsq_address = fsq_location.get("address", "")
+    fsq_location.get("address", "")
 
     our_website = venue.get("website", "")
     our_name = venue["name"]
@@ -376,7 +375,7 @@ def main():
             for issue in result["issues"]:
                 logger.info(f"      {issue}")
             if result.get("fixed"):
-                logger.info(f"      → UPDATED")
+                logger.info("      → UPDATED")
         elif status == "not_found":
             logger.info(f"  ? {venue['name']} - Not found")
         elif status == "wrong_match":
@@ -388,7 +387,7 @@ def main():
             for issue in result["issues"]:
                 logger.info(f"      {issue}")
             if result.get("fixed"):
-                logger.info(f"      → UPDATED")
+                logger.info("      → UPDATED")
         else:  # mismatch
             logger.info(f"  ✗ {venue['name']}")
             for issue in result["issues"]:

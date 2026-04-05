@@ -4,7 +4,7 @@ Unit tests for _maybe_update_existing_venue — the venue NULL-backfill helper.
 All tests mock the Supabase client so no real DB calls are made.
 """
 
-from unittest.mock import MagicMock, patch, call
+from unittest.mock import MagicMock, patch
 import pytest
 
 import db.places as venues_module

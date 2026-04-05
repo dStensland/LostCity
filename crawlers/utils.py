@@ -117,7 +117,7 @@ def parse_date_range(text: str, reference_year: int = None) -> Tuple[Optional[st
         return None, None
 
     text = " ".join(text.split())  # normalize whitespace
-    year = reference_year or datetime.now().year
+    reference_year or datetime.now().year
 
     def _parse_month_day_year(s: str) -> Optional[str]:
         """Parse 'Month DD, YYYY' or 'Month DD YYYY' into YYYY-MM-DD."""
@@ -360,7 +360,7 @@ def validate_event_time(
         # Parse the time
         parts = time_str.split(":")
         hour = int(parts[0])
-        minute = int(parts[1]) if len(parts) > 1 else 0
+        int(parts[1]) if len(parts) > 1 else 0
 
         # Check if time is in the suspicious 1am-5am range
         if 1 <= hour < 6:

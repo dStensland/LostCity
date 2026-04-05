@@ -566,7 +566,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     # Get venue info
                     branch_id = defn.get("branchLocationId")
-                    location_details = defn.get("locationDetails", "")
+                    defn.get("locationDetails", "")
 
                     if branch_id and branch_id in locations:
                         branch = locations[branch_id]

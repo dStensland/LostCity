@@ -14,7 +14,12 @@ from typing import Optional
 import requests
 from bs4 import BeautifulSoup
 
-from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
+from db import (
+    get_or_create_place,
+    insert_event,
+    find_event_by_hash,
+    smart_update_existing_event,
+)
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -75,7 +80,6 @@ def create_monthly_meetings(source_id: int, venue_id: int) -> tuple[int, int]:
         start_date = meeting_date.strftime("%Y-%m-%d")
 
         content_hash = generate_content_hash(title, "Virginia-Highland", start_date)
-
 
         description = (
             "Virginia-Highland Civic Association monthly board meeting. "
@@ -175,7 +179,15 @@ def create_summerfest(source_id: int, venue_id: int) -> tuple[int, int]:
         "is_all_day": False,
         "category": "community",
         "subcategory": "festival",
-        "tags": ["virginia-highland", "vahi", "summerfest", "festival", "live-music", "family-friendly", "outdoor"],
+        "tags": [
+            "virginia-highland",
+            "vahi",
+            "summerfest",
+            "festival",
+            "live-music",
+            "family-friendly",
+            "outdoor",
+        ],
         "price_min": None,
         "price_max": None,
         "price_note": None,
@@ -240,7 +252,14 @@ def create_winterfest(source_id: int, venue_id: int) -> tuple[int, int]:
         "is_all_day": False,
         "category": "community",
         "subcategory": "festival",
-        "tags": ["virginia-highland", "vahi", "winterfest", "tour-of-homes", "holiday", "family-friendly"],
+        "tags": [
+            "virginia-highland",
+            "vahi",
+            "winterfest",
+            "tour-of-homes",
+            "holiday",
+            "family-friendly",
+        ],
         "price_min": None,
         "price_max": None,
         "price_note": "Tour of Homes tickets required",
@@ -282,7 +301,7 @@ def parse_date(date_str: str) -> Optional[str]:
     match = re.search(
         r"(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2})",
         date_str,
-        re.IGNORECASE
+        re.IGNORECASE,
     )
     if match:
         month_str = match.group(1)[:3]
@@ -335,7 +354,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     continue
 
                 soup = BeautifulSoup(response.text, "html.parser")
-                event_elements = soup.select(".event, .calendar-event, article, [class*='event']")
+                event_elements = soup.select(
+                    ".event, .calendar-event, article, [class*='event']"
+                )
 
                 for element in event_elements:
                     try:
@@ -348,14 +369,22 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                         # Skip already handled events
                         title_lower = title.lower()
-                        if any(w in title_lower for w in ["summerfest", "winterfest", "tour of homes", "board meeting"]):
+                        if any(
+                            w in title_lower
+                            for w in [
+                                "summerfest",
+                                "winterfest",
+                                "tour of homes",
+                                "board meeting",
+                            ]
+                        ):
                             continue
 
                         text = element.get_text()
                         date_match = re.search(
                             r"(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2}",
                             text,
-                            re.IGNORECASE
+                            re.IGNORECASE,
                         )
                         if not date_match:
                             continue
@@ -364,24 +393,23 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         if not start_date:
                             continue
 
-                        if datetime.strptime(start_date, "%Y-%m-%d").date() < datetime.now().date():
+                        if (
+                            datetime.strptime(start_date, "%Y-%m-%d").date()
+                            < datetime.now().date()
+                        ):
                             continue
 
                         events_found += 1
 
-                        content_hash = generate_content_hash(title, "Virginia-Highland", start_date)
-
-                        existing = find_event_by_hash(content_hash)
-                        if existing:
-                            smart_update_existing_event(existing, event_record)
-                            events_updated += 1
-                            continue
+                        content_hash = generate_content_hash(
+                            title, "Virginia-Highland", start_date
+                        )
 
                         event_record = {
                             "source_id": source_id,
                             "place_id": venue_id,
                             "title": title,
-                            "description": f"Community event in Virginia-Highland neighborhood",
+                            "description": "Community event in Virginia-Highland neighborhood",
                             "start_date": start_date,
                             "start_time": None,
                             "end_date": None,
@@ -404,6 +432,12 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             "content_hash": content_hash,
                         }
 
+                        existing = find_event_by_hash(content_hash)
+                        if existing:
+                            smart_update_existing_event(existing, event_record)
+                            events_updated += 1
+                            continue
+
                         try:
                             insert_event(event_record)
                             events_new += 1
@@ -420,7 +454,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
             except requests.RequestException:
                 continue
 
-        logger.info(f"Virginia-Highland crawl complete: {events_found} found, {events_new} new, {events_updated} updated")
+        logger.info(
+            f"Virginia-Highland crawl complete: {events_found} found, {events_new} new, {events_updated} updated"
+        )
 
     except Exception as e:
         logger.error(f"Failed to crawl Virginia-Highland: {e}")

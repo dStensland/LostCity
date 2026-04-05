@@ -9,7 +9,6 @@ NOT A WORKING CRAWLER - TEMPLATE ONLY
 
 from __future__ import annotations
 
-import re
 import logging
 from datetime import datetime
 from typing import Optional
@@ -17,7 +16,12 @@ from typing import Optional
 import requests
 from bs4 import BeautifulSoup
 
-from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
+from db import (
+    get_or_create_place,
+    insert_event,
+    find_event_by_hash,
+    smart_update_existing_event,
+)
 from dedupe import generate_content_hash
 from utils import slugify
 
@@ -27,6 +31,7 @@ logger = logging.getLogger(__name__)
 # ============================================================================
 # TEMPLATE 1: Simple Venue Crawler (e.g., Ryman Auditorium)
 # ============================================================================
+
 
 def crawl_ryman_auditorium(source: dict) -> tuple[int, int, int]:
     """
@@ -57,7 +62,7 @@ def crawl_ryman_auditorium(source: dict) -> tuple[int, int, int]:
         "lng": -86.7785,
         "place_type": "music_venue",
         "website": "https://www.ryman.com",
-        "vibes": ["historic", "legendary", "acoustic", "iconic", "mother-church"]
+        "vibes": ["historic", "legendary", "acoustic", "iconic", "mother-church"],
     }
 
     venue_id = get_or_create_place(PLACE_DATA)
@@ -84,7 +89,6 @@ def crawl_ryman_auditorium(source: dict) -> tuple[int, int, int]:
 
             # Generate content hash for deduplication
             content_hash = generate_content_hash(title, "Ryman Auditorium", start_date)
-
 
             # Create event record
             event_record = {
@@ -139,6 +143,7 @@ def crawl_ryman_auditorium(source: dict) -> tuple[int, int, int]:
 # TEMPLATE 2: Honky-Tonk Continuous Music Generator
 # ============================================================================
 
+
 def create_honky_tonk_continuous_events(source: dict) -> tuple[int, int, int]:
     """
     Template for honky-tonks without formal event listings.
@@ -192,29 +197,22 @@ def create_honky_tonk_continuous_events(source: dict) -> tuple[int, int, int]:
             "state": "TN",
             "place_type": "honky_tonk",
             "website": f"https://{honky_tonk['slug']}.com",  # Update with actual URLs
-            "vibes": ["honky-tonk", "country", "live-music", "no-cover", "walk-ins"]
+            "vibes": ["honky-tonk", "country", "live-music", "no-cover", "walk-ins"],
         }
 
         venue_id = get_or_create_place(place_data)
 
         # Generate next 30 days of events
         from datetime import timedelta
+
         today = datetime.now().date()
 
         for i in range(30):
             event_date = (today + timedelta(days=i)).strftime("%Y-%m-%d")
 
             content_hash = generate_content_hash(
-                f"Live Music at {honky_tonk['name']}",
-                honky_tonk["slug"],
-                event_date
+                f"Live Music at {honky_tonk['name']}", honky_tonk["slug"], event_date
             )
-
-            existing = find_event_by_hash(content_hash)
-            if existing:
-                smart_update_existing_event(existing, event_record)
-                events_updated += 1
-                continue
 
             event_record = {
                 "source_id": source_id,
@@ -228,7 +226,14 @@ def create_honky_tonk_continuous_events(source: dict) -> tuple[int, int, int]:
                 "is_all_day": False,
                 "category": "music",
                 "subcategory": "country",
-                "tags": ["honky-tonk", "live-music", "country", "walk-ins", "no-cover", "broadway"],
+                "tags": [
+                    "honky-tonk",
+                    "live-music",
+                    "country",
+                    "walk-ins",
+                    "no-cover",
+                    "broadway",
+                ],
                 "price_min": None,
                 "price_max": None,
                 "price_note": "No cover charge",
@@ -243,6 +248,12 @@ def create_honky_tonk_continuous_events(source: dict) -> tuple[int, int, int]:
                 "content_hash": content_hash,
             }
 
+            existing = find_event_by_hash(content_hash)
+            if existing:
+                smart_update_existing_event(existing, event_record)
+                events_updated += 1
+                continue
+
             insert_event(event_record)
             events_new += 1
             events_found += 1
@@ -254,6 +265,7 @@ def create_honky_tonk_continuous_events(source: dict) -> tuple[int, int, int]:
 # ============================================================================
 # TEMPLATE 3: Aggregator Crawler (e.g., Nashville Scene, Do615)
 # ============================================================================
+
 
 def crawl_nashville_scene_events(source: dict) -> tuple[int, int, int]:
     """
@@ -309,12 +321,6 @@ def crawl_nashville_scene_events(source: dict) -> tuple[int, int, int]:
             # Generate content hash
             content_hash = generate_content_hash(title, venue_name, start_date)
 
-            existing = find_event_by_hash(content_hash)
-            if existing:
-                smart_update_existing_event(existing, event_record)
-                events_updated += 1
-                continue
-
             event_record = {
                 "source_id": source_id,
                 "place_id": venue_id,
@@ -324,6 +330,12 @@ def crawl_nashville_scene_events(source: dict) -> tuple[int, int, int]:
                 "content_hash": content_hash,
                 # ... other fields
             }
+
+            existing = find_event_by_hash(content_hash)
+            if existing:
+                smart_update_existing_event(existing, event_record)
+                events_updated += 1
+                continue
 
             insert_event(event_record)
             events_new += 1
@@ -355,6 +367,7 @@ def map_category(tag: str) -> str:
 # TEMPLATE 4: Songwriter Round / Special Format
 # ============================================================================
 
+
 def crawl_bluebird_cafe(source: dict) -> tuple[int, int, int]:
     """
     Template for songwriter round venues.
@@ -385,7 +398,7 @@ def crawl_bluebird_cafe(source: dict) -> tuple[int, int, int]:
         "zip": "37215",
         "place_type": "listening_room",
         "website": "https://www.bluebirdcafe.com",
-        "vibes": ["songwriter", "acoustic", "intimate", "legendary", "reservations"]
+        "vibes": ["songwriter", "acoustic", "intimate", "legendary", "reservations"],
     }
 
     venue_id = get_or_create_place(PLACE_DATA)
@@ -417,12 +430,6 @@ def crawl_bluebird_cafe(source: dict) -> tuple[int, int, int]:
 
             content_hash = generate_content_hash(title, "Bluebird Cafe", start_date)
 
-            existing = find_event_by_hash(content_hash)
-            if existing:
-                smart_update_existing_event(existing, event_record)
-                events_updated += 1
-                continue
-
             event_record = {
                 "source_id": source_id,
                 "place_id": venue_id,
@@ -432,10 +439,22 @@ def crawl_bluebird_cafe(source: dict) -> tuple[int, int, int]:
                 "start_time": start_time,
                 "category": "music",
                 "subcategory": "songwriter-round",
-                "tags": ["songwriter", "acoustic", "intimate", "in-the-round", "reservations"],
+                "tags": [
+                    "songwriter",
+                    "acoustic",
+                    "intimate",
+                    "in-the-round",
+                    "reservations",
+                ],
                 "content_hash": content_hash,
                 # ... other fields
             }
+
+            existing = find_event_by_hash(content_hash)
+            if existing:
+                smart_update_existing_event(existing, event_record)
+                events_updated += 1
+                continue
 
             insert_event(event_record)
             events_new += 1
@@ -451,6 +470,7 @@ def crawl_bluebird_cafe(source: dict) -> tuple[int, int, int]:
 # ============================================================================
 # TEMPLATE 5: Festival / Multi-Day Event
 # ============================================================================
+
 
 def crawl_cma_fest(source: dict) -> tuple[int, int, int]:
     """
@@ -515,14 +535,9 @@ def crawl_cma_fest(source: dict) -> tuple[int, int, int]:
             content_hash = generate_content_hash(
                 title,
                 venue_name,  # Include venue to distinguish same artist, different stages
-                start_date + start_time  # Include time to distinguish same day, different sets
+                start_date
+                + start_time,  # Include time to distinguish same day, different sets
             )
-
-            existing = find_event_by_hash(content_hash)
-            if existing:
-                smart_update_existing_event(existing, event_record)
-                events_updated += 1
-                continue
 
             event_record = {
                 "source_id": source_id,
@@ -536,6 +551,12 @@ def crawl_cma_fest(source: dict) -> tuple[int, int, int]:
                 "content_hash": content_hash,
                 # ... other fields
             }
+
+            existing = find_event_by_hash(content_hash)
+            if existing:
+                smart_update_existing_event(existing, event_record)
+                events_updated += 1
+                continue
 
             # Pass series_hint to insert_event for linking
             insert_event(event_record, series_hint=series_hint)
@@ -552,6 +573,7 @@ def crawl_cma_fest(source: dict) -> tuple[int, int, int]:
 # ============================================================================
 # UTILITY FUNCTIONS
 # ============================================================================
+
 
 def get_nashville_neighborhood(address: str) -> Optional[str]:
     """
@@ -604,9 +626,19 @@ def detect_honky_tonk(venue_name: str, address: str) -> bool:
     if "broadway" in address_lower:
         # Known honky-tonks
         honky_tonks = [
-            "tootsie", "robert's western", "layla's", "acme", "legends",
-            "rippy", "stage", "underground", "nashville underground",
-            "kid rock", "luke's", "jason aldean", "fgl house"
+            "tootsie",
+            "robert's western",
+            "layla's",
+            "acme",
+            "legends",
+            "rippy",
+            "stage",
+            "underground",
+            "nashville underground",
+            "kid rock",
+            "luke's",
+            "jason aldean",
+            "fgl house",
         ]
         for name in honky_tonks:
             if name in name_lower:

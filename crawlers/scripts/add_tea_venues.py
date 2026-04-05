@@ -457,7 +457,7 @@ def main():
 
     logger.info("")
     logger.info("=" * 70)
-    logger.info(f"Done!")
+    logger.info("Done!")
     logger.info(f"  Venues:  {added_venues} added, {skipped_venues} already existed")
     logger.info(f"  Sources: {added_sources} source stubs created")
     logger.info("=" * 70)

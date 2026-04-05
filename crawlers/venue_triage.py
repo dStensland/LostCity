@@ -100,7 +100,7 @@ def analyze_venue(client, venue: dict) -> Optional[VenueTriage]:
     neighborhood = venue.get("neighborhood")
     venue_type = venue.get("place_type")
     venue_types = venue.get("venue_types") or []
-    vibes = venue.get("vibes") or []
+    venue.get("vibes") or []
     lat = venue.get("lat")
     lng = venue.get("lng")
 

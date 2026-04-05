@@ -3,7 +3,6 @@ Generate SQL cleanup queries for festival series consolidation.
 """
 
 from db import get_client
-from collections import defaultdict
 
 
 def generate_cleanup_sql():
@@ -89,7 +88,7 @@ def generate_cleanup_sql():
         
         # Generate consolidation SQL
         print("-- Step 1: Create consolidated series")
-        print(f"-- (Skip if series already exists)")
+        print("-- (Skip if series already exists)")
         print()
         print("BEGIN;")
         print()
@@ -105,23 +104,23 @@ def generate_cleanup_sql():
         print()
         
         print("-- Step 2: Relink all events to consolidated series")
-        print(f"UPDATE events")
-        print(f"SET series_id = '<new-series-id>'")
+        print("UPDATE events")
+        print("SET series_id = '<new-series-id>'")
         print(f"WHERE source_id = {source_id}")
         print(f"  AND series_id IN ({', '.join(repr(s['id']) for s in series_info)});")
         print()
         
         print("-- Step 3: Delete old fragmented series")
-        print(f"DELETE FROM series")
+        print("DELETE FROM series")
         print(f"WHERE id IN ({', '.join(repr(s['id']) for s in series_info)});")
         print()
         
         print("-- Verify cleanup")
-        print(f"SELECT s.title, s.series_type, COUNT(e.id) as event_count")
-        print(f"FROM series s")
-        print(f"LEFT JOIN events e ON e.series_id = s.id")
+        print("SELECT s.title, s.series_type, COUNT(e.id) as event_count")
+        print("FROM series s")
+        print("LEFT JOIN events e ON e.series_id = s.id")
         print(f"WHERE s.slug = '{source_slug}'")
-        print(f"GROUP BY s.id, s.title, s.series_type;")
+        print("GROUP BY s.id, s.title, s.series_type;")
         print()
         print("COMMIT;")
         print()

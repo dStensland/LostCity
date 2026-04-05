@@ -484,8 +484,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                 supporting_acts = _split_supporting_acts(title_block.get("supportingText"))
                 tour_name = _clean_text(title_block.get("tour"))
-                presented_by = _clean_text(title_block.get("presentedByText"))
-                age_restriction = _clean_text(payload_event.get("age"))
+                _clean_text(title_block.get("presentedByText"))
+                _clean_text(payload_event.get("age"))
 
                 detail_url = (
                     f"{BASE_URL}/events/detail?event_id={event_id}" if event_id else CALENDAR_URL

@@ -171,7 +171,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     "source_id": source_id,
                     "place_id": venue_id,
                     "title": title[:500],
-                    "description": description or f"Classical concert at First Presbyterian Church Atlanta.",
+                    "description": description or "Classical concert at First Presbyterian Church Atlanta.",
                     "start_date": start_date,
                     "start_time": start_time if not is_all_day else None,
                     "end_date": end_date,

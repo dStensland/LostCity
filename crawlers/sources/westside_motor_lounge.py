@@ -82,7 +82,7 @@ def determine_category(title: str, description: str, tags: list[str]) -> tuple[s
 def parse_price_fields(offers: list[dict]) -> tuple[Optional[float], Optional[float], Optional[str], bool]:
     """Derive price fields from Shotgun offers."""
     prices = [offer.get("price") for offer in offers if isinstance(offer.get("price"), (int, float))]
-    names = [offer.get("name") for offer in offers if offer.get("name")]
+    [offer.get("name") for offer in offers if offer.get("name")]
     price_note = ", ".join(
         f"{offer['name']} (${offer['price']})"
         for offer in offers

@@ -6,8 +6,7 @@ separate series records, and that film/festival types ignore venue_id entirely.
 All tests mock the Supabase client to avoid real database calls.
 """
 
-from unittest.mock import MagicMock, call, patch
-import pytest
+from unittest.mock import MagicMock, patch
 
 from series import find_series_by_title, get_or_create_series
 

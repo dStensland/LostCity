@@ -20,6 +20,7 @@ from db import (
     get_or_create_place,
     insert_event,
     find_existing_event_for_insert,
+    smart_update_existing_event,
 )
 from dedupe import generate_content_hash
 from utils import parse_price
@@ -41,7 +42,14 @@ PLACE_DATA = {
     "place_type": "music_venue",
     "spot_type": "music_venue",
     "website": BASE_URL,
-    "vibes": ["live-music", "dive-bar", "west-side", "pet-friendly", "local-bands", "beltline"],
+    "vibes": [
+        "live-music",
+        "dive-bar",
+        "west-side",
+        "pet-friendly",
+        "local-bands",
+        "beltline",
+    ],
 }
 
 HEADERS = {
@@ -71,7 +79,9 @@ def determine_category(title: str) -> tuple[str, Optional[str], list[str]]:
     title_lower = title.lower()
     tags = ["boggs-social", "west-end"]
 
-    if any(w in title_lower for w in ["comedy", "stand-up", "standup", "socially awkward"]):
+    if any(
+        w in title_lower for w in ["comedy", "stand-up", "standup", "socially awkward"]
+    ):
         return "comedy", "standup", tags + ["comedy"]
     if any(w in title_lower for w in ["karaoke", "music mike"]):
         return "nightlife", "karaoke", tags + ["karaoke"]
@@ -123,7 +133,10 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         if not title or len(title) < 3:
                             continue
 
-                        if "google calendar" in title.lower() or "add to calendar" in title.lower():
+                        if (
+                            "google calendar" in title.lower()
+                            or "add to calendar" in title.lower()
+                        ):
                             continue
 
                         # Date from <time> element
@@ -158,7 +171,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                         # Image
                         image_url = None
-                        img_container = element.select_one("a.eventlist-column-thumbnail")
+                        img_container = element.select_one(
+                            "a.eventlist-column-thumbnail"
+                        )
                         if img_container:
                             img_elem = img_container.find("img")
                             if img_elem and img_elem.get("src"):
@@ -174,7 +189,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             event_url = BASE_URL + event_url
 
                         # Dedup
-                        content_hash = generate_content_hash(title, "Boggs Social & Supply", start_date)
+                        content_hash = generate_content_hash(
+                            title, "Boggs Social & Supply", start_date
+                        )
 
                         category, subcategory, tags = determine_category(title)
 
@@ -206,7 +223,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             "source_url": event_url,
                             "ticket_url": event_url,
                             "image_url": image_url,
-                            "raw_text": element.get_text(separator=" ", strip=True)[:500],
+                            "raw_text": element.get_text(separator=" ", strip=True)[
+                                :500
+                            ],
                             "extraction_confidence": 0.85,
                             "is_recurring": False,
                             "recurrence_rule": None,
@@ -220,7 +239,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
                                 events_updated += 1
                             else:
                                 events_new += 1
-                            logger.info(f"Added: {title} on {start_date} at {start_time}")
+                            logger.info(
+                                f"Added: {title} on {start_date} at {start_time}"
+                            )
                         except Exception as e:
                             logger.error(f"Failed to insert: {title}: {e}")
 
@@ -235,7 +256,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 logger.debug(f"Request failed for {url}: {e}")
                 continue
 
-        logger.info(f"Boggs Social website: {events_found} found, {events_new} new, {events_updated} updated")
+        logger.info(
+            f"Boggs Social website: {events_found} found, {events_new} new, {events_updated} updated"
+        )
 
     except Exception as e:
         logger.error(f"Failed to crawl Boggs Social website: {e}")
@@ -253,21 +276,44 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
 WEEKS_AHEAD = 6
 DAY_CODES = ["MO", "TU", "WE", "TH", "FR", "SA", "SU"]
-DAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+DAY_NAMES = [
+    "Monday",
+    "Tuesday",
+    "Wednesday",
+    "Thursday",
+    "Friday",
+    "Saturday",
+    "Sunday",
+]
 
 RECURRING_SCHEDULE = [
-    {"day": 1, "title": "Socially Awkward Comedy", "start_time": "19:00",
-     "description": "Tuesday open mic comedy at Boggs Social & Supply. Sign-up 7pm, show 7:30pm. Free with RSVP.",
-     "category": "comedy", "subcategory": None,
-     "tags": ["comedy", "open-mic", "standup", "weekly", "free"]},
-    {"day": 2, "title": "Karaoke Night w/ Music Mike", "start_time": "19:00",
-     "description": "Wednesday karaoke at Boggs Social & Supply in West End. Free. 7-11pm.",
-     "category": "nightlife", "subcategory": "nightlife.karaoke",
-     "tags": ["karaoke", "nightlife", "weekly", "free"]},
-    {"day": 4, "title": "Sputnik! Dark Alternative Music Video Night", "start_time": "20:00",
-     "description": "Friday alternative music video night at Boggs Social. Eighties, new wave, synthpop. $10 cover.",
-     "category": "nightlife", "subcategory": "nightlife.dj",
-     "tags": ["dj", "80s", "new-wave", "nightlife", "weekly"]},
+    {
+        "day": 1,
+        "title": "Socially Awkward Comedy",
+        "start_time": "19:00",
+        "description": "Tuesday open mic comedy at Boggs Social & Supply. Sign-up 7pm, show 7:30pm. Free with RSVP.",
+        "category": "comedy",
+        "subcategory": None,
+        "tags": ["comedy", "open-mic", "standup", "weekly", "free"],
+    },
+    {
+        "day": 2,
+        "title": "Karaoke Night w/ Music Mike",
+        "start_time": "19:00",
+        "description": "Wednesday karaoke at Boggs Social & Supply in West End. Free. 7-11pm.",
+        "category": "nightlife",
+        "subcategory": "nightlife.karaoke",
+        "tags": ["karaoke", "nightlife", "weekly", "free"],
+    },
+    {
+        "day": 4,
+        "title": "Sputnik! Dark Alternative Music Video Night",
+        "start_time": "20:00",
+        "description": "Friday alternative music video night at Boggs Social. Eighties, new wave, synthpop. $10 cover.",
+        "category": "nightlife",
+        "subcategory": "nightlife.dj",
+        "tags": ["dj", "80s", "new-wave", "nightlife", "weekly"],
+    },
 ]
 
 
@@ -340,7 +386,11 @@ def _generate_recurring_events(source_id: int, venue_id: int) -> tuple[int, int,
                 insert_event(event_record, series_hint=series_hint)
                 events_new += 1
             except Exception as exc:
-                logger.error(f"Failed to insert {template['title']} on {start_date}: {exc}")
+                logger.error(
+                    f"Failed to insert {template['title']} on {start_date}: {exc}"
+                )
 
-    logger.info(f"Boggs Social recurring: {events_found} found, {events_new} new, {events_updated} updated")
+    logger.info(
+        f"Boggs Social recurring: {events_found} found, {events_new} new, {events_updated} updated"
+    )
     return events_found, events_new, events_updated

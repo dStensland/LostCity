@@ -191,7 +191,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 "source_id": source_id,
                 "place_id": venue_id,
                 "title": title,
-                "description": description or f"Event at Buckhead Village District",
+                "description": description or "Event at Buckhead Village District",
                 "start_date": start_date,
                 "start_time": start_time or "18:00",
                 "end_date": None,

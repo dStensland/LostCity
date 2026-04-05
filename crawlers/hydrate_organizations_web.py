@@ -21,7 +21,6 @@ from __future__ import annotations
 import argparse
 import json
 import logging
-import os
 import re
 import time
 from pathlib import Path
@@ -248,7 +247,7 @@ def _fetch_org_ids_from_city(city: str, limit: int = 10000) -> list[str]:
 
 
 def get_org_ids_for_portal(portal_id: str, include_public: bool = True, city: Optional[str] = None) -> list[str]:
-    client = get_client()
+    get_client()
     org_ids: set[str] = set()
 
     for org_id in _fetch_org_ids_from_events(portal_id=portal_id, city=None):

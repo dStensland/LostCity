@@ -10,7 +10,6 @@ fall back to DOM scraping.
 
 from __future__ import annotations
 
-import json
 import re
 import logging
 from datetime import date, datetime, timedelta
@@ -289,9 +288,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 page.wait_for_timeout(1000)
 
             # Try to extract Shopify analytics JSON for structured product data
-            shopify_data = None
             try:
-                shopify_data = page.evaluate("""
+                page.evaluate("""
                     () => {
                         const metas = document.querySelectorAll('script[type="application/json"]');
                         for (const m of metas) {

@@ -5,7 +5,7 @@ Covers Atlanta ITP, Atlanta OTP suburbs, and Nashville.
 """
 
 from db import get_client
-from neighborhood_lookup import NEIGHBORHOODS, haversine, infer_neighborhood_from_coords
+from neighborhood_lookup import infer_neighborhood_from_coords
 
 
 def find_neighborhood(lat, lng):
@@ -52,7 +52,7 @@ def main():
     print(f"Unmatched: {len(unmatched)}")
 
     if unmatched[:10]:
-        print(f"\nSample unmatched:")
+        print("\nSample unmatched:")
         for v in unmatched[:10]:
             print(f"  [{v['id']}] {v['name'][:40]:40s} city={v.get('city','?'):15s} ({v['lat']:.3f}, {v['lng']:.3f})")
 

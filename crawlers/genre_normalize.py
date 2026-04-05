@@ -23,191 +23,487 @@ from typing import Optional
 # ============================================================================
 
 MUSIC_GENRES = {
-    "rock", "indie", "hip-hop", "r-and-b", "jazz", "blues", "country",
-    "folk", "electronic", "pop", "soul", "metal", "punk", "latin", "classical",
+    "rock",
+    "indie",
+    "hip-hop",
+    "r-and-b",
+    "jazz",
+    "blues",
+    "country",
+    "folk",
+    "electronic",
+    "pop",
+    "soul",
+    "metal",
+    "punk",
+    "latin",
+    "classical",
     # Extended
-    "alternative", "singer-songwriter", "house", "reggae", "gospel",
-    "opera", "world", "jam", "cover", "edm", "funk", "bluegrass", "ambient",
-    "karaoke", "dj", "vinyl", "listening-party",
+    "alternative",
+    "singer-songwriter",
+    "house",
+    "reggae",
+    "gospel",
+    "opera",
+    "world",
+    "jam",
+    "cover",
+    "edm",
+    "funk",
+    "bluegrass",
+    "ambient",
+    "karaoke",
+    "dj",
+    "vinyl",
+    "listening-party",
 }
 
 FILM_GENRES = {
-    "action", "comedy", "documentary", "drama", "horror", "sci-fi", "thriller",
-    "indie", "animation", "romance", "classic", "foreign",
+    "action",
+    "comedy",
+    "documentary",
+    "drama",
+    "horror",
+    "sci-fi",
+    "thriller",
+    "indie",
+    "animation",
+    "romance",
+    "classic",
+    "foreign",
 }
 
 COMEDY_GENRES = {
-    "stand-up", "improv", "sketch", "open-mic", "roast", "storytelling",
+    "stand-up",
+    "improv",
+    "sketch",
+    "open-mic",
+    "roast",
+    "storytelling",
 }
 
 THEATER_GENRES = {
-    "musical", "drama", "comedy", "ballet", "opera", "immersive",
-    "spoken-word", "burlesque", "puppet", "shakespeare", "drag",
+    "musical",
+    "drama",
+    "comedy",
+    "ballet",
+    "opera",
+    "immersive",
+    "spoken-word",
+    "burlesque",
+    "puppet",
+    "shakespeare",
+    "drag",
 }
 
 DANCE_GENRES = {
-    "ballet", "contemporary", "modern-dance", "afrocentric", "hip-hop",
-    "flamenco", "latin", "ballroom", "swing", "social-dance",
-    "salsa", "bachata", "line-dancing", "tap", "modern", "jazz",
+    "ballet",
+    "contemporary",
+    "modern-dance",
+    "afrocentric",
+    "hip-hop",
+    "flamenco",
+    "latin",
+    "ballroom",
+    "swing",
+    "social-dance",
+    "salsa",
+    "bachata",
+    "line-dancing",
+    "tap",
+    "modern",
+    "jazz",
 }
 
 SPORTS_GENRES = {
     # Spectator sports
-    "baseball", "basketball", "football", "soccer", "hockey", "mma",
-    "racing", "golf", "tennis", "esports", "roller-derby",
-    "lacrosse", "rugby", "cricket", "field-hockey",
-    "boxing", "wrestling", "kickboxing", "motorsports", "nascar",
-    "monster-truck", "dirt-track", "track", "gymnastics", "figure-skating",
-    "poker", "volleyball",
+    "baseball",
+    "basketball",
+    "football",
+    "soccer",
+    "hockey",
+    "mma",
+    "racing",
+    "golf",
+    "tennis",
+    "esports",
+    "roller-derby",
+    "lacrosse",
+    "rugby",
+    "cricket",
+    "field-hockey",
+    "boxing",
+    "wrestling",
+    "kickboxing",
+    "motorsports",
+    "nascar",
+    "monster-truck",
+    "dirt-track",
+    "track",
+    "gymnastics",
+    "figure-skating",
+    "poker",
+    "volleyball",
     # Watch-party / viewing events
     "watch_party",
 }
 
 RECREATION_GENRES = {
     # Participation / recreational sports
-    "pickleball", "cornhole", "axe-throwing", "softball", "volleyball",
-    "swimming", "diving", "marathon", "triathlon", "cycling", "crossfit",
-    "running", "open-play", "pickup", "league", "adaptive-sports",
-    "batting-cage", "public-play",
+    "pickleball",
+    "cornhole",
+    "axe-throwing",
+    "softball",
+    "volleyball",
+    "swimming",
+    "diving",
+    "marathon",
+    "triathlon",
+    "cycling",
+    "crossfit",
+    "running",
+    "open-play",
+    "pickup",
+    "league",
+    "adaptive-sports",
+    "batting-cage",
+    "public-play",
 }
 
 EXERCISE_GENRES = {
-    "yoga", "run", "cycling", "dance", "hike", "crossfit",
-    "martial-arts", "pilates", "swimming", "climbing",
+    "yoga",
+    "run",
+    "cycling",
+    "dance",
+    "hike",
+    "crossfit",
+    "martial-arts",
+    "pilates",
+    "swimming",
+    "climbing",
 }
 
 # Legacy alias — keep FITNESS_GENRES pointing to the same set
 FITNESS_GENRES = EXERCISE_GENRES
 
 FOOD_DRINK_GENRES = {
-    "southern", "mexican", "italian", "asian", "brunch", "wine", "beer",
-    "cocktails", "coffee", "pop-up", "tasting", "cooking-class",
-    "food-festival", "seafood", "farmers-market",
-    "happy-hour", "specials",
+    "southern",
+    "mexican",
+    "italian",
+    "asian",
+    "brunch",
+    "wine",
+    "beer",
+    "cocktails",
+    "coffee",
+    "pop-up",
+    "tasting",
+    "cooking-class",
+    "food-festival",
+    "seafood",
+    "farmers-market",
+    "happy-hour",
+    "specials",
 }
 
 ART_GENRES = {
-    "exhibition", "gallery-opening", "photography", "sculpture",
-    "street-art", "craft", "digital", "performance", "market",
+    "exhibition",
+    "gallery-opening",
+    "photography",
+    "sculpture",
+    "street-art",
+    "craft",
+    "digital",
+    "performance",
+    "market",
 }
 
 NIGHTLIFE_GENRES = {
-    "dj", "drag", "trivia", "karaoke", "dance-party", "game-night",
-    "burlesque", "wine-night", "cocktail-night",
-    "poker", "bingo", "bar-games", "pub-crawl", "specials", "happy-hour",
-    "latin-night", "line-dancing",
-    "open-mic", "viewing-party", "nerd-stuff",
-    "vinyl", "listening-party", "hi-fi",
+    "dj",
+    "drag",
+    "trivia",
+    "karaoke",
+    "dance-party",
+    "game-night",
+    "burlesque",
+    "wine-night",
+    "cocktail-night",
+    "poker",
+    "bingo",
+    "bar-games",
+    "pub-crawl",
+    "specials",
+    "happy-hour",
+    "latin-night",
+    "line-dancing",
+    "open-mic",
+    "viewing-party",
+    "nerd-stuff",
+    "vinyl",
+    "listening-party",
+    "hi-fi",
 }
 
 LEARNING_GENRES = {
-    "workshop", "class", "lecture", "seminar", "book-club", "tour",
-    "film-screening", "language",
+    "workshop",
+    "class",
+    "lecture",
+    "seminar",
+    "book-club",
+    "tour",
+    "film-screening",
+    "language",
 }
 
 COMMUNITY_GENRES = {
-    "volunteer", "meetup", "networking", "lgbtq", "faith", "activism",
-    "support", "cultural", "meditation", "interfaith",
-    "game-night", "open-mic", "nerd-stuff",
+    "volunteer",
+    "meetup",
+    "networking",
+    "lgbtq",
+    "faith",
+    "activism",
+    "support",
+    "cultural",
+    "meditation",
+    "interfaith",
+    "game-night",
+    "open-mic",
+    "nerd-stuff",
 }
 
 FAMILY_GENRES = {
-    "storytime", "crafts", "science", "nature", "puppet-show",
-    "festival", "music-for-kids", "outdoor-play",
+    "storytime",
+    "crafts",
+    "science",
+    "nature",
+    "puppet-show",
+    "festival",
+    "music-for-kids",
+    "outdoor-play",
     "game-night",
 }
 
 OUTDOOR_GENRES = {
-    "parks", "garden", "market", "sightseeing", "water", "camping", "adventure",
-    "hiking", "birding", "trail",
+    "parks",
+    "garden",
+    "market",
+    "sightseeing",
+    "water",
+    "camping",
+    "adventure",
+    "hiking",
+    "birding",
+    "trail",
 }
 
 WORDS_GENRES = {
-    "reading", "poetry", "book-club", "storytelling", "writing",
-    "comics", "literary-festival", "spoken-word", "poetry-slam", "open-mic",
+    "reading",
+    "poetry",
+    "book-club",
+    "storytelling",
+    "writing",
+    "comics",
+    "literary-festival",
+    "spoken-word",
+    "poetry-slam",
+    "open-mic",
 }
 
 WELLNESS_GENRES = {
-    "recovery", "yoga", "meditation", "breathwork", "sound-bath",
-    "support", "therapy", "reiki", "wellness-class",
+    "recovery",
+    "yoga",
+    "meditation",
+    "breathwork",
+    "sound-bath",
+    "support",
+    "therapy",
+    "reiki",
+    "wellness-class",
 }
 
 MEETUP_GENRES = {
-    "hiking", "book-club", "social", "camping", "foodie",
-    "photography", "language", "dance", "fitness", "exercise", "recreation",
-    "networking", "singles", "outdoors",
+    "hiking",
+    "book-club",
+    "social",
+    "camping",
+    "foodie",
+    "photography",
+    "language",
+    "dance",
+    "fitness",
+    "exercise",
+    "recreation",
+    "networking",
+    "singles",
+    "outdoors",
 }
 
 GAMING_GENRES = {
-    "convention", "esports", "arcade", "tabletop", "anime",
-    "retro", "lan-party",
+    "convention",
+    "esports",
+    "arcade",
+    "tabletop",
+    "anime",
+    "retro",
+    "lan-party",
 }
 
 GAMES_GENRES = {
-    "trivia", "bingo", "board-games", "poker", "dnd", "warhammer",
-    "bar-games", "escape-room", "esports", "card-games", "pub-quiz",
-    "game-night", "chess", "video-games",
+    "trivia",
+    "bingo",
+    "board-games",
+    "poker",
+    "dnd",
+    "warhammer",
+    "bar-games",
+    "escape-room",
+    "esports",
+    "card-games",
+    "pub-quiz",
+    "game-night",
+    "chess",
+    "video-games",
 }
 
 WORKSHOPS_GENRES = {
-    "pottery", "painting", "blacksmithing", "woodworking", "jewelry",
-    "textiles", "glassblowing", "printmaking", "floral", "candle-making",
-    "resin", "crafts",
+    "pottery",
+    "painting",
+    "blacksmithing",
+    "woodworking",
+    "jewelry",
+    "textiles",
+    "glassblowing",
+    "printmaking",
+    "floral",
+    "candle-making",
+    "resin",
+    "crafts",
 }
 
 EDUCATION_GENRES = {
-    "seminar", "lecture", "certification", "language", "career",
-    "medical", "technology", "financial", "science",
+    "seminar",
+    "lecture",
+    "certification",
+    "language",
+    "career",
+    "medical",
+    "technology",
+    "financial",
+    "science",
 }
 
 CONVENTIONS_GENRES = {
-    "fan", "tech", "professional", "trade", "hobby", "academic",
+    "fan",
+    "tech",
+    "professional",
+    "trade",
+    "hobby",
+    "academic",
     "convention",
 }
 
 SUPPORT_GENRES = {
-    "recovery", "grief", "caregiver", "chronic-illness", "mental-health",
-    "peer-support", "meditation",
+    "recovery",
+    "grief",
+    "caregiver",
+    "chronic-illness",
+    "mental-health",
+    "peer-support",
+    "meditation",
 }
 
 FITNESS_NEW_GENRES = {
-    "yoga", "running", "cycling", "swimming", "crossfit", "pilates",
-    "climbing", "martial-arts", "gymnastics", "barre", "hiit",
-    "dance-fitness", "aerial", "run",
+    "yoga",
+    "running",
+    "cycling",
+    "swimming",
+    "crossfit",
+    "pilates",
+    "climbing",
+    "martial-arts",
+    "gymnastics",
+    "barre",
+    "hiit",
+    "dance-fitness",
+    "aerial",
+    "run",
 }
 
 WORDS_NEW_GENRES = {
-    "book-club", "reading", "signing", "poetry", "zine",
-    "literary-festival", "storytime", "spoken-word",
+    "book-club",
+    "reading",
+    "signing",
+    "poetry",
+    "zine",
+    "literary-festival",
+    "storytime",
+    "spoken-word",
 }
 
 RELIGIOUS_GENRES = {
-    "worship", "prayer", "bible-study", "interfaith", "revival",
-    "choir", "ministry",
+    "worship",
+    "prayer",
+    "bible-study",
+    "interfaith",
+    "revival",
+    "choir",
+    "ministry",
 }
 
 VOLUNTEER_GENRES = {
-    "food-bank", "habitat", "cleanup", "mentoring", "animal-shelter",
-    "tutoring", "tree-planting", "meal-delivery",
+    "food-bank",
+    "habitat",
+    "cleanup",
+    "mentoring",
+    "animal-shelter",
+    "tutoring",
+    "tree-planting",
+    "meal-delivery",
 }
 
 CIVIC_GENRES = {
-    "legislation", "town-hall", "public-comment", "advocacy",
-    "organizing", "voter-registration", "commission",
+    "legislation",
+    "town-hall",
+    "public-comment",
+    "advocacy",
+    "organizing",
+    "voter-registration",
+    "commission",
 }
 
 # Union of all valid genres
 VALID_GENRES: set[str] = (
-    MUSIC_GENRES | FILM_GENRES | COMEDY_GENRES | THEATER_GENRES | DANCE_GENRES |
-    SPORTS_GENRES | RECREATION_GENRES | EXERCISE_GENRES |
-    FOOD_DRINK_GENRES | ART_GENRES |
-    NIGHTLIFE_GENRES | LEARNING_GENRES | COMMUNITY_GENRES | FAMILY_GENRES |
-    OUTDOOR_GENRES | WORDS_GENRES | WELLNESS_GENRES | MEETUP_GENRES |
-    GAMING_GENRES |
+    MUSIC_GENRES
+    | FILM_GENRES
+    | COMEDY_GENRES
+    | THEATER_GENRES
+    | DANCE_GENRES
+    | SPORTS_GENRES
+    | RECREATION_GENRES
+    | EXERCISE_GENRES
+    | FOOD_DRINK_GENRES
+    | ART_GENRES
+    | NIGHTLIFE_GENRES
+    | LEARNING_GENRES
+    | COMMUNITY_GENRES
+    | FAMILY_GENRES
+    | OUTDOOR_GENRES
+    | WORDS_GENRES
+    | WELLNESS_GENRES
+    | MEETUP_GENRES
+    | GAMING_GENRES
+    |
     # New taxonomy genre sets
-    GAMES_GENRES | WORKSHOPS_GENRES | EDUCATION_GENRES | CONVENTIONS_GENRES |
-    SUPPORT_GENRES | FITNESS_NEW_GENRES | WORDS_NEW_GENRES | RELIGIOUS_GENRES |
-    VOLUNTEER_GENRES | CIVIC_GENRES
+    GAMES_GENRES
+    | WORKSHOPS_GENRES
+    | EDUCATION_GENRES
+    | CONVENTIONS_GENRES
+    | SUPPORT_GENRES
+    | FITNESS_NEW_GENRES
+    | WORDS_NEW_GENRES
+    | RELIGIOUS_GENRES
+    | VOLUNTEER_GENRES
+    | CIVIC_GENRES
 )
 
 # Category → genre set mapping (for category-scoped lookups)
@@ -290,7 +586,6 @@ GENRE_NORMALIZATION: dict[str, str] = {
     "pop music": "pop",
     "folk music": "folk",
     "bluegrass music": "bluegrass",
-
     # --- Music: merge near-duplicates ---
     "alternative rock": "alternative",
     "alt-rock": "alternative",
@@ -306,7 +601,6 @@ GENRE_NORMALIZATION: dict[str, str] = {
     "pop-punk": "punk",
     "post-punk": "punk",
     "emo": "punk",
-    "ska": "punk",
     "ska-punk": "punk",
     "hard rock": "rock",
     "classic rock": "rock",
@@ -420,7 +714,6 @@ GENRE_NORMALIZATION: dict[str, str] = {
     "top 40": "pop",
     "world music": "world",
     "global": "world",
-
     # --- Film ---
     "science fiction": "sci-fi",
     "sci fi": "sci-fi",
@@ -448,7 +741,6 @@ GENRE_NORMALIZATION: dict[str, str] = {
     "slasher": "horror",
     "supernatural": "horror",
     "zombie": "horror",
-
     # --- Comedy ---
     "stand up": "stand-up",
     "standup": "stand-up",
@@ -461,7 +753,6 @@ GENRE_NORMALIZATION: dict[str, str] = {
     "sketch comedy": "sketch",
     "comedy revue": "sketch",
     "variety show": "sketch",
-    "open mic": "open-mic",
     "open-mic comedy": "open-mic",
     "amateur night": "open-mic",
     "new material night": "open-mic",
@@ -470,7 +761,6 @@ GENRE_NORMALIZATION: dict[str, str] = {
     "moth": "storytelling",
     "story slam": "storytelling",
     "comedic monologue": "storytelling",
-
     # --- Theater ---
     "broadway": "musical",
     "off-broadway": "musical",
@@ -493,7 +783,6 @@ GENRE_NORMALIZATION: dict[str, str] = {
     "puppetry": "puppet",
     "marionette": "puppet",
     "shadow puppet": "puppet",
-
     # --- Sports ---
     "mlb": "baseball",
     "nba": "basketball",
@@ -525,7 +814,6 @@ GENRE_NORMALIZATION: dict[str, str] = {
     "gaming tournament": "esports",
     "league of legends": "esports",
     "valorant": "esports",
-
     # --- Fitness ---
     "vinyasa": "yoga",
     "hot yoga": "yoga",
@@ -572,7 +860,6 @@ GENRE_NORMALIZATION: dict[str, str] = {
     "lap swim": "swimming",
     "aqua fitness": "swimming",
     "masters swim": "swimming",
-
     # --- Food & Drink ---
     "soul food": "soul_food",
     "bbq": "southern",
@@ -629,7 +916,6 @@ GENRE_NORMALIZATION: dict[str, str] = {
     "crawfish": "seafood",
     "crab": "seafood",
     "fish fry": "seafood",
-
     # --- Nightlife ---
     "club night": "dj",
     "dj set": "dj",
@@ -667,7 +953,6 @@ GENRE_NORMALIZATION: dict[str, str] = {
     "tabletop": "nerd-stuff",
     "tabletop gaming": "nerd-stuff",
     "ttrpg": "nerd-stuff",
-
     # --- Learning ---
     "hands-on": "workshop",
     "maker session": "workshop",
@@ -689,10 +974,8 @@ GENRE_NORMALIZATION: dict[str, str] = {
     "behind-the-scenes": "tour",
     "doc & discussion": "film-screening",
     "documentary night": "film-screening",
-    "watch party": "film-screening",
     "language exchange": "language",
     "conversation practice": "language",
-
     # --- Community ---
     "cleanup": "volunteer",
     "service project": "volunteer",
@@ -710,7 +993,6 @@ GENRE_NORMALIZATION: dict[str, str] = {
     "church event": "faith",
     "interfaith": "interfaith",
     "spiritual": "faith",
-    "worship": "faith",
     "prayer": "faith",
     "vespers": "faith",
     "shabbat": "faith",
@@ -744,7 +1026,6 @@ GENRE_NORMALIZATION: dict[str, str] = {
     "easter concert": "classical",
     "gospel concert": "gospel",
     "organ recital": "classical",
-    "choral": "classical",
     "sacred music": "classical",
     "rally": "activism",
     "town hall": "activism",
@@ -760,7 +1041,6 @@ GENRE_NORMALIZATION: dict[str, str] = {
     "heritage": "cultural",
     "diaspora": "cultural",
     "juneteenth": "cultural",
-
     # --- Family ---
     "story hour": "storytime",
     "story time": "storytime",
@@ -786,7 +1066,6 @@ GENRE_NORMALIZATION: dict[str, str] = {
     "splash pad": "outdoor-play",
     "playground": "outdoor-play",
     "field day": "outdoor-play",
-
     # --- Outdoor ---
     "picnic": "parks",
     "lawn": "parks",
@@ -809,7 +1088,6 @@ GENRE_NORMALIZATION: dict[str, str] = {
     "zipline": "adventure",
     "ropes course": "adventure",
     "obstacle": "adventure",
-
     # --- Words ---
     "book signing": "reading",
     "book launch": "reading",
@@ -828,7 +1106,6 @@ GENRE_NORMALIZATION: dict[str, str] = {
     "book festival": "literary-festival",
     "literary fest": "literary-festival",
     "book fair": "literary-festival",
-
     # --- Wellness ---
     "aa": "recovery",
     "alcoholics anonymous": "recovery",
@@ -841,7 +1118,6 @@ GENRE_NORMALIZATION: dict[str, str] = {
     "sobriety": "recovery",
     "al-anon": "recovery",
     "celebrate recovery": "recovery",
-    "sound bath": "sound-bath",
     "sound healing": "sound-bath",
     "breathwork": "breathwork",
     "pranayama": "breathwork",
@@ -849,19 +1125,14 @@ GENRE_NORMALIZATION: dict[str, str] = {
     "energy healing": "reiki",
     "wellness class": "wellness-class",
     "recovery meeting": "recovery",
-
     # --- Meetup ---
     "hike": "hiking",
     "trail": "hiking",
-    "nature walk": "hiking",
-    "group hike": "hiking",
     "food tour": "foodie",
     "eat & explore": "foodie",
     "foodie friday": "foodie",
-    "supper club": "foodie",
     "singles": "singles",
     "speed dating": "singles",
-
     # --- Gaming ---
     "gaming expo": "convention",
     "gaming convention": "convention",
@@ -930,6 +1201,7 @@ SUBCATEGORY_TO_GENRE: dict[str, Optional[str]] = {
 # ============================================================================
 # HELPER FUNCTIONS
 # ============================================================================
+
 
 def normalize_genre(raw: str) -> Optional[str]:
     """Normalize a single genre string to its canonical slug.

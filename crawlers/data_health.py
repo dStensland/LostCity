@@ -4,7 +4,7 @@ Generates comprehensive health reports for all entity types in the database.
 """
 
 import sys
-from typing import Optional, Dict, List, Tuple
+from typing import Optional, Dict
 from datetime import datetime
 from db import get_client
 

@@ -22,7 +22,12 @@ from typing import Optional
 
 from playwright.sync_api import sync_playwright
 
-from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
+from db import (
+    get_or_create_place,
+    insert_event,
+    find_event_by_hash,
+    smart_update_existing_event,
+)
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -58,12 +63,12 @@ def parse_eventbrite_date(date_str: str) -> Optional[dict]:
     Returns dict with start_date, start_time, end_time or None.
     """
     # Remove timezone suffix
-    date_str = re.sub(r'\s+[A-Z]{2,4}$', '', date_str)
+    date_str = re.sub(r"\s+[A-Z]{2,4}$", "", date_str)
 
     # Pattern: Day, Month DD, YYYY, HH:MM AM/PM or Day, Month DD, HH:MM AM/PM
     patterns = [
-        r'(\w+),\s+(\w+)\s+(\d{1,2}),\s+(\d{4}),\s+(\d{1,2}):(\d{2})\s+(AM|PM)',
-        r'(\w+),\s+(\w+)\s+(\d{1,2}),\s+(\d{1,2}):(\d{2})\s+(AM|PM)',
+        r"(\w+),\s+(\w+)\s+(\d{1,2}),\s+(\d{4}),\s+(\d{1,2}):(\d{2})\s+(AM|PM)",
+        r"(\w+),\s+(\w+)\s+(\d{1,2}),\s+(\d{1,2}):(\d{2})\s+(AM|PM)",
     ]
 
     for pattern in patterns:
@@ -77,7 +82,9 @@ def parse_eventbrite_date(date_str: str) -> Optional[dict]:
                 current_year = datetime.now().year
                 # Try current year first
                 try:
-                    test_date = datetime.strptime(f"{month_abbr} {day} {current_year}", "%b %d %Y")
+                    test_date = datetime.strptime(
+                        f"{month_abbr} {day} {current_year}", "%b %d %Y"
+                    )
                     if test_date < datetime.now():
                         year = str(current_year + 1)
                     else:
@@ -102,7 +109,7 @@ def parse_eventbrite_date(date_str: str) -> Optional[dict]:
 
             # Look for end time
             end_time = None
-            end_match = re.search(r'-\s*(\d{1,2}):(\d{2})\s+(AM|PM)', date_str)
+            end_match = re.search(r"-\s*(\d{1,2}):(\d{2})\s+(AM|PM)", date_str)
             if end_match:
                 end_hour, end_minute, end_period = end_match.groups()
                 end_hour_int = int(end_hour)
@@ -145,8 +152,12 @@ def crawl(source: dict) -> tuple[int, int, int]:
             venue_id = get_or_create_place(PLACE_DATA)
 
             # Try search page first (more reliable than organizer page which may be inactive)
-            logger.info(f"Fetching Exhibition Hub Eventbrite search: {EVENTBRITE_SEARCH_URL}")
-            page.goto(EVENTBRITE_SEARCH_URL, wait_until="domcontentloaded", timeout=30000)
+            logger.info(
+                f"Fetching Exhibition Hub Eventbrite search: {EVENTBRITE_SEARCH_URL}"
+            )
+            page.goto(
+                EVENTBRITE_SEARCH_URL, wait_until="domcontentloaded", timeout=30000
+            )
             page.wait_for_timeout(3000)
 
             # Scroll to load all events
@@ -157,19 +168,25 @@ def crawl(source: dict) -> tuple[int, int, int]:
             # Check if page shows "not found" message
             page_text = page.inner_text("body")
             if "not found" in page_text.lower() or "whoops" in page_text.lower():
-                logger.info("No active Exhibition Hub events found (organizer page inactive)")
+                logger.info(
+                    "No active Exhibition Hub events found (organizer page inactive)"
+                )
                 browser.close()
                 return 0, 0, 0
 
             # Extract event cards - try multiple selectors
-            event_cards = page.query_selector_all("article[data-testid='organizer-profile__events-card']")
+            event_cards = page.query_selector_all(
+                "article[data-testid='organizer-profile__events-card']"
+            )
 
             if not event_cards:
                 event_cards = page.query_selector_all(".eds-event-card")
 
             if not event_cards:
                 # Try search result cards
-                event_cards = page.query_selector_all("div[data-testid='search-event-card']")
+                event_cards = page.query_selector_all(
+                    "div[data-testid='search-event-card']"
+                )
 
             if not event_cards:
                 # Generic event card selector
@@ -180,7 +197,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
             for card in event_cards:
                 try:
                     # Extract title
-                    title_elem = card.query_selector("h2, h3, .eds-event-card__formatted-name--is-clamped")
+                    title_elem = card.query_selector(
+                        "h2, h3, .eds-event-card__formatted-name--is-clamped"
+                    )
                     if not title_elem:
                         continue
 
@@ -189,7 +208,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         continue
 
                     # Extract date/time
-                    date_elem = card.query_selector("[data-testid='organizer-profile__events-card-date'], .eds-event-card__formatted-date")
+                    date_elem = card.query_selector(
+                        "[data-testid='organizer-profile__events-card-date'], .eds-event-card__formatted-date"
+                    )
                     if not date_elem:
                         continue
 
@@ -202,10 +223,15 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     start_date = date_info["start_date"]
                     start_time = date_info["start_time"]
                     end_time = date_info["end_time"]
+                    title_lower = title.lower()
 
                     # Extract URL
                     link_elem = card.query_selector("a[href*='/e/']")
-                    event_url = link_elem.get_attribute("href") if link_elem else EVENTBRITE_SEARCH_URL
+                    event_url = (
+                        link_elem.get_attribute("href")
+                        if link_elem
+                        else EVENTBRITE_SEARCH_URL
+                    )
                     if event_url and not event_url.startswith("http"):
                         event_url = f"https://www.eventbrite.com{event_url}"
 
@@ -213,7 +239,13 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     # Check title for Exhibition Hub keywords
                     if not any(
                         keyword in title_lower
-                        for keyword in ["exhibition hub", "bubble", "immersive", "van gogh", "monet"]
+                        for keyword in [
+                            "exhibition hub",
+                            "bubble",
+                            "immersive",
+                            "van gogh",
+                            "monet",
+                        ]
                     ):
                         # This might not be an Exhibition Hub event
                         logger.debug(f"Skipping non-Exhibition Hub event: {title}")
@@ -224,7 +256,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     image_url = img_elem.get_attribute("src") if img_elem else None
 
                     # Extract price if available
-                    price_elem = card.query_selector("[data-testid='organizer-profile__events-card-price'], .eds-event-card-content__sub")
+                    price_elem = card.query_selector(
+                        "[data-testid='organizer-profile__events-card-price'], .eds-event-card-content__sub"
+                    )
                     price_text = price_elem.inner_text().strip() if price_elem else ""
 
                     is_free = "free" in price_text.lower()
@@ -232,7 +266,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     price_max = None
 
                     # Try to extract price
-                    price_match = re.search(r'\$(\d+(?:\.\d{2})?)', price_text)
+                    price_match = re.search(r"\$(\d+(?:\.\d{2})?)", price_text)
                     if price_match and not is_free:
                         price_min = float(price_match.group(1))
 

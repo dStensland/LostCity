@@ -7,7 +7,6 @@ Creates source records for:
 - City of Atlanta Government Meetings
 """
 
-import sys
 from supabase import create_client
 from config import get_config
 
@@ -35,7 +34,7 @@ def register_source(slug: str, name: str, url: str):
             "owner_portal_id": ATLANTA_PORTAL_ID,
         }).eq("slug", slug).execute()
 
-        print(f"  → Updated source to active")
+        print("  → Updated source to active")
         return existing.data[0]['id']
 
     # Create new source

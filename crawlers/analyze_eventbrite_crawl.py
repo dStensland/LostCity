@@ -3,7 +3,6 @@ Analyze Eventbrite crawl results to identify candidates for dedicated crawlers.
 """
 
 import os
-from datetime import datetime, timedelta
 from supabase import create_client
 from collections import defaultdict
 from pathlib import Path
@@ -70,7 +69,7 @@ def analyze_top_venues():
     # Sort by count
     sorted_venues = sorted(venue_counts.items(), key=lambda x: x[1]["count"], reverse=True)[:30]
     
-    print(f"\nTop 30 venues by event count (today's crawl):")
+    print("\nTop 30 venues by event count (today's crawl):")
     print(f"{'Venue Name':50s} {'Events':>8s} {'Website':>10s} {'Type':>20s}")
     print("-" * 90)
     for venue_id, data in sorted_venues:
@@ -221,11 +220,11 @@ def main():
     
     # Run all analyses
     categories = analyze_category_breakdown()
-    top_venues_today = analyze_top_venues()
+    analyze_top_venues()
     analyze_new_category_events()
     analyze_new_venues()
     venues_with_websites = analyze_venues_with_websites()
-    prolific_organizers = analyze_repeat_organizers()
+    analyze_repeat_organizers()
     existing_crawlers = check_existing_crawlers()
     
     # Generate recommendations
@@ -264,7 +263,7 @@ def main():
     print("="*80)
     
     high_value_cats = ["health", "fitness", "community", "charity", "wellness", "education"]
-    print(f"\nHigh-value categories for portal strategy:")
+    print("\nHigh-value categories for portal strategy:")
     for cat in high_value_cats:
         count = categories.get(cat, 0)
         print(f"  {cat:20s} {count:4d} events")

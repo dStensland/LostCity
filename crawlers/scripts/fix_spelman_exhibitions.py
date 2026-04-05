@@ -87,7 +87,7 @@ def task2_fix_calida_rawles_end_date():
 
     # Update end_date
     try:
-        update_result = client.table("events").update({
+        client.table("events").update({
             "end_date": "2026-09-05"
         }).eq("id", event_id).execute()
 

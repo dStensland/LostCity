@@ -14,7 +14,12 @@ from typing import Optional
 
 from playwright.sync_api import sync_playwright
 
-from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
+from db import (
+    get_or_create_place,
+    insert_event,
+    find_event_by_hash,
+    smart_update_existing_event,
+)
 from dedupe import generate_content_hash
 from utils import extract_images_from_page, extract_event_links, find_event_url
 
@@ -74,7 +79,7 @@ def parse_date(date_str: str, year: int) -> Optional[str]:
     match = re.search(
         r"(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2}),?\s+(\d{4})",
         date_str,
-        re.IGNORECASE
+        re.IGNORECASE,
     )
     if match:
         month, day, yr = match.groups()
@@ -88,7 +93,7 @@ def parse_date(date_str: str, year: int) -> Optional[str]:
     match = re.search(
         r"(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d{1,2})",
         date_str,
-        re.IGNORECASE
+        re.IGNORECASE,
     )
     if match:
         month, day = match.groups()
@@ -141,10 +146,14 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             # Find all event links in the calendar
             # Events are typically in anchor tags with event info
-            event_elements = page.query_selector_all("a[href*='/event/'], a[href*='events/'], .event-item, [class*='event']")
+            event_elements = page.query_selector_all(
+                "a[href*='/event/'], a[href*='events/'], .event-item, [class*='event']"
+            )
 
             # Also try to get events from the calendar grid
-            calendar_cells = page.query_selector_all("td.has-event, td a, .calendar-event")
+            calendar_cells = page.query_selector_all(
+                "td.has-event, td a, .calendar-event"
+            )
 
             # Combine and dedupe
             all_elements = list(event_elements) + list(calendar_cells)
@@ -161,7 +170,14 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         continue
 
                     # Skip navigation items
-                    if text.lower() in ["previous", "next", "today", "month", "week", "list"]:
+                    if text.lower() in [
+                        "previous",
+                        "next",
+                        "today",
+                        "month",
+                        "week",
+                        "list",
+                    ]:
                         continue
 
                     # Try to extract title from the text
@@ -176,7 +192,11 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         continue
 
                     # Skip titles that are just dates/months
-                    if re.match(r"^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{1,2}$", title, re.IGNORECASE):
+                    if re.match(
+                        r"^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{1,2}$",
+                        title,
+                        re.IGNORECASE,
+                    ):
                         continue
                     if re.match(r"^\d{1,2}$", title):
                         continue
@@ -193,12 +213,14 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     if not start_date:
                         # Try to get date from parent cell if in a calendar
                         try:
-                            parent_cell = element.evaluate_handle("el => el.closest('td')")
+                            parent_cell = element.evaluate_handle(
+                                "el => el.closest('td')"
+                            )
                             if parent_cell:
                                 cell_date = parent_cell.get_attribute("data-date")
                                 if cell_date:
                                     start_date = cell_date
-                        except:
+                        except Exception:
                             pass
 
                     if not start_date:
@@ -211,42 +233,66 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     # Extract location if available
                     location = ""
                     for line in lines[1:]:
-                        if any(x in line.lower() for x in ["roswell", "atlanta", "marietta", "suwanee", "snellville", "ga", "georgia"]):
+                        if any(
+                            x in line.lower()
+                            for x in [
+                                "roswell",
+                                "atlanta",
+                                "marietta",
+                                "suwanee",
+                                "snellville",
+                                "ga",
+                                "georgia",
+                            ]
+                        ):
                             location = line
                             break
 
                     # Determine if this is a scholastic event
-                    is_scholastic = any(x in title.lower() for x in ["scholastic", "k-12", "k-8", "k-5", "youth", "junior"])
+                    is_scholastic = any(
+                        x in title.lower()
+                        for x in ["scholastic", "k-12", "k-8", "k-5", "youth", "junior"]
+                    )
 
                     events_found += 1
 
-                    content_hash = generate_content_hash(title, "Georgia Chess", start_date)
-
+                    content_hash = generate_content_hash(
+                        title, "Georgia Chess", start_date
+                    )
 
                     # Try to match venue
                     venue_id = None
-                    place_data = find_venue_for_location(location) or find_venue_for_location(title)
+                    place_data = find_venue_for_location(
+                        location
+                    ) or find_venue_for_location(title)
                     if place_data:
                         venue_id = get_or_create_place(place_data)
 
                     # Build event URL
-                    event_url = href if href.startswith("http") else f"{BASE_URL}{href}" if href else EVENTS_URL
+                    event_url = (
+                        href
+                        if href.startswith("http")
+                        else f"{BASE_URL}{href}" if href else EVENTS_URL
+                    )
 
                     # Get specific event URL
 
-
                     event_url = find_event_url(title, event_links, EVENTS_URL)
-
-
 
                     event_record = {
                         "source_id": source_id,
                         "place_id": venue_id,
                         "title": title,
-                        "description": f"{title} - USCF rated chess tournament organized by the Georgia Chess Association. " +
-                                      ("Open to K-12 students." if is_scholastic else "Open to all players."),
+                        "description": f"{title} - USCF rated chess tournament organized by the Georgia Chess Association. "
+                        + (
+                            "Open to K-12 students."
+                            if is_scholastic
+                            else "Open to all players."
+                        ),
                         "start_date": start_date,
-                        "start_time": "09:00" if is_scholastic else "10:00",  # Default times
+                        "start_time": (
+                            "09:00" if is_scholastic else "10:00"
+                        ),  # Default times
                         "end_date": None,
                         "end_time": None,
                         "is_all_day": False,
@@ -257,7 +303,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             "tournament",
                             "uscf",
                             "georgia-chess",
-                        ] + (["scholastic", "youth"] if is_scholastic else ["open"]),
+                        ]
+                        + (["scholastic", "youth"] if is_scholastic else ["open"]),
                         "price_min": None,
                         "price_max": None,
                         "price_note": "Registration required",
@@ -296,7 +343,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             event_patterns = re.findall(
                 r"([A-Z][^\n]{10,80})\n.*?(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2}),?\s+(\d{4})",
                 body_text,
-                re.MULTILINE
+                re.MULTILINE,
             )
 
             for match in event_patterns:
@@ -327,14 +374,14 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     events_updated += 1
                     continue
 
-                is_scholastic = any(x in title.lower() for x in ["scholastic", "k-12", "k-8", "k-5", "youth", "junior"])
+                is_scholastic = any(
+                    x in title.lower()
+                    for x in ["scholastic", "k-12", "k-8", "k-5", "youth", "junior"]
+                )
 
                 # Get specific event URL
 
-
                 event_url = find_event_url(title, event_links, EVENTS_URL)
-
-
 
                 event_record = {
                     "source_id": source_id,

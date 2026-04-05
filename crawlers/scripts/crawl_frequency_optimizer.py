@@ -495,7 +495,7 @@ def print_report(report: OptimizationReport, verbose: bool, applied: bool) -> No
     # --- Summary footer ---
     print()
     if applied:
-        print(f"Changes APPLIED to database.")
+        print("Changes APPLIED to database.")
     else:
         print("Run with --apply to write recommended changes to the database.")
     print("=" * width)

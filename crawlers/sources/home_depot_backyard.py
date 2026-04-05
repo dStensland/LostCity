@@ -110,7 +110,7 @@ def categorize_event(title: str, url: str) -> dict:
         Dict with category, subcategory, tags
     """
     title_lower = title.lower()
-    url_lower = url.lower() if url else ""
+    url.lower() if url else ""
 
     # Market events
     if "market" in title_lower:
@@ -344,7 +344,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     # Build description
                     description_parts = [
-                        f"Community event at The Home Depot Backyard at Mercedes-Benz Stadium."
+                        "Community event at The Home Depot Backyard at Mercedes-Benz Stadium."
                     ]
 
                     if cat_info["category"] == "fitness":

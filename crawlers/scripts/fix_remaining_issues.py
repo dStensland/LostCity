@@ -8,7 +8,6 @@ Fix remaining P0 data quality issues:
 
 from db import get_client
 from collections import defaultdict
-import sys
 
 def main():
     supabase = get_client()
@@ -108,12 +107,12 @@ def main():
         # Analyze patterns
         from collections import Counter
         categories = Counter(e.get("category_id") for e in null_venue)
-        print(f"\nBy category:")
+        print("\nBy category:")
         for cat, count in categories.most_common(10):
             print(f"  {cat}: {count}")
 
         # Sample events
-        print(f"\nSample events:")
+        print("\nSample events:")
         for e in null_venue[:15]:
             print(f"  - [{e.get('category_id')}] '{e['title']}' on {e['start_date']}")
 
@@ -125,10 +124,10 @@ def main():
         online_events = [e for e in null_venue if 'webinar' in e['title'].lower() or 'online' in e['title'].lower() or 'virtual' in e['title'].lower()]
         print(f"Online/webinar events: {len(online_events)} (these are OK with NULL venue)")
 
-        print(f"\nRECOMMENDATION: Keep NULL venue_id events. Most are:")
+        print("\nRECOMMENDATION: Keep NULL venue_id events. Most are:")
         print(f"  - Away sports games ({len(gsu_events)} GSU events)")
         print(f"  - Online/virtual events ({len(online_events)} events)")
-        print(f"  - These are legitimate events without a physical venue in our coverage area")
+        print("  - These are legitimate events without a physical venue in our coverage area")
 
     except Exception as e:
         print(f"FAILED to analyze NULL venue events: {e}", flush=True)

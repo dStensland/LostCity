@@ -13,11 +13,8 @@ from bs4 import BeautifulSoup
 from db.client import (
     _validation_stats,
     smart_title_case,
-    _normalize_image_url,
-    _normalize_source_url,
 )
 from date_utils import MAX_FUTURE_DAYS_DEFAULT
-from tags import VALID_CATEGORIES
 
 logger = logging.getLogger(__name__)
 

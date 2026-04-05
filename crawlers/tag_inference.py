@@ -7,10 +7,10 @@ Also infers genres from event title/description using the unified taxonomy.
 from __future__ import annotations
 
 import re
-from datetime import date, datetime
+from datetime import date
 from typing import Optional
 from tags import INHERITABLE_VIBES, VIBE_TO_TAG, ALL_TAGS, GENRE_TO_TAGS
-from genre_normalize import normalize_genres, normalize_genre, genres_for_category, VALID_GENRES
+from genre_normalize import normalize_genres, normalize_genre, genres_for_category
 
 
 def infer_tags(

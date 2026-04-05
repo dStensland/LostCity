@@ -30,7 +30,7 @@ def add_lat_lng_boundary():
     min_lng = float(sys.argv[5])
     max_lng = float(sys.argv[6])
 
-    print(f'\nAdd this to NEIGHBORHOOD_BOUNDARIES in fix_neighborhoods.py:')
+    print('\nAdd this to NEIGHBORHOOD_BOUNDARIES in fix_neighborhoods.py:')
     print(f'    "{name}": ({min_lat}, {max_lat}, {min_lng}, {max_lng}),')
     print()
 
@@ -43,7 +43,7 @@ def add_zip_mapping():
     zip_code = sys.argv[2]
     neighborhood = sys.argv[3]
 
-    print(f'\nAdd this to ZIP_TO_NEIGHBORHOOD in fix_neighborhoods.py:')
+    print('\nAdd this to ZIP_TO_NEIGHBORHOOD in fix_neighborhoods.py:')
     print(f'    "{zip_code}": "{neighborhood}",')
     print()
 

@@ -14,7 +14,7 @@ from urllib.parse import urljoin
 
 from playwright.sync_api import sync_playwright
 
-from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event, insert_exhibition
+from db import get_or_create_place, insert_event, find_event_by_hash, insert_exhibition
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)

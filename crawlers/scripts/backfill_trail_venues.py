@@ -174,20 +174,20 @@ def main() -> None:
     print(f"  Skipped (type mismatch):      {len(skipped_type)}")
 
     if already_trail:
-        print(f"\n  Already correct (trail):")
+        print("\n  Already correct (trail):")
         for v in sorted(already_trail, key=lambda x: x["name"]):
             hood = v.get("neighborhood") or ""
             print(f"    [{v['id']:>5}] {v['name']:<45} type=trail  {hood}")
 
     if candidates:
-        print(f"\n  Candidates (will be updated to venue_type='trail'):")
+        print("\n  Candidates (will be updated to venue_type='trail'):")
         for v in sorted(candidates, key=lambda x: x["name"]):
             hood = v.get("neighborhood") or ""
             current = v.get("place_type") or "NULL"
             print(f"    [{v['id']:>5}] {v['name']:<45} current={current:<20} {hood}")
 
     if skipped_type:
-        print(f"\n  Skipped (keyword match but type not reclassifiable):")
+        print("\n  Skipped (keyword match but type not reclassifiable):")
         for v in sorted(skipped_type, key=lambda x: x["name"]):
             hood = v.get("neighborhood") or ""
             current = v.get("place_type") or "NULL"
@@ -204,9 +204,9 @@ def main() -> None:
             updated += len(chunk)
         print(f"\n  Applied venue_type='trail' to {updated} venues.")
     elif not args.apply and candidates:
-        print(f"\n  Dry run — use --apply to make changes.")
+        print("\n  Dry run — use --apply to make changes.")
     elif args.apply and not candidates:
-        print(f"\n  Nothing to update.")
+        print("\n  Nothing to update.")
 
     print()
 

@@ -3,7 +3,6 @@
 Script to activate inactive Atlanta bar/nightlife sources and create missing ones.
 """
 
-import sys
 from db import get_client
 
 # Sources to activate
@@ -62,7 +61,7 @@ def activate_sources():
 
     for source in INACTIVE_SOURCES:
         try:
-            result = client.table("sources").update({
+            client.table("sources").update({
                 "is_active": True
             }).eq("id", source['id']).execute()
 

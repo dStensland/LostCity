@@ -19,7 +19,6 @@ Usage:
     python enrichment_proposals.py --reject --id 42
 """
 
-import os
 import sys
 import json
 import uuid

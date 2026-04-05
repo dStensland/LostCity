@@ -622,7 +622,7 @@ def parse_venues_from_html(html: str) -> list[dict]:
         # Fallback: try to find any block that has address-like content
         logger.debug("No standard venue card selectors matched; trying generic parse")
         # Look for any element with a street address pattern
-        all_text = soup.get_text(separator="\n")
+        soup.get_text(separator="\n")
         logger.debug(f"HTML sample (first 500 chars): {html[:500]}")
         return []
 

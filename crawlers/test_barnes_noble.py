@@ -29,7 +29,7 @@ def test_bn_page():
 
         # Get page text
         text = page.inner_text("body")
-        print(f"\n=== Page text (first 1000 chars) ===")
+        print("\n=== Page text (first 1000 chars) ===")
         print(text[:1000])
 
         # Look for event-related keywords
@@ -51,7 +51,7 @@ def test_bn_page():
         page.wait_for_timeout(3000)
 
         events_text = page.inner_text("body")
-        print(f"Events page text (first 1000 chars):")
+        print("Events page text (first 1000 chars):")
         print(events_text[:1000])
 
         # Keep browser open for inspection

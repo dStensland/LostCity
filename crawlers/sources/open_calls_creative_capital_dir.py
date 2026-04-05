@@ -284,11 +284,10 @@ def _parse_item(item_tag) -> Optional[dict]:
     # Extract org name from info text
     # Format: "Org Name — Deadline: DATE" or "Org Name — Deadline: Rolling"
     org_name = ""
-    deadline_text = info_text
     if "—" in info_text:
         parts = info_text.split("—", 1)
         org_name = parts[0].strip()
-        deadline_text = parts[1].strip() if len(parts) > 1 else info_text
+        parts[1].strip() if len(parts) > 1 else info_text
 
     # Parse deadline
     deadline = _parse_deadline(info_text)  # parse from full info text for best match

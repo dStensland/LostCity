@@ -65,7 +65,7 @@ def parse_date_tag(date_text: str) -> Optional[str]:
 
     # Get current year, or next year if date is in the past
     current_year = datetime.now().year
-    current_month = datetime.now().month
+    datetime.now().month
 
     # Map month abbreviation to month number
     month_map = {

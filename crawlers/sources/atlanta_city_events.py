@@ -519,7 +519,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             elif re.search(r"\d{5}", part):
                                 zip_match = re.search(r"\d{5}", part)
                                 zip_code = zip_match.group(0)
-                            elif not part.upper() in ["GA", "GEORGIA"] and len(part) > 2:
+                            elif part.upper() not in ["GA", "GEORGIA"] and len(part) > 2:
                                 city = part
 
                     place_data = {

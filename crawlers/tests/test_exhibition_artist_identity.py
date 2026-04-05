@@ -7,8 +7,7 @@ Covers:
 - get_or_create_and_enrich with discipline="visual_artist" does NOT call enrich_artist
 """
 
-import pytest
-from unittest.mock import MagicMock, patch, call
+from unittest.mock import MagicMock
 
 
 # ---------------------------------------------------------------------------

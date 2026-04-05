@@ -192,7 +192,7 @@ def build_schedule_templates(entries: list[dict]) -> list[dict]:
         location = entry["location"]
         weekday = entry["weekday"]
         start_time = entry["start_time"]
-        day_name = DAY_NAMES[weekday]
+        DAY_NAMES[weekday]
         title = build_event_title(location, weekday, start_time)
         is_walk = location == "South Fulton"
 

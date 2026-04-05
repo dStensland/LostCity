@@ -6,13 +6,10 @@ Venue classification and cleanup script.
 3. Classifies untyped and 'venue' typed entries using rules + LLM
 """
 
-import os
 import re
-import json
 import time
 import argparse
 from typing import Optional
-from collections import Counter
 from dotenv import load_dotenv
 from db import get_client
 from config import get_config

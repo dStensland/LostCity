@@ -154,7 +154,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             category = EVENT_TYPE_MAP.get(event_type, "gaming")
 
             # More info link (BoardGameGeek, etc.)
-            more_info = row.get("More Info", "")
+            row.get("More Info", "")
 
             # Dedup
             content_hash = generate_content_hash(title, PLACE_DATA["name"], start_date)

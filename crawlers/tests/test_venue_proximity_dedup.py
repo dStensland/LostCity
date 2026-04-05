@@ -4,7 +4,6 @@ Unit tests for _proximity_name_match — the venue proximity-dedup helper.
 These tests exercise the matching logic directly without any DB calls.
 """
 
-import pytest
 from db.places import _proximity_name_match
 
 

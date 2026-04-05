@@ -11,7 +11,6 @@ import requests
 from bs4 import BeautifulSoup
 
 from db import get_or_create_place
-from dedupe import generate_content_hash
 from entity_lanes import SourceEntityCapabilities, TypedEntityEnvelope
 from entity_persistence import persist_typed_entity_envelope
 
@@ -324,7 +323,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 # Build description
                 description = exhibition_data.get('description')
                 if not description or len(description) < 50:
-                    description = f"Art exhibition at the Clark Atlanta University Art Museum, documenting the role of African Americans in American history and culture."
+                    description = "Art exhibition at the Clark Atlanta University Art Museum, documenting the role of African Americans in American history and culture."
 
                 # Truncate description if too long
                 if len(description) > 500:

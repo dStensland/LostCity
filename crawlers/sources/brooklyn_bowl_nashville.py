@@ -148,7 +148,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             logger.info(f"Found {len(raw_events)} events in DOM")
 
-            now = datetime.now()
+            datetime.now()
 
             for event_data in raw_events:
                 try:

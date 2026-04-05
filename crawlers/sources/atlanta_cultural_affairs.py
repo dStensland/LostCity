@@ -89,7 +89,7 @@ def generate_annual_events(source_id: int, year: int) -> list[dict]:
 
     if sat_datetime >= today:
         title = f"Atlanta Jazz Festival {year}"
-        description = f"Free outdoor jazz festival at Piedmont Park, presented by the City of Atlanta Mayor's Office of Cultural Affairs. Performances featuring local, national, and international jazz artists."
+        description = "Free outdoor jazz festival at Piedmont Park, presented by the City of Atlanta Mayor's Office of Cultural Affairs. Performances featuring local, national, and international jazz artists."
 
         for day_date, day_name in [(sat_date, "Saturday"), (sun_date, "Sunday")]:
             content_hash = generate_content_hash(f"Atlanta Jazz Festival {year} - {day_name}", "Piedmont Park", day_date)
@@ -146,11 +146,10 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
     try:
         # Try to fetch from government site
-        page_events = []
         try:
             response = requests.get(EVENTS_URL, headers=headers, timeout=30)
             if response.ok:
-                soup = BeautifulSoup(response.text, "html.parser")
+                BeautifulSoup(response.text, "html.parser")
                 # Government sites often list events in news/announcement sections
                 # Parse any event-like content found
         except requests.RequestException as e:

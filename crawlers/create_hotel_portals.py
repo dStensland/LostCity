@@ -5,8 +5,6 @@ These use the hotel vertical template with appropriate branding.
 
 from config import get_config
 from supabase import create_client
-import json
-from datetime import datetime
 
 def create_hotel_portals():
     """Create Bellyard and Clermont hotel portals."""

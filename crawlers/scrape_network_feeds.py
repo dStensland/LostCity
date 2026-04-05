@@ -697,7 +697,7 @@ def main():
             logger.error("No active network sources found. Run the migration first.")
         sys.exit(1)
 
-    logger.info(f"Network Feed Crawler")
+    logger.info("Network Feed Crawler")
     logger.info(f"Sources: {len(sources)}")
     if args.dry_run:
         logger.info("Mode: DRY RUN (no writes)")
@@ -755,7 +755,7 @@ def main():
     )
 
     logger.info(f"\n{'=' * 60}")
-    logger.info(f"Done!")
+    logger.info("Done!")
     logger.info(f"  Sources processed: {len(sources)}")
     logger.info(f"  Feed entries found: {total_found}")
     logger.info(f"  New posts imported: {total_new}")
@@ -766,7 +766,7 @@ def main():
     if errors:
         logger.info(f"  Errors: {errors}")
     if args.dry_run:
-        logger.info(f"  (dry run — nothing written)")
+        logger.info("  (dry run — nothing written)")
 
 
 if __name__ == "__main__":

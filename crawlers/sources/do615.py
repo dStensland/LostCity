@@ -11,10 +11,10 @@ import logging
 from datetime import datetime, timedelta
 from typing import Optional
 
-from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeout
+from playwright.sync_api import sync_playwright
 
 from utils import slugify
-from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -69,7 +69,7 @@ def parse_date(date_text: str) -> Optional[str]:
             try:
                 dt = datetime.fromisoformat(date_text.replace("Z", "+00:00"))
                 return dt.strftime("%Y-%m-%d")
-            except:
+            except Exception:
                 pass
 
         # Try MM/DD/YYYY format
@@ -80,7 +80,9 @@ def parse_date(date_text: str) -> Optional[str]:
             return dt.strftime("%Y-%m-%d")
 
         # Try "Jan 15" or "January 15" format (current year)
-        match = re.match(r"(\w{3,9})\.?\s+(\d{1,2})(?:st|nd|rd|th)?", date_text, re.IGNORECASE)
+        match = re.match(
+            r"(\w{3,9})\.?\s+(\d{1,2})(?:st|nd|rd|th)?", date_text, re.IGNORECASE
+        )
         if match:
             month, day = match.groups()
             year = datetime.now().year
@@ -139,12 +141,12 @@ def determine_category(text: str, do615_category: str = None) -> str:
     if do615_category:
         cat_lower = do615_category.lower()
         for keyword, category in CATEGORY_MAP.items():
-            if re.search(r'\b' + re.escape(keyword) + r'\b', cat_lower):
+            if re.search(r"\b" + re.escape(keyword) + r"\b", cat_lower):
                 return category
 
     text_lower = text.lower()
     for keyword, category in CATEGORY_MAP.items():
-        if re.search(r'\b' + re.escape(keyword) + r'\b', text_lower):
+        if re.search(r"\b" + re.escape(keyword) + r"\b", text_lower):
             return category
 
     return "community"
@@ -196,7 +198,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     for card in cards:
                         try:
                             # Title
-                            title_el = card.query_selector(".ds-listing-event-title-text")
+                            title_el = card.query_selector(
+                                ".ds-listing-event-title-text"
+                            )
                             title = title_el.inner_text().strip() if title_el else None
 
                             if not title or len(title) < 3:
@@ -206,7 +210,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             start_date = None
                             start_time = None
 
-                            date_meta = card.query_selector("meta[itemprop='startDate']")
+                            date_meta = card.query_selector(
+                                "meta[itemprop='startDate']"
+                            )
                             if date_meta:
                                 date_attr = date_meta.get_attribute("datetime")
                                 if date_attr:
@@ -218,12 +224,16 @@ def crawl(source: dict) -> tuple[int, int, int]:
                                         date_attr = date_attr.replace("Z", "+00:00")
                                         if re.match(r".*[+-]\d{4}$", date_attr):
                                             # Insert colon in timezone offset
-                                            date_attr = date_attr[:-2] + ":" + date_attr[-2:]
+                                            date_attr = (
+                                                date_attr[:-2] + ":" + date_attr[-2:]
+                                            )
                                         dt = datetime.fromisoformat(date_attr)
                                         start_date = dt.strftime("%Y-%m-%d")
                                         start_time = dt.strftime("%H:%M")
                                     except Exception as e:
-                                        logger.warning(f"Failed to parse datetime '{date_attr}': {e}")
+                                        logger.warning(
+                                            f"Failed to parse datetime '{date_attr}': {e}"
+                                        )
 
                             # Fallback to time element text
                             if not start_date:
@@ -236,13 +246,21 @@ def crawl(source: dict) -> tuple[int, int, int]:
                                 continue
 
                             # Venue - get from nested span inside .ds-venue-name
-                            venue_el = card.query_selector(".ds-venue-name a span[itemprop='name']")
-                            venue_name = venue_el.inner_text().strip() if venue_el else None
+                            venue_el = card.query_selector(
+                                ".ds-venue-name a span[itemprop='name']"
+                            )
+                            venue_name = (
+                                venue_el.inner_text().strip() if venue_el else None
+                            )
 
                             if not venue_name:
                                 # Fallback to any text in .ds-venue-name
                                 venue_container = card.query_selector(".ds-venue-name")
-                                venue_name = venue_container.inner_text().strip() if venue_container else "Nashville Area"
+                                venue_name = (
+                                    venue_container.inner_text().strip()
+                                    if venue_container
+                                    else "Nashville Area"
+                                )
 
                             # Clean up venue name
                             if venue_name and len(venue_name) > 2:
@@ -271,14 +289,19 @@ def crawl(source: dict) -> tuple[int, int, int]:
                                 if style:
                                     # Extract URL from background-image:url('...')
                                     import re as img_re
-                                    match = img_re.search(r"url\(['\"]?([^'\"]+)['\"]?\)", style)
+
+                                    match = img_re.search(
+                                        r"url\(['\"]?([^'\"]+)['\"]?\)", style
+                                    )
                                     if match:
                                         image_url = match.group(1)
                                         if image_url.startswith("//"):
                                             image_url = f"https:{image_url}"
 
                             # Category - check data attributes
-                            do615_cat = card.get_attribute("data-category") or card.get_attribute("class")
+                            do615_cat = card.get_attribute(
+                                "data-category"
+                            ) or card.get_attribute("class")
                             category = determine_category(title, do615_cat)
 
                             total_found += 1
@@ -298,7 +321,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
                                 venue_cache[venue_name] = venue_id
 
                             # Content hash
-                            content_hash = generate_content_hash(title, venue_name, start_date)
+                            content_hash = generate_content_hash(
+                                title, venue_name, start_date
+                            )
 
                             # Check for existing
                             existing = find_event_by_hash(content_hash)
@@ -336,7 +361,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             try:
                                 insert_event(event_record)
                                 total_new += 1
-                                logger.info(f"Added: {title} on {start_date} at {venue_name}")
+                                logger.info(
+                                    f"Added: {title} on {start_date} at {venue_name}"
+                                )
                             except Exception as e:
                                 logger.error(f"Failed to insert: {title}: {e}")
 

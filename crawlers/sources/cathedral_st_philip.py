@@ -274,7 +274,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                                             "source_id": source_id,
                                             "place_id": venue_id,
                                             "title": title,
-                                            "description": f"Event at The Cathedral of St. Philip, a historic Episcopal cathedral in Buckhead.",
+                                            "description": "Event at The Cathedral of St. Philip, a historic Episcopal cathedral in Buckhead.",
                                             "start_date": start_date,
                                             "start_time": start_time,
                                             "end_date": None,
@@ -349,7 +349,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                                 # Extract description
                                 desc_elem = container.find(class_=lambda x: x and ("description" in x.lower() or "excerpt" in x.lower()))
-                                description = desc_elem.get_text(strip=True) if desc_elem else f"Event at The Cathedral of St. Philip."
+                                description = desc_elem.get_text(strip=True) if desc_elem else "Event at The Cathedral of St. Philip."
 
                                 # Determine category
                                 category = determine_category(title, description)

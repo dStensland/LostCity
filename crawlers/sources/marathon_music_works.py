@@ -15,7 +15,12 @@ from typing import Optional
 from playwright.sync_api import sync_playwright
 from bs4 import BeautifulSoup
 
-from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
+from db import (
+    get_or_create_place,
+    insert_event,
+    find_event_by_hash,
+    smart_update_existing_event,
+)
 from dedupe import generate_content_hash
 from utils import enrich_event_record
 
@@ -53,7 +58,9 @@ def parse_time(time_text: str) -> Optional[str]:
     return None
 
 
-def parse_price(price_text: str) -> tuple[Optional[float], Optional[float], Optional[str]]:
+def parse_price(
+    price_text: str,
+) -> tuple[Optional[float], Optional[float], Optional[str]]:
     """Parse price from text. Returns (min, max, note)."""
     # Try to find price pattern like $25.00 or $25
     match = re.search(r"\$(\d+(?:\.\d{2})?)", price_text)
@@ -107,7 +114,11 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         continue
 
                     title_link = title_elem.find("a")
-                    title = title_link.get_text(strip=True) if title_link else title_elem.get_text(strip=True)
+                    title = (
+                        title_link.get_text(strip=True)
+                        if title_link
+                        else title_elem.get_text(strip=True)
+                    )
 
                     # Extract event URL - try title link, then ticket/buy buttons
                     event_url = CALENDAR_URL
@@ -116,9 +127,16 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         if not event_url.startswith("http"):
                             event_url = BASE_URL + event_url
                     else:
-                        ticket_link = container.find("a", href=re.compile(r"ticket|buy|event", re.IGNORECASE))
+                        ticket_link = container.find(
+                            "a", href=re.compile(r"ticket|buy|event", re.IGNORECASE)
+                        )
                         if not ticket_link:
-                            ticket_link = container.find("a", class_=re.compile(r"ticket|buy|btn|button", re.IGNORECASE))
+                            ticket_link = container.find(
+                                "a",
+                                class_=re.compile(
+                                    r"ticket|buy|btn|button", re.IGNORECASE
+                                ),
+                            )
                         if ticket_link and ticket_link.get("href"):
                             event_url = ticket_link["href"]
                             if not event_url.startswith("http"):
@@ -145,28 +163,39 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         try:
                             dt = datetime.strptime(f"{month} {day} {year}", "%b %d %Y")
                             start_date = dt.strftime("%Y-%m-%d")
-                        except:
-                            logger.warning(f"Could not parse date: {month} {day} {year}")
+                        except Exception:
+                            logger.warning(
+                                f"Could not parse date: {month} {day} {year}"
+                            )
                             continue
                     else:
                         continue
 
                     # Extract time from tw-event-time or tw-event-door-time
-                    time_elem = container.find(["div", "span"], class_=re.compile(r"tw-event-time|tw-event-door-time"))
+                    time_elem = container.find(
+                        ["div", "span"],
+                        class_=re.compile(r"tw-event-time|tw-event-door-time"),
+                    )
                     if time_elem:
                         time_text = time_elem.get_text(strip=True)
-                        time_match = re.search(r"(\d{1,2}:\d{2}\s*[AP]M)", time_text, re.IGNORECASE)
+                        time_match = re.search(
+                            r"(\d{1,2}:\d{2}\s*[AP]M)", time_text, re.IGNORECASE
+                        )
                         if time_match:
                             start_time = parse_time(time_match.group(1))
 
                     # Extract description
                     description = None
-                    desc_elem = container.find(["div", "p"], class_=re.compile(r"description|excerpt|content"))
+                    desc_elem = container.find(
+                        ["div", "p"], class_=re.compile(r"description|excerpt|content")
+                    )
                     if desc_elem:
                         description = desc_elem.get_text(strip=True)[:500]
 
                     # Extract supporting acts
-                    support_elem = container.find(["div", "span"], class_=re.compile(r"support|opener|with"))
+                    support_elem = container.find(
+                        ["div", "span"], class_=re.compile(r"support|opener|with")
+                    )
                     if support_elem and not description:
                         description = f"With {support_elem.get_text(strip=True)}"
 
@@ -174,7 +203,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     price_min = None
                     price_max = None
                     price_note = None
-                    price_elem = container.find(["span", "div"], class_=re.compile(r"price|cost"))
+                    price_elem = container.find(
+                        ["span", "div"], class_=re.compile(r"price|cost")
+                    )
                     if price_elem:
                         price_text = price_elem.get_text(strip=True)
                         price_min, price_max, price_note = parse_price(price_text)
@@ -189,8 +220,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     events_found += 1
 
-                    content_hash = generate_content_hash(title, "Marathon Music Works", start_date)
-
+                    content_hash = generate_content_hash(
+                        title, "Marathon Music Works", start_date
+                    )
 
                     event_record = {
                         "source_id": source_id,
@@ -204,7 +236,12 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "is_all_day": False,
                         "category": "music",
                         "subcategory": "concert",
-                        "tags": ["marathon-music-works", "nashville", "live-music", "marathon-village"],
+                        "tags": [
+                            "marathon-music-works",
+                            "nashville",
+                            "live-music",
+                            "marathon-village",
+                        ],
                         "price_min": price_min,
                         "price_max": price_max,
                         "price_note": price_note,
@@ -220,17 +257,26 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     }
 
                     # Enrich from detail page
-                    enrich_event_record(event_record, source_name="Marathon Music Works")
+                    enrich_event_record(
+                        event_record, source_name="Marathon Music Works"
+                    )
 
                     # Determine is_free if still unknown after enrichment
                     if event_record.get("is_free") is None:
                         desc_lower = (event_record.get("description") or "").lower()
                         title_lower = event_record.get("title", "").lower()
                         combined = f"{title_lower} {desc_lower}"
-                        if any(kw in combined for kw in ["free", "no cost", "no charge", "complimentary"]):
+                        if any(
+                            kw in combined
+                            for kw in ["free", "no cost", "no charge", "complimentary"]
+                        ):
                             event_record["is_free"] = True
-                            event_record["price_min"] = event_record.get("price_min") or 0
-                            event_record["price_max"] = event_record.get("price_max") or 0
+                            event_record["price_min"] = (
+                                event_record.get("price_min") or 0
+                            )
+                            event_record["price_max"] = (
+                                event_record.get("price_max") or 0
+                            )
                         else:
                             event_record["is_free"] = False
 

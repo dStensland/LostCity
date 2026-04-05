@@ -3,7 +3,6 @@
 Script to check which Atlanta bar/nightlife crawlers exist and their status.
 """
 
-import sys
 from pathlib import Path
 from db import get_client
 
@@ -63,19 +62,19 @@ def main():
         except Exception as e:
             print(f"✗ ERROR:    {slug:30s} - {e}")
 
-    print(f"\n=== Summary ===")
+    print("\n=== Summary ===")
     print(f"Active:   {len(active)}")
     print(f"Inactive: {len(inactive)}")
     print(f"Missing:  {len(missing)}")
     print(f"Total:    {len(active) + len(inactive) + len(missing)}")
 
     if inactive:
-        print(f"\n=== Inactive Sources to Activate ===")
+        print("\n=== Inactive Sources to Activate ===")
         for slug, source_id, name in inactive:
             print(f"  {slug} (ID: {source_id})")
 
     if missing:
-        print(f"\n=== Missing Sources (need DB records) ===")
+        print("\n=== Missing Sources (need DB records) ===")
         for slug in missing:
             print(f"  {slug}")
 

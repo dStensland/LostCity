@@ -12,7 +12,6 @@ Usage:
     python3 enrich_skyline_images.py
 """
 
-import os
 import sys
 import time
 import argparse
@@ -241,7 +240,7 @@ def main(dry_run: bool = False):
                 ).eq("id", venue["id"]).execute()
                 print(f"    Updated venue {venue['id']}")
         else:
-            print(f"    NOT FOUND — keeping existing image")
+            print("    NOT FOUND — keeping existing image")
             failed += 1
 
         time.sleep(1.0)

@@ -1,6 +1,5 @@
 """Tests for _looks_like_band_with_ampersand heuristics."""
 
-import pytest
 
 from extractors.lineup import _looks_like_band_with_ampersand
 

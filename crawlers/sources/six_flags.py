@@ -469,7 +469,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             detail_page.goto(event_url, wait_until="domcontentloaded", timeout=30000)
                             detail_page.wait_for_timeout(3000)
 
-                            detail_text = detail_page.inner_text("body")
+                            detail_page.inner_text("body")
 
                             # Extract description from detail page
                             # Look for paragraph text that's not navigation

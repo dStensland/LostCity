@@ -28,7 +28,7 @@ load_dotenv(Path(__file__).parent.parent / "web" / ".env.local")
 
 sys.path.insert(0, str(Path(__file__).parent))
 from db import get_client
-from hours_utils import format_hours_display, prepare_hours_update, should_update_hours
+from hours_utils import prepare_hours_update, should_update_hours
 
 logging.basicConfig(level=logging.INFO, format="%(message)s")
 logger = logging.getLogger(__name__)

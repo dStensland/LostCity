@@ -38,7 +38,7 @@ PLACE_DATA = {
 def parse_date(date_str: str) -> tuple[Optional[str], Optional[str]]:
     """Parse various date formats from Georgian Terrace events."""
     try:
-        current_year = datetime.now().year
+        datetime.now().year
 
         # Clean up the date string
         date_str = date_str.strip()

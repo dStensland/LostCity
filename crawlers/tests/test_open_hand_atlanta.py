@@ -44,7 +44,6 @@ def test_clean_description_normalizes_whitespace():
 def test_format_time():
     # March 23 2026 07:00 EDT = 1742731200 (approximate, depends on TZ)
     # Use a known timestamp instead
-    import time as _time
     from datetime import datetime
 
     dt = datetime(2026, 3, 23, 7, 0, 0)

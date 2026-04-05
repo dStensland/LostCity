@@ -9,12 +9,16 @@ from __future__ import annotations
 import re
 import logging
 from datetime import datetime, timedelta
-from typing import Optional
 
 import requests
 from bs4 import BeautifulSoup
 
-from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
+from db import (
+    get_or_create_place,
+    insert_event,
+    find_event_by_hash,
+    smart_update_existing_event,
+)
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -72,7 +76,6 @@ def create_recurring_events(source_id: int, venue_id: int) -> tuple[int, int]:
 
         content_hash = generate_content_hash(title, "Alpharetta", start_date)
 
-
         description = (
             "Weekly farmers market in downtown Alpharetta featuring local produce, "
             "artisan goods, baked items, and live music. Family-friendly with "
@@ -91,7 +94,13 @@ def create_recurring_events(source_id: int, venue_id: int) -> tuple[int, int]:
             "is_all_day": False,
             "category": "community",
             "subcategory": "market",
-            "tags": ["alpharetta", "farmers-market", "local", "family-friendly", "outdoor"],
+            "tags": [
+                "alpharetta",
+                "farmers-market",
+                "local",
+                "family-friendly",
+                "outdoor",
+            ],
             "price_min": None,
             "price_max": None,
             "price_note": None,
@@ -159,7 +168,13 @@ def create_recurring_events(source_id: int, venue_id: int) -> tuple[int, int]:
             "is_all_day": False,
             "category": "music",
             "subcategory": "festival",
-            "tags": ["alpharetta", "wire-and-wood", "music-festival", "singer-songwriter", "outdoor"],
+            "tags": [
+                "alpharetta",
+                "wire-and-wood",
+                "music-festival",
+                "singer-songwriter",
+                "outdoor",
+            ],
             "price_min": None,
             "price_max": None,
             "price_note": None,
@@ -203,7 +218,12 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
     # Try to fetch from city calendar
     try:
-        for path in ["/recreation/events", "/events", "/calendar", "/parks-recreation/events"]:
+        for path in [
+            "/recreation/events",
+            "/events",
+            "/calendar",
+            "/parks-recreation/events",
+        ]:
             try:
                 url = BASE_URL + path
                 response = requests.get(url, headers=HEADERS, timeout=30)
@@ -211,7 +231,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     continue
 
                 soup = BeautifulSoup(response.text, "html.parser")
-                event_elements = soup.select(".event, .calendar-event, article, [class*='event']")
+                event_elements = soup.select(
+                    ".event, .calendar-event, article, [class*='event']"
+                )
 
                 for element in event_elements:
                     try:
@@ -229,7 +251,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         text = element.get_text()
                         date_match = re.search(
                             r"(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2}",
-                            text, re.IGNORECASE
+                            text,
+                            re.IGNORECASE,
                         )
                         if not date_match:
                             continue
@@ -241,7 +264,10 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         if not day_match:
                             continue
                         try:
-                            dt = datetime.strptime(f"{month_str} {day_match.group(1)} {now.year}", "%b %d %Y")
+                            dt = datetime.strptime(
+                                f"{month_str} {day_match.group(1)} {now.year}",
+                                "%b %d %Y",
+                            )
                             if dt.date() < now.date():
                                 dt = dt.replace(year=now.year + 1)
                             start_date = dt.strftime("%Y-%m-%d")
@@ -249,19 +275,15 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             continue
 
                         events_found += 1
-                        content_hash = generate_content_hash(title, "Alpharetta", start_date)
-
-                        existing = find_event_by_hash(content_hash)
-                        if existing:
-                            smart_update_existing_event(existing, event_record)
-                            events_updated += 1
-                            continue
+                        content_hash = generate_content_hash(
+                            title, "Alpharetta", start_date
+                        )
 
                         event_record = {
                             "source_id": source_id,
                             "place_id": venue_id,
                             "title": title,
-                            "description": f"City of Alpharetta event",
+                            "description": "City of Alpharetta event",
                             "start_date": start_date,
                             "start_time": None,
                             "end_date": None,
@@ -284,6 +306,12 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             "content_hash": content_hash,
                         }
 
+                        existing = find_event_by_hash(content_hash)
+                        if existing:
+                            smart_update_existing_event(existing, event_record)
+                            events_updated += 1
+                            continue
+
                         try:
                             insert_event(event_record)
                             events_new += 1
@@ -302,6 +330,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
     except Exception as e:
         logger.error(f"Error fetching city calendar: {e}")
 
-    logger.info(f"Alpharetta City crawl complete: {events_found} found, {events_new} new, {events_updated} updated")
+    logger.info(
+        f"Alpharetta City crawl complete: {events_found} found, {events_new} new, {events_updated} updated"
+    )
 
     return events_found, events_new, events_updated

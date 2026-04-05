@@ -16,7 +16,7 @@ import json
 import logging
 import re
 import requests
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Optional
 from urllib.parse import quote
 

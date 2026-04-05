@@ -32,7 +32,7 @@ def add_source():
         print(f"Source created successfully: {result.data[0]}")
         return result.data[0]
     else:
-        print(f"Failed to create source")
+        print("Failed to create source")
         return None
 
 if __name__ == "__main__":

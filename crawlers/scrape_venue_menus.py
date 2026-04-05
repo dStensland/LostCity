@@ -351,7 +351,7 @@ def main():
 
         logger.info("=" * 60)
         logger.info(f"Done! Re-dumped {dumped} venues, {failed} failed, {skipped} no improvement")
-        logger.info(f"Next: re-run extraction on improved dumps, then import")
+        logger.info("Next: re-run extraction on improved dumps, then import")
         return
 
     # Parse venue IDs
@@ -392,9 +392,9 @@ def main():
 
     logger.info("=" * 60)
     logger.info(f"Done! Dumped {dumped} venues, {failed} failed, {skipped} already existed")
-    logger.info(f"Next steps:")
+    logger.info("Next steps:")
     logger.info(f"  1. Run Claude Code Task agents to extract menu_highlights from {dump_dir}/")
-    logger.info(f"  2. Import: python3 scrape_venue_specials.py --import-dir menu_results/ --force-update")
+    logger.info("  2. Import: python3 scrape_venue_specials.py --import-dir menu_results/ --force-update")
 
 
 if __name__ == "__main__":

@@ -56,10 +56,10 @@ def backfill(source_slug=None, dry_run=False, verbose=False):
         sys.exit(1)
 
     source_ids = list(sources.keys())
-    logger.info(f"Backfill post categories")
+    logger.info("Backfill post categories")
     logger.info(f"  Sources: {len(source_ids)}")
     if dry_run:
-        logger.info(f"  Mode: DRY RUN")
+        logger.info("  Mode: DRY RUN")
 
     total = 0
     changed = 0
@@ -111,12 +111,12 @@ def backfill(source_slug=None, dry_run=False, verbose=False):
         if len(rows) < BATCH_SIZE:
             break
 
-    logger.info(f"\nDone!")
+    logger.info("\nDone!")
     logger.info(f"  Posts processed: {total}")
     logger.info(f"  Changed: {changed}")
     logger.info(f"  Unchanged: {unchanged}")
     if dry_run:
-        logger.info(f"  (dry run — nothing written)")
+        logger.info("  (dry run — nothing written)")
 
 
 def main():

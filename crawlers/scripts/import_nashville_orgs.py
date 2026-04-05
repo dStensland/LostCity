@@ -637,7 +637,7 @@ def import_organizations():
             logger.error(f"Error importing {org['name']}: {e}")
             error_count += 1
     
-    logger.info(f"\n=== Import Complete ===")
+    logger.info("\n=== Import Complete ===")
     logger.info(f"Successfully imported: {success_count}")
     logger.info(f"Errors: {error_count}")
     logger.info(f"Total organizations: {len(NASHVILLE_ORGS)}")

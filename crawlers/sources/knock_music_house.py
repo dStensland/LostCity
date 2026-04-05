@@ -10,9 +10,13 @@ from datetime import datetime
 from bs4 import BeautifulSoup
 import requests
 
-from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
+from db import (
+    get_or_create_place,
+    insert_event,
+    find_event_by_hash,
+    smart_update_existing_event,
+)
 from dedupe import generate_content_hash
-from utils import extract_event_links, find_event_url
 
 logger = logging.getLogger(__name__)
 
@@ -44,9 +48,17 @@ def parse_jsonld_events(soup: BeautifulSoup) -> list[dict]:
                 if data.get("@type") in ["Event", "MusicEvent"]:
                     events.append(data)
                 if "@graph" in data:
-                    events.extend([e for e in data["@graph"] if e.get("@type") in ["Event", "MusicEvent"]])
+                    events.extend(
+                        [
+                            e
+                            for e in data["@graph"]
+                            if e.get("@type") in ["Event", "MusicEvent"]
+                        ]
+                    )
             elif isinstance(data, list):
-                events.extend([e for e in data if e.get("@type") in ["Event", "MusicEvent"]])
+                events.extend(
+                    [e for e in data if e.get("@type") in ["Event", "MusicEvent"]]
+                )
         except (json.JSONDecodeError, TypeError):
             continue
 
@@ -80,7 +92,11 @@ def crawl(source: dict) -> tuple[int, int, int]:
             if not title:
                 continue
 
-            start_date = event_data.get("startDate", "")[:10] if event_data.get("startDate") else None
+            start_date = (
+                event_data.get("startDate", "")[:10]
+                if event_data.get("startDate")
+                else None
+            )
             if not start_date:
                 continue
 
@@ -90,7 +106,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
             start_time = None
             if event_data.get("startDate") and "T" in event_data.get("startDate", ""):
                 try:
-                    dt = datetime.fromisoformat(event_data["startDate"].replace("Z", "+00:00"))
+                    dt = datetime.fromisoformat(
+                        event_data["startDate"].replace("Z", "+00:00")
+                    )
                     if dt.hour != 0 or dt.minute != 0:
                         start_time = dt.strftime("%H:%M")
                 except ValueError:
@@ -98,16 +116,15 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             # Get specific event URL
 
-
-            event_url = find_event_url(title, event_links, EVENTS_URL)
-
-
+            event_url = EVENTS_URL
 
             event_record = {
                 "source_id": source_id,
                 "place_id": venue_id,
                 "title": title,
-                "description": event_data.get("description", "Live music at Knock Music House")[:500],
+                "description": event_data.get(
+                    "description", "Live music at Knock Music House"
+                )[:500],
                 "start_date": start_date,
                 "start_time": start_time,
                 "end_date": None,
@@ -142,7 +159,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
             except Exception as e:
                 logger.error(f"Failed to insert {title}: {e}")
 
-        logger.info(f"Knock Music House: Found {events_found} events, {events_new} new, {events_updated} existing")
+        logger.info(
+            f"Knock Music House: Found {events_found} events, {events_new} new, {events_updated} existing"
+        )
 
     except Exception as e:
         logger.error(f"Failed to crawl Knock Music House: {e}")

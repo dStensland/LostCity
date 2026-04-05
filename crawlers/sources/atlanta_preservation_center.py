@@ -193,7 +193,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     image_map = extract_images_from_page(page)
 
                     # Get page text
-                    body_text = page.inner_text("body")
+                    page.inner_text("body")
 
                     # Look for event elements using common selectors
                     event_selectors = [

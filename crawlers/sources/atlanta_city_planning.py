@@ -255,7 +255,7 @@ def _parse_events(html: str) -> list[dict]:
 
         # End time
         end_time = None
-        time_end_el = item.find("time", class_="event-time-12hr-end")
+        item.find("time", class_="event-time-12hr-end")
         # The 24hr end is inside event-time-24hr span
         time_24hr_span = item.find("span", class_="event-time-24hr")
         if time_24hr_span:

@@ -4,7 +4,6 @@ Tests for classify.classify_llm() — LLM classification layer.
 All LLM calls are mocked; no network calls required.
 """
 import json
-import pytest
 from unittest.mock import patch
 from classify import classify_llm, TAXONOMY_PROMPT_VERSION
 

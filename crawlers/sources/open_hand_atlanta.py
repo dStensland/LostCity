@@ -197,7 +197,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 "price_max": None,
                 "price_note": None,
                 "is_free": True,
-                "source_url": f"https://donate.openhandatlanta.org/volunteer_calendar",
+                "source_url": "https://donate.openhandatlanta.org/volunteer_calendar",
                 "ticket_url": ticket_url,
                 "image_url": None,
                 "raw_text": f"{job_name} | {start_date_str} | {start_time}-{end_time} | spots: {spots_remaining}",

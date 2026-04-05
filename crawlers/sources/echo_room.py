@@ -344,7 +344,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
     except requests.exceptions.HTTPError as e:
         if e.response.status_code == 404:
-            logger.warning(f"Echo Room Songkick page not found (404). Venue may not have upcoming events or URL changed.")
+            logger.warning("Echo Room Songkick page not found (404). Venue may not have upcoming events or URL changed.")
             # Return success with 0 events rather than raising
             return 0, 0, 0
         else:

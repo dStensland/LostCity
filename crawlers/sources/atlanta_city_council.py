@@ -341,7 +341,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                 # Richer title for special body names
                 if "city council" in committee.lower() and "committee" not in committee.lower():
-                    title = f"Atlanta City Council — Regular Meeting"
+                    title = "Atlanta City Council — Regular Meeting"
 
                 tags = _committee_tags(committee)
 

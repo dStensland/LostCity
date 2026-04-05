@@ -117,7 +117,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     Returns:
         tuple: (events_found, events_new, events_updated)
     """
-    source_id = source["id"]
+    source["id"]
     events_found = 0
     events_new = 0
     events_updated = 0

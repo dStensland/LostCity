@@ -12,7 +12,7 @@ import logging
 import time
 import requests
 from typing import Optional
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 logger = logging.getLogger(__name__)
 
@@ -409,7 +409,7 @@ def _fetch_wikipedia_bio(wikidata_qid: str) -> Optional[str]:
     try:
         # Step 1: Get English Wikipedia sitelink from Wikidata entity
         resp = requests.get(
-            f"https://www.wikidata.org/w/api.php",
+            "https://www.wikidata.org/w/api.php",
             params={
                 "action": "wbgetentities",
                 "ids": wikidata_qid,

@@ -8,11 +8,9 @@ Covers the two active crawlers:
 
 from __future__ import annotations
 
-from datetime import date, datetime
+from datetime import datetime
 from typing import Optional
-from unittest.mock import MagicMock, patch
 
-import pytest
 
 # ---------------------------------------------------------------------------
 # Helpers imported directly from production modules (no DB calls)

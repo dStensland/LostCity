@@ -4,7 +4,6 @@ Tests for classify.classify_rules() — rules-only layer.
 Each test is a focused assertion about a single classification behaviour.
 No DB, no network, no mocks required.
 """
-import pytest
 from classify import classify_rules, CONFIDENCE_THRESHOLD
 
 

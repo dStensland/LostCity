@@ -167,7 +167,7 @@ def main():
 
     # Print summary table
     print(f"\n{'='*60}")
-    print(f"  SUMMARY")
+    print("  SUMMARY")
     print(f"{'='*60}")
     for method, data in report["results_by_method"].items():
         print(f"  {method:20s}  {data['passed']}/{data['sources_tested']} passed")

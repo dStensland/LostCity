@@ -16,7 +16,7 @@ from datetime import datetime, timedelta
 from typing import Optional
 
 import requests
-from icalendar import Calendar, Event
+from icalendar import Calendar
 
 from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
@@ -134,7 +134,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 summary = str(component.get('summary', ''))
                 description = str(component.get('description', ''))
                 location = str(component.get('location', ''))
-                uid = str(component.get('uid', ''))
+                str(component.get('uid', ''))
 
                 if not summary or len(summary) < 3:
                     continue

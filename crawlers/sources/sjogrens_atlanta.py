@@ -23,7 +23,6 @@ import re
 import logging
 from typing import Optional
 
-import requests
 from bs4 import BeautifulSoup
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeout
 

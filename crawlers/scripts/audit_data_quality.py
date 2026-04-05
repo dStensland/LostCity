@@ -306,7 +306,7 @@ if result.data:
     past_90_days = sum(1 for e in result.data if (today_dt - datetime.strptime(e['start_date'], "%Y-%m-%d")).days <= 90)
     past_year = sum(1 for e in result.data if (today_dt - datetime.strptime(e['start_date'], "%Y-%m-%d")).days <= 365)
     
-    print(f"\nBreakdown:")
+    print("\nBreakdown:")
     print(f"  - Past 30 days: {past_30_days}")
     print(f"  - Past 90 days: {past_90_days}")
     print(f"  - Past year: {past_year}")

@@ -4,8 +4,6 @@ Data Quality Statistics Report
 Runs diagnostic queries against the Supabase database
 """
 
-import sys
-from datetime import date
 from db import get_client
 
 def main():

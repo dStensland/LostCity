@@ -10,7 +10,6 @@ Uses Eventbrite API to fetch events for organizer ID 4567583831.
 from __future__ import annotations
 
 import logging
-import re
 import time
 import requests
 from datetime import datetime

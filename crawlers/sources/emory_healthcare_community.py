@@ -440,7 +440,7 @@ def crawl_group(page, group_key: str, group_name: str, source_id: int) -> tuple[
 
             # Venue mapping
             venue_name = event_data.get("venueName", "")
-            venue_zipcode = event_data.get("venueZipcode", "")
+            event_data.get("venueZipcode", "")
             venue_geocode = event_data.get("venueGeocode", {})
 
             lat = venue_geocode.get("latitude") if venue_geocode else None

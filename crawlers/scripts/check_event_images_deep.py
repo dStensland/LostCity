@@ -179,7 +179,7 @@ def main():
         print(f"  [{r['id']}] Status={status} Image={is_image} {test_url[:100]}")
 
     # ── 10. Larger HTTP sample (100 URLs) focused on variety ──────────────
-    print(f"\n=== LARGER HTTP SAMPLE (100 URLs across all domains) ===")
+    print("\n=== LARGER HTTP SAMPLE (100 URLs across all domains) ===")
     http_urls = [r for r in rows if r["image_url"].strip().lower().startswith("http")]
 
     # Stratified sample: pick from different domains
@@ -259,7 +259,7 @@ def main():
             print(f"             URL: {info['url'][:110]}")
 
     # Domain health table
-    print(f"\n  Domain Health Table:")
+    print("\n  Domain Health Table:")
     print(f"    {'Domain':<50s} {'OK':>3} {'Fail':>4} {'!Img':>4}")
     print(f"    {'-'*50} {'---':>3} {'----':>4} {'----':>4}")
     for d in sorted(domain_results.keys()):

@@ -11,7 +11,6 @@ Usage:
 """
 
 import re
-import sys
 import logging
 import argparse
 from datetime import date

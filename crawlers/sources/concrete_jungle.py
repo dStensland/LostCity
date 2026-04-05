@@ -13,7 +13,6 @@ times, descriptions, locations, and capacity.
 from __future__ import annotations
 
 import csv
-import io
 import os
 import re
 import logging
@@ -245,8 +244,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     description = f"Volunteer opportunity with Concrete Jungle: {title}"
 
                 # Location data
-                location_name = row.get("Location Name", "").strip()
-                location_address = row.get("Location Address", "").strip()
+                row.get("Location Name", "").strip()
+                row.get("Location Address", "").strip()
 
                 # Sign-up URL from the row
                 signup_url = row.get("Sign Up", "").strip()

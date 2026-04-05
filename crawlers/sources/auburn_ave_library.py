@@ -246,7 +246,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 location_elem = item.find('bc:location', namespaces)
                 if location_elem is not None:
                     location_id = location_elem.find('bc:id', namespaces)
-                    location_name = location_elem.find('bc:name', namespaces)
+                    location_elem.find('bc:name', namespaces)
 
                     # Filter for AUBURN location only
                     if location_id is not None and location_id.text != 'AUBURN':

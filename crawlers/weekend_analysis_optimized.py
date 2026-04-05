@@ -15,7 +15,7 @@ MAJOR_VENUES = {
 }
 
 def main():
-    config = get_config()
+    get_config()
     client = get_client()
     
     print("Fetching all weekend events...")
@@ -43,7 +43,7 @@ def main():
         desc = (event.get("description") or "").lower()
         venue = event.get("venue") or {}
         venue_slug = venue.get("slug", "")
-        venue_name = venue.get("name", "")
+        venue.get("name", "")
         venue_id = event.get("venue_id")
         
         # Group by title+venue for temporal analysis

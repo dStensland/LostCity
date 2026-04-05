@@ -54,12 +54,12 @@ def debug_api():
             print(f"\nDays array length: {len(days) if days else 0}")
 
             if days and len(days) > 0:
-                print(f"\n=== First Day Sample ===")
+                print("\n=== First Day Sample ===")
                 print(json.dumps(days[0], indent=2, default=str))
             else:
                 print("\nDays array is empty - no events found")
 
-            print(f"\n=== Event Group Items (first 10) ===")
+            print("\n=== Event Group Items (first 10) ===")
             event_groups = api_data.get("eventGroupSelectItems", [])
             for group in event_groups[:10]:
                 print(f"  - {group.get('text')}")

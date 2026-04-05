@@ -16,7 +16,12 @@ from typing import Optional
 from playwright.sync_api import sync_playwright
 from bs4 import BeautifulSoup
 
-from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
+from db import (
+    get_or_create_place,
+    insert_event,
+    find_event_by_hash,
+    smart_update_existing_event,
+)
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -38,19 +43,19 @@ THE_WORKS_VENUE = {
 }
 
 CHATTAHOOCHEE_FOOD_WORKS_VENUE = {
-        "name": "Chattahoochee Food Works",
-        "slug": "chattahoochee-food-works",
-        "address": "1235 Chattahoochee Ave NW Suite 130",
-        "neighborhood": "Upper Westside",
-        "city": "Atlanta",
-        "state": "GA",
-        "zip": "30318",
-        "lat": 33.8098,
-        "lng": -84.4305,
-        "place_type": "food_hall",
-        "spot_type": "food_hall",
-        "website": "https://chattahoocheefoodworks.com",
-        "vibes": ["food-hall", "upper-westside", "chattahoochee", "diverse-cuisine"],
+    "name": "Chattahoochee Food Works",
+    "slug": "chattahoochee-food-works",
+    "address": "1235 Chattahoochee Ave NW Suite 130",
+    "neighborhood": "Upper Westside",
+    "city": "Atlanta",
+    "state": "GA",
+    "zip": "30318",
+    "lat": 33.8098,
+    "lng": -84.4305,
+    "place_type": "food_hall",
+    "spot_type": "food_hall",
+    "website": "https://chattahoocheefoodworks.com",
+    "vibes": ["food-hall", "upper-westside", "chattahoochee", "diverse-cuisine"],
 }
 
 SOURCE_CONFIGS = {
@@ -73,58 +78,80 @@ def _get_source_config(source_slug: str) -> dict:
     return SOURCE_CONFIGS.get(source_slug, SOURCE_CONFIGS["the-works-atl"])
 
 
-def _parse_tec_datetime(text: str) -> tuple[Optional[str], Optional[str], Optional[str], Optional[str]]:
+def _parse_tec_datetime(
+    text: str,
+) -> tuple[Optional[str], Optional[str], Optional[str], Optional[str]]:
     """Parse TEC datetime text like 'March 15 @ 6:00 pm-8:00 pm'."""
     current_year = datetime.now().year
     text = text.strip()
 
     # Multi-day: "March 15 @ 6:00 pm-March 16 @ 12:00 am"
     m = re.match(
-        r'(\w+)\s+(\d+)\s+@\s+(\d+):(\d+)\s+(am|pm)\s*-\s*(\w+)\s+(\d+)\s+@\s+(\d+):(\d+)\s+(am|pm)',
-        text, re.IGNORECASE
+        r"(\w+)\s+(\d+)\s+@\s+(\d+):(\d+)\s+(am|pm)\s*-\s*(\w+)\s+(\d+)\s+@\s+(\d+):(\d+)\s+(am|pm)",
+        text,
+        re.IGNORECASE,
     )
     if m:
         try:
-            start_dt = datetime.strptime(f"{m.group(1)} {m.group(2)} {current_year}", "%B %d %Y")
+            start_dt = datetime.strptime(
+                f"{m.group(1)} {m.group(2)} {current_year}", "%B %d %Y"
+            )
             if (datetime.now() - start_dt).days > 60:
-                start_dt = datetime.strptime(f"{m.group(1)} {m.group(2)} {current_year + 1}", "%B %d %Y")
+                start_dt = datetime.strptime(
+                    f"{m.group(1)} {m.group(2)} {current_year + 1}", "%B %d %Y"
+                )
 
             sh = int(m.group(3))
             sp = m.group(5).lower()
-            if sp == "pm" and sh != 12: sh += 12
-            elif sp == "am" and sh == 12: sh = 0
+            if sp == "pm" and sh != 12:
+                sh += 12
+            elif sp == "am" and sh == 12:
+                sh = 0
 
             eh = int(m.group(8))
             ep = m.group(10).lower()
-            if ep == "pm" and eh != 12: eh += 12
-            elif ep == "am" and eh == 12: eh = 0
+            if ep == "pm" and eh != 12:
+                eh += 12
+            elif ep == "am" and eh == 12:
+                eh = 0
 
             end_month_num = datetime.strptime(m.group(6), "%B").month
             end_year = start_dt.year + (1 if end_month_num < start_dt.month else 0)
-            end_dt = datetime.strptime(f"{m.group(6)} {m.group(7)} {end_year}", "%B %d %Y")
+            end_dt = datetime.strptime(
+                f"{m.group(6)} {m.group(7)} {end_year}", "%B %d %Y"
+            )
 
             return (
-                start_dt.strftime("%Y-%m-%d"), f"{sh:02d}:{m.group(4)}",
-                end_dt.strftime("%Y-%m-%d"), f"{eh:02d}:{m.group(9)}",
+                start_dt.strftime("%Y-%m-%d"),
+                f"{sh:02d}:{m.group(4)}",
+                end_dt.strftime("%Y-%m-%d"),
+                f"{eh:02d}:{m.group(9)}",
             )
         except ValueError:
             pass
 
     # Same-day: "March 15 @ 6:00 pm-8:00 pm" or "March 15 @ 6:00 pm"
     m = re.match(
-        r'(\w+)\s+(\d+)\s+@\s+(\d+):(\d+)\s+(am|pm)(?:\s*-\s*(\d+):(\d+)\s+(am|pm))?',
-        text, re.IGNORECASE
+        r"(\w+)\s+(\d+)\s+@\s+(\d+):(\d+)\s+(am|pm)(?:\s*-\s*(\d+):(\d+)\s+(am|pm))?",
+        text,
+        re.IGNORECASE,
     )
     if m:
         try:
-            dt = datetime.strptime(f"{m.group(1)} {m.group(2)} {current_year}", "%B %d %Y")
+            dt = datetime.strptime(
+                f"{m.group(1)} {m.group(2)} {current_year}", "%B %d %Y"
+            )
             if (datetime.now() - dt).days > 60:
-                dt = datetime.strptime(f"{m.group(1)} {m.group(2)} {current_year + 1}", "%B %d %Y")
+                dt = datetime.strptime(
+                    f"{m.group(1)} {m.group(2)} {current_year + 1}", "%B %d %Y"
+                )
 
             sh = int(m.group(3))
             sp = m.group(5).lower()
-            if sp == "pm" and sh != 12: sh += 12
-            elif sp == "am" and sh == 12: sh = 0
+            if sp == "pm" and sh != 12:
+                sh += 12
+            elif sp == "am" and sh == 12:
+                sh = 0
             start_date = dt.strftime("%Y-%m-%d")
             start_time = f"{sh:02d}:{m.group(4)}"
 
@@ -132,8 +159,10 @@ def _parse_tec_datetime(text: str) -> tuple[Optional[str], Optional[str], Option
             if m.group(6):
                 eh = int(m.group(6))
                 ep = m.group(8).lower()
-                if ep == "pm" and eh != 12: eh += 12
-                elif ep == "am" and eh == 12: eh = 0
+                if ep == "pm" and eh != 12:
+                    eh += 12
+                elif ep == "am" and eh == 12:
+                    eh = 0
                 end_time = f"{eh:02d}:{m.group(7)}"
                 end_date = start_date
 
@@ -156,9 +185,16 @@ def _parse_photo_view_datetime(
 
     dt_text = dt_el.get_text(strip=True)
     if "@" in dt_text:
-        parsed_start_date, parsed_start_time, parsed_end_date, parsed_end_time = _parse_tec_datetime(dt_text)
+        parsed_start_date, parsed_start_time, parsed_end_date, parsed_end_time = (
+            _parse_tec_datetime(dt_text)
+        )
         if parsed_start_date:
-            return parsed_start_date, parsed_start_time, parsed_end_date, parsed_end_time
+            return (
+                parsed_start_date,
+                parsed_start_time,
+                parsed_end_date,
+                parsed_end_time,
+            )
 
     time_tags = dt_el.find_all("time")
     if not time_tags:
@@ -175,7 +211,9 @@ def _parse_photo_view_datetime(
         return f"{hour:02d}:{minute}"
 
     start_time = _normalize_time(time_tags[0].get("datetime"))
-    end_time = _normalize_time(time_tags[1].get("datetime")) if len(time_tags) > 1 else None
+    end_time = (
+        _normalize_time(time_tags[1].get("datetime")) if len(time_tags) > 1 else None
+    )
     end_date = start_date if end_time else start_date
     return start_date, start_time, end_date, end_time
 
@@ -193,11 +231,16 @@ def _classify_event(title: str) -> tuple[str, Optional[str], list[str]]:
         return "fitness", "fitness.yoga", tags + ["yoga"]
     if any(w in title_lower for w in ["comedy", "comedian"]):
         return "comedy", "comedy.standup", tags + ["comedy"]
-    if any(w in title_lower for w in ["music", "concert", "live", "dj", "band", "f.a.m"]):
+    if any(
+        w in title_lower for w in ["music", "concert", "live", "dj", "band", "f.a.m"]
+    ):
         return "music", "concert", tags + ["live-music"]
     if any(w in title_lower for w in ["market", "farmers", "pop-up"]):
         return "community", None, tags + ["market"]
-    if any(w in title_lower for w in ["tasting", "wine", "chef", "dinner", "brunch", "industry night"]):
+    if any(
+        w in title_lower
+        for w in ["tasting", "wine", "chef", "dinner", "brunch", "industry night"]
+    ):
         return "food_drink", None, tags + ["food"]
     if any(w in title_lower for w in ["kids", "family", "easter"]):
         return "family", None, tags + ["family"]
@@ -207,7 +250,9 @@ def _classify_event(title: str) -> tuple[str, Optional[str], list[str]]:
     return "community", None, tags
 
 
-def _resolve_venue(venue_name: str, primary_venue: dict, sub_venues: dict[str, dict]) -> dict:
+def _resolve_venue(
+    venue_name: str, primary_venue: dict, sub_venues: dict[str, dict]
+) -> dict:
     """Map TEC venue name to our sub-venue data."""
     venue_lower = venue_name.lower()
     for keyword, place_data in sub_venues.items():
@@ -256,7 +301,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 if not load_more:
                     break
 
-                before_count = page.locator("article.tribe-events-calendar-list__event").count()
+                before_count = page.locator(
+                    "article.tribe-events-calendar-list__event"
+                ).count()
                 try:
                     load_more.click(timeout=5000)
                     page.wait_for_timeout(2000)
@@ -264,7 +311,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 except Exception:
                     break
 
-                after_count = page.locator("article.tribe-events-calendar-list__event").count()
+                after_count = page.locator(
+                    "article.tribe-events-calendar-list__event"
+                ).count()
                 if after_count <= before_count:
                     break
 
@@ -289,7 +338,12 @@ def crawl(source: dict) -> tuple[int, int, int]:
     if not articles:
         articles = soup.select("article")
         view_type = "article"
-    logger.info("%s: found %s TEC event articles (%s view)", source_slug, len(articles), view_type)
+    logger.info(
+        "%s: found %s TEC event articles (%s view)",
+        source_slug,
+        len(articles),
+        view_type,
+    )
 
     for article in articles:
         try:
@@ -309,22 +363,25 @@ def crawl(source: dict) -> tuple[int, int, int]:
             event_url = link.get("href", events_url)
 
             # DateTime — try list view, then photo view, then generic
-            dt_el = (
-                article.find("time", class_="tribe-events-calendar-list__event-datetime")
-                or article.find("div", class_="tribe-events-pro-photo__event-datetime")
-            )
+            dt_el = article.find(
+                "time", class_="tribe-events-calendar-list__event-datetime"
+            ) or article.find("div", class_="tribe-events-pro-photo__event-datetime")
             if not dt_el:
                 continue
 
             # Photo view uses date tag for month/day + separate time div
-            date_tag = article.find("time", class_="tribe-events-pro-photo__event-date-tag-datetime")
+            date_tag = article.find(
+                "time", class_="tribe-events-pro-photo__event-date-tag-datetime"
+            )
             if date_tag and date_tag.get("datetime"):
                 start_date, start_time, end_date, end_time = _parse_photo_view_datetime(
                     article, dt_el, date_tag
                 )
             else:
                 dt_text = dt_el.get_text(strip=True)
-                start_date, start_time, end_date, end_time = _parse_tec_datetime(dt_text)
+                start_date, start_time, end_date, end_time = _parse_tec_datetime(
+                    dt_text
+                )
             if not start_date:
                 continue
 
@@ -332,22 +389,28 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             # Venue within The Works
             venue_name = ""
-            venue_el = (
-                article.find("span", class_="tribe-events-calendar-list__event-venue-title")
-                or article.find("span", class_="tribe-events-pro-photo__event-venue-title")
+            venue_el = article.find(
+                "span", class_="tribe-events-calendar-list__event-venue-title"
+            ) or article.find(
+                "span", class_="tribe-events-pro-photo__event-venue-title"
             )
             if venue_el:
                 venue_name = venue_el.get_text(strip=True)
 
-            matched_venue = _resolve_venue(venue_name or title, primary_venue, sub_venues)
+            matched_venue = _resolve_venue(
+                venue_name or title, primary_venue, sub_venues
+            )
             venue_id = venue_ids[matched_venue["slug"]]
 
             # Description
-            desc_el = (
-                article.find("div", class_="tribe-events-calendar-list__event-description")
-                or article.find("div", class_="tribe-events-pro-photo__event-description")
+            desc_el = article.find(
+                "div", class_="tribe-events-calendar-list__event-description"
+            ) or article.find("div", class_="tribe-events-pro-photo__event-description")
+            description = (
+                desc_el.get_text(strip=True)
+                if desc_el
+                else f"Event at {matched_venue['name']}"
             )
-            description = desc_el.get_text(strip=True) if desc_el else f"Event at {matched_venue['name']}"
 
             category, subcategory, tags = _classify_event(title)
 
@@ -355,7 +418,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
             is_free = "free" in combined_text
             is_recurring = "tribe-recurring-event" in (article.get("class") or [])
 
-            content_hash = generate_content_hash(title, matched_venue["name"], start_date)
+            content_hash = generate_content_hash(
+                title, matched_venue["name"], start_date
+            )
 
             event_record = {
                 "source_id": source_id,

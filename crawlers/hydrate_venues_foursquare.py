@@ -294,7 +294,7 @@ def hydrate_venue(venue: dict, dry_run: bool = False) -> bool:
         return False
 
     # New API uses fsq_place_id instead of fsq_id
-    fsq_id = result.get("fsq_place_id") or result.get("fsq_id")
+    result.get("fsq_place_id") or result.get("fsq_id")
     fsq_name = result.get("name", "")
 
     # Verify name match (basic fuzzy check)

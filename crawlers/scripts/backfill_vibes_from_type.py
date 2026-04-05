@@ -164,7 +164,7 @@ def main():
     if write:
         print(f"Actually filled:               {filled}")
     else:
-        print(f"\n  DRY RUN — use --allow-production-writes to apply")
+        print("\n  DRY RUN — use --allow-production-writes to apply")
 
 
 if __name__ == "__main__":

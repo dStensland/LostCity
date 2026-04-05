@@ -159,7 +159,6 @@ def crawl(source: dict) -> tuple[int, int, int]:
             # TICKETS / SOLD OUT / CANCELLED
 
             i = 0
-            current_month_year = None
             new_events = []
 
             while i < len(lines):
@@ -175,7 +174,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 # Check for month header like "JANUARY  2026"
                 month_match = re.match(r"(JANUARY|FEBRUARY|MARCH|APRIL|MAY|JUNE|JULY|AUGUST|SEPTEMBER|OCTOBER|NOVEMBER|DECEMBER)\s+(\d{4})", line, re.IGNORECASE)
                 if month_match:
-                    current_month_year = f"{month_match.group(1)} {month_match.group(2)}"
+                    f"{month_match.group(1)} {month_match.group(2)}"
                     i += 1
                     continue
 
@@ -305,7 +304,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                 # Synthetic fallback
                 if not evt.get("description"):
-                    evt["description"] = f"Live music at Variety Playhouse."
+                    evt["description"] = "Live music at Variety Playhouse."
 
                 # Determine is_free if still unknown after enrichment
                 if evt.get("is_free") is None:

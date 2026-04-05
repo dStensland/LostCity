@@ -20,13 +20,20 @@ from io import BytesIO
 
 try:
     import pdfplumber
+
     HAS_PDFPLUMBER = True
 except ImportError:
     HAS_PDFPLUMBER = False
 
 from playwright.sync_api import sync_playwright
 
-from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event, get_portal_id_by_slug
+from db import (
+    get_or_create_place,
+    insert_event,
+    find_event_by_hash,
+    smart_update_existing_event,
+    get_portal_id_by_slug,
+)
 from dedupe import generate_content_hash
 from utils import extract_images_from_page
 
@@ -80,26 +87,102 @@ VENUES = {
 
 # Class category mappings
 CLASS_CATEGORIES = {
-    "yoga": {"category": "fitness", "subcategory": "yoga", "tags": ["yoga", "stretching", "mindfulness"]},
-    "pilates": {"category": "fitness", "subcategory": "pilates", "tags": ["pilates", "core", "strength"]},
-    "cycling": {"category": "fitness", "subcategory": "cycling", "tags": ["cycling", "spin", "cardio"]},
-    "spin": {"category": "fitness", "subcategory": "cycling", "tags": ["cycling", "spin", "cardio"]},
-    "hiit": {"category": "fitness", "subcategory": "hiit", "tags": ["hiit", "cardio", "strength"]},
-    "boxing": {"category": "fitness", "subcategory": "boxing", "tags": ["boxing", "cardio", "strength"]},
-    "zumba": {"category": "fitness", "subcategory": "dance", "tags": ["zumba", "dance", "cardio"]},
-    "aqua": {"category": "fitness", "subcategory": "aquatics", "tags": ["aqua", "pool", "swimming"]},
-    "water": {"category": "fitness", "subcategory": "aquatics", "tags": ["aqua", "pool", "swimming"]},
-    "swim": {"category": "fitness", "subcategory": "aquatics", "tags": ["swimming", "pool", "lap-swim"]},
-    "senior": {"category": "fitness", "subcategory": "senior", "tags": ["senior", "low-impact"]},
-    "strength": {"category": "fitness", "subcategory": "strength", "tags": ["strength", "weights"]},
-    "circuit": {"category": "fitness", "subcategory": "circuit", "tags": ["circuit", "full-body"]},
-    "step": {"category": "fitness", "subcategory": "aerobics", "tags": ["step", "aerobics", "cardio"]},
-    "barre": {"category": "fitness", "subcategory": "barre", "tags": ["barre", "ballet", "strength"]},
-    "stretch": {"category": "fitness", "subcategory": "stretch", "tags": ["stretching", "flexibility"]},
-    "meditation": {"category": "fitness", "subcategory": "meditation", "tags": ["meditation", "mindfulness"]},
+    "yoga": {
+        "category": "fitness",
+        "subcategory": "yoga",
+        "tags": ["yoga", "stretching", "mindfulness"],
+    },
+    "pilates": {
+        "category": "fitness",
+        "subcategory": "pilates",
+        "tags": ["pilates", "core", "strength"],
+    },
+    "cycling": {
+        "category": "fitness",
+        "subcategory": "cycling",
+        "tags": ["cycling", "spin", "cardio"],
+    },
+    "spin": {
+        "category": "fitness",
+        "subcategory": "cycling",
+        "tags": ["cycling", "spin", "cardio"],
+    },
+    "hiit": {
+        "category": "fitness",
+        "subcategory": "hiit",
+        "tags": ["hiit", "cardio", "strength"],
+    },
+    "boxing": {
+        "category": "fitness",
+        "subcategory": "boxing",
+        "tags": ["boxing", "cardio", "strength"],
+    },
+    "zumba": {
+        "category": "fitness",
+        "subcategory": "dance",
+        "tags": ["zumba", "dance", "cardio"],
+    },
+    "aqua": {
+        "category": "fitness",
+        "subcategory": "aquatics",
+        "tags": ["aqua", "pool", "swimming"],
+    },
+    "water": {
+        "category": "fitness",
+        "subcategory": "aquatics",
+        "tags": ["aqua", "pool", "swimming"],
+    },
+    "swim": {
+        "category": "fitness",
+        "subcategory": "aquatics",
+        "tags": ["swimming", "pool", "lap-swim"],
+    },
+    "senior": {
+        "category": "fitness",
+        "subcategory": "senior",
+        "tags": ["senior", "low-impact"],
+    },
+    "strength": {
+        "category": "fitness",
+        "subcategory": "strength",
+        "tags": ["strength", "weights"],
+    },
+    "circuit": {
+        "category": "fitness",
+        "subcategory": "circuit",
+        "tags": ["circuit", "full-body"],
+    },
+    "step": {
+        "category": "fitness",
+        "subcategory": "aerobics",
+        "tags": ["step", "aerobics", "cardio"],
+    },
+    "barre": {
+        "category": "fitness",
+        "subcategory": "barre",
+        "tags": ["barre", "ballet", "strength"],
+    },
+    "stretch": {
+        "category": "fitness",
+        "subcategory": "stretch",
+        "tags": ["stretching", "flexibility"],
+    },
+    "meditation": {
+        "category": "fitness",
+        "subcategory": "meditation",
+        "tags": ["meditation", "mindfulness"],
+    },
 }
 
-DAYS_OF_WEEK = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
+DAYS_OF_WEEK = [
+    "monday",
+    "tuesday",
+    "wednesday",
+    "thursday",
+    "friday",
+    "saturday",
+    "sunday",
+]
 
 
 def get_class_category(class_name: str) -> dict:
@@ -107,11 +190,15 @@ def get_class_category(class_name: str) -> dict:
     name_lower = class_name.lower()
 
     for keyword, cat_info in CLASS_CATEGORIES.items():
-        if re.search(r'\b' + re.escape(keyword) + r'\b', name_lower):
+        if re.search(r"\b" + re.escape(keyword) + r"\b", name_lower):
             return cat_info
 
     # Default fitness class
-    return {"category": "fitness", "subcategory": "class", "tags": ["fitness", "group-class"]}
+    return {
+        "category": "fitness",
+        "subcategory": "class",
+        "tags": ["fitness", "group-class"],
+    }
 
 
 def parse_time(time_str: str) -> Optional[str]:
@@ -161,7 +248,9 @@ def get_next_weekday(weekday_name: str) -> datetime:
     return today + timedelta(days=days_ahead)
 
 
-def crawl_pdf_schedule(pdf_url: str, place_data: dict, source_id: int, portal_id: Optional[str]) -> tuple[int, int, int]:
+def crawl_pdf_schedule(
+    pdf_url: str, place_data: dict, source_id: int, portal_id: Optional[str]
+) -> tuple[int, int, int]:
     """Crawl a PDF schedule and extract class events."""
     events_found = 0
     events_new = 0
@@ -180,7 +269,7 @@ def crawl_pdf_schedule(pdf_url: str, place_data: dict, source_id: int, portal_id
 
         with pdfplumber.open(BytesIO(response.content)) as pdf:
             for page in pdf.pages:
-                text = page.extract_text() or ""
+                page.extract_text() or ""
                 tables = page.extract_tables() or []
 
                 # Try to extract from tables first
@@ -203,7 +292,9 @@ def crawl_pdf_schedule(pdf_url: str, place_data: dict, source_id: int, portal_id
                             cell_text = cell.strip()
 
                             # Look for time pattern
-                            time_match = re.search(r"(\d{1,2}(?::\d{2})?\s*(?:AM|PM|am|pm))", cell_text)
+                            time_match = re.search(
+                                r"(\d{1,2}(?::\d{2})?\s*(?:AM|PM|am|pm))", cell_text
+                            )
                             if not time_match:
                                 continue
 
@@ -212,7 +303,9 @@ def crawl_pdf_schedule(pdf_url: str, place_data: dict, source_id: int, portal_id
                                 continue
 
                             # Extract class name (text before or after time)
-                            class_name = re.sub(r"\d{1,2}(?::\d{2})?\s*(?:AM|PM|am|pm)", "", cell_text).strip()
+                            class_name = re.sub(
+                                r"\d{1,2}(?::\d{2})?\s*(?:AM|PM|am|pm)", "", cell_text
+                            ).strip()
                             class_name = re.sub(r"^\s*[-–—]\s*", "", class_name).strip()
 
                             if len(class_name) < 3:
@@ -239,9 +332,13 @@ def crawl_pdf_schedule(pdf_url: str, place_data: dict, source_id: int, portal_id
                                 class_name, place_data["name"], start_date
                             )
 
-
                             cat_info = get_class_category(class_name)
-                            base_tags = ["piedmont", "fitness", "class", place_data.get("neighborhood", "").lower()]
+                            base_tags = [
+                                "piedmont",
+                                "fitness",
+                                "class",
+                                place_data.get("neighborhood", "").lower(),
+                            ]
 
                             description = f"Group fitness class at {place_data['name']}. Drop-in welcome for members."
 
@@ -291,7 +388,9 @@ def crawl_pdf_schedule(pdf_url: str, place_data: dict, source_id: int, portal_id
                             try:
                                 insert_event(event_record, series_hint=series_hint)
                                 events_new += 1
-                                logger.info(f"Added: {class_name} on {day_name} at {start_time}")
+                                logger.info(
+                                    f"Added: {class_name} on {day_name} at {start_time}"
+                                )
                             except Exception as e:
                                 logger.error(f"Failed to insert: {class_name}: {e}")
 
@@ -301,7 +400,9 @@ def crawl_pdf_schedule(pdf_url: str, place_data: dict, source_id: int, portal_id
     return events_found, events_new, events_updated
 
 
-def crawl_fayetteville_calendar(place_data: dict, source_id: int, portal_id: Optional[str]) -> tuple[int, int, int]:
+def crawl_fayetteville_calendar(
+    place_data: dict, source_id: int, portal_id: Optional[str]
+) -> tuple[int, int, int]:
     """Crawl the Fayetteville wellness center dynamic calendar."""
     events_found = 0
     events_new = 0
@@ -329,7 +430,7 @@ def crawl_fayetteville_calendar(place_data: dict, source_id: int, portal_id: Opt
             # Accept cookies if prompted
             try:
                 page.click("text=Accept", timeout=3000)
-            except:
+            except Exception:
                 pass
 
             # Scroll to load content
@@ -361,24 +462,32 @@ def crawl_fayetteville_calendar(place_data: dict, source_id: int, portal_id: Opt
                     r"(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday),\s+"
                     r"(January|February|March|April|May|June|July|August|September|October|November|December)\s+"
                     r"(\d{1,2})",
-                    line
+                    line,
                 )
                 if date_match:
                     month = date_match.group(2)
                     day = date_match.group(3)
                     year = datetime.now().year
                     try:
-                        current_date = datetime.strptime(f"{month} {day} {year}", "%B %d %Y")
+                        current_date = datetime.strptime(
+                            f"{month} {day} {year}", "%B %d %Y"
+                        )
                         # If date is in the past, assume next year
                         if current_date < datetime.now() - timedelta(days=7):
-                            current_date = datetime.strptime(f"{month} {day} {year + 1}", "%B %d %Y")
+                            current_date = datetime.strptime(
+                                f"{month} {day} {year + 1}", "%B %d %Y"
+                            )
                     except ValueError:
                         pass
                     i += 1
                     continue
 
                 # Check for time range pattern like "5:30am-6:15am"
-                time_match = re.match(r"(\d{1,2}:\d{2}(?:am|pm))-(\d{1,2}:\d{2}(?:am|pm))", line, re.IGNORECASE)
+                time_match = re.match(
+                    r"(\d{1,2}:\d{2}(?:am|pm))-(\d{1,2}:\d{2}(?:am|pm))",
+                    line,
+                    re.IGNORECASE,
+                )
                 if time_match and current_date:
                     start_time = parse_time(time_match.group(1))
                     end_time = parse_time(time_match.group(2))
@@ -399,11 +508,16 @@ def crawl_fayetteville_calendar(place_data: dict, source_id: int, portal_id: Opt
                             continue
 
                         # Skip if it's a new time entry
-                        if re.match(r"\d{1,2}:\d{2}(?:am|pm)", next_line, re.IGNORECASE):
+                        if re.match(
+                            r"\d{1,2}:\d{2}(?:am|pm)", next_line, re.IGNORECASE
+                        ):
                             break
 
                         # Skip if it's a new date
-                        if re.match(r"(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday),", next_line):
+                        if re.match(
+                            r"(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday),",
+                            next_line,
+                        ):
                             break
 
                         # First substantial line is class name
@@ -428,7 +542,15 @@ def crawl_fayetteville_calendar(place_data: dict, source_id: int, portal_id: Opt
 
                     if class_name and current_date and start_time:
                         # Skip nav items
-                        skip_words = ["category", "studio", "class name", "instructor", "reset", "filter", "apply"]
+                        skip_words = [
+                            "category",
+                            "studio",
+                            "class name",
+                            "instructor",
+                            "reset",
+                            "filter",
+                            "apply",
+                        ]
                         if any(sw in class_name.lower() for sw in skip_words):
                             i += 1
                             continue
@@ -440,14 +562,9 @@ def crawl_fayetteville_calendar(place_data: dict, source_id: int, portal_id: Opt
                             class_name, place_data["name"], f"{start_date} {start_time}"
                         )
 
-                        existing = find_event_by_hash(content_hash)
-                        if existing:
-                            smart_update_existing_event(existing, event_record)
-                            events_updated += 1
-                            i += 1
-                            continue
-
-                        cat_info = get_class_category(class_name + " " + (class_type or ""))
+                        cat_info = get_class_category(
+                            class_name + " " + (class_type or "")
+                        )
                         base_tags = ["piedmont", "fitness", "class", "fayetteville"]
 
                         description = f"{class_name}"
@@ -499,10 +616,19 @@ def crawl_fayetteville_calendar(place_data: dict, source_id: int, portal_id: Opt
                             "content_hash": content_hash,
                         }
 
+                        existing = find_event_by_hash(content_hash)
+                        if existing:
+                            smart_update_existing_event(existing, event_record)
+                            events_updated += 1
+                            i += 1
+                            continue
+
                         try:
                             insert_event(event_record, series_hint=series_hint)
                             events_new += 1
-                            logger.info(f"Added: {class_name} on {start_date} at {start_time}")
+                            logger.info(
+                                f"Added: {class_name} on {start_date} at {start_time}"
+                            )
                         except Exception as e:
                             logger.error(f"Failed to insert: {class_name}: {e}")
 
@@ -530,7 +656,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
     atlanta_venue = VENUES["atlanta"]
     for schedule_name, pdf_url in atlanta_venue.get("schedules", {}).items():
         logger.info(f"Crawling Atlanta {schedule_name} schedule...")
-        found, new, updated = crawl_pdf_schedule(pdf_url, atlanta_venue, source_id, portal_id)
+        found, new, updated = crawl_pdf_schedule(
+            pdf_url, atlanta_venue, source_id, portal_id
+        )
         total_found += found
         total_new += new
         total_updated += updated
@@ -539,7 +667,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
     newnan_venue = VENUES["newnan"]
     for schedule_name, pdf_url in newnan_venue.get("schedules", {}).items():
         logger.info(f"Crawling Newnan {schedule_name} schedule...")
-        found, new, updated = crawl_pdf_schedule(pdf_url, newnan_venue, source_id, portal_id)
+        found, new, updated = crawl_pdf_schedule(
+            pdf_url, newnan_venue, source_id, portal_id
+        )
         total_found += found
         total_new += new
         total_updated += updated
@@ -547,7 +677,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
     # Crawl Fayetteville wellness center calendar
     fayetteville_venue = VENUES["fayetteville"]
     logger.info("Crawling Fayetteville calendar...")
-    found, new, updated = crawl_fayetteville_calendar(fayetteville_venue, source_id, portal_id)
+    found, new, updated = crawl_fayetteville_calendar(
+        fayetteville_venue, source_id, portal_id
+    )
     total_found += found
     total_new += new
     total_updated += updated

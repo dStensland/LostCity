@@ -110,22 +110,22 @@ def main():
     print(f"  Not found:          {len(not_found)}")
 
     if already_correct:
-        print(f"\n  Already correct:")
+        print("\n  Already correct:")
         for vid, name, vtype in already_correct:
             print(f"    [{vid:5d}] {name:<55s} type={vtype}")
 
     if to_update:
-        print(f"\n  Updates:")
+        print("\n  Updates:")
         for vid, name, old_type, new_type, reason in to_update:
             print(f"    [{vid:5d}] {name:<55s} {old_type} -> {new_type}  ({reason})")
 
     if skipped:
-        print(f"\n  Skipped (current type doesn't match expected):")
+        print("\n  Skipped (current type doesn't match expected):")
         for vid, name, expected, actual, target in skipped:
             print(f"    [{vid:5d}] {name:<55s} expected={expected} actual={actual} target={target}")
 
     if not_found:
-        print(f"\n  Not found in DB:")
+        print("\n  Not found in DB:")
         for vid, name in not_found:
             print(f"    [{vid:5d}] {name}")
 
@@ -142,9 +142,9 @@ def main():
                 print(f"    FAIL [{vid:5d}] {name}: {e}")
         print(f"\n  Done: {success}/{len(to_update)} updated.")
     elif not args.apply and to_update:
-        print(f"\n  Dry run — use --apply to make changes.")
+        print("\n  Dry run — use --apply to make changes.")
     else:
-        print(f"\n  Nothing to update.")
+        print("\n  Nothing to update.")
 
 
 if __name__ == "__main__":

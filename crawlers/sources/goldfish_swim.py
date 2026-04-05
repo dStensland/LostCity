@@ -254,7 +254,7 @@ def _crawl_jump_start_clinics(
         location_short = loc["city"]
         title = f"Jump Start Swim Clinic at Goldfish Swim School ({location_short})"
 
-        description = (
+        (
             f"Goldfish Swim School {location_short} is offering an intensive Jump Start Clinic "
             f"— four or five consecutive days of 30-minute swim lessons for kids ages 4 months "
             f"to 12 years. Perfect for spring break, school breaks, or getting ready for summer. "

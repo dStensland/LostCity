@@ -154,7 +154,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                                 "source_id": source_id,
                                 "place_id": venue_id,
                                 "title": title,
-                                "description": f"Event at Variant Brewing in Roswell",
+                                "description": "Event at Variant Brewing in Roswell",
                                 "start_date": start_date,
                                 "start_time": "18:00",
                                 "end_date": None,

@@ -23,7 +23,7 @@ def main():
     
     # Get Atlanta portal ID
     result = client.table("portals").select("id").eq("slug", "atlanta").execute()
-    atlanta_portal_id = result.data[0]["id"] if result.data else None
+    result.data[0]["id"] if result.data else None
     
     # Get all events with NULL portal_id in next 30 days
     result = client.table("events").select(

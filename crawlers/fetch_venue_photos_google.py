@@ -142,11 +142,11 @@ def fetch_venue_photos(
     }
 
     print(f"\n{'=' * 60}")
-    print(f"Fetching Google Places Photos")
+    print("Fetching Google Places Photos")
     if venue_type:
         print(f"Venue type: {venue_type}")
     if skip_with_website:
-        print(f"Skipping venues with websites")
+        print("Skipping venues with websites")
     print(f"Found {len(venues)} venues without images")
     print(f"{'=' * 60}")
 
@@ -158,7 +158,7 @@ def fetch_venue_photos(
 
     for i, venue in enumerate(venues, 1):
         name = venue["name"]
-        address = venue.get("address", "")
+        venue.get("address", "")
         city = venue.get("city", "Atlanta")
         state = venue.get("state", "GA")
 
@@ -210,7 +210,7 @@ def fetch_venue_photos(
         time.sleep(0.5)
 
     print(f"\n{'=' * 60}")
-    print(f"RESULTS")
+    print("RESULTS")
     print(f"{'=' * 60}")
     print(f"Total processed: {stats['total']}")
     print(f"Photos found:    {stats['found']}")

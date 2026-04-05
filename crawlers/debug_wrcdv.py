@@ -55,6 +55,6 @@ print(f"\nPage contains 'event': {'event' in text.lower()}")
 print(f"Page contains 'calendar': {'calendar' in text.lower()}")
 
 # Check for common Wix patterns
-print(f"\nWix patterns:")
+print("\nWix patterns:")
 print(f"Has #SITE_CONTAINER: {bool(soup.find(id='SITE_CONTAINER'))}")
 print(f"Has data-hook attributes: {len(soup.find_all(attrs={'data-hook': True}))}")

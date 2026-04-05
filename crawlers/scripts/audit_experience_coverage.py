@@ -200,7 +200,7 @@ def main():
         print(f"{'='*60}")
 
         if mistyped:
-            print(f"\n  Venue type mismatch (won't appear as experience):")
+            print("\n  Venue type mismatch (won't appear as experience):")
             for name, v in mistyped:
                 print(f"    [{v['id']:>5}] {v['venue_type']:<20} {v['name']}")
                 print(f"           → should be: {SUGGESTED_TYPES[category]}")
@@ -211,7 +211,7 @@ def main():
                 print(f"    • {name}")
 
         if found:
-            print(f"\n  Covered:")
+            print("\n  Covered:")
             for name, v in found:
                 print(f"    ✓ {v['venue_type']:<20} {v['name']}")
 
@@ -220,7 +220,7 @@ def main():
         total_found += len(found)
 
     print(f"\n{'='*60}")
-    print(f"  SUMMARY")
+    print("  SUMMARY")
     print(f"{'='*60}")
     print(f"  Found & correctly typed:  {total_found}")
     print(f"  Found but wrong type:     {total_mistyped}")

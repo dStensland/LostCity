@@ -4,7 +4,6 @@ Named series_linking.py to avoid conflict with top-level series.py module.
 """
 
 import logging
-from typing import Optional
 
 logger = logging.getLogger(__name__)
 

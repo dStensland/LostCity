@@ -30,11 +30,8 @@ Tags: kids, coding, stem, family-friendly, rsvp-required + age bands
 from __future__ import annotations
 
 import logging
-from datetime import date, datetime, timedelta
-from typing import Optional
+from datetime import datetime, timedelta
 
-import requests
-from bs4 import BeautifulSoup
 
 from db import (
     get_or_create_place,
@@ -299,7 +296,7 @@ def _generate_jr_program_events(loc: dict) -> list[dict]:
     (ages 5-7, foundational coding, robotics, LEGO) for the next WEEKS_AHEAD weeks.
     Only for locations where is_jr_enabled=True.
     """
-    first_monday = _next_monday()
+    _next_monday()
     title = f"Code Ninjas JR at {loc['name']}"
     location_url = f"{BASE_URL}/{loc['cn_slug']}/"
     description = (

@@ -91,7 +91,7 @@ def parse_time(time_str: str) -> Optional[str]:
 def categorize_event(title: str, description: str) -> tuple[str, str]:
     """Determine category and subcategory."""
     title_lower = title.lower()
-    desc_lower = description.lower()
+    description.lower()
 
     # Music
     if any(word in title_lower for word in ["concert", "symphony", "jazz", "choir", "orchestra", "recital"]):

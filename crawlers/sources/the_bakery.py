@@ -179,7 +179,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
         # Strategy 1: Ticket Tailor event cards
         # TT uses .event-listing or similar structures
-        event_cards = soup.select("[class*='event']")
+        soup.select("[class*='event']")
 
         # Strategy 2: Parse from text if no structured cards
         # Ticket Tailor pages have event blocks with title, date, price

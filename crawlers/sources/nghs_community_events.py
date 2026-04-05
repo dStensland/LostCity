@@ -28,7 +28,7 @@ from typing import Optional
 
 import requests
 
-from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -235,7 +235,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             # Get location details
             location_name = event_data.get("location_name", "")
             room_number = event_data.get("room_number", "")
-            location_text = f"{location_name} {room_number}".strip() if location_name or room_number else ""
+            f"{location_name} {room_number}".strip() if location_name or room_number else ""
 
             # Get ticket/registration info
             ticket_url = event_data.get("ticket_url")

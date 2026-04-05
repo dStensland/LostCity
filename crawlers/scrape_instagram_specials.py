@@ -24,7 +24,6 @@ Usage:
     python3 scrape_instagram_specials.py --venue-type bar --specials-only --limit 50
 """
 
-import base64
 import json
 import logging
 import argparse

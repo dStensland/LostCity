@@ -13,7 +13,6 @@ Usage:
 
 import argparse
 import logging
-import sys
 import time
 
 from db import get_client

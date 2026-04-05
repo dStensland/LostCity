@@ -177,7 +177,7 @@ def analyze_suspicious_titles():
 
 def spot_check_top_sources(top_sources):
     """Show detailed examples from top all-day event sources"""
-    client = get_client()
+    get_client()
     
     print_section("5. SPOT-CHECK: TOP ALL-DAY EVENT SOURCES")
     

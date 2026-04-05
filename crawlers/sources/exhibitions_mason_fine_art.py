@@ -18,7 +18,6 @@ import json
 import logging
 import re
 import time
-from datetime import date
 
 import requests
 from bs4 import BeautifulSoup

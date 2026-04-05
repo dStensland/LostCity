@@ -18,7 +18,11 @@ import re
 import subprocess
 import sys
 import time
-from concurrent.futures import ThreadPoolExecutor, as_completed, TimeoutError as FuturesTimeoutError
+from concurrent.futures import (
+    ThreadPoolExecutor,
+    as_completed,
+    TimeoutError as FuturesTimeoutError,
+)
 from datetime import datetime, timedelta
 from importlib import import_module
 from typing import Optional
@@ -96,7 +100,9 @@ BLOCKED_SOURCE_SLUGS = set(CLOSED_SOURCE_SLUGS)
 # per thread; too many concurrent browsers exhaust file descriptors and RAM quickly.
 # Requests-only crawlers are lightweight and can run at higher concurrency.
 MAX_PLAYWRIGHT_WORKERS = 2  # Reduced from 3 — each browser consumes ~200MB RAM + file descriptors; 2 avoids Errno 35 on macOS
-MAX_REQUESTS_WORKERS = 8   # Reduced from 10 — keeps total socket pressure lower on the same run
+MAX_REQUESTS_WORKERS = (
+    8  # Reduced from 10 — keeps total socket pressure lower on the same run
+)
 
 # Populated once at startup by _classify_sources().
 PLAYWRIGHT_SOURCES: set[str] = set()
@@ -104,12 +110,12 @@ PLAYWRIGHT_SOURCES: set[str] = set()
 TRANSIENT_CRAWL_ERROR_PATTERNS = (
     "server disconnected",
     "connection terminated",
-    "connectionterminated",          # h2 library uses CamelCase: ConnectionTerminated
-    "compression_error",             # h2 ErrorCodes.COMPRESSION_ERROR in repr
-    "protocol_error",                # h2 ErrorCodes.PROTOCOL_ERROR in repr
+    "connectionterminated",  # h2 library uses CamelCase: ConnectionTerminated
+    "compression_error",  # h2 ErrorCodes.COMPRESSION_ERROR in repr
+    "protocol_error",  # h2 ErrorCodes.PROTOCOL_ERROR in repr
     "connection reset by peer",
     "remote protocol error",
-    "remoteprotocolerror",           # httpx CamelCase variant
+    "remoteprotocolerror",  # httpx CamelCase variant
     "temporarily unavailable",
     "timed out",
     "timeout",
@@ -187,7 +193,9 @@ def run_crawler_with_retry(source: dict) -> tuple[int, int, int]:
             return run_crawler(source)
         except Exception as exc:
             last_exc = exc
-            if attempt >= TRANSIENT_CRAWL_MAX_ATTEMPTS or not is_transient_crawl_error(exc):
+            if attempt >= TRANSIENT_CRAWL_MAX_ATTEMPTS or not is_transient_crawl_error(
+                exc
+            ):
                 raise
 
             backoff_seconds = float(attempt)
@@ -222,6 +230,7 @@ def _classify_sources() -> None:
 
     # Build a minimal package spec so pkgutil can walk it without a real import.
     import types
+
     sources_pkg = types.ModuleType("sources")
     sources_pkg.__path__ = [sources_dir]  # type: ignore[attr-defined]
     sources_pkg.__package__ = "sources"
@@ -260,7 +269,9 @@ def run_launch_post_crawl_maintenance(
 
     Returns True on success, False otherwise.
     """
-    script = os.path.join(os.path.dirname(__file__), "scripts", "post_crawl_maintenance.py")
+    script = os.path.join(
+        os.path.dirname(__file__), "scripts", "post_crawl_maintenance.py"
+    )
     cmd = [sys.executable, script, "--city", city, "--continue-on-error"]
     if portal and portal.strip():
         cmd.extend(["--portal", portal.strip()])
@@ -326,13 +337,11 @@ SOURCE_OVERRIDES = {
     "529": "sources.five29",
     "10times": "sources.tentimes",
     "13-stories": "sources.thirteen_stories",
-    "404-weekend": "sources.four04_weekend",
     "404-found-atl": "sources.four04_found_atl",
     "7-stages": "sources.seven_stages",
-    
     # Multiple slugs mapping to single module
     "mobilize-api": "sources.mobilize_api",  # Legacy slug
-    "mobilize-us": "sources.mobilize_api",   # HelpATL API aggregator
+    "mobilize-us": "sources.mobilize_api",  # HelpATL API aggregator
     "mobilize-dekalb-dems": "sources.mobilize",
     "mobilize-ga-dems": "sources.mobilize",
     "fair-count": "sources.mobilize",
@@ -344,7 +353,6 @@ SOURCE_OVERRIDES = {
     "mobilize-50501-georgia": "sources.mobilize",
     "mobilize-necessary-trouble": "sources.mobilize",
     "mobilize-voteriders": "sources.mobilize",
-    
     # Name mismatches (slug != filename.replace("_", "-"))
     "all-fired-up-art": "sources.all_fired_up",
     "aisle-5": "sources.aisle5",
@@ -497,14 +505,14 @@ def run_source(slug: str, skip_circuit_breaker: bool = False) -> bool:
         return False
 
     if slug in BLOCKED_SOURCE_SLUGS:
-        logger.warning(
-            "Source is permanently blocked from crawling: %s", slug
-        )
+        logger.warning("Source is permanently blocked from crawling: %s", slug)
         return False
 
     if not source["is_active"]:
         if skip_circuit_breaker:
-            logger.warning("Source is inactive; continuing because --force was used: %s", slug)
+            logger.warning(
+                "Source is inactive; continuing because --force was used: %s", slug
+            )
         else:
             logger.warning(f"Source is not active: {slug}")
             return False
@@ -538,7 +546,7 @@ def run_source(slug: str, skip_circuit_breaker: bool = False) -> bool:
             events_found=found,
             events_new=new,
             events_updated=updated,
-            events_rejected=rejected
+            events_rejected=rejected,
         )
         # Record success in health tracker
         health_record_success(health_run_id, found, new, updated)
@@ -561,7 +569,9 @@ def run_source(slug: str, skip_circuit_breaker: bool = False) -> bool:
 
         # Log detailed validation stats if there were issues
         if rejected > 0 or stats.warnings > 0:
-            logger.info(f"Validation details for {source['name']}:\n{stats.get_summary()}")
+            logger.info(
+                f"Validation details for {source['name']}:\n{stats.get_summary()}"
+            )
 
         return True
 
@@ -631,14 +641,20 @@ def run_festival_schedules(portal_slug: Optional[str] = None) -> dict:
                         if row.get("slug") and row.get("owner_portal_id") == portal_id
                     }
                     pre_count = len(festivals)
-                    festivals = [festival for festival in festivals if festival.get("slug") in scoped_slugs]
+                    festivals = [
+                        festival
+                        for festival in festivals
+                        if festival.get("slug") in scoped_slugs
+                    ]
                     logger.info(
                         "Festival schedule extraction scoped to portal '%s': %s/%s festivals matched owned sources",
                         portal_slug,
                         len(festivals),
                         pre_count,
                     )
-                    source_rows = [row for row in source_rows if row.get("slug") in scoped_slugs]
+                    source_rows = [
+                        row for row in source_rows if row.get("slug") in scoped_slugs
+                    ]
 
             source_url_by_slug = {
                 row.get("slug"): row.get("url")
@@ -689,7 +705,9 @@ def run_festival_schedules(portal_slug: Optional[str] = None) -> dict:
                     dry_run=False,
                 )
             except Exception as e:
-                logger.debug("  Festival %s candidate failed (%s): %s", slug, candidate_url, e)
+                logger.debug(
+                    "  Festival %s candidate failed (%s): %s", slug, candidate_url, e
+                )
                 continue
 
             festival_found += found
@@ -798,7 +816,9 @@ def _discover_festival_schedule_links(
             )
             resp.raise_for_status()
         except Exception as exc:
-            logger.debug("Festival link discovery fetch failed for %s: %s", seed_url, exc)
+            logger.debug(
+                "Festival link discovery fetch failed for %s: %s", seed_url, exc
+            )
             continue
 
         content_type = (resp.headers.get("content-type") or "").lower()
@@ -903,12 +923,18 @@ def _build_festival_schedule_candidate_urls(
 
         base_for_join = normalized if normalized.endswith("/") else f"{normalized}/"
         for suffix in _FESTIVAL_SCHEDULE_HINTS:
-            expanded.append(_normalize_schedule_url(urljoin(base_for_join, suffix.lstrip("/"))))
+            expanded.append(
+                _normalize_schedule_url(urljoin(base_for_join, suffix.lstrip("/")))
+            )
 
     if discover_links:
-        discovered = _discover_festival_schedule_links(seed_urls, max_links=max_candidates * 4)
+        discovered = _discover_festival_schedule_links(
+            seed_urls, max_links=max_candidates * 4
+        )
         if discovered:
-            logger.debug("Festival URL discovery added %s links for %s", len(discovered), website)
+            logger.debug(
+                "Festival URL discovery added %s links for %s", len(discovered), website
+            )
             expanded.extend(discovered)
 
     deduped: list[str] = []
@@ -988,18 +1014,21 @@ def demote_stale_festival_dates() -> int:
         if f.get("announced_end") and f["announced_end"] >= today_str:
             continue
 
-        client.table("festivals").update({
-            "pending_start": f["announced_start"],
-            "pending_end": f.get("announced_end"),
-            "announced_start": None,
-            "announced_end": None,
-            "date_confidence": 20,
-            "date_source": "auto-demoted-stale",
-        }).eq("id", f["id"]).execute()
+        client.table("festivals").update(
+            {
+                "pending_start": f["announced_start"],
+                "pending_end": f.get("announced_end"),
+                "announced_start": None,
+                "announced_end": None,
+                "date_confidence": 20,
+                "date_source": "auto-demoted-stale",
+            }
+        ).eq("id", f["id"]).execute()
         demoted += 1
         logger.debug(f"Demoted stale festival: {f['slug']} ({f['announced_start']})")
 
     return demoted
+
 
 def check_unannounced_festivals(soon_only: bool = False, dry_run: bool = False) -> dict:
     """
@@ -1016,9 +1045,7 @@ def check_unannounced_festivals(soon_only: bool = False, dry_run: bool = False) 
     if soon_only:
         check_festival_dates(dry_run=dry_run, soon_only=True)
         # Also try promoting existing pending rows
-        check_festival_dates(
-            dry_run=dry_run, soon_only=True, promote_pending=True
-        )
+        check_festival_dates(dry_run=dry_run, soon_only=True, promote_pending=True)
     else:
         # First pass: high-priority (soon)
         check_festival_dates(dry_run=dry_run, soon_only=True)
@@ -1143,6 +1170,7 @@ def run_post_crawl_tasks(
     logger.info("Running data quality healing loop...")
     try:
         from heal_events import run_healing_loop
+
         heal_stats = run_healing_loop(dry_run=False, fix=True, report=True)
         logger.info(
             "Healing: %s prices, %s titles, %s caps, %s closed-venue, %s alerts",
@@ -1183,11 +1211,14 @@ def run_post_crawl_tasks(
     logger.info("Running festival health check...")
     try:
         from festival_health import run_festival_health_check
+
         fh_stats = run_post_crawl_step_with_retry(
             "festival_health_check",
             run_festival_health_check,
         )
-        backfilled = fh_stats.get("titles_backfilled", 0) + fh_stats.get("festival_dates_backfilled", 0)
+        backfilled = fh_stats.get("titles_backfilled", 0) + fh_stats.get(
+            "festival_dates_backfilled", 0
+        )
         if backfilled > 0:
             logger.info(f"Festival health: backfilled {backfilled} series")
     except Exception as e:
@@ -1220,6 +1251,7 @@ def run_post_crawl_tasks(
     logger.info("Running artist backfill and normalization...")
     try:
         from scripts.backfill_event_artists import run_artist_backfill
+
         artist_stats = run_post_crawl_step_with_retry(
             "artist_backfill",
             lambda: run_artist_backfill(dry_run=False),
@@ -1246,6 +1278,7 @@ def run_post_crawl_tasks(
         )
         try:
             from hydrate_tba_events import hydrate_tba_events
+
             tba_stats = run_post_crawl_step_with_retry(
                 "hydrate_tba_events",
                 lambda: hydrate_tba_events(apply=True, limit=tba_hydration_limit),
@@ -1277,6 +1310,7 @@ def run_post_crawl_tasks(
     logger.info("Running tag backfill...")
     try:
         from scripts.backfill_tags import backfill_tags
+
         tag_stats = run_post_crawl_step_with_retry(
             "backfill_tags",
             lambda: backfill_tags(dry_run=False, batch_size=200),
@@ -1293,7 +1327,9 @@ def run_post_crawl_tasks(
             detect_zero_event_sources,
         )
         if deactivated_count > 0:
-            logger.warning(f"Auto-deactivated {deactivated_count} sources: {', '.join(deactivated_slugs)}")
+            logger.warning(
+                f"Auto-deactivated {deactivated_count} sources: {', '.join(deactivated_slugs)}"
+            )
     except Exception as e:
         logger.warning(f"Zero-event detection failed: {e}")
 
@@ -1304,7 +1340,9 @@ def run_post_crawl_tasks(
             "record_daily_snapshot",
             record_daily_snapshot,
         )
-        logger.info(f"Analytics: {snapshot.get('total_upcoming_events', 0)} upcoming events")
+        logger.info(
+            f"Analytics: {snapshot.get('total_upcoming_events', 0)} upcoming events"
+        )
     except Exception as e:
         logger.warning(f"Analytics snapshot failed: {e}")
 
@@ -1377,7 +1415,9 @@ def run_all_sources(
     if adaptive:
         recommended = get_recommended_workers()
         if recommended < max_workers:
-            logger.info(f"Adaptive: reducing workers from {max_workers} to {recommended} based on health")
+            logger.info(
+                f"Adaptive: reducing workers from {max_workers} to {recommended} based on health"
+            )
             max_workers = recommended
 
     # Pre-filter sources with open circuit breakers
@@ -1407,7 +1447,9 @@ def run_all_sources(
         # Split sources into Playwright and requests pools running concurrently.
         pw_workers = min(MAX_PLAYWRIGHT_WORKERS, max_workers)
         req_workers = min(MAX_REQUESTS_WORKERS, max_workers)
-        split_results = _run_split_pool(active_sources, pw_workers=pw_workers, req_workers=req_workers)
+        split_results = _run_split_pool(
+            active_sources, pw_workers=pw_workers, req_workers=req_workers
+        )
         results.update(split_results)
     else:
         # Sequential execution
@@ -1418,9 +1460,7 @@ def run_all_sources(
     # Retry failed sources sequentially
     failed_slugs = [slug for slug, ok in results.items() if not ok]
     if failed_slugs and parallel:
-        logger.info(
-            f"Retrying {len(failed_slugs)} failed sources sequentially..."
-        )
+        logger.info(f"Retrying {len(failed_slugs)} failed sources sequentially...")
         for slug in failed_slugs:
             time.sleep(2)  # Cool-down between retries
             ok = run_source(slug, skip_circuit_breaker=True)
@@ -1435,7 +1475,9 @@ def run_all_sources(
         f"Crawl complete: {success} sources succeeded, {failed} failed, "
         f"{len(skipped_sources)} circuit-breaker skipped"
     )
-    logger.info("Note: Per-source validation statistics are logged above for each crawler.")
+    logger.info(
+        "Note: Per-source validation statistics are logged above for each crawler."
+    )
 
     # Run all post-crawl pipeline tasks
     run_post_crawl_tasks(
@@ -1481,8 +1523,10 @@ def _run_split_pool(
     logger.info(
         "Split pool: %s Playwright sources (max %s workers), "
         "%s requests sources (max %s workers)",
-        len(pw_sources), pw_workers,
-        len(req_sources), req_workers,
+        len(pw_sources),
+        pw_workers,
+        len(req_sources),
+        req_workers,
     )
 
     results: dict[str, bool] = {}
@@ -1500,9 +1544,13 @@ def _run_split_pool(
     ):
         future_to_slug: dict = {}
         for source in pw_sources:
-            future_to_slug[pw_pool.submit(run_source, source["slug"], True)] = source["slug"]
+            future_to_slug[pw_pool.submit(run_source, source["slug"], True)] = source[
+                "slug"
+            ]
         for source in req_sources:
-            future_to_slug[req_pool.submit(run_source, source["slug"], True)] = source["slug"]
+            future_to_slug[req_pool.submit(run_source, source["slug"], True)] = source[
+                "slug"
+            ]
 
         try:
             for future in as_completed(future_to_slug, timeout=batch_timeout):
@@ -1534,7 +1582,9 @@ def _run_split_pool(
     return results
 
 
-def _run_source_list(sources: list[dict], parallel: bool = True, max_workers: int = MAX_WORKERS) -> dict[str, bool]:
+def _run_source_list(
+    sources: list[dict], parallel: bool = True, max_workers: int = MAX_WORKERS
+) -> dict[str, bool]:
     """Run a list of sources through the standard parallel/sequential pipeline with retries.
 
     Shared logic used by run_all_sources, run_smart_crawl, and run_cadence_crawl.
@@ -1554,7 +1604,9 @@ def _run_source_list(sources: list[dict], parallel: bool = True, max_workers: in
         # Cap both pools by max_workers so --workers N still acts as a global limit.
         pw_workers = min(MAX_PLAYWRIGHT_WORKERS, max_workers)
         req_workers = min(MAX_REQUESTS_WORKERS, max_workers)
-        results = _run_split_pool(sources, pw_workers=pw_workers, req_workers=req_workers)
+        results = _run_split_pool(
+            sources, pw_workers=pw_workers, req_workers=req_workers
+        )
     else:
         for source in sources:
             slug = source["slug"]
@@ -1585,7 +1637,9 @@ def run_smart_crawl(args) -> dict[str, bool]:
         cadence_counts[freq] = cadence_counts.get(freq, 0) + 1
 
     cadence_summary = ", ".join(f"{c} {k}" for k, c in sorted(cadence_counts.items()))
-    logger.info(f"Smart mode: {len(due_sources)} sources due for crawl ({cadence_summary})")
+    logger.info(
+        f"Smart mode: {len(due_sources)} sources due for crawl ({cadence_summary})"
+    )
 
     if not due_sources:
         logger.info("No sources due for crawl — exiting")
@@ -1600,10 +1654,12 @@ def run_smart_crawl(args) -> dict[str, bool]:
         else:
             active_sources.append(source)
 
-    max_workers = args.workers if hasattr(args, 'workers') else MAX_WORKERS
-    parallel = not (hasattr(args, 'sequential') and args.sequential)
+    max_workers = args.workers if hasattr(args, "workers") else MAX_WORKERS
+    parallel = not (hasattr(args, "sequential") and args.sequential)
 
-    results = _run_source_list(active_sources, parallel=parallel, max_workers=max_workers)
+    results = _run_source_list(
+        active_sources, parallel=parallel, max_workers=max_workers
+    )
 
     # Summary
     success = sum(1 for v in results.values() if v)
@@ -1639,10 +1695,12 @@ def run_cadence_crawl(args) -> dict[str, bool]:
         else:
             active_sources.append(source)
 
-    max_workers = args.workers if hasattr(args, 'workers') else MAX_WORKERS
-    parallel = not (hasattr(args, 'sequential') and args.sequential)
+    max_workers = args.workers if hasattr(args, "workers") else MAX_WORKERS
+    parallel = not (hasattr(args, "sequential") and args.sequential)
 
-    results = _run_source_list(active_sources, parallel=parallel, max_workers=max_workers)
+    results = _run_source_list(
+        active_sources, parallel=parallel, max_workers=max_workers
+    )
 
     # Summary
     success = sum(1 for v in results.values() if v)
@@ -1707,34 +1765,34 @@ def main():
 
     parser = argparse.ArgumentParser(
         description="Lost City Event Crawler",
-        formatter_class=argparse.RawDescriptionHelpFormatter
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument(
-        "--source", "-s",
-        help="Specific source slug to crawl (default: all active sources)"
+        "--source",
+        "-s",
+        help="Specific source slug to crawl (default: all active sources)",
     )
     parser.add_argument(
-        "--list", "-l",
+        "--list", "-l", action="store_true", help="List available sources and exit"
+    )
+    parser.add_argument(
+        "--dry-run",
+        "-n",
         action="store_true",
-        help="List available sources and exit"
-    )
-    parser.add_argument(
-        "--dry-run", "-n",
-        action="store_true",
-        help="Fetch and extract but don't save to database"
+        help="Fetch and extract but don't save to database",
     )
     parser.add_argument(
         "--db-target",
         choices=["staging", "production"],
         default=default_db_target,
-        help="Database target environment (default: CRAWLER_DB_TARGET or production)"
+        help="Database target environment (default: CRAWLER_DB_TARGET or production)",
     )
     parser.add_argument(
         "--allow-production-writes",
         "--allow-prod-writes",
         action="store_true",
         dest="allow_production_writes",
-        help="Required to perform write operations against production DB target"
+        help="Required to perform write operations against production DB target",
     )
     parser.add_argument(
         "--skip-run-lock",
@@ -1744,99 +1802,91 @@ def main():
     parser.add_argument(
         "--sequential",
         action="store_true",
-        help="Run crawlers sequentially instead of in parallel"
+        help="Run crawlers sequentially instead of in parallel",
     )
     parser.add_argument(
-        "--workers", "-w",
+        "--workers",
+        "-w",
         type=int,
         default=MAX_WORKERS,
-        help=f"Number of parallel workers (default: {MAX_WORKERS})"
+        help=f"Number of parallel workers (default: {MAX_WORKERS})",
     )
     parser.add_argument(
-        "--force", "-f",
+        "--force",
+        "-f",
         action="store_true",
-        help="Force crawl even if circuit breaker is open"
+        help="Force crawl even if circuit breaker is open",
     )
     parser.add_argument(
         "--circuit-status",
         action="store_true",
-        help="Show circuit breaker status for all sources"
+        help="Show circuit breaker status for all sources",
     )
     parser.add_argument(
-        "--health",
-        action="store_true",
-        help="Show crawler health report and exit"
+        "--health", action="store_true", help="Show crawler health report and exit"
     )
     parser.add_argument(
         "--no-adaptive",
         action="store_true",
-        help="Disable adaptive worker count (use fixed workers)"
+        help="Disable adaptive worker count (use fixed workers)",
     )
     parser.add_argument(
-        "--quality",
-        action="store_true",
-        help="Show data quality report and exit"
+        "--quality", action="store_true", help="Show data quality report and exit"
     )
     parser.add_argument(
         "--quality-all",
         action="store_true",
-        help="Show data quality report for all sources"
+        help="Show data quality report for all sources",
     )
     parser.add_argument(
-        "--analytics",
-        action="store_true",
-        help="Show analytics report and exit"
+        "--analytics", action="store_true", help="Show analytics report and exit"
     )
     parser.add_argument(
-        "--report",
-        action="store_true",
-        help="Generate HTML report and exit"
+        "--report", action="store_true", help="Generate HTML report and exit"
     )
     parser.add_argument(
-        "--cleanup",
-        action="store_true",
-        help="Run event cleanup and exit"
+        "--cleanup", action="store_true", help="Run event cleanup and exit"
     )
     parser.add_argument(
         "--cleanup-dry-run",
         action="store_true",
-        help="Show what cleanup would delete without actually deleting"
+        help="Show what cleanup would delete without actually deleting",
     )
     parser.add_argument(
         "--check-festivals",
         action="store_true",
-        help="Check unannounced festivals for newly posted dates and exit"
+        help="Check unannounced festivals for newly posted dates and exit",
     )
     parser.add_argument(
         "--soon",
         action="store_true",
-        help="With --check-festivals, only check festivals within 3 months"
+        help="With --check-festivals, only check festivals within 3 months",
     )
     parser.add_argument(
         "--specials",
         action="store_true",
-        help="Run venue specials scraper (extracts happy hours, food nights, etc.)"
+        help="Run venue specials scraper (extracts happy hours, food nights, etc.)",
     )
     parser.add_argument(
         "--specials-venue-type",
         default="bar",
-        help="Venue type to scrape for --specials (default: bar)"
+        help="Venue type to scrape for --specials (default: bar)",
     )
     parser.add_argument(
         "--specials-limit",
         type=int,
         default=50,
-        help="Max venues to process for --specials (default: 50)"
+        help="Max venues to process for --specials (default: 50)",
     )
     parser.add_argument(
         "--smart",
         action="store_true",
-        help="Smart mode: only crawl sources due based on crawl_frequency"
+        help="Smart mode: only crawl sources due based on crawl_frequency",
     )
     parser.add_argument(
         "--cadence",
         choices=["daily", "twice_weekly", "weekly", "monthly"],
-        help="Force-run all sources with specific frequency"
+        help="Force-run all sources with specific frequency",
     )
     parser.add_argument(
         "--skip-launch-maintenance",
@@ -1922,7 +1972,9 @@ def main():
     should_write = (not args.dry_run) and (not read_only_command)
 
     if should_write and cfg.database.active_target == "production":
-        allow_from_env = os.getenv("CRAWLER_ALLOW_PRODUCTION_WRITES", "").strip().lower() in (
+        allow_from_env = os.getenv(
+            "CRAWLER_ALLOW_PRODUCTION_WRITES", ""
+        ).strip().lower() in (
             "1",
             "true",
             "yes",
@@ -1952,11 +2004,13 @@ def main():
     # When running Atlanta (the default), this is a no-op. For new markets,
     # pass --city Nashville --state TN and the venue state gate will allow it.
     if args.city != "Atlanta" or args.state != "GA":
-        set_crawl_context(CrawlContext(
-            city=args.city,
-            state=args.state,
-            allowed_states=[args.state],
-        ))
+        set_crawl_context(
+            CrawlContext(
+                city=args.city,
+                state=args.state,
+                allowed_states=[args.state],
+            )
+        )
         logger.info("Crawl context: city=%s state=%s", args.city, args.state)
 
     # Health report
@@ -2043,10 +2097,17 @@ def main():
         and not args.skip_run_lock
     )
     try:
-        with hold_crawl_run_lock(enabled=lock_enabled, db_target=cfg.database.active_target):
+        with hold_crawl_run_lock(
+            enabled=lock_enabled, db_target=cfg.database.active_target
+        ):
             # Venue specials scraper
             if args.specials:
-                from scrape_place_specials import get_venues, scrape_venue, _close_browser
+                from scrape_place_specials import (
+                    get_venues,
+                    scrape_venue,
+                    _close_browser,
+                )
+
                 logger.info(
                     f"Specials mode: scraping {args.specials_venue_type} venues "
                     f"(limit={args.specials_limit})"
@@ -2069,7 +2130,9 @@ def main():
                     _close_browser()
                 except Exception:
                     pass
-                logger.info(f"Specials scraper done: {scraped}/{len(venues)} venues processed")
+                logger.info(
+                    f"Specials scraper done: {scraped}/{len(venues)} venues processed"
+                )
                 return 0
 
             # Single source

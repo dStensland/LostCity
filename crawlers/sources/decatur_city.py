@@ -240,7 +240,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 page.wait_for_timeout(1000)
 
             # Get page HTML for parsing
-            html_content = page.content()
+            page.content()
 
             # Check if still on Cloudflare challenge
             body_text = page.inner_text("body")
@@ -314,7 +314,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             "source_id": source_id,
                             "place_id": venue_id,
                             "title": title,
-                            "description": f"Event at City of Decatur. Visit the event page for more details.",
+                            "description": "Event at City of Decatur. Visit the event page for more details.",
                             "start_date": start_date,
                             "start_time": start_time,
                             "end_date": None,

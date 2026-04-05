@@ -27,7 +27,12 @@ from typing import Optional
 import requests
 from bs4 import BeautifulSoup
 
-from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
+from db import (
+    get_or_create_place,
+    insert_event,
+    find_event_by_hash,
+    smart_update_existing_event,
+)
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -65,9 +70,9 @@ def parse_date_from_text(date_text: str) -> Optional[str]:
 
     # Try "Mon DD, YYYY" format (full month name)
     match = re.match(
-        r'(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2})(?:,?\s+(\d{4}))?',
+        r"(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2})(?:,?\s+(\d{4}))?",
         date_text,
-        re.IGNORECASE
+        re.IGNORECASE,
     )
     if match:
         month = match.group(1)
@@ -83,9 +88,9 @@ def parse_date_from_text(date_text: str) -> Optional[str]:
 
     # Try "Mon DD" format (abbreviated month)
     match = re.match(
-        r'(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d{1,2})(?:,?\s+(\d{4}))?',
+        r"(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d{1,2})(?:,?\s+(\d{4}))?",
         date_text,
-        re.IGNORECASE
+        re.IGNORECASE,
     )
     if match:
         month = match.group(1)
@@ -113,15 +118,15 @@ def parse_time_from_text(time_text: str) -> Optional[str]:
     time_text = time_text.strip()
 
     # Match "H:MM am/pm" or "HH:MM am/pm"
-    match = re.match(r'(\d{1,2}):(\d{2})\s*(am|pm)', time_text, re.IGNORECASE)
+    match = re.match(r"(\d{1,2}):(\d{2})\s*(am|pm)", time_text, re.IGNORECASE)
     if match:
         hour = int(match.group(1))
         minute = int(match.group(2))
         period = match.group(3).lower()
 
-        if period == 'pm' and hour != 12:
+        if period == "pm" and hour != 12:
             hour += 12
-        elif period == 'am' and hour == 12:
+        elif period == "am" and hour == 12:
             hour = 0
 
         return f"{hour:02d}:{minute:02d}"
@@ -129,7 +134,9 @@ def parse_time_from_text(time_text: str) -> Optional[str]:
     return None
 
 
-def categorize_event(title: str, description: str) -> tuple[str, Optional[str], list[str]]:
+def categorize_event(
+    title: str, description: str
+) -> tuple[str, Optional[str], list[str]]:
     """
     Categorize ADA Georgia events.
 
@@ -139,38 +146,54 @@ def categorize_event(title: str, description: str) -> tuple[str, Optional[str], 
     tags = ["diabetes", "community-health", "ada"]
 
     # Step Out Walk and fundraisers
-    if any(kw in text for kw in [
-        "step out", "walk", "run", "5k", "fundraiser", "race", "tour de cure"
-    ]):
+    if any(
+        kw in text
+        for kw in [
+            "step out",
+            "walk",
+            "run",
+            "5k",
+            "fundraiser",
+            "race",
+            "tour de cure",
+        ]
+    ):
         tags.extend(["fundraiser", "walk", "outdoor", "family"])
         return "community", "fundraiser", tags
 
     # Health screenings
-    if any(kw in text for kw in [
-        "screening", "test", "blood sugar", "a1c", "health fair"
-    ]):
+    if any(
+        kw in text for kw in ["screening", "test", "blood sugar", "a1c", "health fair"]
+    ):
         tags.extend(["screening", "health-screening", "free"])
         return "wellness", "health_screening", tags
 
     # Support groups
-    if any(kw in text for kw in [
-        "support group", "peer support", "patient support"
-    ]):
+    if any(kw in text for kw in ["support group", "peer support", "patient support"]):
         tags.extend(["support-group", "mental-health"])
         return "wellness", "support_group", tags
 
     # Educational workshops and classes
-    if any(kw in text for kw in [
-        "workshop", "seminar", "education", "training", "class", "learn",
-        "prevention", "cooking", "nutrition", "meal planning"
-    ]):
+    if any(
+        kw in text
+        for kw in [
+            "workshop",
+            "seminar",
+            "education",
+            "training",
+            "class",
+            "learn",
+            "prevention",
+            "cooking",
+            "nutrition",
+            "meal planning",
+        ]
+    ):
         tags.extend(["education", "workshop", "health-education"])
         return "learning", "workshop", tags
 
     # Volunteer and advocacy
-    if any(kw in text for kw in [
-        "volunteer", "advocacy", "lobby", "champion"
-    ]):
+    if any(kw in text for kw in ["volunteer", "advocacy", "lobby", "champion"]):
         tags.extend(["volunteer", "advocacy"])
         return "community", "volunteer", tags
 
@@ -205,25 +228,33 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     headers={
                         "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
                     },
-                    timeout=20
+                    timeout=20,
                 )
 
                 if response.status_code != 200:
-                    logger.debug(f"Page not found: {url} (status {response.status_code})")
+                    logger.debug(
+                        f"Page not found: {url} (status {response.status_code})"
+                    )
                     continue
 
                 soup = BeautifulSoup(response.text, "html.parser")
 
                 # Look for event containers
-                event_containers = soup.find_all("div", class_=lambda x: x and "event" in (x or "").lower())
+                event_containers = soup.find_all(
+                    "div", class_=lambda x: x and "event" in (x or "").lower()
+                )
 
                 if not event_containers:
                     event_containers = soup.find_all("article")
 
                 if not event_containers:
-                    event_containers = soup.find_all("div", class_=lambda x: x and any(
-                        kw in (x or "").lower() for kw in ["card", "item", "post"]
-                    ))
+                    event_containers = soup.find_all(
+                        "div",
+                        class_=lambda x: x
+                        and any(
+                            kw in (x or "").lower() for kw in ["card", "item", "post"]
+                        ),
+                    )
 
                 if not event_containers:
                     logger.debug(f"No event containers found on {url}")
@@ -266,7 +297,10 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             description = desc_elem.get_text(" ", strip=True)[:1000]
 
                         # Extract date
-                        date_elem = container.find(["time", "span", "div"], class_=lambda x: x and "date" in (x or "").lower())
+                        date_elem = container.find(
+                            ["time", "span", "div"],
+                            class_=lambda x: x and "date" in (x or "").lower(),
+                        )
 
                         date_text = None
                         if date_elem:
@@ -278,9 +312,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         if not date_text:
                             search_text = f"{title} {description or ''}"
                             date_match = re.search(
-                                r'(January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{1,2}(?:,?\s+\d{4})?',
+                                r"(January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{1,2}(?:,?\s+\d{4})?",
                                 search_text,
-                                re.IGNORECASE
+                                re.IGNORECASE,
                             )
                             if date_match:
                                 date_text = date_match.group(0)
@@ -291,12 +325,16 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                         start_date = parse_date_from_text(date_text)
                         if not start_date:
-                            logger.debug(f"Could not parse date '{date_text}' for: {title}")
+                            logger.debug(
+                                f"Could not parse date '{date_text}' for: {title}"
+                            )
                             continue
 
                         # Skip past events
                         try:
-                            event_date = datetime.strptime(start_date, "%Y-%m-%d").date()
+                            event_date = datetime.strptime(
+                                start_date, "%Y-%m-%d"
+                            ).date()
                             if event_date < today:
                                 logger.debug(f"Skipping past event: {title}")
                                 continue
@@ -305,7 +343,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                         # Extract time
                         time_text = container.get_text()
-                        time_match = re.search(r'\d{1,2}:\d{2}\s*(?:am|pm)', time_text, re.IGNORECASE)
+                        time_match = re.search(
+                            r"\d{1,2}:\d{2}\s*(?:am|pm)", time_text, re.IGNORECASE
+                        )
                         start_time = None
                         if time_match:
                             start_time = parse_time_from_text(time_match.group(0))
@@ -318,13 +358,19 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                         events_found += 1
 
-                        content_hash = generate_content_hash(title, PLACE_DATA["name"], start_date)
+                        content_hash = generate_content_hash(
+                            title, PLACE_DATA["name"], start_date
+                        )
 
-
-                        category, subcategory, tags = categorize_event(title, description or "")
+                        category, subcategory, tags = categorize_event(
+                            title, description or ""
+                        )
 
                         # Check if free
-                        is_free = "free" in text or "no cost" in text
+                        is_free = (
+                            "free" in time_text.lower()
+                            or "no cost" in time_text.lower()
+                        )
 
                         event_record = {
                             "source_id": source_id,

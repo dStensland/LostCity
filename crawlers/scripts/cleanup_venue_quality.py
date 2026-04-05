@@ -220,7 +220,7 @@ def main():
     dupe_pairs = step4_duplicate_candidates(client, venues, write=write)
 
     print(f"\n{'=' * 60}")
-    print(f"  Summary")
+    print("  Summary")
     print(f"{'=' * 60}")
     print(f"  Bad names:           {bad_names}")
     print(f"  Out of metro:        {out_of_metro}")

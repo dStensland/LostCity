@@ -17,7 +17,7 @@ from __future__ import annotations
 import json
 import logging
 import re
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Optional
 from zoneinfo import ZoneInfo
 
@@ -334,7 +334,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                 image_url = evt.get("image") or evt.get("image_url")
                 ticket_url = evt.get("url") or evt.get("ticket_url")
-                description = evt.get("description") or f"Comedy show at Relapse Theatre"
+                description = evt.get("description") or "Comedy show at Relapse Theatre"
                 price_min = _extract_price(evt)
                 is_free = not price_min and "free" in description.lower()
 
@@ -390,7 +390,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         source_id=source_id,
                         venue_id=venue_id,
                         title=title,
-                        description=f"Comedy show at Relapse Theatre",
+                        description="Comedy show at Relapse Theatre",
                         start_date=start_date,
                         start_time=start_time,
                         image_url=item.get("image_url"),

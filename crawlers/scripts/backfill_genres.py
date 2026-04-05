@@ -328,7 +328,7 @@ if __name__ == "__main__":
             dry_run=args.dry_run,
             retag_all=args.retag_all,
         )
-        logger.info(f"\nEvent Results:")
+        logger.info("\nEvent Results:")
         logger.info(f"  Total processed:         {event_stats['total']}")
         logger.info(f"  Genres from subcategory:  {event_stats['genres_from_subcategory']}")
         logger.info(f"  Genres from inference:    {event_stats['genres_from_inference']}")
@@ -345,11 +345,11 @@ if __name__ == "__main__":
             limit=args.limit,
             dry_run=args.dry_run,
         )
-        logger.info(f"\nVenue Results:")
+        logger.info("\nVenue Results:")
         logger.info(f"  Total processed: {venue_stats['total']}")
         logger.info(f"  Updated: {venue_stats['updated']}")
         logger.info(f"  No events: {venue_stats['no_events']}")
         logger.info(f"  Errors: {venue_stats['errors']}")
 
     if args.dry_run:
-        logger.info(f"\n*** DRY RUN - No changes were made ***")
+        logger.info("\n*** DRY RUN - No changes were made ***")

@@ -208,7 +208,7 @@ def run_deactivate(dry_run: bool = False):
 
     # Report
     print(f"\n{'=' * 70}")
-    print(f"DEACTIVATION REPORT")
+    print("DEACTIVATION REPORT")
     print(f"{'=' * 70}")
 
     by_reason = defaultdict(list)

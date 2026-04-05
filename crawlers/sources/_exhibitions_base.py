@@ -18,11 +18,9 @@ Usage:
 from __future__ import annotations
 
 import logging
-import re
 import time
 from abc import ABC, abstractmethod
 from datetime import date
-from typing import Optional
 
 import requests
 from bs4 import BeautifulSoup

@@ -111,7 +111,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             # Find all events by looking for month + day + title pattern
             months = r"(JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)"
-            event_pattern = re.compile(
+            re.compile(
                 rf"{months}\s+(\d{{1,2}})\s+([^\n]+(?:[-&][^\n]+)?)\s+", re.MULTILINE
             )
 

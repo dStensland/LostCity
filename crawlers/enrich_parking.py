@@ -230,7 +230,6 @@ def backfill(
 
     # Fetch venues to process
     # Try with parking columns first; fall back if migration hasn't run yet
-    has_parking_cols = True
     try:
         query = client.table("places").select(
             "id, name, slug, website, lat, lng, parking_note, parking_source"
@@ -241,7 +240,6 @@ def backfill(
             query = query.is_("parking_note", "null")
         result = query.order("id").execute()
     except Exception:
-        has_parking_cols = False
         logger.info("parking columns not found — run migration first for filtering")
         query = client.table("places").select(
             "id, name, slug, website, lat, lng"

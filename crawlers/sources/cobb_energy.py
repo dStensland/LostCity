@@ -14,7 +14,12 @@ from typing import Optional
 
 from playwright.sync_api import sync_playwright, Page
 
-from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
+from db import (
+    get_or_create_place,
+    insert_event,
+    find_event_by_hash,
+    smart_update_existing_event,
+)
 from dedupe import generate_content_hash
 from utils import enrich_event_record
 
@@ -39,7 +44,9 @@ PLACE_DATA = {
 }
 
 
-def parse_date_time(date_str: str, time_str: str) -> tuple[Optional[str], Optional[str]]:
+def parse_date_time(
+    date_str: str, time_str: str
+) -> tuple[Optional[str], Optional[str]]:
     """
     Parse date and time from detail page formats.
 
@@ -56,7 +63,11 @@ def parse_date_time(date_str: str, time_str: str) -> tuple[Optional[str], Option
     start_date = None
 
     # Try "March 15, 2026" or "Mar 15, 2026"
-    match = re.search(r"(January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[.,]?\s+(\d{1,2})[.,]?\s*(\d{4})?", date_str, re.IGNORECASE)
+    match = re.search(
+        r"(January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[.,]?\s+(\d{1,2})[.,]?\s*(\d{4})?",
+        date_str,
+        re.IGNORECASE,
+    )
     if match:
         month, day, year = match.groups()
         year = year or str(current_year)
@@ -74,7 +85,9 @@ def parse_date_time(date_str: str, time_str: str) -> tuple[Optional[str], Option
     # Parse time if present
     start_time = None
     if time_str:
-        match = re.search(r"(\d{1,2}):(\d{2})\s*(am|pm|a\.m\.|p\.m\.)", time_str, re.IGNORECASE)
+        match = re.search(
+            r"(\d{1,2}):(\d{2})\s*(am|pm|a\.m\.|p\.m\.)", time_str, re.IGNORECASE
+        )
         if match:
             hour, minute, period = match.groups()
             hour = int(hour)
@@ -106,10 +119,14 @@ def extract_detail_data(page: Page, detail_url: str) -> list[dict]:
                 elem = page.query_selector(selector)
                 if elem:
                     text = elem.inner_text().strip()
-                    if text and len(text) > 2 and text.lower() not in ["events", "home", "calendar"]:
+                    if (
+                        text
+                        and len(text) > 2
+                        and text.lower() not in ["events", "home", "calendar"]
+                    ):
                         title = text
                         break
-            except:
+            except Exception:
                 continue
 
         if not title:
@@ -134,7 +151,7 @@ def extract_detail_data(page: Page, detail_url: str) -> list[dict]:
             "div.content p",
             "article p",
             ".event-details p",
-            "p"
+            "p",
         ]
         for selector in desc_selectors:
             try:
@@ -149,13 +166,17 @@ def extract_detail_data(page: Page, detail_url: str) -> list[dict]:
                         break
                 if description:
                     break
-            except:
+            except Exception:
                 continue
 
         # Extract presenter/presenting org
         presenter = None
         body_text = page.inner_text("body")
-        presenter_match = re.search(r"(?:Presented by|Presenting Organization:|Presenter:)\s*([^\n]+)", body_text, re.IGNORECASE)
+        presenter_match = re.search(
+            r"(?:Presented by|Presenting Organization:|Presenter:)\s*([^\n]+)",
+            body_text,
+            re.IGNORECASE,
+        )
         if presenter_match:
             presenter = presenter_match.group(1).strip()
 
@@ -173,14 +194,16 @@ def extract_detail_data(page: Page, detail_url: str) -> list[dict]:
             ".event-image img",
             "article img",
             "img[class*='event']",
-            "img"
+            "img",
         ]
         for selector in image_selectors:
             try:
                 elem = page.query_selector(selector)
                 if elem:
                     src = elem.get_attribute("src")
-                    if src and ("assets/img" in src or "1250x610" in src or len(src) > 20):
+                    if src and (
+                        "assets/img" in src or "1250x610" in src or len(src) > 20
+                    ):
                         if not src.startswith("http"):
                             if src.startswith("/"):
                                 image_url = BASE_URL + src
@@ -189,16 +212,20 @@ def extract_detail_data(page: Page, detail_url: str) -> list[dict]:
                         else:
                             image_url = src
                         break
-            except:
+            except Exception:
                 continue
 
         # Extract ticket URL
         ticket_url = None
         try:
-            ticket_links = page.query_selector_all("a[href*='ticketmaster'], a[href*='ticket'], a:has-text('Buy Tickets'), a:has-text('Tickets')")
+            ticket_links = page.query_selector_all(
+                "a[href*='ticketmaster'], a[href*='ticket'], a:has-text('Buy Tickets'), a:has-text('Tickets')"
+            )
             for link in ticket_links:
                 href = link.get_attribute("href")
-                if href and ("ticketmaster" in href.lower() or "ticket" in href.lower()):
+                if href and (
+                    "ticketmaster" in href.lower() or "ticket" in href.lower()
+                ):
                     if not href.startswith("http"):
                         if href.startswith("/"):
                             ticket_url = BASE_URL + href
@@ -207,7 +234,7 @@ def extract_detail_data(page: Page, detail_url: str) -> list[dict]:
                     else:
                         ticket_url = href
                     break
-        except:
+        except Exception:
             pass
 
         # Extract showtimes (dates and times)
@@ -236,7 +263,8 @@ def extract_detail_data(page: Page, detail_url: str) -> list[dict]:
         if not showtimes:
             range_match = re.search(
                 rf"({MONTH_PAT})\.?\s+(\d{{1,2}})\s*-\s*(\d{{1,2}})\s*/\s*(\d{{4}})",
-                body_text, re.IGNORECASE,
+                body_text,
+                re.IGNORECASE,
             )
             if range_match:
                 month_str, start_day, end_day, year_str = range_match.groups()
@@ -250,7 +278,8 @@ def extract_detail_data(page: Page, detail_url: str) -> list[dict]:
         if not showtimes:
             single_match = re.search(
                 rf"({MONTH_PAT})\.?\s+(\d{{1,2}})\s*/\s*(\d{{4}})",
-                body_text, re.IGNORECASE,
+                body_text,
+                re.IGNORECASE,
             )
             if single_match:
                 month_str, day_str, year_str = single_match.groups()
@@ -273,14 +302,20 @@ def extract_detail_data(page: Page, detail_url: str) -> list[dict]:
                 category = "theater"
             elif "comedy" in presenter_lower or "comedian" in title.lower():
                 category = "comedy"
-            elif any(word in presenter_lower for word in ["orchestra", "symphony", "jazz", "blues", "music"]):
+            elif any(
+                word in presenter_lower
+                for word in ["orchestra", "symphony", "jazz", "blues", "music"]
+            ):
                 category = "music"
 
         # Also check title
         title_lower = title.lower()
         if any(word in title_lower for word in ["comedy", "comedian", "stand-up"]):
             category = "comedy"
-        elif any(word in title_lower for word in ["concert", "symphony", "orchestra", "jazz", "blues"]):
+        elif any(
+            word in title_lower
+            for word in ["concert", "symphony", "orchestra", "jazz", "blues"]
+        ):
             category = "music"
 
         # Create one event per showtime
@@ -340,7 +375,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     href = link.get_attribute("href")
                     if href:
                         if not href.startswith("http"):
-                            href = BASE_URL + (href if href.startswith("/") else "/" + href)
+                            href = BASE_URL + (
+                                href if href.startswith("/") else "/" + href
+                            )
                         if href not in detail_links:
                             detail_links.append(href)
             except Exception as e:
@@ -350,7 +387,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             # Visit each detail page
             detail_page = context.new_page()
-            for detail_url in detail_links[:50]:  # Limit to 50 events to avoid long crawls
+            for detail_url in detail_links[
+                :50
+            ]:  # Limit to 50 events to avoid long crawls
                 event_data_list = extract_detail_data(detail_page, detail_url)
 
                 for event_data in event_data_list:
@@ -359,8 +398,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     title = event_data["title"]
                     start_date = event_data["start_date"]
 
-                    content_hash = generate_content_hash(title, "Cobb Energy Performing Arts Centre", start_date)
-
+                    content_hash = generate_content_hash(
+                        title, "Cobb Energy Performing Arts Centre", start_date
+                    )
 
                     event_record = {
                         "source_id": source_id,
@@ -390,17 +430,26 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     }
 
                     # Enrich from detail page
-                    enrich_event_record(event_record, source_name="Cobb Energy Performing Arts Centre")
+                    enrich_event_record(
+                        event_record, source_name="Cobb Energy Performing Arts Centre"
+                    )
 
                     # Determine is_free if still unknown after enrichment
                     if event_record.get("is_free") is None:
                         desc_lower = (event_record.get("description") or "").lower()
                         title_lower = event_record.get("title", "").lower()
                         combined = f"{title_lower} {desc_lower}"
-                        if any(kw in combined for kw in ["free", "no cost", "no charge", "complimentary"]):
+                        if any(
+                            kw in combined
+                            for kw in ["free", "no cost", "no charge", "complimentary"]
+                        ):
                             event_record["is_free"] = True
-                            event_record["price_min"] = event_record.get("price_min") or 0
-                            event_record["price_max"] = event_record.get("price_max") or 0
+                            event_record["price_min"] = (
+                                event_record.get("price_min") or 0
+                            )
+                            event_record["price_max"] = (
+                                event_record.get("price_max") or 0
+                            )
                         else:
                             event_record["is_free"] = False
 

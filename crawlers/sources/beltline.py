@@ -142,7 +142,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             page.wait_for_timeout(5000)
 
             # Extract images from page
-            image_map = extract_images_from_page(page)
+            extract_images_from_page(page)
 
             # Scroll to load content
             for _ in range(3):

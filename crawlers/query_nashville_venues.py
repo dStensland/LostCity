@@ -2,7 +2,6 @@
 """Query examples for Eater Nashville Essential 38 venues."""
 
 import db
-import json
 
 client = db.get_client()
 

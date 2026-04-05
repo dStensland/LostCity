@@ -162,7 +162,7 @@ def run(execute=False, min_count=3, venue_id=None):
         if frequency:
             print(f"    Pattern: {frequency} on {day_of_week}")
         else:
-            print(f"    Pattern: irregular (no consistent weekday)")
+            print("    Pattern: irregular (no consistent weekday)")
         print(f"    Dates: {dates[0]} ... {dates[-1]}")
 
         if execute:
@@ -196,7 +196,7 @@ def run(execute=False, min_count=3, venue_id=None):
                 total_series += 1
                 total_linked += linked
             else:
-                print(f"    -> Failed to create series")
+                print("    -> Failed to create series")
         else:
             print(f"    -> Would create series and link {len(group_events)} events")
 
@@ -210,7 +210,7 @@ def run(execute=False, min_count=3, venue_id=None):
     else:
         print(f"  Candidate groups: {len(candidates)}")
         print(f"  Total events to link: {sum(len(g) for g in candidates.values())}")
-        print(f"\n  Run with --execute to create series and link events")
+        print("\n  Run with --execute to create series and link events")
     print(f"{'=' * 60}\n")
 
 

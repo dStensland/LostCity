@@ -6,15 +6,13 @@ Broadway-style musicals in historic Marietta Square.
 
 from __future__ import annotations
 
-import re
 import logging
 from datetime import datetime, timedelta
-from typing import Optional
 
 import requests
 from bs4 import BeautifulSoup
 
-from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_place, insert_event, find_event_by_hash
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -167,7 +165,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     try:
         response = requests.get(f"{BASE_URL}/current-season/", headers=HEADERS, timeout=30)
         if response.status_code == 200:
-            soup = BeautifulSoup(response.text, "html.parser")
+            BeautifulSoup(response.text, "html.parser")
             # Look for show information
             # This is a fallback - if scraping works, we'd parse shows here
             logger.info("Successfully fetched Marietta Theatre season page")

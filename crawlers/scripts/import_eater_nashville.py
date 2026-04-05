@@ -454,12 +454,12 @@ def import_venues():
             if existing.data:
                 # Update existing venue
                 venue_id = existing.data[0]['id']
-                result = client.table('places').update(place_data).eq('id', venue_id).execute()
+                client.table('places').update(place_data).eq('id', venue_id).execute()
                 logger.info(f"[{i}/{total}] Updated: {place_data['name']}")
                 updated += 1
             else:
                 # Insert new venue
-                result = client.table('places').insert(place_data).execute()
+                client.table('places').insert(place_data).execute()
                 logger.info(f"[{i}/{total}] Created: {place_data['name']}")
                 created += 1
 

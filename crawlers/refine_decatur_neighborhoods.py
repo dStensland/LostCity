@@ -73,7 +73,7 @@ def refine_decatur_neighborhoods(dry_run: bool = False):
 
         if not lat or not lng:
             print(f"✗ {venue_name}")
-            print(f"  No coordinates available")
+            print("  No coordinates available")
             print()
             no_coords += 1
             continue
@@ -98,7 +98,7 @@ def refine_decatur_neighborhoods(dry_run: bool = False):
                 updated += 1
         else:
             print(f"✗ {venue_name}")
-            print(f"  No specific Decatur neighborhood match")
+            print("  No specific Decatur neighborhood match")
             print(f"  (lat={lat:.4f}, lng={lng:.4f})")
             no_match += 1
 

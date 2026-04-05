@@ -214,7 +214,7 @@ def main():
     }
 
     mode_label = "SIMPLE" if args.simple else "LLM ENRICHMENT"
-    logger.info(f"Festival Program Batch Enrichment")
+    logger.info("Festival Program Batch Enrichment")
     logger.info(f"{'=' * 70}")
     logger.info(f"Festivals to process: {total}")
     logger.info(f"Mode: {'DRY RUN' if args.dry_run else 'LIVE'} | {mode_label} | JS: {args.render_js}")
@@ -325,7 +325,7 @@ def main():
 
     # Summary
     logger.info(f"\n{'=' * 70}")
-    logger.info(f"RESULTS")
+    logger.info("RESULTS")
     logger.info(f"{'=' * 70}")
     logger.info(f"Festivals processed:  {stats['total']}")
     logger.info(f"With data:            {stats['festivals_enriched']}")
@@ -342,7 +342,7 @@ def main():
         logger.info(f"Pages crawled:        {stats['total_pages_crawled']}")
         logger.info(f"LLM calls (~):        {stats['llm_calls']}")
     if args.dry_run:
-        logger.info(f"\nDRY RUN — no data written to database")
+        logger.info("\nDRY RUN — no data written to database")
 
 
 if __name__ == "__main__":

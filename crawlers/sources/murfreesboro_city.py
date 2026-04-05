@@ -13,8 +13,12 @@ from typing import Optional
 
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeout
 
-from utils import slugify
-from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
+from db import (
+    get_or_create_place,
+    insert_event,
+    find_event_by_hash,
+    smart_update_existing_event,
+)
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -45,7 +49,7 @@ def parse_date(date_text: str) -> Optional[str]:
             try:
                 dt = datetime.fromisoformat(date_text.replace("Z", "+00:00"))
                 return dt.strftime("%Y-%m-%d")
-            except:
+            except Exception:
                 pass
 
         # "January 28, 2026" or "Jan 28, 2026"
@@ -157,7 +161,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
             page.wait_for_timeout(5000)  # Wait for ASP.NET calendar to render
 
             # Try to find calendar events
-            event_elements = page.query_selector_all(".calendar-event, .event-item, [class*='event']")
+            event_elements = page.query_selector_all(
+                ".calendar-event, .event-item, [class*='event']"
+            )
 
             if not event_elements:
                 logger.warning("No event elements found, trying text extraction")
@@ -184,13 +190,21 @@ def crawl(source: dict) -> tuple[int, int, int]:
                                     start_time = parse_time(check_line)
 
                                 if not title and len(check_line) > 5:
-                                    if not parse_date(check_line) and not parse_time(check_line):
-                                        if not re.match(r"^(home|about|contact|search|menu)", check_line, re.IGNORECASE):
+                                    if not parse_date(check_line) and not parse_time(
+                                        check_line
+                                    ):
+                                        if not re.match(
+                                            r"^(home|about|contact|search|menu)",
+                                            check_line,
+                                            re.IGNORECASE,
+                                        ):
                                             title = check_line
 
                         if title:
                             events_found += 1
-                            content_hash = generate_content_hash(title, PLACE_DATA["name"], start_date)
+                            content_hash = generate_content_hash(
+                                title, PLACE_DATA["name"], start_date
+                            )
 
                             if find_event_by_hash(content_hash):
                                 events_updated += 1
@@ -242,7 +256,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         if not element_text or len(element_text) < 10:
                             continue
 
-                        lines = [l.strip() for l in element_text.split("\n") if l.strip()]
+                        lines = [
+                            l.strip() for l in element_text.split("\n") if l.strip()
+                        ]
                         if not lines:
                             continue
 
@@ -277,7 +293,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
                                 event_url = href
 
                         category = determine_category(element_text)
-                        content_hash = generate_content_hash(title, PLACE_DATA["name"], start_date)
+                        content_hash = generate_content_hash(
+                            title, PLACE_DATA["name"], start_date
+                        )
 
                         existing = find_event_by_hash(content_hash)
                         if existing:

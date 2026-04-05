@@ -32,8 +32,7 @@ from entity_lanes import SourceEntityCapabilities, TypedEntityEnvelope
 from entity_persistence import persist_typed_entity_envelope
 from exhibition_utils import build_exhibition_record
 from utils import (
-    extract_images_from_page, extract_event_links, find_event_url,
-    enrich_event_record, parse_date_range,
+    extract_images_from_page, enrich_event_record, parse_date_range,
 )
 
 try:

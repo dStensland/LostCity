@@ -4,7 +4,6 @@ Deep dive into specific sources with high all-day event rates
 """
 
 from db import get_client
-from collections import defaultdict
 
 def analyze_source_details(source_slug):
     """Get detailed info about a specific source's events"""

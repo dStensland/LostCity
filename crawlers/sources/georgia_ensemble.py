@@ -15,7 +15,12 @@ from typing import Optional
 
 from playwright.sync_api import sync_playwright
 
-from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
+from db import (
+    get_or_create_place,
+    insert_event,
+    find_event_by_hash,
+    smart_update_existing_event,
+)
 from dedupe import generate_content_hash
 from utils import extract_images_from_page
 
@@ -83,12 +88,14 @@ def parse_date_range(date_text: str) -> tuple[Optional[str], Optional[str]]:
     cross_month_match = re.search(
         r"(January|February|March|April|May|June|July|August|September|October|November|December)\s*(\d{1,2})\s*[-–—]\s*(January|February|March|April|May|June|July|August|September|October|November|December)\s*(\d{1,2}),?\s*(\d{4})",
         date_text,
-        re.IGNORECASE
+        re.IGNORECASE,
     )
     if cross_month_match:
         start_month, start_day, end_month, end_day, year = cross_month_match.groups()
         try:
-            start_dt = datetime.strptime(f"{start_month} {start_day} {year}", "%B %d %Y")
+            start_dt = datetime.strptime(
+                f"{start_month} {start_day} {year}", "%B %d %Y"
+            )
             end_dt = datetime.strptime(f"{end_month} {end_day} {year}", "%B %d %Y")
             return start_dt.strftime("%Y-%m-%d"), end_dt.strftime("%Y-%m-%d")
         except ValueError:
@@ -99,7 +106,7 @@ def parse_date_range(date_text: str) -> tuple[Optional[str], Optional[str]]:
     same_month_match = re.search(
         r"(January|February|March|April|May|June|July|August|September|October|November|December)\s*(\d{1,2})\s*[-–—]\s*(\d{1,2}),?\s*(\d{4})",
         date_text,
-        re.IGNORECASE
+        re.IGNORECASE,
     )
     if same_month_match:
         month, start_day, end_day, year = same_month_match.groups()
@@ -115,7 +122,7 @@ def parse_date_range(date_text: str) -> tuple[Optional[str], Optional[str]]:
     single_match = re.search(
         r"(January|February|March|April|May|June|July|August|September|October|November|December)\s*(\d{1,2}),?\s*(\d{4})",
         date_text,
-        re.IGNORECASE
+        re.IGNORECASE,
     )
     if single_match:
         month, day, year = single_match.groups()
@@ -159,21 +166,31 @@ def extract_title_from_heading(heading_text: str) -> Optional[str]:
 
     # Remove content after the first date pattern or director credit
     heading_text = re.sub(
-        r'\s*(January|February|March|April|May|June|July|August|September|October|November|December)\s*\d{1,2}.*',
-        '',
+        r"\s*(January|February|March|April|May|June|July|August|September|October|November|December)\s*\d{1,2}.*",
+        "",
         heading_text,
         flags=re.IGNORECASE,
     )
-    heading_text = re.sub(r'\s*Directed?\s*/?\s*Music\s*Directed?\s*by.*', '', heading_text, flags=re.IGNORECASE)
-    heading_text = re.sub(r'\s*Directed?\s*by.*', '', heading_text, flags=re.IGNORECASE)
-    heading_text = re.sub(r',\s*(adapted|created|written|based on|conceived|performed).*', '', heading_text, flags=re.IGNORECASE)
-    heading_text = re.sub(r'\s+by\s+[A-Z][a-z].*', '', heading_text)
+    heading_text = re.sub(
+        r"\s*Directed?\s*/?\s*Music\s*Directed?\s*by.*",
+        "",
+        heading_text,
+        flags=re.IGNORECASE,
+    )
+    heading_text = re.sub(r"\s*Directed?\s*by.*", "", heading_text, flags=re.IGNORECASE)
+    heading_text = re.sub(
+        r",\s*(adapted|created|written|based on|conceived|performed).*",
+        "",
+        heading_text,
+        flags=re.IGNORECASE,
+    )
+    heading_text = re.sub(r"\s+by\s+[A-Z][a-z].*", "", heading_text)
 
     # Take everything up to the first comma that's followed by attribution
-    title = heading_text.strip().rstrip(',').strip()
+    title = heading_text.strip().rstrip(",").strip()
 
     # Normalize whitespace
-    title = re.sub(r'\s+', ' ', title).strip()
+    title = re.sub(r"\s+", " ", title).strip()
 
     # Convert ALL CAPS to title case for readability
     if title.isupper():
@@ -208,7 +225,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             image_map = extract_images_from_page(page)
 
             # Georgia Ensemble Theatre lists shows in h5 headings on the season page
-            show_headings = page.query_selector_all('h5.wp-block-heading')
+            show_headings = page.query_selector_all("h5.wp-block-heading")
 
             logger.info(f"Found {len(show_headings)} show headings")
 
@@ -233,7 +250,10 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     # Skip past shows
                     check_date = end_date or start_date
                     try:
-                        if datetime.strptime(check_date, "%Y-%m-%d").date() < datetime.now().date():
+                        if (
+                            datetime.strptime(check_date, "%Y-%m-%d").date()
+                            < datetime.now().date()
+                        ):
                             logger.debug(f"Skipping past show: {title}")
                             continue
                     except ValueError:
@@ -241,41 +261,64 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     # Get description from the paragraph following the heading
                     description = None
-                    next_p = heading.evaluate("el => el.nextElementSibling?.tagName === 'P' ? el.nextElementSibling.innerText : null")
+                    next_p = heading.evaluate(
+                        "el => el.nextElementSibling?.tagName === 'P' ? el.nextElementSibling.innerText : null"
+                    )
                     if next_p:
                         desc = next_p.strip()
                         # Skip "Also a Travel Team performance" notes
-                        if desc and len(desc) > 30 and not desc.startswith("Also a Travel Team"):
+                        if (
+                            desc
+                            and len(desc) > 30
+                            and not desc.startswith("Also a Travel Team")
+                        ):
                             description = desc[:500]
 
                     # Try to find a link to the individual show page
                     ticket_url = SEASON_URL
                     try:
                         # Look for show-specific page link
-                        show_slug = title.lower().replace(" ", "-").replace("'", "").replace(":", "")
-                        show_slug = re.sub(r'[^a-z0-9-]', '', show_slug)
-                        show_page_url = f"{BASE_URL}/{show_slug}/"
+                        show_slug = (
+                            title.lower()
+                            .replace(" ", "-")
+                            .replace("'", "")
+                            .replace(":", "")
+                        )
+                        show_slug = re.sub(r"[^a-z0-9-]", "", show_slug)
 
                         # Check if there's a link in the content
-                        show_link = heading.query_selector('a')
+                        show_link = heading.query_selector("a")
                         if show_link:
-                            href = show_link.get_attribute('href')
+                            href = show_link.get_attribute("href")
                             if href:
-                                ticket_url = href if href.startswith('http') else BASE_URL + href
-                    except:
+                                ticket_url = (
+                                    href if href.startswith("http") else BASE_URL + href
+                                )
+                    except Exception:
                         pass
 
                     # Determine category
                     category = "theater"
                     subcategory = "play"
-                    tags = ["georgia-ensemble-theatre", "get", "theater", "sandy-springs"]
+                    tags = [
+                        "georgia-ensemble-theatre",
+                        "get",
+                        "theater",
+                        "sandy-springs",
+                    ]
 
                     # Classify by title/content
                     title_lower = title.lower()
-                    if any(word in title_lower for word in ["musical", "surf party", "ring of fire"]):
+                    if any(
+                        word in title_lower
+                        for word in ["musical", "surf party", "ring of fire"]
+                    ):
                         subcategory = "musical"
                         tags.append("musical")
-                    elif any(word in title_lower for word in ["dragons", "wrinkle in time", "giver"]):
+                    elif any(
+                        word in title_lower
+                        for word in ["dragons", "wrinkle in time", "giver"]
+                    ):
                         tags.append("family")
                     elif "comedy" in title_lower:
                         subcategory = "comedy"
@@ -283,14 +326,19 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     events_found += 1
 
-                    content_hash = generate_content_hash(title, "Georgia Ensemble Theatre", start_date)
-
+                    content_hash = generate_content_hash(
+                        title, "Georgia Ensemble Theatre", start_date
+                    )
 
                     # Find image by title match
                     event_image = None
                     title_lower = title.lower()
                     for img_alt, img_url in image_map.items():
-                        if img_alt.lower() == title_lower or title_lower in img_alt.lower() or img_alt.lower() in title_lower:
+                        if (
+                            img_alt.lower() == title_lower
+                            or title_lower in img_alt.lower()
+                            or img_alt.lower() in title_lower
+                        ):
                             event_image = img_url
                             break
 
@@ -310,7 +358,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "source_id": source_id,
                         "place_id": venue_id,
                         "title": title,
-                        "description": description or f"{title} at Georgia Ensemble Theatre",
+                        "description": description
+                        or f"{title} at Georgia Ensemble Theatre",
                         "start_date": start_date,
                         "start_time": "19:30",  # Default evening showtime (7:30 PM)
                         "end_date": end_date,
@@ -328,7 +377,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "image_url": event_image,
                         "raw_text": heading_text,
                         "extraction_confidence": 0.92,
-                        "is_recurring": True if end_date and end_date != start_date else False,
+                        "is_recurring": (
+                            True if end_date and end_date != start_date else False
+                        ),
                         "recurrence_rule": None,
                         "content_hash": content_hash,
                     }
