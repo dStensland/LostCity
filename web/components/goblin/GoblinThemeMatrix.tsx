@@ -45,6 +45,8 @@ export default function GoblinThemeMatrix({
   const [newThemeId, setNewThemeId] = useState<number | null>(null);
   // Optimistic toggle state: Map<"themeId-movieId", boolean>
   const [optimisticToggles, setOptimisticToggles] = useState<Map<string, boolean>>(new Map());
+  // Track keys with in-flight API calls — polling must not clear these
+  const inFlightKeys = useRef<Set<string>>(new Set());
   const [cancelingThemeId, setCancelingThemeId] = useState<number | null>(null);
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const newRowRef = useRef<HTMLTableRowElement | null>(null);
@@ -80,9 +82,18 @@ export default function GoblinThemeMatrix({
     [checkedSet, optimisticToggles]
   );
 
-  // Clear optimistic state when real data arrives
+  // Reconcile optimistic state when server data arrives — keep in-flight keys
   useEffect(() => {
-    setOptimisticToggles(new Map());
+    setOptimisticToggles((prev) => {
+      if (prev.size === 0) return prev;
+      if (inFlightKeys.current.size === 0) return new Map();
+      // Only keep optimistic entries that are still in-flight
+      const kept = new Map<string, boolean>();
+      for (const [key, val] of prev) {
+        if (inFlightKeys.current.has(key)) kept.set(key, val);
+      }
+      return kept;
+    });
   }, [themes]);
 
   // Scroll new row into view (requestAnimationFrame ensures DOM has rendered)
@@ -102,6 +113,9 @@ export default function GoblinThemeMatrix({
       const key = `${themeId}-${movieId}`;
       const currentState = isChecked(themeId, movieId);
 
+      // Mark in-flight so polling doesn't wipe optimistic state
+      inFlightKeys.current.add(key);
+
       // Optimistic update
       setOptimisticToggles((prev) => {
         const next = new Map(prev);
@@ -118,7 +132,11 @@ export default function GoblinThemeMatrix({
             body: JSON.stringify({ movie_id: movieId }),
           }
         );
-        if (!res.ok) {
+        inFlightKeys.current.delete(key);
+        if (res.ok) {
+          // Server confirmed — refresh to get authoritative state
+          onRefresh();
+        } else {
           // Rollback
           setOptimisticToggles((prev) => {
             const next = new Map(prev);
@@ -127,6 +145,7 @@ export default function GoblinThemeMatrix({
           });
         }
       } catch {
+        inFlightKeys.current.delete(key);
         // Rollback on network error
         setOptimisticToggles((prev) => {
           const next = new Map(prev);
@@ -135,7 +154,7 @@ export default function GoblinThemeMatrix({
         });
       }
     },
-    [sessionId, isChecked]
+    [sessionId, isChecked, onRefresh]
   );
 
   /* ---- Add theme ---- */
