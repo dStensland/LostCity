@@ -210,9 +210,8 @@ export default function GoblinThemeMatrix({
     }
   }, []);
 
-  /* ---- Truncate title for column header ---- */
-  const truncTitle = (title: string, max = 9) =>
-    title.length > max ? title.slice(0, max - 1).trimEnd() + "\u2026" : title;
+  /* ---- Skull for checked state ---- */
+  const SKULL = "\u{1F480}";
 
   /* ---- Render ---- */
 
@@ -224,23 +223,24 @@ export default function GoblinThemeMatrix({
           THEME TRACKER
         </h2>
         {/* Show movie column headers as preview */}
-        <div className="flex gap-2 mb-4 overflow-x-auto">
+        <div className="flex gap-3 mb-4 overflow-x-auto pb-1">
           {sortedMovies.map((movie) => (
-            <div key={movie.id} className="flex-shrink-0 w-16 text-center">
-              <div className="w-8 h-12 mx-auto bg-zinc-900 overflow-hidden relative mb-1">
+            <div key={movie.id} className="flex-shrink-0 w-20 text-center">
+              <div className="w-14 h-20 mx-auto bg-zinc-900 border border-zinc-800 overflow-hidden relative mb-1.5 shadow-[0_0_8px_rgba(0,0,0,0.5)]">
                 {movie.poster_path ? (
                   <SmartImage
                     src={`${TMDB_IMAGE_BASE}${movie.poster_path}`}
                     alt={movie.title}
                     fill
                     className="object-cover"
+                    sizes="56px"
                   />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center text-zinc-700 text-2xs">?</div>
+                  <div className="w-full h-full flex items-center justify-center text-zinc-700 text-xs font-bold">?</div>
                 )}
               </div>
-              <span className="text-zinc-700 text-2xs tracking-wider uppercase block truncate">
-                {truncTitle(movie.title)}
+              <span className="text-zinc-500 text-2xs font-bold tracking-wider uppercase block leading-tight">
+                {movie.title}
               </span>
             </div>
           ))}
@@ -316,31 +316,32 @@ export default function GoblinThemeMatrix({
             <tr>
               {/* Empty corner cell */}
               <th
-                className="sticky left-0 z-10 bg-zinc-950 min-w-[100px] max-w-[100px]"
+                className="sticky left-0 z-10 bg-zinc-950 min-w-[90px] sm:min-w-[120px] max-w-[120px]"
                 aria-label="Themes"
               />
               {sortedMovies.map((movie) => (
                 <th
                   key={movie.id}
-                  className="px-1 pb-2 text-center align-bottom"
-                  style={{ minWidth: 70, maxWidth: 80 }}
+                  className="px-1.5 pb-2 text-center align-bottom"
+                  style={{ minWidth: 90, maxWidth: 110 }}
                 >
-                  <div className="w-8 h-12 mx-auto bg-zinc-900 overflow-hidden relative mb-1">
+                  <div className="w-14 h-20 sm:w-16 sm:h-24 mx-auto bg-zinc-900 border border-zinc-800 overflow-hidden relative mb-1.5 shadow-[0_0_8px_rgba(0,0,0,0.5)]">
                     {movie.poster_path ? (
                       <SmartImage
                         src={`${TMDB_IMAGE_BASE}${movie.poster_path}`}
                         alt={movie.title}
                         fill
                         className="object-cover"
+                        sizes="64px"
                       />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center text-zinc-700 text-2xs">
+                      <div className="w-full h-full flex items-center justify-center text-zinc-700 text-xs font-bold">
                         ?
                       </div>
                     )}
                   </div>
-                  <span className="text-zinc-500 text-2xs tracking-wider uppercase block truncate max-w-[70px] mx-auto">
-                    {truncTitle(movie.title)}
+                  <span className="text-zinc-400 text-2xs font-bold tracking-wider uppercase block leading-tight max-w-[100px] mx-auto">
+                    {movie.title}
                   </span>
                 </th>
               ))}
@@ -359,14 +360,14 @@ export default function GoblinThemeMatrix({
               >
                 {/* Theme label — sticky left */}
                 <td
-                  className="sticky left-0 z-10 bg-zinc-950 min-w-[100px] max-w-[100px] pr-2 py-0.5 align-middle"
+                  className="sticky left-0 z-10 bg-zinc-950 min-w-[90px] sm:min-w-[120px] max-w-[120px] pr-2 py-0.5 align-middle"
                   onTouchStart={() => startLongPress(theme.id)}
                   onTouchEnd={cancelLongPress}
                   onTouchCancel={cancelLongPress}
                 >
-                  <div className="group flex items-center gap-1 min-h-[44px]">
+                  <div className="group flex items-center gap-1 min-h-[48px]">
                     <span
-                      className="text-red-400 text-2xs font-bold tracking-[0.15em] uppercase truncate flex-1 select-none"
+                      className="text-red-400 text-xs sm:text-xs font-bold tracking-[0.1em] uppercase leading-tight flex-1 select-none break-words"
                       title={theme.label}
                     >
                       {theme.label}
@@ -391,15 +392,17 @@ export default function GoblinThemeMatrix({
                     <td key={movie.id} className="px-1 py-0.5 text-center">
                       <button
                         onClick={() => handleToggle(theme.id, movie.id)}
-                        className={`w-full min-h-[44px] border transition-colors ${
+                        className={`w-full min-h-[48px] border-2 transition-all active:scale-95 ${
                           checked
-                            ? "bg-red-900/60 border-red-800 text-white"
-                            : "bg-zinc-900 border-zinc-800 text-transparent hover:border-zinc-700"
+                            ? "bg-red-950 border-red-700 shadow-[0_0_12px_rgba(185,28,28,0.3)]"
+                            : "bg-zinc-900/50 border-zinc-800 hover:border-zinc-600 hover:bg-zinc-900"
                         }`}
                         aria-label={`${theme.label} in ${movie.title}: ${checked ? "checked" : "unchecked"}`}
                       >
-                        {checked && (
-                          <span className="text-sm font-black">✕</span>
+                        {checked ? (
+                          <span className="text-xl leading-none" role="img" aria-label="skull">{SKULL}</span>
+                        ) : (
+                          <span className="text-zinc-800 text-xs">&#x2022;</span>
                         )}
                       </button>
                     </td>
