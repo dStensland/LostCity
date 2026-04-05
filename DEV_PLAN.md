@@ -53,6 +53,7 @@ If this declaration is missing, the work is not ready.
 | K: Admin Portal Onboarding | Paused | 2026-02-10 | Admin |
 | **Atlanta Consumer Quality** | | | |
 | O: Atlanta Consumer Product | Active | 2026-03-09 | Live Product |
+| O1: Premium Consumer Architecture | Active | 2026-04-04 | Live Product |
 | **Portal Ecosystem** | | | |
 | P1: HelpATL (Citizen) | Active | 2026-03-09 | Content Pillar |
 | P2: Family Portal | Active | 2026-03-11 | Content Pillar |
@@ -109,6 +110,25 @@ We are no longer building demos. Every portal and product ships consumer-ready o
 7. Hangs and social proof integrated into discovery flows.
 
 **Verification:** Cold-start test — someone unfamiliar with LostCity can open Atlanta, understand what it is, find something to do tonight, and get there. No dead ends.
+
+---
+
+### Phase O1: Premium Consumer Architecture
+
+**Surface:** `consumer`
+
+**Goal:** Finish the portal surface split so Explore, feed, detail, and community behave like first-class products instead of branches of one compatibility-era shell.
+
+**Why:** Premium consumer quality now depends more on route/runtime architecture than on adding more UI. Surface ownership, cacheability, and hot-path slimming are the leverage points.
+
+**Core tasks:**
+1. Keep legacy inbound query compatibility, but eliminate internal dependence on it.
+2. Give every surface an explicit runtime/cache policy through the portal runtime layer.
+3. Keep `[portal]/layout.tsx` provider-only and move trackers/widgets/chrome into surface-owned wrappers.
+4. Optimize Explore as the primary premium discovery entrypoint, then feed, detail, and community on the same contract.
+5. Keep detail overlays supported only as detail-surface infrastructure.
+
+**Verification:** `/{portal}`, `/{portal}/explore`, one canonical detail route, and one community route each render with only their own surface runtime/chrome, no unrelated route work, and measurable first-load improvements on Atlanta without portal leakage on FORTH or HelpATL.
 
 ---
 

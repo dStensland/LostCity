@@ -163,6 +163,20 @@ Check `components/ui/` (Badge, Dot, CountBadge, Button, DialogFooter), `componen
 2. Consumer screens cannot expose admin concepts.
 3. If `both`, acceptance criteria must be separate per surface.
 
+### Portal Surface Architecture
+
+1. Canonical Explore URLs are `/{portal}/explore...`. Do not introduce new `?view=find` emitters.
+2. Legacy Explore query URLs are compatibility-only. Normalize or redirect them; never emit them from new UI.
+3. Shared portal resolution belongs in `web/lib/portal-runtime/*`. Do not resolve portals ad hoc in pages, layouts, or components.
+4. Shared `[portal]` layout is provider/runtime-only. No surface-specific header, footer, nav, or loading logic there.
+5. Every route family must clearly belong to one surface: `feed`, `explore`, `detail`, or `community`, and must declare one runtime/cache policy.
+6. Surface chrome belongs to the owning surface only. Do not render civic/feed/detail/explore chrome from unrelated routes.
+7. Detail overlays are allowed only as detail-surface behavior. Do not add new query-param overlay routing to feed, explore, or community surfaces.
+8. Page/RSC data loading must import shared server loaders directly. API routes wrap the same loaders; no server self-fetching.
+9. When replacing an old route pattern or bridge, delete the legacy emitter/path in the same workstream or the immediately following one. Transitional code must have a removal target.
+10. Shared layout runtime must stay minimal. Trackers, widgets, and any non-universal client runtime belong in surface-owned wrappers, not `[portal]/layout.tsx`.
+11. Legacy query-style Explore and community entry is inbound compatibility only. Parsing is allowed; emitting or depending on it in live app paths is not.
+
 ### Data Ownership and Federation
 
 1. Facts are global; preferences are portal-local.

@@ -17,6 +17,29 @@ web/
 └── public/               # Static assets
 ```
 
+## Portal Surface Architecture
+
+The portal app is split into four surfaces with independent ownership:
+
+- `feed` — root portal feed and feed-adjacent pages
+- `explore` — canonical `/{portal}/explore`
+- `detail` — canonical entity/detail pages plus detail-owned overlay entry
+- `community` — civic/community routes such as groups, support, volunteer, and community hubs
+
+### Hard rules
+
+1. **Canonical Explore URLs only.** New UI must emit `/{portal}/explore...`, never `?view=find`.
+2. **Legacy query URLs are compatibility only.** Normalize or redirect them; do not build new features on them.
+3. **Use portal runtime for route resolution.** Portal/surface detection belongs in `lib/portal-runtime/*`, not inline in pages or layouts.
+4. **Keep `[portal]/layout.tsx` thin.** It may own providers, theme, and truly global runtime only. No surface-specific chrome or loading behavior.
+5. **Surface-owned chrome only.** Headers, footers, civic bars, Explore bars, and detail overlay behavior must live in the owning surface files.
+6. **No new shared query-overlay routing.** If an overlay experience exists, it must be detail-surface code, not feed/explore/community code.
+7. **Shared server-loader pattern is mandatory.** Pages and RSCs import server loaders directly; API routes wrap the same loaders; never fetch your own API from the server.
+8. **Delete compatibility aggressively.** If you replace a route bridge or legacy emitter, remove the old emission path in the same workstream or the immediately following one.
+9. **Every route family needs a runtime policy.** Surface ownership is not enough; each route family must have an explicit cache/runtime posture.
+10. **Shared layout runtime stays minimal.** Trackers, widgets, and surface-specific client runtime belong in the owning surface wrapper, not in `[portal]/layout.tsx`.
+11. **Legacy query-style community/explore entry is read-only compatibility.** Normalize or redirect it, but do not author new behavior on top of it.
+
 ## Commands
 
 ```bash
