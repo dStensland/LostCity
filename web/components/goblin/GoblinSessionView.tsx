@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useMemo } from "react";
 import SmartImage from "@/components/SmartImage";
+import GoblinThemeMatrix from "./GoblinThemeMatrix";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -20,7 +21,7 @@ interface SessionTheme {
   id: number;
   label: string;
   status: string;
-  goblin_theme_movies: Array<{ movie_id: number }>;
+  goblin_theme_movies: Array<{ movie_id: number; checked_by: string; checked_at: string }>;
 }
 
 interface TimelineEntry {
@@ -99,11 +100,6 @@ export default function GoblinSessionView({
   onCancelSession,
 }: Props) {
   const [addingMovieId, setAddingMovieId] = useState<number | null>(null);
-  const [cancelingThemeId, setCancelingThemeId] = useState<number | null>(null);
-  const [themeLabel, setThemeLabel] = useState("");
-  const [themeMovieIds, setThemeMovieIds] = useState<Set<number>>(new Set());
-  const [submittingTheme, setSubmittingTheme] = useState(false);
-  const [showThemeForm, setShowThemeForm] = useState(false);
 
   /* Lookup maps for timeline display */
   const movieMap = useMemo(() => {
@@ -122,16 +118,6 @@ export default function GoblinSessionView({
   const sortedMovies = useMemo(
     () => [...session.movies].sort((a, b) => a.watch_order - b.watch_order),
     [session.movies]
-  );
-
-  /* Active vs canceled themes */
-  const activeThemes = useMemo(
-    () => session.themes.filter((t) => t.status === "active"),
-    [session.themes]
-  );
-  const canceledThemes = useMemo(
-    () => session.themes.filter((t) => t.status === "canceled"),
-    [session.themes]
   );
 
   /* Chronological timeline (newest first) */
@@ -171,65 +157,6 @@ export default function GoblinSessionView({
     },
     [session.id, onRefresh]
   );
-
-  const handleCancelTheme = useCallback(
-    async (themeId: number) => {
-      setCancelingThemeId(themeId);
-      try {
-        const res = await fetch(
-          `/api/goblinday/sessions/${session.id}/themes/${themeId}`,
-          {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ status: "canceled" }),
-          }
-        );
-        if (res.ok) onRefresh();
-      } finally {
-        setCancelingThemeId(null);
-      }
-    },
-    [session.id, onRefresh]
-  );
-
-  const handleAddTheme = useCallback(
-    async (e: React.FormEvent) => {
-      e.preventDefault();
-      if (!themeLabel.trim()) return;
-      setSubmittingTheme(true);
-      try {
-        const res = await fetch(
-          `/api/goblinday/sessions/${session.id}/themes`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              label: themeLabel.trim(),
-              movie_ids: Array.from(themeMovieIds),
-            }),
-          }
-        );
-        if (res.ok) {
-          setThemeLabel("");
-          setThemeMovieIds(new Set());
-          setShowThemeForm(false);
-          onRefresh();
-        }
-      } finally {
-        setSubmittingTheme(false);
-      }
-    },
-    [session.id, themeLabel, themeMovieIds, onRefresh]
-  );
-
-  const toggleThemeMovie = useCallback((movieId: number) => {
-    setThemeMovieIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(movieId)) next.delete(movieId);
-      else next.add(movieId);
-      return next;
-    });
-  }, []);
 
   /* Already-added movie IDs for filtering proposed list */
   const addedMovieIds = useMemo(
@@ -285,6 +212,42 @@ export default function GoblinSessionView({
             CANCELED THEME{" "}
             <span className="text-zinc-500 line-through">
               &quot;{theme?.label ?? `#${entry.theme_id}`}&quot;
+            </span>
+          </span>
+        );
+      }
+      case "theme_checked": {
+        const theme = entry.theme_id ? themeMap.get(entry.theme_id) : null;
+        const movie = entry.movie_id ? movieMap.get(entry.movie_id) : null;
+        return (
+          <span className="text-zinc-600">
+            <span className="text-zinc-700 mr-2">✓</span>
+            {actor}
+            SPOTTED{" "}
+            <span className="text-zinc-500 font-bold">
+              &quot;{theme?.label ?? `#${entry.theme_id}`}&quot;
+            </span>
+            {" "}IN{" "}
+            <span className="text-zinc-500 font-bold">
+              {movie?.title ?? `#${entry.movie_id}`}
+            </span>
+          </span>
+        );
+      }
+      case "theme_unchecked": {
+        const theme = entry.theme_id ? themeMap.get(entry.theme_id) : null;
+        const movie = entry.movie_id ? movieMap.get(entry.movie_id) : null;
+        return (
+          <span className="text-zinc-600">
+            <span className="text-zinc-700 mr-2">−</span>
+            {actor}
+            REMOVED{" "}
+            <span className="text-zinc-600">
+              &quot;{theme?.label ?? `#${entry.theme_id}`}&quot;
+            </span>
+            {" "}FROM{" "}
+            <span className="text-zinc-600">
+              {movie?.title ?? `#${entry.movie_id}`}
             </span>
           </span>
         );
@@ -473,124 +436,13 @@ export default function GoblinSessionView({
           )}
         </section>
 
-        {/* ---- THEMES SECTION ---- */}
-        <section>
-          <h2 className="text-red-600 text-xs font-bold tracking-[0.2em] uppercase mb-3 border-b border-zinc-800 pb-2">
-            THEMES
-          </h2>
-
-          {/* Active themes */}
-          {activeThemes.length > 0 && (
-            <div className="flex flex-wrap gap-2 mb-3">
-              {activeThemes.map((theme) => (
-                <span
-                  key={theme.id}
-                  className="inline-flex items-center gap-2 px-3 py-1.5 border-2 border-red-800 bg-red-950/30 text-red-300 text-xs font-bold tracking-[0.15em] uppercase"
-                >
-                  {theme.label}
-                  <button
-                    onClick={() => handleCancelTheme(theme.id)}
-                    disabled={cancelingThemeId === theme.id}
-                    className="text-red-600 hover:text-red-400 transition-colors disabled:opacity-40 font-black"
-                    title="Cancel theme"
-                  >
-                    &#10005;
-                  </button>
-                </span>
-              ))}
-            </div>
-          )}
-
-          {/* Canceled themes */}
-          {canceledThemes.length > 0 && (
-            <div className="flex flex-wrap gap-2 mb-3">
-              {canceledThemes.map((theme) => (
-                <span
-                  key={theme.id}
-                  className="inline-flex items-center gap-2 px-3 py-1.5 border border-zinc-800 bg-zinc-900/30 text-zinc-600 text-xs tracking-[0.15em] uppercase line-through"
-                >
-                  {theme.label}
-                </span>
-              ))}
-            </div>
-          )}
-
-          {/* Add theme toggle */}
-          {!showThemeForm ? (
-            <button
-              onClick={() => setShowThemeForm(true)}
-              className="px-4 py-3 sm:py-2 border-2 border-dashed border-zinc-700 hover:border-red-800 text-zinc-600 hover:text-red-400 text-xs font-bold tracking-[0.2em] uppercase transition-colors w-full min-h-[44px]"
-            >
-              + ADD THEME
-            </button>
-          ) : (
-            <form
-              onSubmit={handleAddTheme}
-              className="border-2 border-zinc-800 bg-black p-4 space-y-3"
-            >
-              <div>
-                <label className="text-zinc-600 text-2xs tracking-[0.2em] uppercase block mb-1">
-                  THEME LABEL
-                </label>
-                <input
-                  type="text"
-                  value={themeLabel}
-                  onChange={(e) => setThemeLabel(e.target.value)}
-                  placeholder="E.G. FINAL GIRL, BODY HORROR..."
-                  className="w-full px-3 py-2 bg-zinc-900 border-2 border-zinc-700 text-white text-xs font-mono tracking-wider uppercase placeholder:text-zinc-700 focus:outline-none focus:border-red-700 transition-colors"
-                />
-              </div>
-
-              {/* Movie checkboxes */}
-              {sortedMovies.length > 0 && (
-                <div>
-                  <label className="text-zinc-600 text-2xs tracking-[0.2em] uppercase block mb-2">
-                    TAG MOVIES
-                  </label>
-                  <div className="space-y-1">
-                    {sortedMovies.map((movie) => (
-                      <label
-                        key={movie.id}
-                        className="flex items-center gap-2 py-1 px-2 hover:bg-zinc-900/50 cursor-pointer transition-colors"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={themeMovieIds.has(movie.id)}
-                          onChange={() => toggleThemeMovie(movie.id)}
-                          className="accent-red-600 w-3.5 h-3.5"
-                        />
-                        <span className="text-zinc-300 text-xs tracking-wider uppercase">
-                          {movie.title}
-                        </span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              <div className="flex gap-2">
-                <button
-                  type="submit"
-                  disabled={!themeLabel.trim() || submittingTheme}
-                  className="flex-1 px-4 py-2 bg-red-900 hover:bg-red-800 text-red-100 font-black text-xs tracking-[0.15em] uppercase border-2 border-red-700 transition-colors disabled:opacity-40"
-                >
-                  {submittingTheme ? "ADDING..." : "ADD THEME"}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowThemeForm(false);
-                    setThemeLabel("");
-                    setThemeMovieIds(new Set());
-                  }}
-                  className="px-4 py-2 bg-zinc-900 text-zinc-500 text-xs tracking-[0.15em] uppercase border-2 border-zinc-700 hover:border-zinc-600 transition-colors"
-                >
-                  CANCEL
-                </button>
-              </div>
-            </form>
-          )}
-        </section>
+        {/* ---- THEME TRACKER ---- */}
+        <GoblinThemeMatrix
+          sessionId={session.id}
+          movies={sortedMovies}
+          themes={session.themes}
+          onRefresh={onRefresh}
+        />
 
         {/* ---- TIMELINE ---- */}
         <section>
