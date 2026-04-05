@@ -16,10 +16,18 @@
  */
 
 import { createPortalScopedClient } from "@/lib/supabase/server";
-import { getPortalBySlug } from "@/lib/portal";
+import { getCachedPortalBySlug } from "@/lib/portal";
 import { getTimeSlot, isWeekend } from "@/lib/city-pulse/time-slots";
 import { getLocalDateString, getLocalDateStringOffset } from "@/lib/formats";
 import { getPortalSourceAccess } from "@/lib/federation";
+import { buildExploreHomePayload } from "@/lib/explore-platform/home";
+import { getExploreHomeFallbackCounts } from "@/lib/explore-platform/server/home-fallback";
+import {
+  getSharedCacheJson,
+  setSharedCacheJson,
+} from "@/lib/shared-cache";
+import type { Portal } from "@/lib/portal-context";
+import type { PortalSourceAccess } from "@/lib/federation";
 import type {
   ExploreHomeResponse,
   LanePreview,
@@ -38,17 +46,18 @@ const LANE_SLUGS: LaneSlug[] = [
   "game-day",
   "regulars",
   "classes",
-  "calendar",
-  "map",
   "places",
 ];
 
 /** Lanes where today/weekend counts are not applicable (non-temporal). */
 const NON_TEMPORAL_LANES: ReadonlySet<LaneSlug> = new Set([
-  "calendar",
-  "map",
   "places",
 ]);
+const EXPLORE_HOME_CACHE_NAMESPACE = "explore-home:data";
+const EXPLORE_HOME_CACHE_TTL_MS = 2 * 60 * 1000;
+const EXPLORE_HOME_LATEST_CACHE_KEY_SUFFIX = "latest";
+const EXPLORE_HOME_LATEST_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
+const EXPLORE_HOME_CACHE_MAX_ENTRIES = 50;
 
 /** Weekend date range: Friday through Sunday (inclusive).
  *  On Fri -> today through Sun. On Sat -> yesterday Fri through tomorrow Sun.
@@ -185,10 +194,8 @@ function generateLaneCopy(
         return "No places listed yet";
       case "classes":
         return "Classes coming soon";
-      case "calendar":
-        return "No events on the calendar";
-      case "map":
-        return "No mappable events";
+      default:
+        return "Nothing to browse right now";
     }
   }
 
@@ -207,10 +214,6 @@ function generateLaneCopy(
           return `${todayCount} class${todayCount === 1 ? "" : "es"} today`;
         case "places":
           return `${totalCount} places to explore`;
-        case "calendar":
-          return `${totalCount} events this week`;
-        case "map":
-          return `${totalCount} events on the map`;
         default:
           return `${todayCount} today`;
       }
@@ -236,13 +239,33 @@ function generateLaneCopy(
       return `${totalCount} class${totalCount === 1 ? "" : "es"} coming up`;
     case "places":
       return `${totalCount} places to explore`;
-    case "calendar":
-      return `${totalCount} events on the calendar`;
-    case "map":
-      return `${totalCount} events near you`;
     default:
       return `${totalCount} available`;
   }
+}
+
+function buildExploreHomeCacheKey(portalSlug: string, now: Date): string {
+  const hourEt = Number(
+    new Intl.DateTimeFormat("en-US", {
+      timeZone: "America/New_York",
+      hour: "numeric",
+      hour12: false,
+    }).format(now),
+  );
+  const timeSlot = getTimeSlot(hourEt);
+  const today = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/New_York",
+  }).format(now);
+  return `${portalSlug}|${timeSlot}|${today}`;
+}
+
+function shouldCacheExploreHomePayload(data: ExploreHomeResponse): boolean {
+  const laneEntries = Object.entries(data.lanes);
+  const nonClassesLanes = laneEntries.filter(([key]) => key !== "classes");
+  const zeroCount = nonClassesLanes.filter(
+    ([, lane]) => lane.state === "zero",
+  ).length;
+  return zeroCount <= Math.floor(nonClassesLanes.length / 2);
 }
 
 // ---------------------------------------------------------------------------
@@ -269,22 +292,36 @@ interface RpcLaneCounts {
  */
 export async function getExploreHomeData(
   portalSlug: string,
+  options?: {
+    portal?: Portal | null;
+    sourceAccess?: PortalSourceAccess | null;
+  },
 ): Promise<ExploreHomeResponse | null> {
   try {
+    const now = new Date();
+    const cacheKey = buildExploreHomeCacheKey(portalSlug, now);
+    const cached = await getSharedCacheJson<ExploreHomeResponse>(
+      EXPLORE_HOME_CACHE_NAMESPACE,
+      cacheKey,
+    );
+    if (cached) {
+      return cached;
+    }
+
     // 1. Resolve portal + source access
-    const portal = await getPortalBySlug(portalSlug);
+    const portal = options?.portal ?? await getCachedPortalBySlug(portalSlug);
     if (!portal) return null;
 
     const city =
       (portal.filters as { city?: string } | null)?.city || "Atlanta";
 
-    const sourceAccess = await getPortalSourceAccess(portal.id);
+    const sourceAccess =
+      options?.sourceAccess ?? await getPortalSourceAccess(portal.id);
 
     const supabase = await createPortalScopedClient(portal.id);
 
     // Date boundaries -- all time-of-day computation uses Eastern Time so
     // Vercel's UTC servers produce correct results for Atlanta.
-    const now = new Date();
     const today = getLocalDateString(now);
     const weekEnd = getLocalDateStringOffset(7); // 7-day lookahead
 
@@ -327,13 +364,23 @@ export async function getExploreHomeData(
       } as never,
     );
 
-    if (rpcError) {
-      console.warn("[explore-home-data] RPC error:", rpcError);
-    }
+    const rpcResultCandidate = (counts ?? {}) as Record<string, RpcLaneCounts>;
+    const hasMalformedResult = LANE_SLUGS.some((slug) => {
+      const value = rpcResultCandidate[slug];
+      return !value || typeof value !== "object";
+    });
 
-    // The RPC returns a JSONB object keyed by lane slug. If the RPC failed,
-    // counts will be null and every lane degrades to "zero".
-    const rpcResult = (counts ?? {}) as Record<string, RpcLaneCounts>;
+    let rpcResult = rpcResultCandidate;
+    if (rpcError || hasMalformedResult) {
+      console.warn("[explore-home-data] Explore home RPC degraded, using fallback.", {
+        rpcError,
+        hasMalformedResult,
+      });
+      const fallbackCounts = await getExploreHomeFallbackCounts(portalSlug);
+      if (fallbackCounts) {
+        rpcResult = fallbackCounts;
+      }
+    }
 
     // -----------------------------------------------------------------------
     // 3. Assemble lane data (counts + state + copy, no preview items)
@@ -376,9 +423,56 @@ export async function getExploreHomeData(
       };
     }
 
-    return { lanes };
+    const payload = buildExploreHomePayload(portalSlug, { lanes });
+    if (shouldCacheExploreHomePayload(payload)) {
+      await setSharedCacheJson(
+        EXPLORE_HOME_CACHE_NAMESPACE,
+        cacheKey,
+        payload,
+        EXPLORE_HOME_CACHE_TTL_MS,
+        { maxEntries: EXPLORE_HOME_CACHE_MAX_ENTRIES },
+      );
+      await setSharedCacheJson(
+        EXPLORE_HOME_CACHE_NAMESPACE,
+        `${portalSlug}|${EXPLORE_HOME_LATEST_CACHE_KEY_SUFFIX}`,
+        payload,
+        EXPLORE_HOME_LATEST_CACHE_TTL_MS,
+        { maxEntries: EXPLORE_HOME_CACHE_MAX_ENTRIES },
+      );
+    }
+
+    return payload;
   } catch (err) {
     console.error("[explore-home-data] getExploreHomeData error:", err);
     return null;
   }
+}
+
+export async function getCachedExploreHomeSeed(
+  portalSlug: string,
+): Promise<{ data: ExploreHomeResponse; isStale: boolean } | null> {
+  const cacheKey = buildExploreHomeCacheKey(portalSlug, new Date());
+  const exact = await getSharedCacheJson<ExploreHomeResponse>(
+    EXPLORE_HOME_CACHE_NAMESPACE,
+    cacheKey,
+  );
+  if (exact) {
+    return {
+      data: exact,
+      isStale: false,
+    };
+  }
+
+  const latest = await getSharedCacheJson<ExploreHomeResponse>(
+    EXPLORE_HOME_CACHE_NAMESPACE,
+    `${portalSlug}|${EXPLORE_HOME_LATEST_CACHE_KEY_SUFFIX}`,
+  );
+  if (latest) {
+    return {
+      data: latest,
+      isStale: true,
+    };
+  }
+
+  return null;
 }

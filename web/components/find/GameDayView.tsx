@@ -14,18 +14,20 @@ import { useEffect, useState, useMemo, useCallback, memo } from "react";
 import { Trophy } from "@phosphor-icons/react";
 import { GameCard } from "@/components/find/gameday/GameCard";
 import { TeamChip } from "@/components/find/gameday/TeamChip";
+import { useExploreUrlState } from "@/lib/explore-platform/url-state";
 import {
   TEAMS,
   type GameEvent,
-  type GameDayResponse,
   type TeamSchedule,
 } from "@/lib/teams-config";
+import type { GameDayLaneInitialData } from "@/lib/explore-platform/lane-data";
 
 // ── Types ───────────────────────────────────────────────────────────
 
 interface GameDayViewProps {
   portalId: string;
   portalSlug: string;
+  initialData?: GameDayLaneInitialData | null;
 }
 
 /** A game with team metadata attached, for date-grouped rendering. */
@@ -128,22 +130,23 @@ function extractOpponent(title: string, shortName: string): string {
 // ── Component ───────────────────────────────────────────────────────
 
 export const GameDayView = memo(function GameDayView({
-  portalId: _portalId,
   portalSlug,
+  initialData,
 }: GameDayViewProps) {
+  const state = useExploreUrlState();
   // State
-  const [teamSchedules, setTeamSchedules] = useState<TeamSchedule[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [teamSchedules, setTeamSchedules] = useState<TeamSchedule[]>(
+    initialData?.teams ?? [],
+  );
+  const [loading, setLoading] = useState(!initialData);
   const [error, setError] = useState(false);
 
-  // Initialize team filter from URL (not useSearchParams — replaceState doesn't trigger re-render)
-  const [activeTeam, setActiveTeam] = useState<string | null>(() => {
-    if (typeof window === "undefined") return null;
-    return new URLSearchParams(window.location.search).get("team");
-  });
+  const activeTeam = state.params.get("team");
 
   // Fetch game-day data
   useEffect(() => {
+    if (initialData) return;
+
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 8000);
 
@@ -152,7 +155,7 @@ export const GameDayView = memo(function GameDayView({
     })
       .then((res) => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        return res.json() as Promise<GameDayResponse>;
+        return res.json() as Promise<{ teams: TeamSchedule[] }>;
       })
       .then((data) => {
         if (controller.signal.aborted) return;
@@ -172,19 +175,12 @@ export const GameDayView = memo(function GameDayView({
       clearTimeout(timeoutId);
       controller.abort();
     };
-  }, [portalSlug]);
+  }, [initialData, portalSlug]);
 
   // URL sync for team filter
   const handleTeamChange = useCallback((teamSlug: string | null) => {
-    setActiveTeam(teamSlug);
-    const url = new URL(window.location.href);
-    if (teamSlug) {
-      url.searchParams.set("team", teamSlug);
-    } else {
-      url.searchParams.delete("team");
-    }
-    window.history.replaceState({}, "", url.toString());
-  }, []);
+    state.setLaneParams({ team: teamSlug }, "replace");
+  }, [state]);
 
   // Build team config lookup
   const teamConfigMap = useMemo(
@@ -192,11 +188,21 @@ export const GameDayView = memo(function GameDayView({
     [],
   );
 
-  // Teams that have data (for chip rendering)
-  const teamsWithData = useMemo(() => {
+  // Teams visible in the chip row. Keep the active team visible even when it
+  // has no upcoming games so intent-driven links still feel anchored.
+  const visibleTeams = useMemo(() => {
     const dataSlugs = new Set(teamSchedules.map((t) => t.slug));
-    return TEAMS.filter((t) => dataSlugs.has(t.slug));
-  }, [teamSchedules]);
+    const teams = TEAMS.filter((t) => dataSlugs.has(t.slug));
+
+    if (activeTeam && !teams.some((team) => team.slug === activeTeam)) {
+      const activeTeamConfig = teamConfigMap.get(activeTeam);
+      if (activeTeamConfig) {
+        return [activeTeamConfig, ...teams];
+      }
+    }
+
+    return teams;
+  }, [activeTeam, teamSchedules, teamConfigMap]);
 
   // Flatten team-grouped -> date-grouped
   const dateGroups = useMemo((): DateGroup[] => {
@@ -304,7 +310,7 @@ export const GameDayView = memo(function GameDayView({
 
   // ── Error / empty ─────────────────────────────────────────────────
 
-  if (error || teamsWithData.length === 0) {
+  if (error) {
     return (
       <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
         <Trophy
@@ -329,7 +335,7 @@ export const GameDayView = memo(function GameDayView({
           isActive={!activeTeam}
           onClick={() => handleTeamChange(null)}
         />
-        {teamsWithData.map((team) => (
+        {visibleTeams.map((team) => (
           <TeamChip
             key={team.slug}
             slug={team.slug}
@@ -350,7 +356,9 @@ export const GameDayView = memo(function GameDayView({
             className="w-10 h-10 text-[var(--muted)] mb-3"
           />
           <p className="text-sm text-[var(--soft)]">
-            No games scheduled this week.
+            {activeTeam
+              ? `No ${(teamConfigMap.get(activeTeam)?.shortName ?? "selected team")} games scheduled this week.`
+              : "No games scheduled this week."}
           </p>
         </div>
       ) : (

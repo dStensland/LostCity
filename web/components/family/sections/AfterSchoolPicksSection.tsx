@@ -6,6 +6,7 @@ import { Clock } from "@phosphor-icons/react";
 import type { EventWithLocation } from "@/lib/search";
 import { FAMILY_TOKENS } from "@/lib/family-design-tokens";
 import { SectionLabel, SeeAllLink, SkeletonBlock } from "./_shared";
+import { buildExploreUrl } from "@/lib/find-url";
 
 const AMBER = FAMILY_TOKENS.amber;
 const SAGE = FAMILY_TOKENS.sage;
@@ -241,7 +242,9 @@ export function AfterSchoolPicksSection({
         color={AMBER}
         rightSlot={
           has ? (
-            <SeeAllLink href={`/${portalSlug}?view=find&lane=events&date=today`} />
+            <SeeAllLink
+              href={buildExploreUrl({ portalSlug, lane: "events", date: "today" })}
+            />
           ) : undefined
         }
       />

@@ -1,3 +1,5 @@
+import { buildExploreUrl } from "@/lib/find-url";
+
 // Shared types and utilities for FeedSection sub-components
 
 export type FeedEvent = {
@@ -83,40 +85,34 @@ export function isSafeUrl(url: string): boolean {
 
 /** Build "See all" URL based on section filters */
 export function getSeeAllUrl(section: FeedSectionData, portalSlug: string): string {
-  const params = new URLSearchParams();
   const autoFilter = section.auto_filter;
-
-  let hasFilters = false;
+  const extraParams: Record<string, string> = {};
 
   if (autoFilter?.categories?.length) {
-    params.set("categories", autoFilter.categories.join(","));
-    hasFilters = true;
+    extraParams.categories = autoFilter.categories.join(",");
   }
   if ((autoFilter as Record<string, unknown>)?.nightlife_mode) {
-    params.set("categories", "games,dance");
-    hasFilters = true;
+    extraParams.categories = "games,dance";
   }
   if (autoFilter?.tags?.length) {
-    params.set("tags", autoFilter.tags.join(","));
-    hasFilters = true;
+    extraParams.tags = autoFilter.tags.join(",");
   }
   if (autoFilter?.is_free) {
-    params.set("price", "free");
-    params.set("free", "1");
-    hasFilters = true;
+    extraParams.price = "free";
+    extraParams.free = "1";
   }
   if (autoFilter?.date_filter === "today") {
-    params.set("date", "today");
-    hasFilters = true;
+    extraParams.date = "today";
   } else if (autoFilter?.date_filter === "this_weekend") {
-    params.set("date", "weekend");
-    hasFilters = true;
+    extraParams.date = "weekend";
   }
 
-  if (hasFilters) {
-    params.set("view", "find");
+  if (Object.keys(extraParams).length > 0) {
+    return buildExploreUrl({
+      portalSlug,
+      lane: "events",
+      extraParams,
+    });
   }
-
-  const queryString = params.toString();
-  return `/${portalSlug}${queryString ? `?${queryString}` : ""}`;
+  return `/${portalSlug}`;
 }

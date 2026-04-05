@@ -1,17 +1,19 @@
-import { notFound, redirect } from "next/navigation";
+import { redirect } from "next/navigation";
 import SmartImage from "@/components/SmartImage";
 import Link from "next/link";
 import { ArrowRight } from "@phosphor-icons/react/dist/ssr";
-import { PortalHeader } from "@/components/headers";
 import { createClient } from "@/lib/supabase/server";
 import { getLocalDateString } from "@/lib/formats";
-import { getCachedPortalBySlug, getPortalVertical } from "@/lib/portal";
 import FilmPortalNav from "../_components/film/FilmPortalNav";
 import FilmShowtimeBoard from "../_components/film/FilmShowtimeBoard";
+import { buildExploreUrl } from "@/lib/find-url";
+import { resolveFilmPageRequest } from "../_surfaces/detail/resolve-film-page-request";
 
 type Props = {
   params: Promise<{ portal: string }>;
 };
+
+export const revalidate = 120;
 
 type RawVenueEventRow = {
   id: number;
@@ -166,16 +168,16 @@ async function getVenuePulse(limit = 36): Promise<VenueCard[]> {
 }
 
 export default async function FilmVenuesPage({ params }: Props) {
-  const { portal: slug } = await params;
-  const portal = await getCachedPortalBySlug(slug);
+  const { portal: portalSlug } = await params;
+  const request = await resolveFilmPageRequest({
+    portalSlug,
+    pathname: `/${portalSlug}/venues`,
+  });
 
-  if (!portal) {
-    notFound();
+  if (!request) {
+    redirect(buildExploreUrl({ portalSlug, lane: "places" }));
   }
-
-  if (getPortalVertical(portal) !== "film") {
-    redirect(`/${portal.slug}?view=find&lane=places`);
-  }
+  const portal = request.portal;
 
   const venues = await getVenuePulse(36);
   const indieVenues = venues.filter((venue) => isIndieVenueName(venue.name));
@@ -183,7 +185,6 @@ export default async function FilmVenuesPage({ params }: Props) {
 
   return (
     <div className="min-h-screen bg-[#090d16] text-[#f6f7fb]">
-      <PortalHeader portalSlug={portal.slug} portalName={portal.name} />
       <main className="mx-auto max-w-6xl px-4 pb-16 pt-6 space-y-7">
         <FilmPortalNav portalSlug={portal.slug} />
 

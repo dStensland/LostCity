@@ -6,6 +6,7 @@ import type { Icon as PhosphorIcon } from "@phosphor-icons/react";
 import { useWeather } from "@/lib/hooks/useWeather";
 import { LANE_META, BROWSE_LANES as BROWSE_LANE_SLUGS, VIEW_LANES as VIEW_LANE_SLUGS, LANE_ICONS } from "@/lib/explore-lane-meta";
 import AmbientBackground from "@/components/AmbientBackground";
+import { buildExploreUrl } from "@/lib/find-url";
 
 // -------------------------------------------------------------------------
 // Lane definitions
@@ -105,7 +106,7 @@ export const FindSidebar = memo(function FindSidebar({
     return (
       <li key={lane.id}>
         <a
-          href={`/${portalSlug}${lane.href}`}
+          href={`/${portalSlug}/explore${lane.href}`}
           onClick={(e) => handleLaneClick(lane, e)}
           onMouseEnter={() => onLaneHover?.(lane.id)}
           className={[
@@ -164,7 +165,7 @@ export const FindSidebar = memo(function FindSidebar({
       <div className="relative z-[2] p-6 flex flex-col gap-6 h-full">
         {/* Title — always visible home link; coral when on home, cream when in a lane */}
         <a
-          href={`/${portalSlug}?view=find`}
+          href={buildExploreUrl({ portalSlug })}
           onClick={handleExploreClick}
           className={`text-2xl font-bold leading-none transition-colors cursor-pointer ${
             !activeLane

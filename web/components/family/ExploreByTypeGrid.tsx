@@ -3,6 +3,7 @@
 import { memo, type ComponentType } from "react";
 import Link from "next/link";
 import { FAMILY_TOKENS } from "@/lib/family-design-tokens";
+import { buildExploreUrl } from "@/lib/find-url";
 
 // ---- Palette (Afternoon Field) -------------------------------------------
 const SAGE = FAMILY_TOKENS.sage;
@@ -208,11 +209,14 @@ export const ExploreByTypeGrid = memo(function ExploreByTypeGrid({
       >
         {DESTINATION_CATEGORIES.map((cat) => {
           // Build query link — filter by venue_type if we have types
-          const typeParam =
-            cat.venueTypes.length > 0
-              ? `&venue_type=${cat.venueTypes.join(",")}`
-              : "";
-          const href = `/${portalSlug}?view=find&lane=places${typeParam}`;
+          const href = buildExploreUrl({
+            portalSlug,
+            lane: "places",
+            extraParams:
+              cat.venueTypes.length > 0
+                ? { venue_type: cat.venueTypes.join(",") }
+                : undefined,
+          });
 
           const IconComponent = cat.icon;
           return (
@@ -271,7 +275,7 @@ export const ExploreByTypeGrid = memo(function ExploreByTypeGrid({
       {/* See all destinations link */}
       <div style={{ marginTop: 10, textAlign: "center" }}>
         <Link
-          href={`/${portalSlug}?view=find&lane=places`}
+          href={buildExploreUrl({ portalSlug, lane: "places" })}
           style={{
             fontFamily: FONT_BODY,
             fontSize: 12,

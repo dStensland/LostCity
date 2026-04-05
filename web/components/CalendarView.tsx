@@ -20,6 +20,7 @@ import RSVPButton from "./RSVPButton";
 import { decodeHtmlEntities, formatCompactCount, formatTimeSplit } from "@/lib/formats";
 import { DEFAULT_PORTAL_SLUG } from "@/lib/portal-context";
 import { useCalendarEvents, type CalendarEvent } from "@/lib/hooks/useCalendarEvents";
+import { buildExploreUrl } from "@/lib/find-url";
 
 interface DayData {
   date: Date;
@@ -782,7 +783,7 @@ export default function CalendarView({
 
                       {activeDate && (
                         <Link
-                          href={`/${portalSlug}?view=find&lane=events&date_start=${format(activeDate, "yyyy-MM-dd")}&date_end=${format(activeDate, "yyyy-MM-dd")}`}
+                          href={`${buildExploreUrl({ portalSlug, lane: "events" })}&date_start=${format(activeDate, "yyyy-MM-dd")}&date_end=${format(activeDate, "yyyy-MM-dd")}`}
                           className="block mt-3 text-center py-2.5 rounded-xl border border-[var(--twilight)] text-[var(--muted)] hover:text-[var(--cream)] hover:border-[var(--coral)]/50 transition-colors font-mono text-xs"
                         >
                           View all {formatCompactCount(activeDayEvents.length)} events in list view

@@ -6,6 +6,7 @@ import { usePlaceDiscovery, type FilterState } from "@/lib/hooks/usePlaceDiscove
 import PlaceFilterBar from "@/components/find/PlaceFilterBar";
 import PlaceListView, { type SortOption } from "@/components/find/PlaceListView";
 import { SPOTS_TABS, getTabChips, type SpotsTab } from "@/lib/spots-constants";
+import type { PlacesLaneInitialData } from "@/lib/explore-platform/lane-data";
 
 // ---------------------------------------------------------------------------
 // Sub-Tab Bar
@@ -72,9 +73,15 @@ interface Props {
   portalId: string;
   portalSlug: string;
   isExclusive?: boolean;
+  initialData?: PlacesLaneInitialData | null;
 }
 
-export default function PortalSpotsView({ portalId, portalSlug, isExclusive = false }: Props) {
+export default function PortalSpotsView({
+  portalId,
+  portalSlug,
+  isExclusive = false,
+  initialData = null,
+}: Props) {
   const {
     spots,
     filteredSpots,
@@ -89,7 +96,12 @@ export default function PortalSpotsView({ portalId, portalSlug, isExclusive = fa
     setUserLocation,
     activeTab,
     setActiveTab,
-  } = usePlaceDiscovery({ portalId, portalSlug, isExclusive });
+  } = usePlaceDiscovery({
+    portalId,
+    portalSlug,
+    isExclusive,
+    initialPayload: initialData,
+  });
 
   const [sortByRaw, setSortBy] = useState<SortOption>("category");
 

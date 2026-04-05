@@ -15,15 +15,16 @@ type FindFilterBarProps = {
   portalExclusive?: boolean;
   portalSlug?: string;
   vertical?: string | null;
+  deferMetadata?: boolean;
 };
 
 // ─── Filter counts hook ─────────────────────────────────────────────────────
 
-function useFilterCounts(portalSlug?: string) {
+function useFilterCounts(portalSlug?: string, enabled = true) {
   const [counts, setCounts] = useState<Record<string, Record<string, number>>>({});
 
   useEffect(() => {
-    if (!portalSlug) return;
+    if (!enabled || !portalSlug) return;
 
     const controller = new AbortController();
     fetch(`/api/portals/${portalSlug}/filter-counts`, { signal: controller.signal })
@@ -34,7 +35,7 @@ function useFilterCounts(portalSlug?: string) {
       .catch(() => {});
 
     return () => controller.abort();
-  }, [portalSlug]);
+  }, [enabled, portalSlug]);
 
   return counts;
 }
@@ -202,9 +203,23 @@ function MobileFilterStrip({ f, onOpenSheet, vertical }: MobileFilterStripProps)
   );
 }
 
-export default function FindFilterBar({ variant = "full", hideDate = false, portalId, portalExclusive = false, portalSlug, vertical }: FindFilterBarProps) {
-  const f = useFilterEngine({ portalId, portalExclusive });
-  const filterCounts = useFilterCounts(portalSlug);
+export default function FindFilterBar({
+  variant = "full",
+  hideDate = false,
+  portalId,
+  portalExclusive = false,
+  portalSlug,
+  vertical,
+  deferMetadata = false,
+}: FindFilterBarProps) {
+  const [metadataEnabled, setMetadataEnabled] = useState(!deferMetadata);
+  const f = useFilterEngine({
+    portalId,
+    portalSlug,
+    portalExclusive,
+    loadAvailability: metadataEnabled,
+  });
+  const filterCounts = useFilterCounts(portalSlug, metadataEnabled);
   const categoryCounts = filterCounts.category || {};
   const isCommunity = vertical === "community";
 
@@ -221,9 +236,23 @@ export default function FindFilterBar({ variant = "full", hideDate = false, port
   const dateDropdownRef = useRef<HTMLDivElement>(null);
   const dateInputRef = useRef<HTMLInputElement>(null);
 
+  const enableMetadata = useCallback(() => {
+    if (!metadataEnabled) {
+      setMetadataEnabled(true);
+    }
+  }, [metadataEnabled]);
+
   const toggleDropdown = useCallback((id: DropdownId) => {
+    if (id === "category") {
+      enableMetadata();
+    }
     setActiveDropdown((prev) => (prev === id ? null : id));
-  }, []);
+  }, [enableMetadata]);
+
+  const openMobileSheet = useCallback(() => {
+    enableMetadata();
+    setMobileSheetOpen(true);
+  }, [enableMetadata]);
 
   // Close dropdown on outside click — use "click" (not "mousedown") so the
   // closing click is consumed by the handler and doesn't pass through to
@@ -419,7 +448,7 @@ export default function FindFilterBar({ variant = "full", hideDate = false, port
 
             {/* Filters button (opens mobile sheet) */}
             <button
-              onClick={() => setMobileSheetOpen(true)}
+              onClick={openMobileSheet}
               className={`btn-press flex items-center gap-1.5 px-3 py-1.5 rounded-full font-mono text-xs font-medium transition-all border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--coral)]/70 focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--void)] ${
                 f.hasFilters
                   ? "bg-[var(--action-primary)] text-[var(--btn-primary-text)] border-[var(--action-primary)]/40 shadow-sm"
@@ -481,7 +510,7 @@ export default function FindFilterBar({ variant = "full", hideDate = false, port
       {/* Mobile filter strip */}
       <MobileFilterStrip
         f={f}
-        onOpenSheet={() => setMobileSheetOpen(true)}
+        onOpenSheet={openMobileSheet}
         vertical={vertical}
       />
 

@@ -14,6 +14,7 @@ import MapPopupCard from "@/components/map/MapPopupCard";
 import MobileMapSheet from "@/components/map/MobileMapSheet";
 import UserLocationDot from "@/components/map/UserLocationDot";
 import styles from "@/components/map/MapView.module.css";
+import { buildExploreUrl } from "@/lib/find-url";
 
 export interface MapBounds {
   north: number;
@@ -800,7 +801,7 @@ export default function MapView({
             </svg>
             <span className="text-[var(--cream)] text-sm whitespace-nowrap">No events found</span>
             <Link
-              href={`/${portal.slug}?view=find&lane=map`}
+              href={`${buildExploreUrl({ portalSlug: portal.slug, lane: "events" })}&display=map`}
               className="flex-shrink-0 px-2.5 py-1 rounded-full bg-[var(--coral)] text-[var(--void)] text-xs font-mono font-medium hover:bg-[var(--rose)] transition-colors"
             >
               Clear filters

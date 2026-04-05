@@ -2,7 +2,6 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { cache, Suspense } from "react";
 import ScrollToTop from "@/components/ScrollToTop";
-import { getCachedPortalBySlug } from "@/lib/portal";
 import {
   getFestivalBySlug,
   getFestivalPrograms,
@@ -27,8 +26,10 @@ import { createCssVarClass } from "@/lib/css-utils";
 import { getCategoryAccentColor } from "@/lib/moments-utils";
 import { buildBreadcrumbSchema } from "@/lib/breadcrumb-schema";
 import { getFestivalLayout, type FestivalLayout } from "@/lib/festival-layout";
+import { buildExploreUrl } from "@/lib/find-url";
+import { resolveDetailPageRequest } from "../../_surfaces/detail/resolve-detail-page-request";
 
-export const revalidate = 300; // 5 minutes
+export const revalidate = 120;
 
 type Props = {
   params: Promise<{ portal: string; slug: string }>;
@@ -40,7 +41,10 @@ const getCachedFestivalBySlug = cache(getFestivalBySlug);
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug, portal: portalSlug } = await params;
   const festival = await getCachedFestivalBySlug(slug);
-  const portal = await getCachedPortalBySlug(portalSlug);
+  const request = await resolveDetailPageRequest({
+    portalSlug,
+    pathname: `/${portalSlug}/festivals/${slug}`,
+  });
 
   if (!festival) {
     return {
@@ -52,14 +56,15 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     };
   }
 
-  const portalName = portal?.name || "Lost City";
+  const activePortalSlug = request?.portal.slug || portalSlug;
+  const portalName = request?.portal.name || "Lost City";
   const description = festival.description || `${festival.name} festival schedule, programs, and tickets.`;
 
   return {
     title: `${festival.name} | ${portalName}`,
     description,
     alternates: {
-      canonical: `/${portal?.slug || portalSlug}/festivals/${slug}`,
+      canonical: `/${activePortalSlug}/festivals/${slug}`,
     },
     openGraph: {
       title: festival.name,
@@ -67,7 +72,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       type: "website",
       images: [
         {
-          url: `/${portal?.slug || portalSlug}/festivals/${slug}/opengraph-image`,
+          url: `/${activePortalSlug}/festivals/${slug}/opengraph-image`,
           width: 1200,
           height: 630,
           alt: festival.name,
@@ -80,7 +85,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       description,
       images: [
         {
-          url: `/${portal?.slug || portalSlug}/festivals/${slug}/opengraph-image`,
+          url: `/${activePortalSlug}/festivals/${slug}/opengraph-image`,
           width: 1200,
           height: 630,
           alt: festival.name,
@@ -222,15 +227,18 @@ function normalizeText(value: string): string {
 export default async function PortalFestivalPage({ params }: Props) {
   const { slug, portal: portalSlug } = await params;
   const festival = await getCachedFestivalBySlug(slug);
-  const portal = await getCachedPortalBySlug(portalSlug);
+  const request = await resolveDetailPageRequest({
+    portalSlug,
+    pathname: `/${portalSlug}/festivals/${slug}`,
+  });
 
   if (!festival) {
     notFound();
   }
 
   // Use the URL portal or fall back to default
-  const activePortalSlug = portal?.slug || portalSlug;
-  const activePortalName = portal?.name || portalSlug.charAt(0).toUpperCase() + portalSlug.slice(1);
+  const activePortalSlug = request?.portal.slug || portalSlug;
+  const activePortalName = request?.portal.name || portalSlug.charAt(0).toUpperCase() + portalSlug.slice(1);
 
   const layout = getFestivalLayout(festival.festival_type);
   const accentColor = getCategoryAccentColor(festival.categories?.[0]);
@@ -251,7 +259,14 @@ export default async function PortalFestivalPage({ params }: Props) {
           __html: safeJsonLd(
             buildBreadcrumbSchema([
               { name: activePortalName, href: `/${activePortalSlug}` },
-              { name: "Festivals", href: `/${activePortalSlug}?view=find&lane=events&categories=festivals` },
+              {
+                name: "Festivals",
+                href: buildExploreUrl({
+                  portalSlug: activePortalSlug,
+                  lane: "events",
+                  categories: "festivals",
+                }),
+              },
               { name: festival.name },
             ])
           ),

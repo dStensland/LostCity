@@ -13,6 +13,7 @@ import type { CityPulseSection, CityPulseEventItem } from "@/lib/city-pulse/type
 import { Confetti } from "@phosphor-icons/react";
 import FeedSectionHeader from "@/components/feed/FeedSectionHeader";
 import { TieredEventList, type TieredFeedEvent } from "@/components/feed/TieredEventList";
+import { buildExploreUrl } from "@/lib/find-url";
 
 interface Props {
   section: CityPulseSection;
@@ -29,7 +30,11 @@ export default function ComingUpSection({ section, portalSlug }: Props) {
   // Map CityPulseEventItem → TieredFeedEvent (card_tier + editorial_mentions included)
   const events = eventItems.map((i) => i.event as TieredFeedEvent);
 
-  const seeAllHref = `/${portalSlug}?view=happening&date=next_7_days`;
+  const seeAllHref = buildExploreUrl({
+    portalSlug,
+    lane: "events",
+    extraParams: { date: "next_7_days" },
+  });
 
   return (
     <section>

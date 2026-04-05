@@ -12,6 +12,7 @@ import { usePortalOptional, DEFAULT_PORTAL, DEFAULT_PORTAL_SLUG } from "@/lib/po
 import { useAuth } from "@/lib/auth-context";
 import { getPortalNavLabel } from "@/lib/nav-labels";
 import { isHelpAtlSupportDirectoryEnabled } from "@/lib/helpatl-support";
+import { buildExploreUrl } from "@/lib/find-url";
 import type { HeaderConfig } from "@/lib/visual-presets";
 import type { PortalBranding } from "@/lib/portal-context";
 
@@ -150,33 +151,20 @@ export default function StandardHeader({
       return `/${portalSlug}/support`;
     }
 
+    if (tab.key === "find") {
+      return buildExploreUrl({ portalSlug });
+    }
+
+    if (tab.key === "community") {
+      return "/your-people";
+    }
+
     const params = new URLSearchParams(searchParams?.toString() || "");
     params.delete("event");
     params.delete("spot");
     params.delete("series");
     params.delete("festival");
     params.delete("org");
-
-    if (tab.key === "find") {
-      params.set("view", "find");
-      params.delete("content");
-      params.delete("tab");
-      params.delete("type");
-      params.delete("display");
-      params.delete("lane");
-    } else if (tab.key === "happening") {
-      params.set("view", "happening");
-      params.delete("tab");
-      params.delete("type");
-    } else if (tab.key === "places") {
-      params.set("view", "places");
-      params.delete("tab");
-      params.delete("type");
-      params.delete("content");
-      params.delete("display");
-    } else if (tab.key === "community") {
-      return "/your-people";
-    }
 
     const query = params.toString();
     return query ? `/${portalSlug}?${query}` : `/${portalSlug}`;
@@ -192,6 +180,7 @@ export default function StandardHeader({
     }
     if (tab.key === "find") {
       return (
+        pathname.startsWith(`/${portalSlug}/explore`) ||
         isFindRoute ||
         pathname.startsWith(`/${portalSlug}/spots/`) ||
         pathname.startsWith(`/${portalSlug}/events/`) ||
@@ -230,7 +219,12 @@ export default function StandardHeader({
       );
     }
     if (tab.key === "community") {
-      return pathname === "/your-people";
+      return (
+        pathname === "/your-people" ||
+        pathname.startsWith(`/${portalSlug}/groups`) ||
+        pathname.startsWith(`/${portalSlug}/support`) ||
+        pathname.startsWith(`/${portalSlug}/community`)
+      );
     }
     if (tab.key === "support") {
       return pathname.startsWith(`/${portalSlug}/support`);
@@ -406,7 +400,7 @@ export default function StandardHeader({
               {mobileMenuOpen && (
                 <div className="absolute right-0 top-full mt-2 w-48 py-2 bg-[var(--dusk)] border border-[var(--twilight)] rounded-lg shadow-xl z-[200]">
                   <Link
-                    href={`/${portalSlug}?view=find&lane=map`}
+                    href={`/${portalSlug}/explore?lane=events&display=map`}
                     onClick={() => setMobileMenuOpen(false)}
                     className="flex items-center gap-2 px-3 py-2 font-mono text-sm text-[var(--muted)] hover:text-[var(--soft)] hover:bg-[var(--twilight)]/30"
                   >

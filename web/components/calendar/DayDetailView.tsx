@@ -10,6 +10,7 @@ import { useCalendar } from "@/lib/calendar/CalendarProvider";
 import { useSelectedDayData } from "@/lib/calendar/useCalendarDerived";
 import { OpenTimeBlock } from "@/components/calendar/OpenTimeBlock";
 import type { CalendarEvent, CalendarPlan, FriendCalendarEvent } from "@/lib/types/calendar";
+import { buildExploreUrl } from "@/lib/find-url";
 
 interface DayDetailViewProps {
   eventsByDate: Map<string, CalendarEvent[]>;
@@ -83,10 +84,10 @@ export default function DayDetailView({ eventsByDate, plansByDate, friendEventsB
 
           {/* Add from Find link */}
           <Link
-            href={`/${DEFAULT_PORTAL_SLUG}?view=find&lane=events&date_start=${format(selectedDate, "yyyy-MM-dd")}&date_end=${format(selectedDate, "yyyy-MM-dd")}`}
+            href={`${buildExploreUrl({ portalSlug: DEFAULT_PORTAL_SLUG, lane: "events" })}&date_start=${format(selectedDate, "yyyy-MM-dd")}&date_end=${format(selectedDate, "yyyy-MM-dd")}`}
             className="px-2.5 py-0.5 rounded-full bg-[var(--coral)]/20 text-[var(--coral)] font-mono text-xs font-medium hover:bg-[var(--coral)]/30 transition-colors"
           >
-            + Add from Find
+            + Add from Explore
           </Link>
         </div>
       </div>
@@ -448,10 +449,10 @@ function EmptyDayState({
         {isPast ? "That date has passed." : "Nothing planned yet."}
       </p>
       <Link
-        href={`/${DEFAULT_PORTAL_SLUG}?view=find&lane=events&date_start=${format(selectedDate, "yyyy-MM-dd")}&date_end=${format(selectedDate, "yyyy-MM-dd")}`}
+        href={`${buildExploreUrl({ portalSlug: DEFAULT_PORTAL_SLUG, lane: "events" })}&date_start=${format(selectedDate, "yyyy-MM-dd")}&date_end=${format(selectedDate, "yyyy-MM-dd")}`}
         className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-[var(--coral)]/20 text-[var(--coral)] font-mono text-xs font-medium hover:bg-[var(--coral)]/30 transition-colors"
       >
-        Explore in Find
+        Explore events
         <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
         </svg>

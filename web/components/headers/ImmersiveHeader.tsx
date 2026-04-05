@@ -13,6 +13,7 @@ import { usePortalOptional, DEFAULT_PORTAL, DEFAULT_PORTAL_SLUG } from "@/lib/po
 import { useAuth } from "@/lib/auth-context";
 import { getPortalNavLabel } from "@/lib/nav-labels";
 import { isHelpAtlSupportDirectoryEnabled } from "@/lib/helpatl-support";
+import { buildExploreUrl } from "@/lib/find-url";
 import type { HeaderConfig } from "@/lib/visual-presets";
 import type { PortalBranding } from "@/lib/portal-context";
 
@@ -115,7 +116,9 @@ export default function ImmersiveHeader({
   const getHref = useCallback((tab: typeof TABS[0]) => {
     if (tab.key === "feed") return `/${portalSlug}`;
     if (tab.key === "support") return `/${portalSlug}/support`;
-    return `/${portalSlug}?view=${tab.key}`;
+    if (tab.key === "find") return buildExploreUrl({ portalSlug });
+    if (tab.key === "community") return "/your-people";
+    return `/${portalSlug}`;
   }, [portalSlug]);
 
   const isActive = (tab: typeof TABS[0]) => {
@@ -124,10 +127,15 @@ export default function ImmersiveHeader({
       return isPortalPage && (!currentView || currentView === "feed");
     }
     if (tab.key === "find") {
-      return isPortalPage && (currentView === "find" || currentView === "events" || currentView === "spots" || currentView === "map" || currentView === "calendar");
+      return pathname.startsWith(`/${portalSlug}/explore`) || (isPortalPage && (currentView === "find" || currentView === "events" || currentView === "spots" || currentView === "map" || currentView === "calendar"));
     }
     if (tab.key === "community") {
-      return isPortalPage && currentView === "community";
+      return (
+        pathname === "/your-people" ||
+        pathname.startsWith(`/${portalSlug}/groups`) ||
+        pathname.startsWith(`/${portalSlug}/support`) ||
+        pathname.startsWith(`/${portalSlug}/community`)
+      );
     }
     if (tab.key === "support") {
       return pathname.startsWith(`/${portalSlug}/support`);

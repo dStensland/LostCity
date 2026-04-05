@@ -116,13 +116,14 @@ export async function GET(request: NextRequest) {
   const genres = searchParams.get("genres")?.split(",").filter(Boolean);
   const search = searchParams.get("q")?.toLowerCase().trim();
   // Escape PostgREST filter special characters in search term
-  const safeSearch = search?.replace(/[%_]/g, "\\$&");
+  const safeSearch = search?.replace(/[%_,()]/g, "\\$&");
   const centerLat = parseFloatParam(searchParams.get("center_lat"));
   const centerLng = parseFloatParam(searchParams.get("center_lng"));
   const radiusKm = parseFloatParam(searchParams.get("radius_km"));
   const sortBy = searchParams.get("sort"); // distance | special_relevance | hybrid
   const includeHours = searchParams.get("include_hours") === "true";
   const includeEvents = searchParams.get("include_events") === "true";
+  const compact = searchParams.get("compact") === "1";
   const cuisineParam = searchParams.get("cuisine")?.split(",").filter(Boolean);
   const responseLimitRaw = Number.parseInt(searchParams.get("limit") || "600", 10);
   const responseLimit = Number.isFinite(responseLimitRaw)
@@ -217,7 +218,6 @@ export async function GET(request: NextRequest) {
       id: number;
       name: string;
       slug: string;
-      address: string | null;
       neighborhood: string | null;
       place_type: string | null;
       location_designator: "standard" | "private_after_signup" | "virtual" | "recovery_meeting" | null;
@@ -227,11 +227,12 @@ export async function GET(request: NextRequest) {
       lng: number | null;
       price_level: number | null;
       hours: HoursData | null;
-      hours_display: string | null;
-      vibes: string[] | null;
       short_description: string | null;
-      genres: string[] | null;
-      place_vertical_details: { google: { rating: number | null; rating_count: number | null } | null } | null;
+      address?: string | null;
+      hours_display?: string | null;
+      vibes?: string[] | null;
+      genres?: string[] | null;
+      place_vertical_details?: { google: { rating: number | null; rating_count: number | null } | null } | null;
     };
 
     type EventRow = {
@@ -270,9 +271,30 @@ export async function GET(request: NextRequest) {
 
     // Fetch all active venues with enhanced data
     // Note: is_24_hours column may not exist in all environments
+    const venueSelect = compact
+      ? [
+          "id",
+          "name",
+          "slug",
+          "neighborhood",
+          "place_type",
+          "location_designator",
+          "city",
+          "image_url",
+          "price_level",
+          "hours",
+          "short_description",
+          hasCenter ? "lat" : null,
+          hasCenter ? "lng" : null,
+          hasCenter ? "address" : null,
+        ]
+          .filter(Boolean)
+          .join(",")
+      : "id, name, slug, address, neighborhood, place_type, location_designator, city, image_url, lat, lng, price_level, hours, hours_display, vibes, short_description, genres, place_vertical_details(google)";
+
     let query = supabase
       .from("places")
-      .select("id, name, slug, address, neighborhood, place_type, location_designator, city, image_url, lat, lng, price_level, hours, hours_display, vibes, short_description, genres, place_vertical_details(google)")
+      .select(venueSelect)
       .neq("is_active", false); // Exclude deactivated venues
 
     // Venues table has no portal_id column, so we scope by city.
@@ -527,6 +549,7 @@ export async function GET(request: NextRequest) {
       return {
         payload: {
           spots: [],
+          compact,
           meta: {
             total: 0,
             openCount: 0,
@@ -561,18 +584,18 @@ export async function GET(request: NextRequest) {
         image_url: venue.image_url,
         event_count: eventCounts.get(venue.id) || 0,
         price_level: venue.price_level,
-        lat: venue.lat,
-        lng: venue.lng,
-        hours_display: venue.hours_display,
+        lat: hasCenter ? venue.lat : null,
+        lng: hasCenter ? venue.lng : null,
+        hours_display: compact ? null : (venue.hours_display ?? null),
         is_24_hours: is24h,
-        vibes: venue.vibes,
+        vibes: compact ? null : (venue.vibes ?? null),
         short_description: venue.short_description,
-        genres: venue.genres,
+        genres: compact ? null : (venue.genres ?? null),
         is_open: openStatus.isOpen,
         closes_at: openStatus.closesAt,
         distance_km: distanceKm !== null ? Math.round(distanceKm * 100) / 100 : null,
-        google_rating: googleData?.rating ?? null,
-        google_rating_count: googleData?.rating_count ?? null,
+        google_rating: compact ? null : (googleData?.rating ?? null),
+        google_rating_count: compact ? null : (googleData?.rating_count ?? null),
       };
 
       // Geo fields only when a center point is provided
@@ -702,6 +725,7 @@ export async function GET(request: NextRequest) {
 
       const payload = {
         spots,
+        compact,
         meta: {
           total: spots.length,
           openCount,

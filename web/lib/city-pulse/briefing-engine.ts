@@ -10,6 +10,7 @@
  */
 
 import type { BriefingOutput } from "./types";
+import { buildExploreUrl } from "@/lib/find-url";
 
 // ---------------------------------------------------------------------------
 // Context type
@@ -165,7 +166,7 @@ function extractTentpole(ctx: BriefingContext): Signal | null {
     headline,
     pill: {
       label: `${title} Preview`,
-      href: `/${ctx.portalSlug}?view=find`,
+      href: buildExploreUrl({ portalSlug: ctx.portalSlug }),
       accent: "var(--gold)",
       ariaLabel: `See ${title} events`,
     },
@@ -203,7 +204,7 @@ function extractExhibitionClosing(ctx: BriefingContext): Signal | null {
     headline,
     pill: {
       label: `${title} — closing soon`,
-      href: `/${ctx.portalSlug}?view=find&lane=arts`,
+      href: buildExploreUrl({ portalSlug: ctx.portalSlug, lane: "arts" }),
       accent: "var(--copper)",
       ariaLabel: `See ${title} exhibition`,
     },
@@ -221,7 +222,11 @@ function extractSchoolCalendar(ctx: BriefingContext): Signal | null {
     headline,
     pill: {
       label: "Kid-friendly events",
-      href: `/${ctx.portalSlug}?view=find&categories=family`,
+      href: buildExploreUrl({
+        portalSlug: ctx.portalSlug,
+        lane: "events",
+        categories: "family",
+      }),
       accent: "var(--neon-green)",
       ariaLabel: "See family-friendly events",
     },

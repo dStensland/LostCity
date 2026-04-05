@@ -1,4 +1,5 @@
 import { Metadata } from "next";
+import { notFound } from "next/navigation";
 import Link from "next/link";
 import {
   type Neighborhood,
@@ -10,12 +11,12 @@ import { supabase } from "@/lib/supabase";
 import { createServiceClient } from "@/lib/supabase/service";
 import { toAbsoluteUrl } from "@/lib/site-url";
 import { getLocalDateString } from "@/lib/formats";
-import { getCachedPortalBySlug } from "@/lib/portal";
 import NeighborhoodsPageClient from "@/components/neighborhoods/NeighborhoodsPageClient";
 import CategoryIcon from "@/components/CategoryIcon";
 import { type NeighborhoodActivity, getNeighborhoodColor } from "@/lib/neighborhood-colors";
+import { resolveFeedPageRequest } from "../_surfaces/feed/resolve-feed-page-request";
 
-export const revalidate = 60;
+export const revalidate = 300;
 
 type Props = {
   params: Promise<{ portal: string }>;
@@ -74,12 +75,8 @@ function computeRawScore(row: {
   );
 }
 
-async function getActivityData(portalSlug: string): Promise<NeighborhoodActivity[]> {
+async function getActivityData(portalSlug: string, portalId: string | null): Promise<NeighborhoodActivity[]> {
   try {
-    // Resolve portal ID
-    const portal = await getCachedPortalBySlug(portalSlug);
-    const portalId = portal?.id ?? null;
-
     const serviceClient = createServiceClient();
     const { data: rpcRows, error } = await serviceClient.rpc(
       "get_neighborhood_activity" as never,
@@ -295,10 +292,19 @@ function NeighborhoodIndexCard({
 }
 
 export default async function NeighborhoodsIndexPage({ params }: Props) {
-  const { portal } = await params;
+  const { portal: portalSlug } = await params;
+  const request = await resolveFeedPageRequest({
+    portalSlug,
+    pathname: `/${portalSlug}/neighborhoods`,
+  });
+  const portal = request?.portal;
+  if (!portal) {
+    notFound();
+  }
+
   const [counts, activityData] = await Promise.all([
     getVenueCountsByNeighborhood(),
-    getActivityData(portal),
+    getActivityData(portal.slug, portal.id),
   ]);
   const sections = buildNeighborhoodIndexSections(counts);
 
@@ -319,9 +325,9 @@ export default async function NeighborhoodsIndexPage({ params }: Props) {
       {/* Interactive map hero */}
       {activityData.length > 0 && (
         <section className="mb-8">
-          <NeighborhoodsPageClient
+            <NeighborhoodsPageClient
             activityData={activityData}
-            portalSlug={portal}
+            portalSlug={portal.slug}
           />
         </section>
       )}
@@ -353,7 +359,7 @@ export default async function NeighborhoodsIndexPage({ params }: Props) {
                   key={neighborhood.id}
                   neighborhood={neighborhood}
                   count={count}
-                  portalSlug={portal}
+                  portalSlug={portal.slug}
                   activity={activityBySlug.get(neighborhood.id)}
                   compact={isCompact}
                 />

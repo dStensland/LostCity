@@ -10,6 +10,7 @@ import CategoryIcon from "@/components/CategoryIcon";
 import { DEFAULT_PORTAL_SLUG, DEFAULT_PORTAL_NAME } from "@/lib/constants";
 import { safeJsonLd } from "@/lib/formats";
 import { getSiteUrl } from "@/lib/site-url";
+import { buildExploreUrl } from "@/lib/find-url";
 
 // Static brag stats — updated periodically, not worth blocking page render.
 // Last verified: 2026-03-27 against Supabase.
@@ -863,16 +864,16 @@ export default function Home() {
           </p>
           <div className="flex flex-wrap justify-center gap-2.5 md:gap-3 mb-8">
             {[
-              { label: "Music", icon: "music", href: `/${DEFAULT_PORTAL_SLUG}?view=find&lane=events&categories=music`, color: "cyan" },
-              { label: "Comedy", icon: "comedy", href: `/${DEFAULT_PORTAL_SLUG}?view=find&lane=events&categories=comedy`, color: "pink" },
-              { label: "Art", icon: "art", href: `/${DEFAULT_PORTAL_SLUG}?view=find&lane=events&categories=art`, color: "purple" },
-              { label: "Theater", icon: "theater", href: `/${DEFAULT_PORTAL_SLUG}?view=find&lane=events&categories=theater`, color: "cyan" },
-              { label: "Food & Drink", icon: "food_drink", href: `/${DEFAULT_PORTAL_SLUG}?view=find&lane=events&categories=food_drink`, color: "pink" },
-              { label: "Nightlife", icon: "nightlife", href: `/${DEFAULT_PORTAL_SLUG}?view=find&lane=events&categories=nightlife`, color: "purple" },
-              { label: "Sports", icon: "sports", href: `/${DEFAULT_PORTAL_SLUG}?view=find&lane=events&categories=sports`, color: "cyan" },
-              { label: "Outdoors", icon: "outdoors", href: `/${DEFAULT_PORTAL_SLUG}?view=find&lane=events&categories=outdoors`, color: "pink" },
-              { label: "Community", icon: "community", href: `/${DEFAULT_PORTAL_SLUG}?view=find&lane=events&categories=community`, color: "purple" },
-              { label: "Free", icon: "other", href: `/${DEFAULT_PORTAL_SLUG}?view=find&lane=events&free=1`, color: "cyan" },
+              { label: "Music", icon: "music", href: buildExploreUrl({ portalSlug: DEFAULT_PORTAL_SLUG, lane: "events", categories: "music" }), color: "cyan" },
+              { label: "Comedy", icon: "comedy", href: buildExploreUrl({ portalSlug: DEFAULT_PORTAL_SLUG, lane: "events", categories: "comedy" }), color: "pink" },
+              { label: "Art", icon: "art", href: buildExploreUrl({ portalSlug: DEFAULT_PORTAL_SLUG, lane: "events", categories: "art" }), color: "purple" },
+              { label: "Theater", icon: "theater", href: buildExploreUrl({ portalSlug: DEFAULT_PORTAL_SLUG, lane: "events", categories: "theater" }), color: "cyan" },
+              { label: "Food & Drink", icon: "food_drink", href: buildExploreUrl({ portalSlug: DEFAULT_PORTAL_SLUG, lane: "events", categories: "food_drink" }), color: "pink" },
+              { label: "Nightlife", icon: "nightlife", href: buildExploreUrl({ portalSlug: DEFAULT_PORTAL_SLUG, lane: "events", categories: "nightlife" }), color: "purple" },
+              { label: "Sports", icon: "sports", href: buildExploreUrl({ portalSlug: DEFAULT_PORTAL_SLUG, lane: "events", categories: "sports" }), color: "cyan" },
+              { label: "Outdoors", icon: "outdoors", href: buildExploreUrl({ portalSlug: DEFAULT_PORTAL_SLUG, lane: "events", categories: "outdoors" }), color: "pink" },
+              { label: "Community", icon: "community", href: buildExploreUrl({ portalSlug: DEFAULT_PORTAL_SLUG, lane: "events", categories: "community" }), color: "purple" },
+              { label: "Free", icon: "other", href: buildExploreUrl({ portalSlug: DEFAULT_PORTAL_SLUG, lane: "events", extraParams: { free: "1" } }), color: "cyan" },
             ].map((cat, i) => (
               <ScrollReveal key={cat.label} direction="fade" delay={i * 40}>
                 <Link
@@ -904,7 +905,7 @@ export default function Home() {
           </div>
           <ScrollReveal direction="up" delay={400}>
             <Link
-              href={`/${DEFAULT_PORTAL_SLUG}?view=find&lane=events&date=today`}
+              href={buildExploreUrl({ portalSlug: DEFAULT_PORTAL_SLUG, lane: "events", date: "today" })}
               className="inline-flex items-center gap-3 text-base font-medium text-[var(--cream)] transition-all duration-300 hover:gap-4 hover:text-[#00e5ff] rounded-lg px-2 py-1 -mx-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00e5ff]/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[#08080c]"
             >
               See what&apos;s happening today

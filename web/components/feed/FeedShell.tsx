@@ -8,6 +8,7 @@ import { TransitionContainer } from "@/components/ui/TransitionContainer";
 import ForYouView from "@/components/feed/ForYouView";
 import ExploreTrackList from "@/components/explore/ExploreTrackList";
 import Link from "next/link";
+import { buildExploreUrl } from "@/lib/find-url";
 
 type FeedTab = "curated" | "explore" | "foryou";
 
@@ -83,13 +84,13 @@ function ExploreFeedOutro({ portalSlug }: { portalSlug: string }) {
 
         <div className="mt-4 flex flex-wrap gap-2.5">
           <Link
-            href={`/${portalSlug}?view=find&lane=places`}
+            href={buildExploreUrl({ portalSlug, lane: "places" })}
             className="px-3.5 py-2 rounded-lg border border-[var(--twilight)] text-[var(--cream)] text-xs font-mono hover:border-[var(--neon-amber)]/40 hover:text-[var(--neon-amber)] transition-colors"
           >
             Browse Places
           </Link>
           <Link
-            href={`/${portalSlug}?view=find&lane=events`}
+            href={buildExploreUrl({ portalSlug, lane: "events" })}
             className="px-3.5 py-2 rounded-lg border border-[var(--twilight)] text-[var(--cream)] text-xs font-mono hover:border-[var(--coral)]/40 hover:text-[var(--coral)] transition-colors"
           >
             Tonight&apos;s Events

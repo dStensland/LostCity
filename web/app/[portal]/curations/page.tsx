@@ -1,38 +1,39 @@
 import CurationsDiscoveryView from "@/components/community/CurationsDiscoveryView";
-import { createServiceClient } from "@/lib/supabase/service";
-import type { AnySupabase } from "@/lib/api-utils";
+import { resolveCommunityPageRequest } from "../_surfaces/community/resolve-community-page-request";
 
-export const revalidate = 60;
+export const revalidate = 180;
 
 type Props = {
   params: Promise<{ portal: string }>;
 };
 
 export async function generateMetadata({ params }: Props) {
-  const { portal } = await params;
+  const { portal: portalSlug } = await params;
+  const request = await resolveCommunityPageRequest({
+    portalSlug,
+    pathname: `/${portalSlug}/curations`,
+  });
+  const portalName = request?.portal.name || portalSlug.charAt(0).toUpperCase() + portalSlug.slice(1);
   return {
-    title: `Curations | ${portal.charAt(0).toUpperCase() + portal.slice(1)} | Lost City`,
+    title: `Curations | ${portalName} | Lost City`,
     description: `Browse community-curated guides on Lost City`,
   };
 }
 
 export default async function CurationsPage({ params }: Props) {
   const { portal: portalSlug } = await params;
+  const request = await resolveCommunityPageRequest({
+    portalSlug,
+    pathname: `/${portalSlug}/curations`,
+  });
 
-  // Resolve portal_id for the discovery view
-  const svc = createServiceClient() as AnySupabase;
-  const { data: portal } = await svc
-    .from("portals")
-    .select("id")
-    .eq("slug", portalSlug)
-    .maybeSingle();
-
-  const portalId = portal?.id || "";
+  const portalId = request?.portal.id || "";
+  const activePortalSlug = request?.portal.slug || portalSlug;
 
   return (
     <div className="min-h-screen">
       <div className="max-w-3xl mx-auto px-4 py-6 pb-28">
-        <CurationsDiscoveryView portalId={portalId} portalSlug={portalSlug} />
+        <CurationsDiscoveryView portalId={portalId} portalSlug={activePortalSlug} />
       </div>
     </div>
   );

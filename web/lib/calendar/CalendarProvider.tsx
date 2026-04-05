@@ -159,7 +159,7 @@ export function CalendarProvider({ children }: { children: React.ReactNode }) {
 
     if (changed) {
       const newUrl = `${window.location.pathname}?${params.toString()}`;
-      window.history.replaceState(null, "", newUrl);
+      window.history.replaceState(window.history.state, "", newUrl);
     }
   }, [state.currentView, state.selectedDate]);
 

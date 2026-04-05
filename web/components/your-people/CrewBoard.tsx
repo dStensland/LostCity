@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCrewBoard } from "@/lib/hooks/useCrewBoard";
 import CrewEventCard from "@/components/your-people/CrewEventCard";
 import FeedSectionHeader from "@/components/feed/FeedSectionHeader";
+import { buildExploreUrl } from "@/lib/find-url";
 
 export default function CrewBoard() {
   const { days, isLoading } = useCrewBoard();
@@ -37,7 +38,7 @@ export default function CrewBoard() {
           <div className="text-center py-6">
             <p className="text-sm text-[var(--soft)] mb-3">Nobody&apos;s got plans yet.</p>
             <Link
-              href="/atlanta?view=find"
+              href={buildExploreUrl({ portalSlug: "atlanta" })}
               className="inline-flex items-center gap-1.5 font-mono text-xs text-[var(--coral)] hover:opacity-80 transition-opacity"
             >
               Browse events &rarr;

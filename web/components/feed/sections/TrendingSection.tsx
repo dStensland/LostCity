@@ -28,6 +28,7 @@ import {
   Ticket,
   Lightning,
 } from "@phosphor-icons/react";
+import { buildExploreUrl } from "@/lib/find-url";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -490,7 +491,7 @@ export default function TrendingSection({ section, portalSlug }: Props) {
             </h2>
           </div>
           <Link
-            href={`/${portalSlug}?view=find&lane=events`}
+            href={buildExploreUrl({ portalSlug, lane: "events" })}
             className="text-xs flex items-center gap-1 text-[var(--coral)] transition-colors hover:opacity-80"
           >
             See all <ArrowRight className="w-3 h-3" />

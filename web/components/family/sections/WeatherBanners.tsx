@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Umbrella, Sun, ArrowRight } from "@phosphor-icons/react";
 import { FAMILY_TOKENS } from "@/lib/family-design-tokens";
+import { buildExploreUrl } from "@/lib/find-url";
 
 const SAGE = FAMILY_TOKENS.sage;
 const SKY = FAMILY_TOKENS.sky;
@@ -139,7 +140,12 @@ export function GetOutsideBanner({
               {condition} and {temp}°F — a great day to head outdoors with the kids.
             </p>
             <Link
-              href={`/${portalSlug}?view=find&lane=events&tags=family-friendly&outdoor=1`}
+              href={buildExploreUrl({
+                portalSlug,
+                lane: "events",
+                tags: "family-friendly",
+                extraParams: { outdoor: "1" },
+              })}
               className="inline-flex items-center gap-1.5 hover:opacity-80 transition-opacity"
               style={{
                 fontFamily: "var(--font-dm-sans, system-ui, sans-serif)",

@@ -3,6 +3,7 @@
 import { memo } from "react";
 import Link from "next/link";
 import SmartImage from "@/components/SmartImage";
+import { buildExploreUrl } from "@/lib/find-url";
 
 // ---- Palette (Afternoon Field) -------------------------------------------
 const CARD = "#FAFAF6";
@@ -173,7 +174,9 @@ export const FamilyDestinationCard = memo(function FamilyDestinationCard({
     library_pass_eligible,
   } = destination;
 
-  const href = slug ? `/${portalSlug}/spots/${slug}` : `/${portalSlug}?view=find&lane=places`;
+  const href = slug
+    ? `/${portalSlug}/spots/${slug}`
+    : buildExploreUrl({ portalSlug, lane: "places" });
   const typeLabel = venue_type ? (VENUE_TYPE_LABELS[venue_type] ?? null) : null;
 
   // Fallback gradient color based on venue type
@@ -391,5 +394,4 @@ function typeEmojiFor(venue_type: string | null): string {
   };
   return venue_type ? (MAP[venue_type] ?? "📍") : "📍";
 }
-
 

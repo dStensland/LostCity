@@ -1,23 +1,12 @@
 "use client";
 
 import { useCallback } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
-import dynamic from "next/dynamic";
-
-function TabSkeleton() {
-  return (
-    <div className="px-4 py-6 space-y-3">
-      {[1, 2, 3].map((i) => (
-        <div key={i} className="h-16 rounded-xl bg-[var(--twilight)]/40 animate-pulse" />
-      ))}
-    </div>
-  );
-}
-
-const ShowtimesView = dynamic(() => import("./ShowtimesView"), { loading: () => <TabSkeleton /> });
-const MusicListingsView = dynamic(() => import("./MusicListingsView"), { loading: () => <TabSkeleton /> });
-const TheaterListingsView = dynamic(() => import("./TheaterListingsView"), { loading: () => <TabSkeleton /> });
-const ComedyListingsView = dynamic(() => import("./ComedyListingsView"), { loading: () => <TabSkeleton /> });
+import { useExploreUrlState } from "@/lib/explore-platform/url-state";
+import ShowtimesView from "./ShowtimesView";
+import MusicListingsView from "./MusicListingsView";
+import TheaterListingsView from "./TheaterListingsView";
+import ComedyListingsView from "./ComedyListingsView";
+import type { ShowsLaneInitialData } from "@/lib/explore-platform/lane-data";
 
 type ShowsTab = "film" | "music" | "theater" | "comedy";
 
@@ -37,21 +26,19 @@ function isValidTab(value: string | null): value is ShowsTab {
 interface ShowsViewProps {
   portalId: string;
   portalSlug: string;
+  initialData?: ShowsLaneInitialData | null;
 }
 
-export function ShowsView({ portalId, portalSlug }: ShowsViewProps) {
-  const searchParams = useSearchParams();
-  const router = useRouter();
-  const rawTab = searchParams?.get("tab");
+export function ShowsView({ portalId, portalSlug, initialData }: ShowsViewProps) {
+  const state = useExploreUrlState();
+  const rawTab = state.params.get("tab");
   const activeTab: ShowsTab = isValidTab(rawTab) ? rawTab : "film";
 
   const handleTabChange = useCallback(
     (tab: ShowsTab) => {
-      const params = new URLSearchParams(searchParams?.toString() || "");
-      params.set("tab", tab);
-      router.replace(`?${params.toString()}`, { scroll: false });
+      state.setLaneParams({ tab }, "replace");
     },
-    [router, searchParams],
+    [state],
   );
 
   return (
@@ -77,10 +64,34 @@ export function ShowsView({ portalId, portalSlug }: ShowsViewProps) {
       </div>
 
       {/* Tab content */}
-      {activeTab === "film" && <ShowtimesView portalId={portalId} portalSlug={portalSlug} />}
-      {activeTab === "music" && <MusicListingsView portalId={portalId} portalSlug={portalSlug} />}
-      {activeTab === "theater" && <TheaterListingsView portalId={portalId} portalSlug={portalSlug} />}
-      {activeTab === "comedy" && <ComedyListingsView portalId={portalId} portalSlug={portalSlug} />}
+      {activeTab === "film" && (
+        <ShowtimesView
+          portalId={portalId}
+          portalSlug={portalSlug}
+          initialData={initialData?.tab === "film" ? initialData : null}
+        />
+      )}
+      {activeTab === "music" && (
+        <MusicListingsView
+          portalId={portalId}
+          portalSlug={portalSlug}
+          initialData={initialData?.tab === "music" ? initialData : null}
+        />
+      )}
+      {activeTab === "theater" && (
+        <TheaterListingsView
+          portalId={portalId}
+          portalSlug={portalSlug}
+          initialData={initialData?.tab === "theater" ? initialData : null}
+        />
+      )}
+      {activeTab === "comedy" && (
+        <ComedyListingsView
+          portalId={portalId}
+          portalSlug={portalSlug}
+          initialData={initialData?.tab === "comedy" ? initialData : null}
+        />
+      )}
     </div>
   );
 }

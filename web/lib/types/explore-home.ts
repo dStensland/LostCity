@@ -1,3 +1,5 @@
+import type { ExploreHomePayload } from "@/lib/explore-platform/types";
+
 export type LaneState = "alive" | "quiet" | "zero";
 
 export type LaneSlug =
@@ -6,9 +8,7 @@ export type LaneSlug =
   | "game-day"
   | "regulars"
   | "places"
-  | "classes"
-  | "calendar"
-  | "map";
+  | "classes";
 
 export interface PreviewItem {
   id: number;
@@ -30,6 +30,4 @@ export interface LanePreview {
   items?: PreviewItem[];
 }
 
-export interface ExploreHomeResponse {
-  lanes: Record<LaneSlug, LanePreview>;
-}
+export type ExploreHomeResponse = ExploreHomePayload;

@@ -10,6 +10,7 @@
 import type { ViewMode, FindType, UserPreferences } from "./search-context";
 import type { SearchResult } from "./unified-search";
 import { ITP_NEIGHBORHOODS, NEIGHBORHOOD_ALIASES } from "@/config/neighborhoods";
+import { buildExploreUrl } from "@/lib/find-url";
 
 // ============================================
 // Types
@@ -298,7 +299,7 @@ export function detectQuickActions(
   }
 
   const actions: QuickAction[] = [];
-  const baseUrl = `/${portalSlug}?view=find&lane=events`;
+  const baseUrl = buildExploreUrl({ portalSlug, lane: "events" });
 
   // Check for "free" intent
   if (/\bfree\b/i.test(trimmedQuery)) {

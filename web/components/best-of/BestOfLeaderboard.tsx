@@ -6,6 +6,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useAuthenticatedFetch } from "@/lib/hooks/useAuthenticatedFetch";
 import type { BestOfCategory, BestOfRankedVenue } from "@/lib/best-of";
 import { getCategoryColor, CASE_MIN_LENGTH, CASE_MAX_LENGTH } from "@/lib/best-of";
+import { buildBestOfUrl } from "@/lib/find-url";
 import BestOfPlaceCard from "./BestOfPlaceCard";
 import NominateSpotSheet from "./NominateSpotSheet";
 import { Info, CaretDown } from "@phosphor-icons/react";
@@ -157,7 +158,7 @@ export default function BestOfLeaderboard({ categorySlug, portalSlug }: BestOfLe
       <div className="mb-6">
         {/* Breadcrumb back link */}
         <a
-          href={`/${portalSlug}?view=community&tab=bestof`}
+          href={buildBestOfUrl({ portalSlug })}
           className="inline-flex items-center gap-1.5 text-xs text-[var(--muted)] hover:text-[var(--cream)] active:scale-95 transition-all mb-4 group rounded-sm px-1 -ml-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--action-primary)]"
         >
           <svg className="w-3.5 h-3.5 transition-transform group-hover:-translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -2,15 +2,15 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import ScrollToTop from "@/components/ScrollToTop";
 import FestivalSchedule from "@/components/FestivalSchedule";
-import { getCachedPortalBySlug } from "@/lib/portal";
 import {
   getFestivalBySlug,
   getFestivalPrograms,
   getFestivalEvents,
 } from "@/lib/festivals";
 import { getFestivalLayout } from "@/lib/festival-layout";
+import { resolveDetailPageRequest } from "../../../_surfaces/detail/resolve-detail-page-request";
 
-export const revalidate = 300;
+export const revalidate = 120;
 
 type Props = {
   params: Promise<{ portal: string; slug: string }>;
@@ -18,17 +18,20 @@ type Props = {
 
 export default async function FestivalSchedulePage({ params }: Props) {
   const { slug, portal: portalSlug } = await params;
-  const [festival, portal] = await Promise.all([
+  const [festival, request] = await Promise.all([
     getFestivalBySlug(slug),
-    getCachedPortalBySlug(portalSlug),
+    resolveDetailPageRequest({
+      portalSlug,
+      pathname: `/${portalSlug}/festivals/${slug}/schedule`,
+    }),
   ]);
 
   if (!festival) {
     notFound();
   }
 
-  const activePortalSlug = portal?.slug || portalSlug;
-  const activePortalName = portal?.name || portalSlug.charAt(0).toUpperCase() + portalSlug.slice(1);
+  const activePortalSlug = request?.portal.slug || portalSlug;
+  const activePortalName = request?.portal.name || portalSlug.charAt(0).toUpperCase() + portalSlug.slice(1);
 
   const [programs, sessions] = await Promise.all([
     getFestivalPrograms(festival.id),

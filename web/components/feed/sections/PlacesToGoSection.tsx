@@ -7,6 +7,7 @@ import FeedSectionHeader from "@/components/feed/FeedSectionHeader";
 import FeedSectionSkeleton from "@/components/feed/FeedSectionSkeleton";
 import { PlacesToGoCategoryTile } from "./PlacesToGoCategoryTile";
 import type { PlacesToGoResponse } from "@/lib/places-to-go/types";
+import { buildExploreUrl } from "@/lib/find-url";
 
 interface PlacesToGoSectionProps {
   portalSlug: string;
@@ -64,7 +65,7 @@ export function PlacesToGoSection({ portalSlug }: PlacesToGoSectionProps) {
         priority="secondary"
         accentColor="var(--neon-green)"
         icon={<MapPin weight="duotone" className="w-5 h-5" />}
-        seeAllHref={`/${portalSlug}?view=find&lane=places`}
+        seeAllHref={buildExploreUrl({ portalSlug, lane: "places" })}
       />
 
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5">

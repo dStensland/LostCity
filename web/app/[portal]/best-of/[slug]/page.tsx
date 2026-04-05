@@ -1,6 +1,6 @@
-import { redirect } from "next/navigation";
+import BestOfLeaderboard from "@/components/best-of/BestOfLeaderboard";
 
-export const revalidate = 60;
+export const revalidate = 180;
 
 type Props = {
   params: Promise<{ portal: string; slug: string }>;
@@ -20,6 +20,11 @@ export async function generateMetadata({ params }: Props) {
 }
 
 export default async function BestOfLeaderboardPage({ params }: Props) {
-  const { portal: portalSlug } = await params;
-  redirect(`/${portalSlug}?view=community`);
+  const { portal: portalSlug, slug } = await params;
+
+  return (
+    <div className="mx-auto max-w-5xl px-4 py-6 pb-24">
+      <BestOfLeaderboard categorySlug={slug} portalSlug={portalSlug} />
+    </div>
+  );
 }

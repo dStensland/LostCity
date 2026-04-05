@@ -1,4 +1,9 @@
-import { normalizeFinURLParams } from "../normalize-find-url";
+import {
+  hasLegacyExploreNormalizationInput,
+  isLegacyExploreRequest,
+  normalizeFinURLParams,
+  toCanonicalExploreUrl,
+} from "../normalize-find-url";
 
 describe("normalizeFinURLParams", () => {
   // Legacy view aliases → find
@@ -75,7 +80,7 @@ describe("normalizeFinURLParams", () => {
   it("redirects ?content=regulars to ?view=find&regulars=true", () => {
     const result = normalizeFinURLParams(new URLSearchParams("content=regulars"));
     expect(result.get("view")).toBe("find");
-    expect(result.get("regulars")).toBe("true");
+    expect(result.get("lane")).toBe("regulars");
     expect(result.has("content")).toBe(false);
   });
 
@@ -184,13 +189,15 @@ describe("happening view normalization", () => {
   it("normalizes ?view=happening&display=calendar", () => {
     const params = new URLSearchParams("view=happening&display=calendar");
     const result = normalizeFinURLParams(params);
-    expect(result.get("lane")).toBe("calendar");
+    expect(result.get("lane")).toBe("events");
+    expect(result.get("display")).toBe("calendar");
   });
 
   it("normalizes ?view=happening&display=map", () => {
     const params = new URLSearchParams("view=happening&display=map");
     const result = normalizeFinURLParams(params);
-    expect(result.get("lane")).toBe("map");
+    expect(result.get("lane")).toBe("events");
+    expect(result.get("display")).toBe("map");
   });
 
   it("preserves search param", () => {
@@ -207,5 +214,34 @@ describe("places view normalization", () => {
     const result = normalizeFinURLParams(params);
     expect(result.get("view")).toBe("find");
     expect(result.get("lane")).toBe("places");
+  });
+});
+
+describe("canonical explore URL helpers", () => {
+  it("converts legacy explore URLs to /explore", () => {
+    expect(
+      toCanonicalExploreUrl(
+        "atlanta",
+        new URLSearchParams("view=happening&display=calendar"),
+      ),
+    ).toBe("/atlanta/explore?display=calendar&lane=events");
+  });
+
+  it("detects legacy explore entry signals", () => {
+    expect(isLegacyExploreRequest(new URLSearchParams("view=find&lane=events"))).toBe(true);
+    expect(isLegacyExploreRequest(new URLSearchParams("q=brunch"))).toBe(true);
+    expect(isLegacyExploreRequest(new URLSearchParams("view=feed"))).toBe(false);
+  });
+
+  it("skips normalization for canonical explore shell params", () => {
+    expect(hasLegacyExploreNormalizationInput(new URLSearchParams("lane=events"))).toBe(false);
+    expect(hasLegacyExploreNormalizationInput(new URLSearchParams("q=brunch"))).toBe(false);
+    expect(hasLegacyExploreNormalizationInput(new URLSearchParams("lane=shows&tab=film"))).toBe(false);
+  });
+
+  it("flags legacy-shaped explore params for normalization", () => {
+    expect(hasLegacyExploreNormalizationInput(new URLSearchParams("view=find&lane=events"))).toBe(true);
+    expect(hasLegacyExploreNormalizationInput(new URLSearchParams("lane=music"))).toBe(true);
+    expect(hasLegacyExploreNormalizationInput(new URLSearchParams("display=calendar"))).toBe(true);
   });
 });

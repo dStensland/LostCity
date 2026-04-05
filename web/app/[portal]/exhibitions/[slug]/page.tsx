@@ -1,6 +1,5 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { getCachedPortalBySlug } from "@/lib/portal";
 import {
   InfoCard,
   MetadataGrid,
@@ -19,8 +18,9 @@ import {
 } from "@/lib/exhibitions-utils";
 import type { ExhibitionWithVenue } from "@/lib/exhibitions-utils";
 import { Ticket } from "@phosphor-icons/react/dist/ssr";
+import { resolveDetailPageRequest } from "../../_surfaces/detail/resolve-detail-page-request";
 
-export const revalidate = 300;
+export const revalidate = 120;
 
 type Props = {
   params: Promise<{ portal: string; slug: string }>;
@@ -93,11 +93,20 @@ function formatEventDate(startDate: string): string {
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
+function getDaysUntil(dateString: string): number {
+  return Math.ceil(
+    (new Date(dateString).getTime() - Date.now()) / (1000 * 60 * 60 * 24),
+  );
+}
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug, portal: portalSlug } = await params;
-  const [exhibition, portal] = await Promise.all([
+  const [exhibition, request] = await Promise.all([
     fetchExhibition(slug),
-    getCachedPortalBySlug(portalSlug),
+    resolveDetailPageRequest({
+      portalSlug,
+      pathname: `/${portalSlug}/exhibitions/${slug}`,
+    }),
   ]);
 
   if (!exhibition) {
@@ -107,7 +116,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     };
   }
 
-  const portalName = portal?.name || "Lost City: Arts";
+  const portalName = request?.portal.name || "Lost City: Arts";
+  const activePortalSlug = request?.portal.slug || portalSlug;
   const artistNames =
     exhibition.artists?.map((a) => a.artist_name).join(", ") ?? "";
   const description = exhibition.description
@@ -120,7 +130,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     title: `${exhibition.title} | ${portalName}`,
     description,
     alternates: {
-      canonical: `/${portalSlug}/exhibitions/${slug}`,
+      canonical: `/${activePortalSlug}/exhibitions/${slug}`,
     },
     openGraph: {
       title: exhibition.title,
@@ -142,16 +152,19 @@ export default async function ExhibitionDetailPage({ params }: Props) {
       ? `https://${process.env.VERCEL_URL}`
       : "http://localhost:3000");
 
-  const [exhibition, portal] = await Promise.all([
+  const [exhibition, request] = await Promise.all([
     fetchExhibition(slug),
-    getCachedPortalBySlug(portalSlug),
+    resolveDetailPageRequest({
+      portalSlug,
+      pathname: `/${portalSlug}/exhibitions/${slug}`,
+    }),
   ]);
 
   if (!exhibition) {
     notFound();
   }
 
-  const activePortalSlug = portal?.slug || portalSlug;
+  const activePortalSlug = request?.portal.slug || portalSlug;
   const accentColor = "var(--action-primary)";
 
   const artists = exhibition.artists ?? [];
@@ -165,10 +178,7 @@ export default async function ExhibitionDetailPage({ params }: Props) {
 
   // Closing countdown (30-day window)
   const daysLeft = exhibition.closing_date
-    ? Math.ceil(
-        (new Date(exhibition.closing_date).getTime() - Date.now()) /
-          (1000 * 60 * 60 * 24)
-      )
+    ? getDaysUntil(exhibition.closing_date)
     : null;
   const showCountdown = daysLeft !== null && daysLeft > 0 && daysLeft <= 30;
 

@@ -1,20 +1,20 @@
 import { notFound, redirect } from "next/navigation";
 import { Suspense } from "react";
-import { getCachedPortalBySlug, getPortalVertical } from "@/lib/portal";
-import { isDogPortal } from "@/lib/dog-art";
 import { getDogServices } from "@/lib/dog-data";
 import { SERVICE_TYPE_OPTIONS } from "@/lib/dog-tags";
 import DogDeepPageShell from "@/app/[portal]/_components/dog/DogDeepPageShell";
 import DogFilterChips from "@/app/[portal]/_components/dog/DogFilterChips";
 import { DogVenueRow } from "@/app/[portal]/_components/dog/DogCard";
 import DogEmptyState from "@/app/[portal]/_components/dog/DogEmptyState";
+import { buildExploreUrl } from "@/lib/find-url";
+import { resolveFeedPageRequest } from "../_surfaces/feed/resolve-feed-page-request";
 
 type Props = {
   params: Promise<{ portal: string }>;
   searchParams: Promise<{ type?: string }>;
 };
 
-export const revalidate = 60;
+export const revalidate = 300;
 
 export default async function DogServicesPage({
   params,
@@ -23,12 +23,14 @@ export default async function DogServicesPage({
   const { portal: portalSlug } = await params;
   const sp = await searchParams;
 
-  const portal = await getCachedPortalBySlug(portalSlug);
-  if (!portal) notFound();
+  const request = await resolveFeedPageRequest({
+    portalSlug,
+    pathname: `/${portalSlug}/services`,
+  });
+  if (!request) notFound();
 
-  const vertical = getPortalVertical(portal);
-  if (vertical !== "dog" && !isDogPortal(portal.slug)) {
-    redirect(`/${portal.slug}?view=find&lane=places`);
+  if (!request.isDog) {
+    redirect(buildExploreUrl({ portalSlug: request.portal.slug, lane: "places" }));
   }
 
   const venues = await getDogServices(sp.type);

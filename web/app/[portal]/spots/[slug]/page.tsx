@@ -1,6 +1,5 @@
 import ScrollToTop from "@/components/ScrollToTop";
 import { getSpotBySlug } from "@/lib/spots";
-import { getCachedPortalBySlug } from "@/lib/portal";
 import { getSpotDetail } from "@/lib/spot-detail";
 import { notFound } from "next/navigation";
 
@@ -10,8 +9,10 @@ import { safeJsonLd } from "@/lib/formats";
 import { buildBreadcrumbSchema } from "@/lib/breadcrumb-schema";
 import { mapSpotDetailToViewData } from "@/lib/mappers/spot-detail-mapper";
 import PlaceDetailWrapper from "./PlaceDetailWrapper";
+import { buildExploreUrl } from "@/lib/find-url";
+import { resolveDetailPageRequest } from "../../_surfaces/detail/resolve-detail-page-request";
 
-export const revalidate = 60;
+export const revalidate = 120;
 
 type Props = {
   params: Promise<{ portal: string; slug: string }>;
@@ -23,7 +24,10 @@ const getCachedSpotBySlug = cache(getSpotBySlug);
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug, portal: portalSlug } = await params;
   const spot = await getCachedSpotBySlug(slug);
-  const portal = await getCachedPortalBySlug(portalSlug);
+  const request = await resolveDetailPageRequest({
+    portalSlug,
+    pathname: `/${portalSlug}/spots/${slug}`,
+  });
 
   if (!spot) {
     return {
@@ -35,6 +39,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     };
   }
 
+  const activePortalSlug = request?.portal.slug || portalSlug;
   const description = spot.description
     ? spot.description.slice(0, 160)
     : `${spot.name} in ${spot.neighborhood || spot.city}. Discover more spots with Lost City.`;
@@ -43,7 +48,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     title: `${spot.name} | Lost City`,
     description,
     alternates: {
-      canonical: `/${portal?.slug || portalSlug}/spots/${slug}`,
+      canonical: `/${activePortalSlug}/spots/${slug}`,
     },
     openGraph: {
       title: spot.name,
@@ -51,7 +56,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       type: "website",
       images: [
         {
-          url: `/${portal?.slug || portalSlug}/spots/${slug}/opengraph-image`,
+          url: `/${activePortalSlug}/spots/${slug}/opengraph-image`,
           width: 1200,
           height: 630,
           alt: spot.name,
@@ -64,7 +69,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       description,
       images: [
         {
-          url: `/${portal?.slug || portalSlug}/spots/${slug}/opengraph-image`,
+          url: `/${activePortalSlug}/spots/${slug}/opengraph-image`,
           width: 1200,
           height: 630,
           alt: spot.name,
@@ -141,10 +146,13 @@ function buildOpeningHours(
 
 export default async function PortalSpotPage({ params }: Props) {
   const { portal: portalSlug, slug } = await params;
+  const request = await resolveDetailPageRequest({
+    portalSlug,
+    pathname: `/${portalSlug}/spots/${slug}`,
+  });
 
   // getSpotDetail already fetches the venue — no need for a separate getCachedSpotBySlug here
-  const [portal, detail] = await Promise.all([
-    getCachedPortalBySlug(portalSlug),
+  const [detail] = await Promise.all([
     getSpotDetail(slug),
   ]);
 
@@ -152,9 +160,9 @@ export default async function PortalSpotPage({ params }: Props) {
     notFound();
   }
 
-  const activePortalSlug = portal?.slug || portalSlug;
+  const activePortalSlug = request?.portal.slug || portalSlug;
   const activePortalName =
-    portal?.name ||
+    request?.portal.name ||
     portalSlug.charAt(0).toUpperCase() + portalSlug.slice(1);
 
   // Map server data to client view shape
@@ -216,7 +224,7 @@ export default async function PortalSpotPage({ params }: Props) {
               { name: activePortalName, href: `/${activePortalSlug}` },
               {
                 name: "Spots",
-                href: `/${activePortalSlug}?view=find&lane=places`,
+                href: buildExploreUrl({ portalSlug: activePortalSlug, lane: "places" }),
               },
               { name: spotName },
             ])

@@ -1,6 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 import Link from "next/link";
 import { format } from "date-fns";
+import { buildExploreUrl } from "@/lib/find-url";
 import { getProxiedImageSrc } from "@/lib/image-proxy";
 
 const DEFAULT_EVENT_IMAGE = "https://forthatlanta.com/hubfs/Forth/Website/Images/Club/hero-banner-club-faq-desktop.jpg";
@@ -21,7 +22,7 @@ function resolveEventHref(
   const id = event.id == null ? "" : String(event.id).trim();
   if (id) return `/${portalSlug}/events/${id}`;
   const fallbackQuery = event.venue_name || event.title;
-  return `/${portalSlug}?view=find&lane=events&search=${encodeURIComponent(fallbackQuery)}`;
+  return buildExploreUrl({ portalSlug, lane: "events", search: fallbackQuery });
 }
 
 function formatEventDate(dateValue: string): string {

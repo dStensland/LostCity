@@ -5,6 +5,7 @@ import Link from "next/link";
 import { MusicNote, MaskHappy, SmileyWink, Ticket } from "@phosphor-icons/react";
 import { formatTime } from "@/lib/formats";
 import SmartImage from "@/components/SmartImage";
+import { buildExploreUrl } from "@/lib/find-url";
 
 // ── Types ────────────────────────────────────────────────────────────
 
@@ -168,7 +169,11 @@ export function PlaceGroupedShowsList({
         <p className="text-sm text-[var(--soft)]">
           No shows today ·{" "}
           <Link
-            href={`/${portalSlug}?view=find&lane=shows&vertical=${linkVertical}`}
+            href={buildExploreUrl({
+              portalSlug,
+              lane: "shows",
+              extraParams: { vertical: linkVertical },
+            })}
             className="text-[var(--show-accent)] hover:underline font-mono text-xs"
           >
             {restOfWeekCount} more this week →
@@ -204,7 +209,11 @@ export function PlaceGroupedShowsList({
       {restOfWeekCount > 0 && (
         <div className="mt-2 px-1">
           <Link
-            href={`/${portalSlug}?view=find&lane=shows&vertical=${linkVertical}`}
+            href={buildExploreUrl({
+              portalSlug,
+              lane: "shows",
+              extraParams: { vertical: linkVertical },
+            })}
             className="text-xs font-mono text-[var(--show-accent)] hover:underline"
           >
             {todayCount} today · {restOfWeekCount} more this week →

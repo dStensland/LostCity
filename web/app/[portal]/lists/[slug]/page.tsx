@@ -1,10 +1,10 @@
 import ListDetailView from "@/components/community/ListDetailView";
-import { getCachedPortalBySlug } from "@/lib/portal";
 import { createServiceClient } from "@/lib/supabase/service";
 import type { Metadata } from "next";
+import { resolveCommunityPageRequest } from "../../_surfaces/community/resolve-community-page-request";
 
 // Revalidate every minute - community lists change infrequently
-export const revalidate = 60;
+export const revalidate = 180;
 
 type Props = {
   params: Promise<{ portal: string; slug: string }>;
@@ -12,8 +12,12 @@ type Props = {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { portal: portalSlug, slug } = await params;
-  const portal = await getCachedPortalBySlug(portalSlug);
-  const portalName = portal?.name || "Lost City";
+  const request = await resolveCommunityPageRequest({
+    portalSlug,
+    pathname: `/${portalSlug}/lists/${slug}`,
+  });
+  const portalName = request?.portal.name || "Lost City";
+  const activePortalSlug = request?.portal.slug || portalSlug;
 
   const supabase = createServiceClient();
   const { data: list } = await supabase
@@ -43,7 +47,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     title,
     description,
     alternates: {
-      canonical: `/${portalSlug}/lists/${slug}`,
+      canonical: `/${activePortalSlug}/lists/${slug}`,
     },
     openGraph: {
       title: listTitle,
@@ -61,11 +65,16 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function ListDetailPage({ params }: Props) {
   const { portal: portalSlug, slug } = await params;
+  const request = await resolveCommunityPageRequest({
+    portalSlug,
+    pathname: `/${portalSlug}/lists/${slug}`,
+  });
+  const activePortalSlug = request?.portal.slug || portalSlug;
 
   return (
     <div className="min-h-screen">
       <div className="max-w-3xl mx-auto px-4 py-6 pb-28">
-        <ListDetailView portalSlug={portalSlug} listSlug={slug} />
+        <ListDetailView portalSlug={activePortalSlug} listSlug={slug} />
       </div>
     </div>
   );

@@ -9,6 +9,7 @@ import type { EventWithLocation } from "@/lib/search";
 import { LibraryPassSection } from "../LibraryPassSection";
 import { FAMILY_TOKENS } from "@/lib/family-design-tokens";
 import { SectionLabel, SeeAllLink, SkeletonBlock } from "./_shared";
+import { buildExploreUrl } from "@/lib/find-url";
 
 const AMBER = FAMILY_TOKENS.amber;
 const SAGE = FAMILY_TOKENS.sage;
@@ -324,7 +325,7 @@ export function WeekendSection({
             color={SAGE}
             rightSlot={
               <SeeAllLink
-                href={`/${portalSlug}?view=find&lane=events&date=weekend`}
+                href={buildExploreUrl({ portalSlug, lane: "events", date: "weekend" })}
                 label={`${satStr}–${sunStr} →`}
               />
             }
@@ -351,7 +352,7 @@ export function WeekendSection({
           ))}
           {weekendEvents.length > previewEvents.length && (
             <Link
-              href={`/${portalSlug}?view=find&lane=events&date=weekend`}
+              href={buildExploreUrl({ portalSlug, lane: "events", date: "weekend" })}
               className="flex items-center justify-center py-3 rounded-xl border hover:opacity-80 transition-opacity"
               style={{
                 borderColor: `${SAGE}30`,
@@ -368,7 +369,7 @@ export function WeekendSection({
         </div>
       ) : (
         <Link
-          href={`/${portalSlug}?view=find&lane=events&date=weekend`}
+          href={buildExploreUrl({ portalSlug, lane: "events", date: "weekend" })}
           className="hover:opacity-70 transition-opacity"
           style={{ fontFamily: "var(--font-dm-sans, system-ui, sans-serif)", fontSize: 13, color: SAGE }}
         >

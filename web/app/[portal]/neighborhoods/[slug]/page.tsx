@@ -15,11 +15,12 @@ import { safeJsonLd } from "@/lib/formats";
 import { toAbsoluteUrl } from "@/lib/site-url";
 import { getNeighborhoodColor } from "@/lib/neighborhood-colors";
 import { hexToRgb, formatCategoryLabel, NOISE_CATEGORIES } from "@/lib/neighborhood-utils";
+import { buildExploreUrl } from "@/lib/find-url";
 import Dot from "@/components/ui/Dot";
 import PlaceCard from "@/components/PlaceCard";
 import CategoryIcon from "@/components/CategoryIcon";
 
-export const revalidate = 60;
+export const revalidate = 300;
 
 type Props = {
   params: Promise<{ portal: string; slug: string }>;
@@ -189,7 +190,7 @@ export default async function NeighborhoodPage({ params }: Props) {
     .map(([c]) => c);
 
   // Real counts from separate query (not capped by display limit)
-  const { todayCount, upcomingCount } = eventCounts;
+  const { todayCount } = eventCounts;
 
   // Top spots for display (full list available via "See all")
   const displaySpots = spots.slice(0, 10);
@@ -401,7 +402,11 @@ export default async function NeighborhoodPage({ params }: Props) {
               Popular Spots
             </span>
             <Link
-              href={`/${portal}?view=find&lane=places&neighborhood=${encodeURIComponent(neighborhood.name)}`}
+              href={buildExploreUrl({
+                portalSlug: portal,
+                lane: "places",
+                extraParams: { neighborhood: neighborhood.name },
+              })}
               className="text-xs font-medium transition-opacity hover:opacity-70"
               style={{ color: color }}
             >

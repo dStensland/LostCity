@@ -12,18 +12,16 @@
  */
 
 import { useState, useEffect, useMemo, useCallback, useTransition } from "react";
-import { useSearchParams } from "next/navigation";
 import {
   SCENE_ACTIVITY_TYPES,
-  matchActivityType,
-  buildRecurrenceLabel,
 } from "@/lib/city-pulse/section-builders";
 import { SceneEventRow, SceneChip, getActivityIcon, WeekdayRow, getDayKeyFromDate, buildNext7Days } from "@/components/feed/SceneEventRow";
 import { triggerHaptic } from "@/lib/haptics";
 import { ListBullets, Repeat } from "@phosphor-icons/react";
 import { TransitionContainer } from "@/components/ui/TransitionContainer";
+import { useExploreUrlState } from "@/lib/explore-platform/url-state";
 import type { CityPulseEventItem } from "@/lib/city-pulse/types";
-import type { FeedEventData } from "@/components/EventCard";
+import type { RegularsLaneEvent, RegularsLaneInitialData } from "@/lib/explore-platform/lane-data";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -32,13 +30,9 @@ import type { FeedEventData } from "@/components/EventCard";
 interface RegularsViewProps {
   portalId: string;
   portalSlug: string;
-  initialData?: { events: FeedEventData[] } | null;
+  initialData?: RegularsLaneInitialData | null;
 }
-
-type RegularEvent = FeedEventData & {
-  is_recurring?: boolean;
-  recurrence_label?: string;
-};
+type RegularEvent = RegularsLaneEvent;
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -50,8 +44,8 @@ const ACTIVITY_MAP = new Map(SCENE_ACTIVITY_TYPES.map((a) => [a.id, a]));
 // Component
 // ---------------------------------------------------------------------------
 
-export default function RegularsView({ portalId, portalSlug, initialData }: RegularsViewProps) {
-  const searchParams = useSearchParams();
+export default function RegularsView({ portalSlug, initialData }: RegularsViewProps) {
+  const state = useExploreUrlState();
 
   const [isPending, startTransition] = useTransition();
 
@@ -65,42 +59,38 @@ export default function RegularsView({ portalId, portalSlug, initialData }: Regu
   // Local filter state — initialized from URL, synced back via replaceState
   // (avoids router.push() which triggers full Next.js navigation on every tap)
   const [activeActivities, setActiveActivities] = useState<string[]>(() => {
-    const param = searchParams?.get("activity");
+    const param = state.params.get("activity");
     return param ? param.split(",").filter(Boolean) : [];
   });
 
   const [activeWeekdays, setActiveWeekdays] = useState<string[]>(() => {
-    const param = searchParams?.get("weekday");
+    const param = state.params.get("weekday");
     return param ? param.split(",").filter(Boolean) : [];
   });
 
   // Sync filter state to URL without triggering navigation
   const syncUrl = useCallback(
     (activities: string[], weekdays: string[]) => {
-      const params = new URLSearchParams();
-      params.set("view", "find");
-      params.set("lane", "regulars");
-      params.set("content", "regulars");
-      if (activities.length > 0) params.set("activity", activities.join(","));
-      if (weekdays.length > 0) params.set("weekday", weekdays.join(","));
-      const url = `/${portalSlug}?${params.toString()}`;
-      window.history.replaceState(window.history.state, "", url);
+      state.setLaneParams(
+        {
+          activity: activities.length > 0 ? activities.join(",") : null,
+          weekday: weekdays.length > 0 ? weekdays.join(",") : null,
+          content: null,
+        },
+        "replace",
+      );
     },
-    [portalSlug],
+    [state],
   );
 
   // Fetch all events for the week (filtering happens client-side).
   // Skipped when initialData was provided by the RSC — avoids SSR waterfall.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (initialData) return;
 
     const controller = new AbortController();
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setLoading(true);
-    setError(null);
 
-    fetch(`/api/regulars?portal=${encodeURIComponent(portalSlug)}`, { signal: controller.signal })
+    fetch(`/api/regulars?portal=${encodeURIComponent(portalSlug)}&compact=1`, { signal: controller.signal })
       .then((res) => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         return res.json();
@@ -117,14 +107,14 @@ export default function RegularsView({ portalId, portalSlug, initialData }: Regu
       .finally(() => setLoading(false));
 
     return () => controller.abort();
-  }, [portalSlug]);
+  }, [initialData, portalSlug]);
 
-  // Classify events by activity type (stable — covers all events)
   const classifiedEvents = useMemo(() => {
     const map = new Map<number, string>();
     for (const event of events) {
-      const actId = matchActivityType(event);
-      if (actId) map.set(event.id, actId);
+      if (event.activity_type) {
+        map.set(event.id, event.activity_type);
+      }
     }
     return map;
   }, [events]);
@@ -247,8 +237,8 @@ export default function RegularsView({ portalId, portalSlug, initialData }: Regu
       event: {
         ...event,
         is_recurring: true,
-        recurrence_label: buildRecurrenceLabel(event),
-      },
+        recurrence_label: event.recurrence_label ?? undefined,
+      } as never,
     }),
     [],
   );

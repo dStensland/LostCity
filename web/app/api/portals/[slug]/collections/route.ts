@@ -20,6 +20,8 @@ import { createClient } from "@/lib/supabase/server";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 import { normalizePortalSlug, resolvePortalSlugAlias } from "@/lib/portal-aliases";
 import { getLocalDateString } from "@/lib/formats";
+import { buildExploreUrl } from "@/lib/find-url";
+import { applyPortalScopeToQuery } from "@/lib/portal-scope";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -168,25 +170,29 @@ export async function GET(request: NextRequest, context: RouteContext) {
     closingSoonResult,
   ] = await Promise.all([
     // 1. Free This Weekend — portal-scoped
-    supabase
-      .from("events")
-      .select("id", { count: "exact", head: true })
-      .eq("is_free", true)
-      .eq("is_active", true)
-      .or(`portal_id.eq.${portalData.id},portal_id.is.null`)
-      .in("start_date", [nextSaturday, nextSunday])
-      .limit(10) as unknown as Promise<CountResult & { error: unknown }>,
+    applyPortalScopeToQuery(
+      supabase
+        .from("events")
+        .select("id", { count: "exact", head: true })
+        .eq("is_free", true)
+        .eq("is_active", true)
+        .in("start_date", [nextSaturday, nextSunday])
+        .limit(10),
+      { portalId: portalData.id, includePublicWhenPortal: true },
+    ) as unknown as Promise<CountResult & { error: unknown }>,
 
     // 2. Date Night — find tonight's top neighborhood, portal-scoped via city
-    supabase
-      .from("events")
-      .select("places!events_place_id_fkey(neighborhood, city)")
-      .eq("is_active", true)
-      .eq("start_date", today)
-      .or(`portal_id.eq.${portalData.id},portal_id.is.null`)
-      .not("places.neighborhood", "is", null)
-      .eq("places.city", portalCity)
-      .limit(200) as unknown as Promise<{
+    applyPortalScopeToQuery(
+      supabase
+        .from("events")
+        .select("places!events_place_id_fkey(neighborhood, city)")
+        .eq("is_active", true)
+        .eq("start_date", today)
+        .not("places.neighborhood", "is", null)
+        .eq("places.city", portalCity)
+        .limit(200),
+      { portalId: portalData.id, includePublicWhenPortal: true },
+    ) as unknown as Promise<{
         data: Array<{ places: { neighborhood: string; city: string } | null }> | null;
         error: unknown;
       }>,
@@ -202,14 +208,16 @@ export async function GET(request: NextRequest, context: RouteContext) {
 
     // 4. Family Sunday (only on Sat/Sun) — portal-scoped
     isWeekend
-      ? (supabase
-          .from("events")
-          .select("id", { count: "exact", head: true })
-          .eq("category_id", "family")
-          .eq("is_active", true)
-          .or(`portal_id.eq.${portalData.id},portal_id.is.null`)
-          .eq("start_date", nextSunday)
-          .limit(10) as unknown as Promise<CountResult & { error: unknown }>)
+      ? (applyPortalScopeToQuery(
+          supabase
+            .from("events")
+            .select("id", { count: "exact", head: true })
+            .eq("category_id", "family")
+            .eq("is_active", true)
+            .eq("start_date", nextSunday)
+            .limit(10),
+          { portalId: portalData.id, includePublicWhenPortal: true },
+        ) as unknown as Promise<CountResult & { error: unknown }>)
       : Promise.resolve({ count: 0, error: null }),
 
     // 5. Closing Soon — exhibitions closing in next 14 days
@@ -255,7 +263,10 @@ export async function GET(request: NextRequest, context: RouteContext) {
       count: Math.min(freeWeekendResult.count ?? 0, 10),
       slug: "free-this-weekend",
       categories: ["All free"],
-      href: `/${canonicalSlug}?view=find&free=true&date=weekend`,
+      href: buildExploreUrl({
+        portalSlug: canonicalSlug,
+        extraParams: { free: true, date: "weekend" },
+      }),
     },
     {
       title: topNeighborhood ? `Date Night: ${topNeighborhood}` : "Date Night",
@@ -264,8 +275,11 @@ export async function GET(request: NextRequest, context: RouteContext) {
       slug: "date-night",
       categories: ["Dining", "Shows"],
       href: topNeighborhood
-        ? `/${canonicalSlug}?view=find&neighborhoods=${encodeURIComponent(topNeighborhood)}`
-        : `/${canonicalSlug}?view=find`,
+        ? buildExploreUrl({
+            portalSlug: canonicalSlug,
+            extraParams: { neighborhoods: topNeighborhood },
+          })
+        : buildExploreUrl({ portalSlug: canonicalSlug }),
     },
     {
       title: `New in ${portalCity}`,
@@ -273,7 +287,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
       count: Math.min(newPlacesResult.count ?? 0, 10),
       slug: "new-in-city",
       categories: ["New spots"],
-      href: `/${canonicalSlug}?view=find`,
+      href: buildExploreUrl({ portalSlug: canonicalSlug }),
     },
     {
       title: "Family Sunday",
@@ -281,7 +295,11 @@ export async function GET(request: NextRequest, context: RouteContext) {
       count: Math.min(familySundayResult.count ?? 0, 10),
       slug: "family-sunday",
       categories: ["Kid-friendly"],
-      href: `/${canonicalSlug}?view=find&categories=family&date=weekend`,
+      href: buildExploreUrl({
+        portalSlug: canonicalSlug,
+        categories: "family",
+        date: "weekend",
+      }),
     },
     {
       title: "Closing Soon",
@@ -289,7 +307,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
       count: Math.min(closingSoonResult.count ?? 0, 10),
       slug: "closing-soon",
       categories: ["Arts", "Exhibitions"],
-      href: `/${canonicalSlug}?view=find&lane=arts`,
+      href: buildExploreUrl({ portalSlug: canonicalSlug, lane: "arts" }),
     },
   ];
 

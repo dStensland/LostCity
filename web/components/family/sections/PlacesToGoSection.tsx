@@ -4,6 +4,7 @@ import Link from "next/link";
 import { FamilyDestinationCard, type FamilyDestination } from "../FamilyDestinationCard";
 import { FAMILY_TOKENS } from "@/lib/family-design-tokens";
 import { SectionLabel, SeeAllLink } from "./_shared";
+import { buildExploreUrl } from "@/lib/find-url";
 
 const SAGE = FAMILY_TOKENS.sage;
 const BORDER = FAMILY_TOKENS.border;
@@ -53,7 +54,7 @@ export function PlacesToGoSection({
       <SectionLabel
         text={labelText}
         color={SAGE}
-        rightSlot={<SeeAllLink href={`/${portalSlug}?view=find&lane=places`} />}
+        rightSlot={<SeeAllLink href={buildExploreUrl({ portalSlug, lane: "places" })} />}
       />
       {isLoading ? (
         <div className="flex gap-2.5 overflow-hidden">
@@ -78,7 +79,7 @@ export function PlacesToGoSection({
         </div>
       ) : (
         <Link
-          href={`/${portalSlug}?view=find&lane=places`}
+          href={buildExploreUrl({ portalSlug, lane: "places" })}
           className="hover:opacity-70 transition-opacity"
           style={{ fontFamily: "var(--font-dm-sans, system-ui, sans-serif)", fontSize: 13, color: SAGE }}
         >

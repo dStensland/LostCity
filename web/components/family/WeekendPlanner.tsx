@@ -12,6 +12,7 @@ import type { KidProfile } from "@/lib/types/kid-profiles";
 import { LibraryPassSection } from "./LibraryPassSection";
 import { FamilyDestinationCard, type FamilyDestination } from "./FamilyDestinationCard";
 import { FAMILY_TOKENS } from "@/lib/family-design-tokens";
+import { buildExploreUrl } from "@/lib/find-url";
 
 // ---- Palette (Afternoon Field) -------------------------------------------
 
@@ -462,7 +463,11 @@ function AddSomethingCard({
   dateString: string;
 }) {
   const copy = `Browse events for ${dayLabel}`;
-  const href = `/${portalSlug}?view=find&lane=events&date=${dateString}`;
+  const href = buildExploreUrl({
+    portalSlug,
+    lane: "events",
+    extraParams: { date: dateString },
+  });
 
   return (
     <Link
@@ -986,7 +991,12 @@ function BudgetPicksSection({
           Budget Picks
         </p>
         <Link
-          href={`/${portalSlug}?view=find&lane=events&date=weekend&free=1`}
+          href={buildExploreUrl({
+            portalSlug,
+            lane: "events",
+            date: "weekend",
+            extraParams: { free: "1" },
+          })}
           style={{
             fontFamily: FONT_BODY,
             fontSize: 12,
@@ -1162,7 +1172,7 @@ function WeekendDestinationsSection({
           {headerLabel}
         </p>
         <Link
-          href={`/${portalSlug}?view=find&lane=places`}
+          href={buildExploreUrl({ portalSlug, lane: "places" })}
           style={{
             fontFamily: FONT_BODY,
             fontSize: 12,
@@ -1434,7 +1444,11 @@ export const WeekendPlanner = memo(function WeekendPlanner({
               Perfect For This Weekend
             </p>
             <Link
-              href={`/${portalSlug}?view=find&lane=events&date=weekend`}
+              href={buildExploreUrl({
+                portalSlug,
+                lane: "events",
+                date: "weekend",
+              })}
               style={{
                 fontFamily: FONT_BODY,
                 fontSize: 12,

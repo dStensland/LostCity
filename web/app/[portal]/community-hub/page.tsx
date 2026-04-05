@@ -2,12 +2,10 @@ import { notFound, redirect } from "next/navigation";
 import SmartImage from "@/components/SmartImage";
 import Link from "next/link";
 import { ArrowRight } from "@phosphor-icons/react/dist/ssr";
-import { PortalHeader } from "@/components/headers";
 import { createClient } from "@/lib/supabase/server";
 import { getLocalDateString } from "@/lib/formats";
-import { getCachedPortalBySlug, getPortalVertical } from "@/lib/portal";
-import { isFilmPortalVertical } from "@/lib/portal-taxonomy";
 import FilmPortalNav from "../_components/film/FilmPortalNav";
+import { resolveCommunityPageRequest } from "../_surfaces/community/resolve-community-page-request";
 
 type Props = {
   params: Promise<{ portal: string }>;
@@ -77,17 +75,17 @@ const COMMUNITY_PATHS = [
   {
     title: "Film Groups",
     body: "Local collectives, recurring meetups, and screening clubs.",
-    hrefFor: (slug: string) => `/${slug}?view=community&tab=groups`,
+    hrefFor: (slug: string) => `/${slug}/groups`,
   },
   {
     title: "People + Lists",
     body: "Curators and community-made lists to discover what matters in Atlanta.",
-    hrefFor: (slug: string) => `/${slug}?view=community&tab=people`,
+    hrefFor: () => "/your-people",
   },
   {
     title: "Classes + Workshops",
     body: "Film education, craft workshops, and production skill-building sessions.",
-    hrefFor: (slug: string) => `/${slug}?view=find&lane=events`,
+    hrefFor: (slug: string) => `/${slug}/explore?lane=events`,
   },
 ];
 
@@ -235,14 +233,15 @@ async function getFilmCommunityData() {
 
 export default async function CommunityHubPage({ params }: Props) {
   const { portal: slug } = await params;
-  const portal = await getCachedPortalBySlug(slug);
+  const request = await resolveCommunityPageRequest({
+    portalSlug: slug,
+    pathname: `/${slug}/community-hub`,
+  });
 
-  if (!portal) notFound();
+  if (!request) notFound();
 
-  const vertical = getPortalVertical(portal);
-
-  if (!isFilmPortalVertical(vertical)) {
-    redirect(`/${portal.slug}?view=community`);
+  if (!request.isFilm) {
+    redirect(`/${request.portal.slug}/community-hub`);
   }
 
   const { groups, upcomingMeetups } = await getFilmCommunityData();
@@ -250,9 +249,8 @@ export default async function CommunityHubPage({ params }: Props) {
 
   return (
     <div className="min-h-screen bg-[#090d16] text-[#f6f7fb]">
-      <PortalHeader portalSlug={portal.slug} portalName={portal.name} />
       <main className="mx-auto max-w-6xl px-4 pb-16 pt-6 space-y-7">
-        <FilmPortalNav portalSlug={portal.slug} />
+        <FilmPortalNav portalSlug={request.portal.slug} />
 
         <header className="space-y-2">
           <p className="text-xs uppercase tracking-[0.18em] text-[#8fa2c4]">Atlanta Film</p>
@@ -283,7 +281,7 @@ export default async function CommunityHubPage({ params }: Props) {
               <p className="text-xs uppercase tracking-[0.18em] text-[#95a8cb]">Spotlight Meetup</p>
               <h2 className="mt-1 font-[var(--font-film-editorial)] text-3xl text-[#f7f8fd]">Where Atlanta&apos;s film scene meets</h2>
             </div>
-            <Link href={`/${portal.slug}?view=community&tab=groups`} className="inline-flex items-center gap-1 text-xs uppercase tracking-[0.14em] text-[#c9d9ff] hover:text-[#e1eaff]">
+            <Link href={`/${request.portal.slug}/groups`} className="inline-flex items-center gap-1 text-xs uppercase tracking-[0.14em] text-[#c9d9ff] hover:text-[#e1eaff]">
               Explore groups
               <ArrowRight size={12} />
             </Link>
@@ -312,7 +310,7 @@ export default async function CommunityHubPage({ params }: Props) {
                 </p>
                 {spotlight.org_slug ? (
                   <Link
-                    href={`/${portal.slug}/community/${spotlight.org_slug}`}
+                    href={`/${request.portal.slug}/community/${spotlight.org_slug}`}
                     className="mt-4 inline-flex items-center gap-1 text-xs uppercase tracking-[0.14em] text-[#d9e6ff] hover:text-[#f3f7ff]"
                   >
                     View group
@@ -338,7 +336,7 @@ export default async function CommunityHubPage({ params }: Props) {
             {groups.length > 0 ? groups.slice(0, 18).map((group, index) => (
               <Link
                 key={group.id}
-                href={`/${portal.slug}/community/${group.slug}`}
+                href={`/${request.portal.slug}/community/${group.slug}`}
                 className="group block rounded-2xl border border-[#2a3349] bg-[#0d1424] p-4 hover:border-[#4a628f]"
               >
                 <div className="flex items-start gap-3">
@@ -414,7 +412,7 @@ export default async function CommunityHubPage({ params }: Props) {
                   </div>
 
                   {event.org_slug ? (
-                    <Link href={`/${portal.slug}/community/${event.org_slug}`} className="inline-flex items-center gap-1 text-xs uppercase tracking-[0.14em] text-[#c9d9ff] hover:text-[#e1eaff]">
+                    <Link href={`/${request.portal.slug}/community/${event.org_slug}`} className="inline-flex items-center gap-1 text-xs uppercase tracking-[0.14em] text-[#c9d9ff] hover:text-[#e1eaff]">
                       Group
                       <ArrowRight size={11} />
                     </Link>
@@ -435,7 +433,7 @@ export default async function CommunityHubPage({ params }: Props) {
               <h2 className="font-[var(--font-film-editorial)] text-2xl text-[#f7f7fb]">{path.title}</h2>
               <p className="mt-2 text-sm text-[#c8d5eb]">{path.body}</p>
               <Link
-                href={path.hrefFor(portal.slug)}
+                href={path.hrefFor(request.portal.slug)}
                 className="mt-3 inline-flex items-center gap-1 text-xs uppercase tracking-[0.14em] text-[#c9d9ff]"
               >
                 Explore

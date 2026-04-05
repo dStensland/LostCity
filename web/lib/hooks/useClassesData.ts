@@ -1,6 +1,11 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import {
+  buildClassesScheduleRequestKey,
+  buildClassesStudiosRequestKey,
+} from "@/lib/explore-platform/classes-request";
+import type { ClassesLaneInitialData } from "@/lib/explore-platform/lane-data";
 
 // --- Types aligned with /api/classes/studios and /api/classes responses ---
 
@@ -80,6 +85,7 @@ export interface UseClassesDataParams {
   skillLevel?: string | null;
   search?: string | null;
   studioSlug?: string | null;
+  initialPayload?: ClassesLaneInitialData | null;
 }
 
 export interface UseClassesDataResult {
@@ -146,11 +152,20 @@ export function useClassesData({
   skillLevel,
   search,
   studioSlug,
+  initialPayload,
 }: UseClassesDataParams): UseClassesDataResult {
-  const [studios, setStudios] = useState<StudiosResponse | null>(null);
-  const [schedule, setSchedule] = useState<ClassesResponse | null>(null);
-  const [studiosLoading, setStudiosLoading] = useState(false);
-  const [scheduleLoading, setScheduleLoading] = useState(false);
+  const [studios, setStudios] = useState<StudiosResponse | null>(
+    () => initialPayload?.studios ?? null,
+  );
+  const [schedule, setSchedule] = useState<ClassesResponse | null>(
+    () => initialPayload?.schedule ?? null,
+  );
+  const [studiosLoading, setStudiosLoading] = useState(
+    () => !studioSlug && !initialPayload?.studios,
+  );
+  const [scheduleLoading, setScheduleLoading] = useState(
+    () => Boolean(studioSlug) && !initialPayload?.schedule,
+  );
   const [error, setError] = useState<string | null>(null);
 
   // Cache studios responses to avoid refetch on back navigation
@@ -159,14 +174,30 @@ export function useClassesData({
 
   // --- Studios fetch (runs when no studioSlug) ---
   useEffect(() => {
-    if (studioSlug) return;
+    if (studioSlug) {
+      setStudiosLoading(false);
+      return;
+    }
 
     abortRef.current?.abort();
     const controller = new AbortController();
     abortRef.current = controller;
 
     const { startDate, endDate } = computeDateRange(dateWindow);
-    const cacheKey = `${category ?? ""}|${dateWindow ?? ""}|${skillLevel ?? ""}|${search ?? ""}`;
+    const cacheKey = buildClassesStudiosRequestKey({
+      category,
+      dateWindow,
+      skillLevel,
+      search,
+    });
+
+    if (initialPayload?.studios && initialPayload.requestKey === cacheKey) {
+      studiosCache.current.set(cacheKey, initialPayload.studios);
+      setStudios(initialPayload.studios);
+      setStudiosLoading(false);
+      setError(null);
+      return;
+    }
 
     const cached = studiosCache.current.get(cacheKey);
     if (cached) {
@@ -179,7 +210,7 @@ export function useClassesData({
     setStudiosLoading(true);
     setError(null);
 
-    const params = new URLSearchParams({ portal: portalSlug });
+    const params = new URLSearchParams({ portal: portalSlug, limit: "120" });
     if (category) params.set("class_category", category);
     if (startDate) params.set("start_date", startDate);
     if (endDate) params.set("end_date", endDate);
@@ -215,15 +246,33 @@ export function useClassesData({
       clearTimeout(timeoutId);
       controller.abort();
     };
-  }, [portalSlug, category, dateWindow, skillLevel, search, studioSlug]);
+  }, [portalSlug, category, dateWindow, skillLevel, search, studioSlug, initialPayload]);
 
   // --- Schedule fetch (runs when studioSlug is set) ---
   useEffect(() => {
-    if (!studioSlug) return;
+    if (!studioSlug) {
+      setScheduleLoading(false);
+      return;
+    }
 
     abortRef.current?.abort();
     const controller = new AbortController();
     abortRef.current = controller;
+
+    const requestKey = buildClassesScheduleRequestKey({
+      portalSlug,
+      studioSlug,
+      category,
+      dateWindow,
+      skillLevel,
+    });
+
+    if (initialPayload?.schedule && initialPayload.requestKey === requestKey) {
+      setSchedule(initialPayload.schedule);
+      setScheduleLoading(false);
+      setError(null);
+      return;
+    }
 
     setScheduleLoading(true);
     setError(null);
@@ -267,7 +316,7 @@ export function useClassesData({
       clearTimeout(timeoutId);
       controller.abort();
     };
-  }, [portalSlug, studioSlug, dateWindow, skillLevel, category]);
+  }, [portalSlug, studioSlug, dateWindow, skillLevel, category, initialPayload]);
 
   return { studios, schedule, studiosLoading, scheduleLoading, error };
 }

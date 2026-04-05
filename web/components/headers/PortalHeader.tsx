@@ -1,6 +1,5 @@
 "use client";
 
-import { Suspense } from "react";
 import { usePortalOptional, DEFAULT_PORTAL } from "@/lib/portal-context";
 import { applyPreset } from "@/lib/apply-preset";
 import type { HeaderTemplate } from "@/lib/visual-presets";
@@ -77,29 +76,6 @@ function PortalHeaderInner({
 }
 
 /**
- * Header loading fallback
- */
-function HeaderFallback() {
-  return (
-    <header className="portal-feed-header sticky top-0 z-[100] border-b border-[var(--twilight)]/30 bg-[var(--void)]/95 backdrop-blur-sm relative">
-      <div className="portal-feed-header-row px-4 py-2 sm:py-3 flex items-center gap-3">
-        <div className="h-8 w-24 rounded skeleton-shimmer" />
-        <div className="hidden sm:flex flex-1 justify-center">
-          <div className="h-9 w-64 rounded-full skeleton-shimmer" />
-        </div>
-        <div className="flex items-center gap-2 ml-auto">
-          <div className="h-8 w-8 rounded-full skeleton-shimmer" />
-          <div className="h-8 w-8 rounded-full skeleton-shimmer" />
-        </div>
-      </div>
-      <div className="sm:hidden px-4 py-2 border-t border-[var(--twilight)]/20">
-        <div className="h-8 w-full rounded-full skeleton-shimmer" />
-      </div>
-    </header>
-  );
-}
-
-/**
  * Portal Header - Renders the appropriate header template based on portal branding.
  *
  * Header Templates:
@@ -109,9 +85,5 @@ function HeaderFallback() {
  * - immersive: Transparent over hero image, fades on scroll
  */
 export default function PortalHeader(props: PortalHeaderProps) {
-  return (
-    <Suspense fallback={<HeaderFallback />}>
-      <PortalHeaderInner {...props} />
-    </Suspense>
-  );
+  return <PortalHeaderInner {...props} />;
 }

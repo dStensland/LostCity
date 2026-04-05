@@ -1,10 +1,11 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { getCachedPortalBySlug } from "@/lib/portal";
 import { getFilteredEventsWithCursor } from "@/lib/search";
 import { getPortalSourceAccess } from "@/lib/federation";
 import { filterByPortalCity } from "@/lib/portal-scope";
 import EventListingPage from "@/components/seo/EventListingPage";
+import { buildExploreUrl } from "@/lib/find-url";
+import { resolveFeedPageRequest } from "../_surfaces/feed/resolve-feed-page-request";
 
 export const revalidate = 300;
 
@@ -14,32 +15,38 @@ type Props = {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { portal: portalSlug } = await params;
-  const portal = await getCachedPortalBySlug(portalSlug);
-  if (!portal) return {};
+  const request = await resolveFeedPageRequest({
+    portalSlug,
+    pathname: `/${portalSlug}/free`,
+  });
+  if (!request) return {};
 
-  const cityName = portal.name;
+  const cityName = request.portal.name;
   const title = `Free Events in ${cityName} — No Cover, No Ticket | Lost City`;
   const description = `Free things to do in ${cityName}. No-cover concerts, free festivals, community events, and more.`;
 
   return {
     title,
     description,
-    alternates: { canonical: `/${portal.slug}/free` },
+    alternates: { canonical: `/${request.portal.slug}/free` },
     openGraph: { title, description, type: "website" },
   };
 }
 
 export default async function FreePage({ params }: Props) {
   const { portal: portalSlug } = await params;
-  const portal = await getCachedPortalBySlug(portalSlug);
-  if (!portal) notFound();
+  const request = await resolveFeedPageRequest({
+    portalSlug,
+    pathname: `/${portalSlug}/free`,
+  });
+  if (!request) notFound();
 
-  const sourceAccess = await getPortalSourceAccess(portal.id);
+  const sourceAccess = await getPortalSourceAccess(request.portal.id);
 
   const { events: rawEvents } = await getFilteredEventsWithCursor(
     {
       is_free: true,
-      portal_id: portal.id,
+      portal_id: request.portal.id,
       source_ids: sourceAccess.sourceIds,
       exclude_classes: true,
     },
@@ -47,19 +54,19 @@ export default async function FreePage({ params }: Props) {
     50
   );
 
-  const portalCity = portal.filters?.city;
+  const portalCity = request.portal.filters?.city;
   const events = filterByPortalCity(rawEvents, portalCity);
 
-  const cityName = portal.name;
+  const cityName = request.portal.name;
 
   return (
     <EventListingPage
       title={`Free Events in ${cityName}`}
       description={`Free things to do in ${cityName}. No-cover concerts, free festivals, community events, and more.`}
-      portalSlug={portal.slug}
+      portalSlug={request.portal.slug}
       portalName={cityName}
-      canonicalPath={`/${portal.slug}/free`}
-      findHref={`/${portal.slug}?view=find&lane=events&price=free`}
+      canonicalPath={`/${request.portal.slug}/free`}
+      findHref={buildExploreUrl({ portalSlug: request.portal.slug, lane: "events", price: "free" })}
       breadcrumbLabel="Free Events"
       events={events}
     />

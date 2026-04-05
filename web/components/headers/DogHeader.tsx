@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import { usePathname, useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import UserMenu from "../UserMenu";
 import HeaderSearchButton from "../HeaderSearchButton";
 import { useAuth } from "@/lib/auth-context";
+import { buildDogMapUrl, buildSavedUrl } from "@/lib/find-url";
 
 type NavTab = {
   key: string;
@@ -15,8 +16,8 @@ type NavTab = {
 
 const TABS: NavTab[] = [
   { key: "feed", label: "Explore", href: "" },
-  { key: "find", label: "Map", href: "?view=find" },
-  { key: "community", label: "Saved", href: "?view=community" },
+  { key: "find", label: "Map", href: "__MAP__" },
+  { key: "community", label: "Saved", href: "__SAVED__" },
 ];
 
 interface DogHeaderProps {
@@ -39,6 +40,8 @@ export default function DogHeader({
   useAuth();
 
   const currentView = searchParams?.get("view") || "feed";
+  const mapPath = buildDogMapUrl({ portalSlug });
+  const savedPath = buildSavedUrl({ portalSlug });
 
   // Close mobile menu on outside click
   useEffect(() => {
@@ -86,46 +89,50 @@ export default function DogHeader({
       return (isPortalPage && (!currentView || currentView === "feed")) || isDeepPage;
     if (tab.key === "find")
       return (
-        isPortalPage &&
-        ["find", "events", "spots", "map", "calendar"].includes(currentView)
+        pathname === mapPath ||
+        (isPortalPage &&
+          ["find", "events", "spots", "map", "calendar"].includes(currentView))
       );
     if (tab.key === "community")
-      return isPortalPage && currentView === "community";
+      return pathname === savedPath || (isPortalPage && currentView === "community");
     return false;
   };
 
-  const handleKeyDown = useCallback(
-    (event: React.KeyboardEvent, currentIndex: number) => {
-      let targetIndex: number | null = null;
-      switch (event.key) {
-        case "ArrowLeft":
-          event.preventDefault();
-          targetIndex =
-            currentIndex > 0 ? currentIndex - 1 : TABS.length - 1;
-          break;
-        case "ArrowRight":
-          event.preventDefault();
-          targetIndex =
-            currentIndex < TABS.length - 1 ? currentIndex + 1 : 0;
-          break;
-        case "Home":
-          event.preventDefault();
-          targetIndex = 0;
-          break;
-        case "End":
-          event.preventDefault();
-          targetIndex = TABS.length - 1;
-          break;
-        default:
-          return;
-      }
-      if (targetIndex !== null) {
-        const href = TABS[targetIndex].href;
-        router.push(`/${portalSlug}${href ? `${href}` : ""}`);
-      }
-    },
-    [portalSlug, router]
-  );
+  const handleKeyDown = (event: React.KeyboardEvent, currentIndex: number) => {
+    let targetIndex: number | null = null;
+    switch (event.key) {
+      case "ArrowLeft":
+        event.preventDefault();
+        targetIndex =
+          currentIndex > 0 ? currentIndex - 1 : TABS.length - 1;
+        break;
+      case "ArrowRight":
+        event.preventDefault();
+        targetIndex =
+          currentIndex < TABS.length - 1 ? currentIndex + 1 : 0;
+        break;
+      case "Home":
+        event.preventDefault();
+        targetIndex = 0;
+        break;
+      case "End":
+        event.preventDefault();
+        targetIndex = TABS.length - 1;
+        break;
+      default:
+        return;
+    }
+    if (targetIndex !== null) {
+      const href = TABS[targetIndex].href;
+      router.push(
+        href === "__MAP__"
+          ? mapPath
+          : href === "__SAVED__"
+            ? savedPath
+            : `/${portalSlug}${href ? `${href}` : ""}`
+      );
+    }
+  };
 
   return (
     <>
@@ -211,7 +218,13 @@ export default function DogHeader({
                 return (
                   <Link
                     key={tab.key}
-                    href={`/${portalSlug}${tab.href ? `${tab.href}` : ""}`}
+                    href={
+                      tab.href === "__MAP__"
+                        ? mapPath
+                        : tab.href === "__SAVED__"
+                          ? savedPath
+                          : `/${portalSlug}${tab.href ? `${tab.href}` : ""}`
+                    }
                     role="tab"
                     aria-selected={active}
                     tabIndex={active ? 0 : -1}
@@ -291,7 +304,13 @@ export default function DogHeader({
                 return (
                   <Link
                     key={tab.key}
-                    href={`/${portalSlug}${tab.href ? `${tab.href}` : ""}`}
+                    href={
+                      tab.href === "__MAP__"
+                        ? mapPath
+                        : tab.href === "__SAVED__"
+                          ? savedPath
+                          : `/${portalSlug}${tab.href ? `${tab.href}` : ""}`
+                    }
                     onClick={() => setMobileMenuOpen(false)}
                     className="block px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors"
                     style={{
@@ -328,7 +347,13 @@ export default function DogHeader({
             return (
               <Link
                 key={tab.key}
-                href={`/${portalSlug}${tab.href ? `${tab.href}` : ""}`}
+                href={
+                  tab.href === "__MAP__"
+                    ? mapPath
+                    : tab.href === "__SAVED__"
+                      ? savedPath
+                      : `/${portalSlug}${tab.href ? `${tab.href}` : ""}`
+                }
                 className="flex flex-col items-center gap-0.5 px-4 py-1"
               >
                 <BottomNavIcon tabKey={tab.key} active={active} />

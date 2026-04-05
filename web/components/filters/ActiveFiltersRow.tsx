@@ -1,11 +1,12 @@
 "use client";
 
 import { useCallback, useMemo } from "react";
-import { useRouter, useSearchParams, usePathname } from "next/navigation";
+import { usePathname } from "next/navigation";
 import FilterChip, { getTagVariant, type FilterChipVariant } from "./FilterChip";
 import { CATEGORIES, TAG_GROUPS, PRICE_FILTERS } from "@/lib/search-constants";
 import { VIBE_GROUPS } from "@/lib/spots-constants";
 import { formatGenre } from "@/lib/series-utils";
+import { useReplaceStateParams } from "@/lib/hooks/useReplaceStateParams";
 
 // Date filter display labels
 const DATE_LABELS: Record<string, string> = {
@@ -27,9 +28,9 @@ interface ActiveFiltersRowProps {
 }
 
 export default function ActiveFiltersRow({ className = "" }: ActiveFiltersRowProps) {
-  const router = useRouter();
   const pathname = usePathname();
-  const searchParams = useSearchParams();
+  const searchParams = useReplaceStateParams();
+  const effectiveParams = searchParams;
 
   const vibeLabelMap = useMemo(() => {
     const map = new Map<string, string>();
@@ -52,7 +53,7 @@ export default function ActiveFiltersRow({ className = "" }: ActiveFiltersRowPro
         : `Search: "${normalized}"`;
     };
 
-    const searchParam = searchParams.get("search");
+    const searchParam = effectiveParams.get("search");
     const searchLabel = searchParam ? shortSearchLabel(searchParam) : null;
     if (searchLabel) {
       filters.push({
@@ -64,7 +65,7 @@ export default function ActiveFiltersRow({ className = "" }: ActiveFiltersRowPro
     }
 
     // Categories
-    const categoriesParam = searchParams.get("categories");
+    const categoriesParam = effectiveParams.get("categories");
     if (categoriesParam) {
       const categoryValues = categoriesParam.split(",").filter(Boolean);
       for (const value of categoryValues) {
@@ -79,7 +80,7 @@ export default function ActiveFiltersRow({ className = "" }: ActiveFiltersRowPro
     }
 
     // Tags
-    const tagsParam = searchParams.get("tags");
+    const tagsParam = effectiveParams.get("tags");
     if (tagsParam) {
       const tagValues = tagsParam.split(",").filter(Boolean);
       for (const value of tagValues) {
@@ -102,7 +103,7 @@ export default function ActiveFiltersRow({ className = "" }: ActiveFiltersRowPro
     }
 
     // Genres
-    const genresParam = searchParams.get("genres");
+    const genresParam = effectiveParams.get("genres");
     if (genresParam) {
       const genreValues = genresParam.split(",").filter(Boolean);
       for (const value of genreValues) {
@@ -116,7 +117,7 @@ export default function ActiveFiltersRow({ className = "" }: ActiveFiltersRowPro
     }
 
     // Date filter
-    const dateParam = searchParams.get("date");
+    const dateParam = effectiveParams.get("date");
     if (dateParam) {
       let dateLabel = DATE_LABELS[dateParam];
       if (!dateLabel && /^\d{4}-\d{2}-\d{2}$/.test(dateParam)) {
@@ -134,7 +135,7 @@ export default function ActiveFiltersRow({ className = "" }: ActiveFiltersRowPro
     }
 
     // Free only
-    const freeParam = searchParams.get("free");
+    const freeParam = effectiveParams.get("free");
     if (freeParam === "1") {
       filters.push({
         type: "free",
@@ -143,7 +144,7 @@ export default function ActiveFiltersRow({ className = "" }: ActiveFiltersRowPro
         variant: "free",
       });
     } else {
-      const priceParam = searchParams.get("price");
+      const priceParam = effectiveParams.get("price");
       if (priceParam && priceParam !== "free") {
         const priceOption = PRICE_FILTERS.find((p) => p.value === priceParam);
         filters.push({
@@ -156,7 +157,7 @@ export default function ActiveFiltersRow({ className = "" }: ActiveFiltersRowPro
     }
 
     // Neighborhoods
-    const neighborhoodsParam = searchParams.get("neighborhoods");
+    const neighborhoodsParam = effectiveParams.get("neighborhoods");
     if (neighborhoodsParam) {
       const neighborhoodValues = neighborhoodsParam.split(",").filter(Boolean);
       for (const value of neighborhoodValues) {
@@ -170,7 +171,7 @@ export default function ActiveFiltersRow({ className = "" }: ActiveFiltersRowPro
     }
 
     // Venue vibes
-    const vibesParam = searchParams.get("vibes");
+    const vibesParam = effectiveParams.get("vibes");
     if (vibesParam) {
       const vibeValues = vibesParam.split(",").filter(Boolean);
       for (const value of vibeValues) {
@@ -184,12 +185,12 @@ export default function ActiveFiltersRow({ className = "" }: ActiveFiltersRowPro
     }
 
     return filters;
-  }, [searchParams, vibeLabelMap]);
+  }, [effectiveParams, vibeLabelMap]);
 
   // Remove a specific filter
   const removeFilter = useCallback(
     (filter: ActiveFilter) => {
-      const params = new URLSearchParams(searchParams.toString());
+      const params = new URLSearchParams(effectiveParams.toString());
 
       switch (filter.type) {
         case "search":
@@ -261,14 +262,14 @@ export default function ActiveFiltersRow({ className = "" }: ActiveFiltersRowPro
       params.delete("page");
 
       const newUrl = params.toString() ? `${pathname}?${params.toString()}` : pathname;
-      router.push(newUrl, { scroll: false });
+      window.history.replaceState(window.history.state, "", newUrl);
     },
-    [router, pathname, searchParams]
+    [pathname, effectiveParams]
   );
 
   // Clear all filters
   const clearAllFilters = useCallback(() => {
-    const params = new URLSearchParams(searchParams.toString());
+    const params = new URLSearchParams(effectiveParams.toString());
 
     // Remove all filter params
     params.delete("categories");
@@ -285,8 +286,8 @@ export default function ActiveFiltersRow({ className = "" }: ActiveFiltersRowPro
     params.delete("page");
 
     const newUrl = params.toString() ? `${pathname}?${params.toString()}` : pathname;
-    router.push(newUrl, { scroll: false });
-  }, [router, pathname, searchParams]);
+    window.history.replaceState(window.history.state, "", newUrl);
+  }, [pathname, effectiveParams]);
 
   // Don't render if no active filters
   if (activeFilters.length === 0) {

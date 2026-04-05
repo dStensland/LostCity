@@ -4,6 +4,7 @@ import Link from "next/link";
 import Image from "@/components/SmartImage";
 import type { ExploreTrack, ExploreTrackVenuePreview } from "@/lib/explore-tracks";
 import { EXPLORE_THEME } from "@/lib/explore-tracks";
+import { buildExploreUrl } from "@/lib/find-url";
 
 interface ExploreTrackSectionProps {
   track: ExploreTrack;
@@ -102,7 +103,7 @@ export default function ExploreTrackSection({
           {/* "See all" card */}
           {track.venueCount > track.previewVenues.length && (
             <Link
-              href={`/${portalSlug}?view=find&lane=places&search=${encodeURIComponent(track.name)}`}
+              href={buildExploreUrl({ portalSlug, lane: "places", search: track.name })}
               className="flex-shrink-0 w-28 rounded-lg flex items-center justify-center transition-all hover:scale-[1.02]"
               style={{
                 background: EXPLORE_THEME.bg,

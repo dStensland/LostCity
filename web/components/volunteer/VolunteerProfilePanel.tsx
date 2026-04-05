@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/lib/auth-context";
 
 type VolunteerProfileResponse = {
   causes: string[];
@@ -51,6 +52,7 @@ function toggleValue(current: string[], value: string) {
 
 export function VolunteerProfilePanel() {
   const router = useRouter();
+  const { user, loading: authLoading } = useAuth();
   const [isPending, startTransition] = useTransition();
   const [causes, setCauses] = useState<string[]>([]);
   const [skills, setSkills] = useState<string[]>([]);
@@ -59,8 +61,13 @@ export function VolunteerProfilePanel() {
   const [mobilityConstraints, setMobilityConstraints] = useState("");
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [message, setMessage] = useState<string | null>(null);
+  const requiresSignIn = !authLoading && !user;
 
   useEffect(() => {
+    if (authLoading || !user) {
+      return;
+    }
+
     const controller = new AbortController();
 
     fetch("/api/me/volunteer-profile", {
@@ -91,10 +98,15 @@ export function VolunteerProfilePanel() {
       });
 
     return () => controller.abort();
-  }, []);
+  }, [authLoading, user]);
 
   async function saveProfile() {
     setMessage(null);
+
+    if (!user) {
+      setMessage("Sign in to save volunteer preferences.");
+      return;
+    }
 
     const response = await fetch("/api/me/volunteer-profile", {
       method: "PATCH",
@@ -125,6 +137,14 @@ export function VolunteerProfilePanel() {
     startTransition(() => {
       router.refresh();
     });
+  }
+
+  if (requiresSignIn) {
+    return (
+      <div className="rounded-3xl border border-[#E5E4E1] bg-white p-6">
+        <p className="text-sm text-[#6D6C6A]">Sign in to personalize volunteer matches.</p>
+      </div>
+    );
   }
 
   if (status === "error") {

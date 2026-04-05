@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ArrowLeft, Ticket } from "@phosphor-icons/react";
 import type { VerticalLane } from "@/lib/types/discovery";
 import { LANE_CONFIG, LANE_ICONS } from "@/lib/types/discovery";
+import { buildExploreUrl } from "@/lib/find-url";
 
 // -------------------------------------------------------------------------
 // LaneFilterBar
@@ -29,12 +30,12 @@ export const LaneFilterBar = memo(function LaneFilterBar({
   return (
     <div className="flex items-center gap-3">
       <Link
-        href={`/${portalSlug}?view=find`}
+        href={buildExploreUrl({ portalSlug })}
         className="flex h-8 flex-shrink-0 items-center gap-1.5 rounded-lg border border-[var(--twilight)] bg-[var(--night)] px-2 text-[var(--soft)] hover:text-[var(--cream)] transition-colors"
         aria-label="Back to Find"
       >
         <ArrowLeft size={16} weight="regular" />
-        <span className="text-xs text-[var(--soft)]">Find</span>
+        <span className="text-xs text-[var(--soft)]">Explore</span>
       </Link>
 
       <div className="flex items-center gap-2 flex-1 min-w-0">

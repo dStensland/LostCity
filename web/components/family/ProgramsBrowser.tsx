@@ -13,6 +13,7 @@ import type { GenericFilter } from "./KidFilterChips";
 import { ProgramDetailSheet } from "./ProgramDetailSheet";
 import { ProgramCard } from "./ProgramCard";
 import { FAMILY_TOKENS } from "@/lib/family-design-tokens";
+import { buildExploreUrl } from "@/lib/find-url";
 
 // ---- Palette ---------------------------------------------------------------
 
@@ -972,7 +973,11 @@ export const ProgramsBrowser = memo(function ProgramsBrowser({
               </button>
             ) : (
               <a
-                href={`/${portalSlug}?view=find&lane=events&categories=family,community`}
+                href={buildExploreUrl({
+                  portalSlug,
+                  lane: "events",
+                  categories: "family,community",
+                })}
                 style={{
                   display: "inline-block",
                   marginTop: 16,

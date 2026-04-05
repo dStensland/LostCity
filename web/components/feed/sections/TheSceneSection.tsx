@@ -29,6 +29,7 @@ import {
   ArrowRight, MicrophoneStage, ListBullets, Plus, X, Check, WarningCircle,
 } from "@phosphor-icons/react";
 import FeedSectionHeader from "@/components/feed/FeedSectionHeader";
+import { buildExploreUrl } from "@/lib/find-url";
 
 /** Map from activity ID → config for O(1) lookup */
 const ACTIVITY_MAP = new Map(SCENE_ACTIVITY_TYPES.map((a) => [a.id, a]));
@@ -292,7 +293,14 @@ export default function TheSceneSection({ portalSlug }: Props) {
         priority="secondary"
         accentColor="var(--vibe)"
         icon={<MicrophoneStage weight="duotone" className="w-5 h-5" />}
-        seeAllHref={`/${portalSlug}?view=find&lane=regulars${activeChipId !== "all" ? `&activity=${activeChipId}` : ""}${activeDays.length > 0 ? `&weekday=${activeDays.join(",")}` : ""}`}
+        seeAllHref={buildExploreUrl({
+          portalSlug,
+          lane: "regulars",
+          extraParams: {
+            ...(activeChipId !== "all" ? { activity: activeChipId } : {}),
+            ...(activeDays.length > 0 ? { weekday: activeDays.join(",") } : {}),
+          },
+        })}
       />
 
       {/* Activity chip strip */}

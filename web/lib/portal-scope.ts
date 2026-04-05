@@ -28,6 +28,7 @@ type PortalScopeOptions = {
   portalId?: string | null;
   portalExclusive?: boolean;
   publicOnlyWhenNoPortal?: boolean;
+  includePublicWhenPortal?: boolean;
 };
 
 type FederatedPortalScopeOptions = PortalScopeOptions & {
@@ -111,10 +112,14 @@ export function applyPortalScopeToQuery<T>(
   const {
     portalId = null,
     publicOnlyWhenNoPortal = false,
+    includePublicWhenPortal = false,
   } = options;
   const scoped = query as unknown as PortalScopedQuery<T>;
 
   if (portalId) {
+    if (includePublicWhenPortal) {
+      return scoped.or(`portal_id.eq.${portalId},portal_id.is.null`) as T;
+    }
     return scoped.eq("portal_id", portalId) as T;
   }
 

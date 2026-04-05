@@ -46,7 +46,7 @@ export function StudiosDirectory({ portalSlug }: StudiosDirectoryProps) {
     const params = new URLSearchParams();
     if (next.type) params.set("type", next.type);
     if (next.status) params.set("status", next.status);
-    window.history.replaceState(null, "", `?${params}`);
+    window.history.replaceState(window.history.state, "", `?${params}`);
   };
 
   const typeOptions = Object.entries(STUDIO_TYPE_LABELS) as [StudioType, string][];
@@ -58,7 +58,7 @@ export function StudiosDirectory({ portalSlug }: StudiosDirectoryProps) {
       <div className="space-y-3">
         <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide">
           <span className="font-mono text-xs text-[var(--muted)] uppercase tracking-wider flex-shrink-0">
-            // type
+            {"// type"}
           </span>
           {typeOptions.map(([key, label]) => (
             <button
@@ -77,7 +77,7 @@ export function StudiosDirectory({ portalSlug }: StudiosDirectoryProps) {
 
         <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide">
           <span className="font-mono text-xs text-[var(--muted)] uppercase tracking-wider flex-shrink-0">
-            // availability
+            {"// availability"}
           </span>
           {statusOptions.map(([key, label]) => (
             <button
@@ -108,7 +108,7 @@ export function StudiosDirectory({ portalSlug }: StudiosDirectoryProps) {
       ) : studios.length === 0 ? (
         <div className="border border-[var(--twilight)] rounded-none p-8 text-center">
           <p className="font-mono text-sm text-[var(--muted)]">
-            // no studios match your filters
+            {"// no studios match your filters"}
           </p>
           <button
             onClick={() => setFilters({ type: "", status: "" })}

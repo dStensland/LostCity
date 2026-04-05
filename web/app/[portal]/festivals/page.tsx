@@ -3,7 +3,6 @@ import {
   getTentpoleEvents,
   type TentpoleEvent,
 } from "@/lib/festivals";
-import { getCachedPortalBySlug, getPortalVertical } from "@/lib/portal";
 import {
   type CountdownLabel,
   getUrgencyColor,
@@ -14,6 +13,7 @@ import FilmPortalNav from "../_components/film/FilmPortalNav";
 import Link from "next/link";
 import Image from "@/components/SmartImage";
 import type { Metadata } from "next";
+import { resolveFeedPageRequest } from "../_surfaces/feed/resolve-feed-page-request";
 
 export const revalidate = 300;
 
@@ -23,8 +23,11 @@ type Props = {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { portal: portalSlug } = await params;
-  const portal = await getCachedPortalBySlug(portalSlug);
-  const portalName = portal?.name || "Lost City";
+  const request = await resolveFeedPageRequest({
+    portalSlug,
+    pathname: `/${portalSlug}/festivals`,
+  });
+  const portalName = request?.portal.name || "Lost City";
 
   return {
     title: `The Big Stuff | ${portalName}`,
@@ -117,11 +120,15 @@ function formatEventDates(event: TentpoleEvent): string {
 
 export default async function BigStuffPage({ params }: Props) {
   const { portal: portalSlug } = await params;
-  const portal = await getCachedPortalBySlug(portalSlug);
+  const request = await resolveFeedPageRequest({
+    portalSlug,
+    pathname: `/${portalSlug}/festivals`,
+  });
+  const portal = request?.portal ?? null;
 
   const activePortalSlug = portal?.slug || portalSlug;
   const activePortalName = portal?.name || portalSlug.charAt(0).toUpperCase() + portalSlug.slice(1);
-  const isFilmPortal = portal ? getPortalVertical(portal) === "film" : false;
+  const isFilmPortal = request?.isFilm ?? false;
   const today = getLocalDateString();
 
   const [festivals, tentpoleEvents] = await Promise.all([

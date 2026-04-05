@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { resolvePortalSurface } from "@/lib/portal-runtime/resolvePortalSurface";
 
 /**
  * Vanity domains that map to specific paths on the main site.
@@ -28,13 +29,11 @@ const KNOWN_VERTICALS = new Set([
  * Base domains the platform runs on. Used to extract subdomain portions.
  */
 const BASE_DOMAINS = ["lostcity.ai", "lostcity.app", "localhost", "lvh.me"];
-
 /**
  * Legacy portal slugs that should redirect to their subdomain equivalents.
  * Maps old slug → { vertical, city } for 302 redirect.
  */
 const LEGACY_SLUG_REDIRECTS: Record<string, { vertical: string; city: string }> = {
-  helpatl: { vertical: "citizen", city: "atlanta" },
   "atl-dogs": { vertical: "dog", city: "atlanta" },
   "atl-film": { vertical: "film", city: "atlanta" },
 };
@@ -132,13 +131,42 @@ export function middleware(request: NextRequest) {
   }
 
   // --- Subdomain header injection ---
-  const response = NextResponse.next();
+  const requestHeaders = new Headers(request.headers);
+  const searchParams = request.nextUrl.searchParams;
+  const pathSegments = request.nextUrl.pathname.split("/").filter(Boolean);
+  const portalSlug = pathSegments[0] ?? null;
+  const childSegment = pathSegments[1] ?? null;
+  const routeMatch = resolvePortalSurface({
+    pathname: request.nextUrl.pathname,
+    searchParams,
+  });
+
+  if (portalSlug && !childSegment && routeMatch.isLegacyExplore) {
+    const redirectUrl = request.nextUrl.clone();
+    redirectUrl.pathname = `/${portalSlug}/explore`;
+    if (searchParams.get("view") === "find") {
+      redirectUrl.searchParams.delete("view");
+    }
+    return NextResponse.redirect(redirectUrl, 307);
+  }
 
   if (subdomain && KNOWN_VERTICALS.has(subdomain)) {
-    response.headers.set("x-lc-vertical", subdomain);
+    requestHeaders.set("x-lc-vertical", subdomain);
   } else if (subdomain) {
-    // Unknown subdomain — could be B2B custom subdomain
-    response.headers.set("x-lc-subdomain", subdomain);
+    requestHeaders.set("x-lc-subdomain", subdomain);
+  }
+
+  const response = NextResponse.next({
+    request: {
+      headers: requestHeaders,
+    },
+  });
+
+  if (requestHeaders.has("x-lc-vertical")) {
+    response.headers.set("x-lc-vertical", requestHeaders.get("x-lc-vertical")!);
+  }
+  if (requestHeaders.has("x-lc-subdomain")) {
+    response.headers.set("x-lc-subdomain", requestHeaders.get("x-lc-subdomain")!);
   }
 
   return response;

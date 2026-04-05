@@ -1,21 +1,22 @@
 import { notFound, redirect } from "next/navigation";
-import { getCachedPortalBySlug, getPortalVertical } from "@/lib/portal";
+import { resolveFilmPageRequest } from "../_surfaces/detail/resolve-film-page-request";
 
 type Props = {
   params: Promise<{ portal: string }>;
 };
 
+export const revalidate = 120;
+
 export default async function LegacyProgramsPage({ params }: Props) {
-  const { portal: slug } = await params;
-  const portal = await getCachedPortalBySlug(slug);
+  const { portal: portalSlug } = await params;
+  const request = await resolveFilmPageRequest({
+    portalSlug,
+    pathname: `/${portalSlug}/programs`,
+  });
 
-  if (!portal) {
+  if (!request) {
     notFound();
   }
 
-  if (getPortalVertical(portal) !== "film") {
-    notFound();
-  }
-
-  redirect(`/${portal.slug}/screening-programs`);
+  redirect(`/${request.portal.slug}/screening-programs`);
 }

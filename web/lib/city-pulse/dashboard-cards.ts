@@ -6,8 +6,21 @@
  */
 
 import type { DashboardCard, TimeSlot, FeedContext } from "./types";
+import { buildExploreUrl } from "@/lib/find-url";
 
 type CardTemplate = Omit<DashboardCard, "id"> & { id: string };
+
+function buildCardHref(
+  portalSlug: string,
+  lane: string,
+  extraParams: Record<string, string | boolean>,
+): string {
+  return buildExploreUrl({
+    portalSlug,
+    lane,
+    extraParams,
+  });
+}
 
 // ---------------------------------------------------------------------------
 // Card templates by context
@@ -19,35 +32,58 @@ const CARDS = {
     label: "Coffee spots",
     value: "Open now",
     icon: "Coffee",
-    href: `/${slug}?view=find&lane=places&venue_type=restaurant&cuisine=coffee&open_now=true&tab=eat-drink&label=Coffee`,
+    href: buildCardHref(slug, "places", {
+      venue_type: "restaurant",
+      cuisine: "coffee",
+      open_now: true,
+      tab: "eat-drink",
+      label: "Coffee",
+    }),
   }),
   morning_walk: (slug: string): CardTemplate => ({
     id: "morning_walk",
     label: "Morning walk",
     value: "BeltLine & trails",
     icon: "PersonSimpleWalk",
-    href: `/${slug}?view=find&lane=places&venue_type=park%2Ctrail%2Cgarden&tab=things-to-do&label=Parks+%26+Trails`,
+    href: buildCardHref(slug, "places", {
+      venue_type: "park,trail,garden",
+      tab: "things-to-do",
+      label: "Parks & Trails",
+    }),
   }),
   farmers_market: (slug: string): CardTemplate => ({
     id: "farmers_market",
     label: "Markets",
     value: "This weekend",
     icon: "Storefront",
-    href: `/${slug}?view=find&lane=events&categories=food_drink&genres=farmers-market&date=today`,
+    href: buildCardHref(slug, "events", {
+      categories: "food_drink",
+      genres: "farmers-market",
+      date: "today",
+    }),
   }),
   parks: (slug: string): CardTemplate => ({
     id: "parks",
     label: "Parks & outdoors",
     value: "Near you",
     icon: "Tree",
-    href: `/${slug}?view=find&lane=places&venue_type=park%2Ctrail%2Cgarden&tab=things-to-do&label=Parks`,
+    href: buildCardHref(slug, "places", {
+      venue_type: "park,trail,garden",
+      tab: "things-to-do",
+      label: "Parks",
+    }),
   }),
   patio: (slug: string): CardTemplate => ({
     id: "patio",
     label: "Patio bars",
     value: "Open now",
     icon: "SunHorizon",
-    href: `/${slug}?view=find&lane=places&vibes=outdoor-seating%2Crooftop%2Cpatio&open_now=true&tab=eat-drink&label=Patios`,
+    href: buildCardHref(slug, "places", {
+      vibes: "outdoor-seating,rooftop,patio",
+      open_now: true,
+      tab: "eat-drink",
+      label: "Patios",
+    }),
     accent: "var(--gold)",
   }),
   beltline: (slug: string): CardTemplate => ({
@@ -55,14 +91,22 @@ const CARDS = {
     label: "BeltLine",
     value: "Open now",
     icon: "Path",
-    href: `/${slug}?view=find&lane=places&neighborhoods=Old+Fourth+Ward%2CInman+Park%2CReynoldstown%2CGrant+Park&open_now=true&tab=things-to-do&label=BeltLine`,
+    href: buildCardHref(slug, "places", {
+      neighborhoods: "Old Fourth Ward,Inman Park,Reynoldstown,Grant Park",
+      open_now: true,
+      tab: "things-to-do",
+      label: "BeltLine",
+    }),
   }),
   live_music: (slug: string): CardTemplate => ({
     id: "live_music",
     label: "Live music",
     value: "Tonight",
     icon: "MusicNotes",
-    href: `/${slug}?view=find&lane=events&categories=music&date=today`,
+    href: buildCardHref(slug, "events", {
+      categories: "music",
+      date: "today",
+    }),
     accent: "var(--coral)",
   }),
   nightlife: (slug: string): CardTemplate => ({
@@ -70,7 +114,10 @@ const CARDS = {
     label: "Going Out",
     value: "Trending",
     icon: "Martini",
-    href: `/${slug}?view=find&lane=events&categories=games%2Cdance&date=today`,
+    href: buildCardHref(slug, "events", {
+      categories: "games,dance",
+      date: "today",
+    }),
     accent: "var(--neon-magenta)",
   }),
   late_night: (slug: string): CardTemplate => ({
@@ -78,21 +125,35 @@ const CARDS = {
     label: "Late night eats",
     value: "Open now",
     icon: "ForkKnife",
-    href: `/${slug}?view=find&lane=places&vibes=late-night&open_now=true&tab=eat-drink&label=Late+Night+Eats`,
+    href: buildCardHref(slug, "places", {
+      vibes: "late-night",
+      open_now: true,
+      tab: "eat-drink",
+      label: "Late Night Eats",
+    }),
   }),
   indoor: (slug: string): CardTemplate => ({
     id: "indoor",
     label: "Indoor vibes",
     value: "Stay dry",
     icon: "Umbrella",
-    href: `/${slug}?view=find&lane=places&venue_type=museum%2Cgallery%2Centertainment%2Carcade%2Cbowling%2Ccinema&tab=things-to-do&label=Indoor+Vibes`,
+    href: buildCardHref(slug, "places", {
+      venue_type: "museum,gallery,entertainment,arcade,bowling,cinema",
+      tab: "things-to-do",
+      label: "Indoor Vibes",
+    }),
   }),
   happy_hour: (slug: string): CardTemplate => ({
     id: "happy_hour",
     label: "Happy hours",
     value: "Active now",
     icon: "BeerStein",
-    href: `/${slug}?view=find&lane=places&venue_type=bar%2Cbrewery%2Crestaurant&open_now=true&tab=eat-drink&label=Happy+Hour`,
+    href: buildCardHref(slug, "places", {
+      venue_type: "bar,brewery,restaurant",
+      open_now: true,
+      tab: "eat-drink",
+      label: "Happy Hour",
+    }),
     accent: "var(--gold)",
   }),
   museums: (slug: string): CardTemplate => ({
@@ -100,14 +161,24 @@ const CARDS = {
     label: "Museums",
     value: "Open now",
     icon: "Bank",
-    href: `/${slug}?view=find&lane=places&venue_type=museum%2Cgallery&tab=things-to-do&label=Museums`,
+    href: buildCardHref(slug, "places", {
+      venue_type: "museum,gallery",
+      tab: "things-to-do",
+      label: "Museums",
+    }),
   }),
   brunch: (slug: string): CardTemplate => ({
     id: "brunch",
     label: "Brunch",
     value: "Open now",
     icon: "Egg",
-    href: `/${slug}?view=find&lane=places&venue_type=restaurant&cuisine=brunch_breakfast&open_now=true&tab=eat-drink&label=Brunch`,
+    href: buildCardHref(slug, "places", {
+      venue_type: "restaurant",
+      cuisine: "brunch_breakfast",
+      open_now: true,
+      tab: "eat-drink",
+      label: "Brunch",
+    }),
     accent: "var(--gold)",
   }),
   food_events: (slug: string): CardTemplate => ({
@@ -115,14 +186,20 @@ const CARDS = {
     label: "Food & drink",
     value: "Today",
     icon: "CookingPot",
-    href: `/${slug}?view=find&lane=events&categories=food_drink&date=today`,
+    href: buildCardHref(slug, "events", {
+      categories: "food_drink",
+      date: "today",
+    }),
   }),
   comedy: (slug: string): CardTemplate => ({
     id: "comedy",
     label: "Comedy",
     value: "Tonight",
     icon: "SmileyWink",
-    href: `/${slug}?view=find&lane=events&categories=comedy&date=today`,
+    href: buildCardHref(slug, "events", {
+      categories: "comedy",
+      date: "today",
+    }),
   }),
 } as const;
 

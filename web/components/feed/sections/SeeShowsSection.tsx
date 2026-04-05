@@ -5,6 +5,7 @@ import { Ticket } from "@phosphor-icons/react";
 import FeedSectionHeader from "@/components/feed/FeedSectionHeader";
 import NowShowingSection from "./NowShowingSection";
 import { PlaceGroupedShowsList } from "@/components/feed/PlaceGroupedShowsList";
+import { buildExploreUrl } from "@/lib/find-url";
 
 // ── Types ─────────────────────────────────────────────────────────
 
@@ -44,7 +45,7 @@ export default function SeeShowsSection({ portalSlug }: SeeShowsSectionProps) {
         priority="secondary"
         accentColor="var(--coral)"
         icon={<Ticket weight="duotone" className="w-5 h-5" />}
-        seeAllHref={`/${portalSlug}?view=find&lane=shows`}
+        seeAllHref={buildExploreUrl({ portalSlug, lane: "shows" })}
       />
 
       {/* Tab bar — each tab gets its own accent color */}

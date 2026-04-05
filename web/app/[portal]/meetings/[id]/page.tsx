@@ -4,9 +4,9 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { format, parseISO, isBefore } from "date-fns";
 import { getEventById } from "@/lib/supabase";
-import { getCachedPortalBySlug } from "@/lib/portal";
 import { formatTime } from "@/lib/formats";
 import ScrollToTop from "@/components/ScrollToTop";
+import { resolveDetailPageRequest } from "../../_surfaces/detail/resolve-detail-page-request";
 import {
   ArrowLeft,
   ShareNetwork,
@@ -18,7 +18,7 @@ import {
   ChatCircle,
 } from "@phosphor-icons/react/dist/ssr";
 
-export const revalidate = 60;
+export const revalidate = 120;
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -79,7 +79,10 @@ type Props = { params: Promise<{ portal: string; id: string }> };
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id, portal: portalSlug } = await params;
   const event = await getCachedMeetingById(parseInt(id, 10));
-  const portal = await getCachedPortalBySlug(portalSlug);
+  const request = await resolveDetailPageRequest({
+    portalSlug,
+    pathname: `/${portalSlug}/meetings/${id}`,
+  });
 
   if (!event) {
     return {
@@ -88,7 +91,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     };
   }
 
-  const portalName = portal?.name || "HelpATL";
+  const activePortalSlug = request?.portal.slug || portalSlug;
+  const portalName = request?.portal.name || "HelpATL";
   const dateObj = parseISO(event.start_date);
   const formattedDate = format(dateObj, "EEEE, MMMM d, yyyy");
   const venueName = event.venue?.name || "TBA";
@@ -100,7 +104,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     title: `${event.title} | ${portalName}`,
     description,
     alternates: {
-      canonical: `/${portalSlug}/meetings/${event.id}`,
+      canonical: `/${activePortalSlug}/meetings/${event.id}`,
     },
     openGraph: {
       title: event.title,
@@ -461,14 +465,17 @@ export default async function CivicMeetingDetailPage({ params }: Props) {
 
   if (isNaN(eventId)) notFound();
 
-  const [event, portal] = await Promise.all([
+  const [event, request] = await Promise.all([
     getCachedMeetingById(eventId),
-    getCachedPortalBySlug(portalSlug),
+    resolveDetailPageRequest({
+      portalSlug,
+      pathname: `/${portalSlug}/meetings/${id}`,
+    }),
   ]);
 
   if (!event) notFound();
 
-  const activePortalSlug: string = portal?.slug ?? portalSlug;
+  const activePortalSlug = request?.portal.slug ?? portalSlug;
 
   // Parse civic metadata (future JSONB field, gracefully absent today)
   const civicMeta: CivicMetadata =

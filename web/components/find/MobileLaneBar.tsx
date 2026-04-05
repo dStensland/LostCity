@@ -3,6 +3,7 @@
 import { useCallback } from "react";
 import { House } from "@phosphor-icons/react";
 import { LANE_META, BROWSE_LANES, VIEW_LANES, LANE_ICONS } from "@/lib/explore-lane-meta";
+import { buildExploreUrl } from "@/lib/find-url";
 
 const MOBILE_LANES = [...BROWSE_LANES, ...VIEW_LANES].map((slug) => ({
   id: slug,
@@ -30,7 +31,7 @@ export function MobileLaneBar({ portalSlug, activeLane, onLaneChange }: MobileLa
     <div className="lg:hidden sticky top-[73px] z-40 bg-[var(--void)]/95 backdrop-blur-sm border-b border-[var(--twilight)]/30">
       <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide px-3 py-2">
         <a
-          href={`/${portalSlug}?view=find`}
+          href={buildExploreUrl({ portalSlug })}
           onClick={(e) => handleClick(null, e)}
           className={`shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${
             !activeLane
@@ -47,7 +48,7 @@ export function MobileLaneBar({ portalSlug, activeLane, onLaneChange }: MobileLa
           return (
             <a
               key={lane.id}
-              href={`/${portalSlug}${lane.href}`}
+              href={`/${portalSlug}/explore${lane.href}`}
               onClick={(e) => handleClick(lane.id, e)}
               className="shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors whitespace-nowrap"
               style={

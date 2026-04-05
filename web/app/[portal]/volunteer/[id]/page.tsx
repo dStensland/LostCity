@@ -1,6 +1,5 @@
 import ScrollToTop from "@/components/ScrollToTop";
 import { getEventById } from "@/lib/supabase";
-import { getCachedPortalBySlug } from "@/lib/portal";
 import { notFound } from "next/navigation";
 import { cache } from "react";
 import { format, parseISO } from "date-fns";
@@ -18,8 +17,9 @@ import {
   UsersThree,
   Timer,
 } from "@phosphor-icons/react/dist/ssr";
+import { resolveCommunityPageRequest } from "../../_surfaces/community/resolve-community-page-request";
 
-export const revalidate = 60;
+export const revalidate = 180;
 
 type Props = {
   params: Promise<{ portal: string; id: string }>;
@@ -33,7 +33,10 @@ const getCachedVolunteerEvent = cache(async (id: number) => {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id, portal: portalSlug } = await params;
   const event = await getCachedVolunteerEvent(parseInt(id, 10));
-  const portal = await getCachedPortalBySlug(portalSlug);
+  const request = await resolveCommunityPageRequest({
+    portalSlug,
+    pathname: `/${portalSlug}/volunteer/${id}`,
+  });
 
   if (!event) {
     return {
@@ -42,7 +45,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     };
   }
 
-  const portalName = portal?.name || "HelpATL";
+  const activePortalSlug = request?.portal.slug || portalSlug;
+  const portalName = request?.portal.name || "HelpATL";
   const venueName = event.venue?.name || "Location TBA";
   const dateObj = parseISO(event.start_date);
   const formattedDate = format(dateObj, "EEEE, MMMM d, yyyy");
@@ -54,7 +58,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     title: `${event.title} | ${venueName} | ${portalName}`,
     description,
     alternates: {
-      canonical: `/${portalSlug}/volunteer/${event.id}`,
+      canonical: `/${activePortalSlug}/volunteer/${event.id}`,
     },
     openGraph: {
       title: event.title,
@@ -101,14 +105,17 @@ function deriveDurationLabel(
 export default async function VolunteerDetailPage({ params }: Props) {
   const { id, portal: portalSlug } = await params;
   const event = await getCachedVolunteerEvent(parseInt(id, 10));
-  const portal = await getCachedPortalBySlug(portalSlug);
+  const request = await resolveCommunityPageRequest({
+    portalSlug,
+    pathname: `/${portalSlug}/volunteer/${id}`,
+  });
 
   if (!event) {
     notFound();
   }
 
-  const activePortalSlug = portal?.slug || portalSlug;
-  const activePortalName = portal?.name || "HelpATL";
+  const activePortalSlug = request?.portal.slug || portalSlug;
+  const activePortalName = request?.portal.name || "HelpATL";
 
   // Typed access to future civic_metadata JSONB field
   const civicMeta = (event as { civic_metadata?: {

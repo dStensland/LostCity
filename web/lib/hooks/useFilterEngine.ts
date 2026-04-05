@@ -1,11 +1,11 @@
 "use client";
 
-import { useSearchParams, usePathname } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useCallback, useMemo, useState, useEffect, useRef } from "react";
 import { CATEGORIES, TAG_GROUPS } from "@/lib/search-constants";
 import { VIBE_GROUPS } from "@/lib/spots-constants";
 import { type FindType } from "@/lib/find-filter-schema";
-import { dispatchReplaceState } from "@/lib/hooks/useReplaceStateParams";
+import { useReplaceStateParams } from "@/lib/hooks/useReplaceStateParams";
 import {
   createFindFilterSnapshot,
   diffFindFilterKeys,
@@ -37,6 +37,7 @@ export interface UseFilterEngineOptions {
   portalExclusive?: boolean;
   findType?: FindType;
   enableTracking?: boolean;
+  loadAvailability?: boolean;
 }
 
 export interface UseFilterEngineReturn {
@@ -107,20 +108,11 @@ export function useFilterEngine({
   portalExclusive = false,
   findType = "events",
   enableTracking = true,
+  loadAvailability = true,
 }: UseFilterEngineOptions): UseFilterEngineReturn {
   const pathname = usePathname();
-  const searchParams = useSearchParams();
-
-  // ─── Local param override ──────────────────────────────────────────────────
-  // replaceState does NOT trigger useSearchParams to re-render. We keep a
-  // local URLSearchParams that's applied immediately on write, so the UI
-  // reflects filter changes instantly. It's cleared once useSearchParams
-  // catches up (i.e. when a real navigation or Next.js flush occurs) — but
-  // in practice it stays in sync because both read from the same URL.
-  const [localParams, setLocalParams] = useState<URLSearchParams | null>(null);
-
-  // The effective params for reading: local override wins while it's present.
-  const effectiveParams = localParams ?? searchParams;
+  const searchParams = useReplaceStateParams();
+  const effectiveParams = searchParams;
 
   // ─── Availability state ────────────────────────────────────────────────────
   const [genreOptions, setGenreOptions] = useState<GenreOption[]>([]);
@@ -215,7 +207,7 @@ export function useFilterEngine({
 
   const tagGroupOptions = useMemo(() => {
     const availableSet = availableTags?.length
-      ? new Set(availableTags.map((t) => t.value))
+      ? new Set(availableTags.map((tag) => tag.value))
       : null;
 
     if (!availableSet) return TAG_GROUP_OPTIONS;
@@ -235,31 +227,25 @@ export function useFilterEngine({
   // ─── URL update helper ─────────────────────────────────────────────────────
   const updateParams = useCallback(
     (updates: Record<string, string | null>) => {
-      // Build the new params from the current effective state (local override
-      // or searchParams) so rapid toggling stays consistent.
       const params = new URLSearchParams(effectiveParams.toString());
       for (const [key, value] of Object.entries(updates)) {
         if (!value) params.delete(key);
         else params.set(key, value);
       }
-      params.set("view", "find");
+      params.delete("view");
+      params.delete("type");
+      if (!params.get("lane")) {
+        params.set("lane", "events");
+      }
       params.delete("page");
-      const url = params.toString() ? `${pathname}?${params.toString()}` : pathname;
+      const basePath = portalSlug ? `/${portalSlug}/explore` : pathname;
+      const url = params.toString() ? `${basePath}?${params.toString()}` : basePath;
 
       // Write to history without triggering a Next.js navigation cycle.
       // This avoids re-entering Suspense boundaries on every filter toggle.
-      window.history.replaceState(null, "", url);
-
-      // Notify data-fetching hooks (useTimeline, useEventFilters) that the URL
-      // changed so they re-read params and refetch. Without this, hooks using
-      // useReplaceStateParams would never see the change.
-      dispatchReplaceState();
-
-      // Immediately update local state so the UI reflects the change without
-      // waiting for useSearchParams to re-render (which it won't from replaceState).
-      setLocalParams(params);
+      window.history.replaceState(window.history.state, "", url);
     },
-    [pathname, effectiveParams]
+    [effectiveParams, pathname, portalSlug]
   );
 
   // ─── Toggle helpers ────────────────────────────────────────────────────────
@@ -354,12 +340,15 @@ export function useFilterEngine({
     }
 
     if (prev.length === 1 && currentGenres.length > 0) {
+      // This resets now-invalid genre params when category scope broadens.
       updateParams({ genres: null });
     }
   }, [currentCategories]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ─── Fetch availability-aware categories/tags ──────────────────────────────
   useEffect(() => {
+    if (!loadAvailability) return;
+
     const controller = new AbortController();
     const params = new URLSearchParams();
     if (portalId && portalId !== "default") params.set("portal_id", portalId);
@@ -380,7 +369,7 @@ export function useFilterEngine({
       });
 
     return () => controller.abort();
-  }, [portalExclusive, portalId]);
+  }, [loadAvailability, portalExclusive, portalId]);
 
   // ─── Auto-track filter changes ─────────────────────────────────────────────
   useEffect(() => {

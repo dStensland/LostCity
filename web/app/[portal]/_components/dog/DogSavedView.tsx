@@ -8,6 +8,7 @@ import { createClient } from "@/lib/supabase/client";
 import { getLocalDateString, formatTime } from "@/lib/formats";
 import { classifyDogContentType, DOG_CONTENT_COLORS } from "@/lib/dog-art";
 import DogEmptyState from "./DogEmptyState";
+import { buildDogMapUrl, buildSavedUrl } from "@/lib/find-url";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -183,7 +184,7 @@ export default function DogSavedView({ portalSlug }: { portalSlug: string }) {
           remember.
         </p>
         <Link
-          href={`/auth/login?redirect=/${portalSlug}?view=community`}
+          href={`/auth/login?redirect=${encodeURIComponent(buildSavedUrl({ portalSlug }))}`}
           className="dog-btn-primary inline-block mt-6"
         >
           Sign in
@@ -241,7 +242,7 @@ export default function DogSavedView({ portalSlug }: { portalSlug: string }) {
             headline="No upcoming saved events"
             body="Events you save will appear here so you don't miss them."
             ctaLabel="Find events"
-            ctaHref={`/${portalSlug}?view=find`}
+            ctaHref={buildDogMapUrl({ portalSlug })}
           />
         ) : (
           <div className="mt-4 space-y-3">
@@ -263,7 +264,7 @@ export default function DogSavedView({ portalSlug }: { portalSlug: string }) {
           headline="No saved places"
           body="Save your favorite dog-friendly spots for quick access."
           ctaLabel="Explore the map"
-          ctaHref={`/${portalSlug}?view=find`}
+          ctaHref={buildDogMapUrl({ portalSlug })}
         />
       ) : (
         <div className="mt-4 space-y-3">

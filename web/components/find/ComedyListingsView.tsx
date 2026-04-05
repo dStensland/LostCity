@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useTransition } from "react";
-import { useSearchParams } from "next/navigation";
 import { Microphone } from "@phosphor-icons/react";
 import { DatePillStrip } from "@/components/find/DatePillStrip";
 import { type StageShow } from "@/components/find/StageShowCard";
@@ -9,10 +8,13 @@ import { VenueShowsCard } from "@/components/find/shows/VenueShowsCard";
 import { type BaseShow } from "@/components/find/shows/ShowRow";
 import { TransitionContainer } from "@/components/ui/TransitionContainer";
 import { useShowListings } from "@/lib/hooks/useShowListings";
+import { useExploreUrlState } from "@/lib/explore-platform/url-state";
+import type { ShowsListingsInitialData } from "@/lib/explore-platform/lane-data";
 
 export interface ComedyListingsViewProps {
   portalId: string;
   portalSlug: string;
+  initialData?: ShowsListingsInitialData<"comedy"> | null;
 }
 
 type ComedyFilter = "all" | "standup" | "improv" | "open-mic";
@@ -111,10 +113,20 @@ function filterMatchesFormat(key: ComedyFilter, show: StageShow): boolean {
   return true;
 }
 
-export default function ComedyListingsView({ portalId: _portalId, portalSlug }: ComedyListingsViewProps) {
-  const searchParams = useSearchParams();
-  const initialFilter = (searchParams.get("genre") as ComedyFilter) || "all";
-  const [activeFilter, setActiveFilter] = useState<ComedyFilter>(initialFilter);
+const VALID_FILTERS = new Set<ComedyFilter>(["all", "standup", "improv", "open-mic"]);
+
+export default function ComedyListingsView({
+  portalSlug,
+  initialData,
+}: ComedyListingsViewProps) {
+  const state = useExploreUrlState();
+  const rawGenre = state.params.get("genre");
+  const rawDate = state.params.get("date");
+  const genreFromUrl =
+    rawGenre && VALID_FILTERS.has(rawGenre as ComedyFilter)
+      ? (rawGenre as ComedyFilter)
+      : "all";
+  const [activeFilter, setActiveFilter] = useState<ComedyFilter>(genreFromUrl);
   const [isPending, startTransition] = useTransition();
 
   const {
@@ -127,29 +139,37 @@ export default function ComedyListingsView({ portalId: _portalId, portalSlug }: 
   } = useShowListings<StageShow>({
     apiPath: "/api/whats-on/stage?filter=comedy",
     portalSlug,
+    initialPayload: initialData
+      ? {
+          date: initialData.date,
+          meta: initialData.meta,
+          shows: initialData.shows,
+          requestKey: initialData.requestKey,
+        }
+      : null,
   });
 
-  // Sync filter to URL
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    if (activeFilter === "all") {
-      params.delete("genre");
-    } else {
-      params.set("genre", activeFilter);
+    setActiveFilter(genreFromUrl);
+  }, [genreFromUrl]);
+
+  useEffect(() => {
+    if (rawDate && rawDate !== selectedDate) {
+      setSelectedDate(rawDate);
     }
-    const newUrl = `${window.location.pathname}${params.toString() ? `?${params.toString()}` : ""}`;
-    window.history.replaceState(null, "", newUrl);
-  }, [activeFilter]);
+  }, [rawDate, selectedDate, setSelectedDate]);
 
   function handleDateSelect(date: string) {
     startTransition(() => {
       setSelectedDate(date);
+      state.setLaneParams({ date }, "replace");
     });
   }
 
   function handleFilterSelect(key: ComedyFilter) {
     startTransition(() => {
       setActiveFilter(key);
+      state.setLaneParams({ genre: key === "all" ? null : key }, "replace");
     });
   }
 

@@ -53,6 +53,7 @@ import {
 } from "@/components/EventCard";
 import { HeroCard } from "@/components/feed/HeroCard";
 import { trackPortalAction } from "@/lib/analytics/portal-action-tracker";
+import { buildExploreUrl } from "@/lib/find-url";
 
 /** Block javascript: and data: URLs from DB content to prevent XSS */
 function isSafeUrl(url: string): boolean {
@@ -219,6 +220,7 @@ function inferTrackedTargetFromHref(href: string): {
     href.includes("view=find") ||
     href.includes("view=happening") ||
     href.includes("view=places") ||
+    href.includes("/explore") ||
     href.includes("categories=") ||
     href.includes("tags=")
   ) {
@@ -230,46 +232,36 @@ function inferTrackedTargetFromHref(href: string): {
 
 // Helper: Build "See all" URL based on section filters
 function getSeeAllUrl(section: FeedSectionData, portalSlug: string): string {
-  const params = new URLSearchParams();
   const autoFilter = section.auto_filter;
-
-  // Always include view=find&lane=events when there are filters to show filtered results
-  let hasFilters = false;
+  const extraParams: Record<string, string> = {};
 
   if (autoFilter?.categories?.length) {
-    params.set("categories", autoFilter.categories.join(","));
-    hasFilters = true;
+    extraParams.categories = autoFilter.categories.join(",");
   }
-  // nightlife_mode sections link to the games+dance categories in find view
   if ((autoFilter as Record<string, unknown>)?.nightlife_mode) {
-    params.set("categories", "games,dance");
-    hasFilters = true;
+    extraParams.categories = "games,dance";
   }
   if (autoFilter?.tags?.length) {
-    params.set("tags", autoFilter.tags.join(","));
-    hasFilters = true;
+    extraParams.tags = autoFilter.tags.join(",");
   }
   if (autoFilter?.is_free) {
-    params.set("price", "free");
-    params.set("free", "1");
-    hasFilters = true;
+    extraParams.price = "free";
+    extraParams.free = "1";
   }
   if (autoFilter?.date_filter === "today") {
-    params.set("date", "today");
-    hasFilters = true;
+    extraParams.date = "today";
   } else if (autoFilter?.date_filter === "this_weekend") {
-    params.set("date", "weekend");
-    hasFilters = true;
+    extraParams.date = "weekend";
   }
 
-  // Switch to find view when filters are applied
-  if (hasFilters) {
-    params.set("view", "find");
-    params.set("lane", "events");
+  if (Object.keys(extraParams).length > 0) {
+    return buildExploreUrl({
+      portalSlug,
+      lane: "events",
+      extraParams,
+    });
   }
-
-  const queryString = params.toString();
-  return `/${portalSlug}${queryString ? `?${queryString}` : ""}`;
+  return `/${portalSlug}`;
 }
 
 export default function FeedSection({ section, isFirst }: Props) {
@@ -492,7 +484,7 @@ export function HolidayGrid({
           const glowColor = cardStyle?.glowColor || accentColor;
           const tag = section.auto_filter?.tags?.[0];
           const filterUrl = tag
-            ? `/${portalSlug}?tags=${tag}&view=find&lane=events`
+            ? buildExploreUrl({ portalSlug, lane: "events", tags: tag })
             : getSeeAllUrl(section, portalSlug);
           const eventCount = section.events.length;
 
@@ -1010,7 +1002,7 @@ function CollapsibleEvents({
   // Build URL with tag filter - clicking the card navigates to filtered view
   const tag = section.auto_filter?.tags?.[0];
   const filterUrl = tag
-    ? `/${portalSlug}?tags=${tag}&view=find&lane=events`
+    ? buildExploreUrl({ portalSlug, lane: "events", tags: tag })
     : getSeeAllUrl(section, portalSlug);
 
   return (
@@ -1463,7 +1455,11 @@ function NightlifeCarousel({
           </h3>
         </div>
         <Link
-          href={`/${portalSlug}?view=find&lane=events&categories=nightlife`}
+          href={buildExploreUrl({
+            portalSlug,
+            lane: "events",
+            categories: "nightlife",
+          })}
           className="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-mono transition-all group"
           style={{
             color: "var(--neon-magenta)",
@@ -1693,7 +1689,11 @@ function CategoryGrid({
         {categories.map((cat) => (
           <Link
             key={cat.id}
-            href={`/${portalSlug}?view=find&lane=events&categories=${cat.id}`}
+            href={buildExploreUrl({
+              portalSlug,
+              lane: "events",
+              categories: cat.id,
+            })}
             className="flex flex-col items-center gap-2 p-4 rounded-xl border border-[var(--twilight)] hover:border-[var(--coral)]/50 transition-all group min-h-[80px] relative bg-[var(--card-bg)]"
           >
             <CategoryIcon

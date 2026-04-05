@@ -1,6 +1,7 @@
 import type { SearchResult } from "@/lib/unified-search";
 import type { SearchSuggestion } from "@/lib/search-suggestions";
 import type { FindType } from "@/lib/find-filter-schema";
+import { buildExploreUrl } from "@/lib/find-url";
 
 export type SearchSuggestionResultMode = "instant" | "preview";
 
@@ -14,9 +15,13 @@ function buildFindSearchHref(
   query: string,
 ): string {
   if (findType === "destinations") {
-    return `/${portalSlug}?view=find&lane=places&search=${encodeURIComponent(query)}`;
+    return buildExploreUrl({ portalSlug, lane: "places", search: query });
   }
-  return `/${portalSlug}?view=find&lane=events&search=${encodeURIComponent(query)}`;
+  return buildExploreUrl({
+    portalSlug,
+    lane: findType === "classes" ? "classes" : "events",
+    search: query,
+  });
 }
 
 function shouldIncludeSuggestionType(
@@ -104,8 +109,16 @@ export function mapSuggestionToSearchResult(
         subtitle: mode === "preview" ? "Neighborhood" : undefined,
         href:
           navigationContext.findType === "destinations"
-            ? `/${portalSlug}?view=find&lane=places&neighborhoods=${encoded}`
-            : `/${portalSlug}?view=find&lane=events&neighborhoods=${encoded}`,
+            ? buildExploreUrl({
+                portalSlug,
+                lane: "places",
+                extraParams: { neighborhoods: suggestion.text },
+              })
+            : buildExploreUrl({
+                portalSlug,
+                lane: "events",
+                extraParams: { neighborhoods: suggestion.text },
+              }),
         score: baseScore - 40,
       };
     case "category":
@@ -114,7 +127,11 @@ export function mapSuggestionToSearchResult(
         type: mode === "preview" ? "event" : "category",
         title: suggestion.text,
         subtitle: mode === "preview" ? "Category" : undefined,
-        href: `/${portalSlug}?view=find&lane=events&categories=${encoded}`,
+        href: buildExploreUrl({
+          portalSlug,
+          lane: "events",
+          categories: suggestion.text,
+        }),
         score: baseScore - 50,
       };
     case "tag":
@@ -123,7 +140,11 @@ export function mapSuggestionToSearchResult(
         type: mode === "preview" ? "event" : "category",
         title: suggestion.text,
         subtitle: mode === "preview" ? "Tag" : "Tag",
-        href: `/${portalSlug}?view=find&lane=events&tags=${encoded}`,
+        href: buildExploreUrl({
+          portalSlug,
+          lane: "events",
+          tags: suggestion.text,
+        }),
         score: baseScore - 55,
       };
     case "vibe":
@@ -132,7 +153,11 @@ export function mapSuggestionToSearchResult(
         type: "venue",
         title: suggestion.text,
         subtitle: "Vibe",
-        href: `/${portalSlug}?view=find&lane=places&vibes=${encoded}`,
+        href: buildExploreUrl({
+          portalSlug,
+          lane: "places",
+          vibes: suggestion.text,
+        }),
         score: baseScore - 60,
       };
     case "program":

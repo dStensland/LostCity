@@ -1,11 +1,11 @@
 import { notFound } from "next/navigation";
-import { getCachedPortalBySlug } from "@/lib/portal";
 import { getOpenCalls } from "@/lib/open-calls";
 import { OpenCallsBoard } from "@/components/arts/OpenCallsBoard";
 import { ArtsSecondaryNav } from "@/components/arts/ArtsSecondaryNav";
 import type { Metadata } from "next";
+import { resolveFeedPageRequest } from "../_surfaces/feed/resolve-feed-page-request";
 
-export const revalidate = 60;
+export const revalidate = 300;
 
 type Props = {
   params: Promise<{ portal: string }>;
@@ -13,15 +13,19 @@ type Props = {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { portal: portalSlug } = await params;
-  const portal = await getCachedPortalBySlug(portalSlug);
-  const portalName = portal?.name || "Lost City: Arts";
+  const request = await resolveFeedPageRequest({
+    portalSlug,
+    pathname: `/${portalSlug}/open-calls`,
+  });
+  const activePortalSlug = request?.portal.slug || portalSlug;
+  const portalName = request?.portal.name || "Lost City: Arts";
 
   return {
     title: `Open Calls | ${portalName}`,
     description:
       "Open calls, residencies, grants, and commissions for Atlanta artists. Curated and updated daily.",
     alternates: {
-      canonical: `/${portalSlug}/open-calls`,
+      canonical: `/${activePortalSlug}/open-calls`,
     },
     openGraph: {
       title: `Open Calls | ${portalName}`,
@@ -33,7 +37,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function OpenCallsPage({ params }: Props) {
   const { portal: portalSlug } = await params;
-  const portal = await getCachedPortalBySlug(portalSlug);
+  const request = await resolveFeedPageRequest({
+    portalSlug,
+    pathname: `/${portalSlug}/open-calls`,
+  });
+  const portal = request?.portal ?? null;
 
   if (!portal) {
     notFound();

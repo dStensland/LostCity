@@ -29,6 +29,7 @@ import { useDetailFetch } from "@/lib/hooks/useDetailFetch";
 import { useDetailNavigation } from "@/lib/hooks/useDetailNavigation";
 import { decodeHtmlEntities, formatTimeSplit } from "@/lib/formats";
 import { useState } from "react";
+import { buildExploreUrl } from "@/lib/find-url";
 
 // ── Types ────────────────────────────────────────────────────────────────
 
@@ -804,7 +805,7 @@ export default function FestivalDetailView({
               A festival-scoped Find filter is a follow-up. */}
           {hasOverflow && (
             <Link
-              href={`/${portalSlug}?view=find`}
+              href={buildExploreUrl({ portalSlug })}
               className="mt-3 inline-flex items-center gap-1 text-xs font-mono hover:opacity-80 transition-opacity"
               style={{ color: "var(--accent-color)" }}
             >

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { buildExploreUrl } from "@/lib/find-url";
 import SmartImage from "@/components/SmartImage";
 import { Clock, FilmSlate, MapPin } from "@phosphor-icons/react";
 import { buildFilmCapsule } from "@/lib/film-capsule";
@@ -313,7 +314,7 @@ export default function FilmShowtimeBoard({
           </div>
 
           <Link
-            href={`/${portalSlug}?view=find&lane=shows`}
+            href={buildExploreUrl({ portalSlug, lane: "shows" })}
             className="text-xs uppercase tracking-[0.14em] text-[#c9d9ff] hover:text-[#e1eaff]"
           >
             Open full finder

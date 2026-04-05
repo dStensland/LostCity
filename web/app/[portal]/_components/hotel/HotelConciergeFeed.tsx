@@ -9,6 +9,7 @@ import HotelCarousel from "./HotelCarousel";
 import HotelHeroCard from "./HotelHeroCard";
 import HotelEventCard from "./HotelEventCard";
 import HotelDestinationCard from "./HotelDestinationCard";
+import { buildExploreUrl } from "@/lib/find-url";
 
 interface FeedSection {
   title: string;
@@ -271,7 +272,10 @@ export default function HotelConciergeFeed({ portal }: HotelConciergeFeedProps) 
             title={leadTitle}
             subtitle={leadSubtitle}
             className="mb-16"
-            action={{ label: "All destinations", href: `/${portal.slug}?view=find&lane=places` }}
+            action={{
+              label: "All destinations",
+              href: buildExploreUrl({ portalSlug: portal.slug, lane: "places" }),
+            }}
           >
             <HotelCarousel>
               {leadDestinations.map((destination) => (
@@ -290,7 +294,10 @@ export default function HotelConciergeFeed({ portal }: HotelConciergeFeedProps) 
             title="Tonight"
             subtitle="Events with strong signal for this evening."
             className="mb-16"
-            action={{ label: "All events", href: `/${portal.slug}?view=find&lane=events` }}
+            action={{
+              label: "All events",
+              href: buildExploreUrl({ portalSlug: portal.slug, lane: "events" }),
+            }}
           >
             <HotelHeroCard event={todaySection.events[0]} portalSlug={portal.slug} />
             {todaySection.events.length > 1 && (
@@ -334,7 +341,14 @@ export default function HotelConciergeFeed({ portal }: HotelConciergeFeedProps) 
             title="Where To Eat"
             subtitle="Dining destinations prioritized for this part of day."
             className="mb-16"
-            action={{ label: "All dining", href: `/${portal.slug}?view=find&lane=places&venue_type=restaurant` }}
+            action={{
+              label: "All dining",
+              href: buildExploreUrl({
+                portalSlug: portal.slug,
+                lane: "places",
+                extraParams: { venue_type: "restaurant" },
+              }),
+            }}
           >
             <HotelCarousel>
               {categorized.dine.slice(0, 15).map((destination) => (
@@ -351,7 +365,14 @@ export default function HotelConciergeFeed({ portal }: HotelConciergeFeedProps) 
             title="Where To Drink"
             subtitle="Cocktail bars, rooftops, and nightlife with live context."
             className="mb-16"
-            action={{ label: "All bars", href: `/${portal.slug}?view=find&lane=places&venue_type=bar,brewery,rooftop,nightclub` }}
+            action={{
+              label: "All bars",
+              href: buildExploreUrl({
+                portalSlug: portal.slug,
+                lane: "places",
+                extraParams: { venue_type: "bar,brewery,rooftop,nightclub" },
+              }),
+            }}
           >
             <HotelCarousel>
               {categorized.drink.slice(0, 15).map((destination) => (

@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { getCachedPortalBySlug } from "@/lib/portal";
 import { createClient } from "@/lib/supabase/server";
 import {
   formatCommitmentLevel,
@@ -14,8 +13,9 @@ import {
 import { VolunteerInterestButton } from "@/components/volunteer/VolunteerInterestButton";
 import { VolunteerApplyLink } from "@/components/volunteer/VolunteerApplyLink";
 import { VolunteerDetailTracker } from "@/components/volunteer/VolunteerDetailTracker";
+import { resolveCommunityPageRequest } from "../../../_surfaces/community/resolve-community-page-request";
 
-export const revalidate = 60;
+export const revalidate = 180;
 
 type Props = {
   params: Promise<{ portal: string; slug: string }>;
@@ -23,7 +23,11 @@ type Props = {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { portal: portalSlug, slug } = await params;
-  const portal = await getCachedPortalBySlug(portalSlug);
+  const request = await resolveCommunityPageRequest({
+    portalSlug,
+    pathname: `/${portalSlug}/volunteer/opportunities/${slug}`,
+  });
+  const portal = request?.portal ?? null;
   if (!portal) {
     return { title: "Volunteer Opportunity", robots: { index: false, follow: false } };
   }
@@ -52,7 +56,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function VolunteerOpportunityDetailPage({ params }: Props) {
   const { portal: portalSlug, slug } = await params;
-  const portal = await getCachedPortalBySlug(portalSlug);
+  const request = await resolveCommunityPageRequest({
+    portalSlug,
+    pathname: `/${portalSlug}/volunteer/opportunities/${slug}`,
+  });
+  const portal = request?.portal ?? null;
   if (!portal) notFound();
 
   const supabase = await createClient();

@@ -1,11 +1,11 @@
 import { notFound } from "next/navigation";
-import { getCachedPortalBySlug } from "@/lib/portal";
 import { ExhibitionFeed } from "@/components/arts/ExhibitionFeed";
 import { ArtsSecondaryNav } from "@/components/arts/ArtsSecondaryNav";
 import type { Metadata } from "next";
 import type { ExhibitionWithVenue } from "@/lib/exhibitions-utils";
+import { resolveFeedPageRequest } from "../_surfaces/feed/resolve-feed-page-request";
 
-export const revalidate = 60;
+export const revalidate = 300;
 
 type Props = {
   params: Promise<{ portal: string }>;
@@ -13,15 +13,19 @@ type Props = {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { portal: portalSlug } = await params;
-  const portal = await getCachedPortalBySlug(portalSlug);
-  const portalName = portal?.name || "Lost City: Arts";
+  const request = await resolveFeedPageRequest({
+    portalSlug,
+    pathname: `/${portalSlug}/exhibitions`,
+  });
+  const activePortalSlug = request?.portal.slug || portalSlug;
+  const portalName = request?.portal.name || "Lost City: Arts";
 
   return {
     title: `Exhibitions | ${portalName}`,
     description:
       "Currently showing across Atlanta's galleries and museums. Solo shows, group exhibitions, installations, and more.",
     alternates: {
-      canonical: `/${portalSlug}/exhibitions`,
+      canonical: `/${activePortalSlug}/exhibitions`,
     },
     openGraph: {
       title: `Exhibitions | ${portalName}`,
@@ -60,7 +64,11 @@ async function fetchExhibitions(
 
 export default async function ExhibitionsPage({ params }: Props) {
   const { portal: portalSlug } = await params;
-  const portal = await getCachedPortalBySlug(portalSlug);
+  const request = await resolveFeedPageRequest({
+    portalSlug,
+    pathname: `/${portalSlug}/exhibitions`,
+  });
+  const portal = request?.portal ?? null;
 
   if (!portal) {
     notFound();

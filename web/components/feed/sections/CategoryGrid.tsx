@@ -3,6 +3,7 @@
 import Link from "next/link";
 import CategoryIcon from "@/components/CategoryIcon";
 import type { FeedSectionData } from "./types";
+import { buildExploreUrl } from "@/lib/find-url";
 
 export function CategoryGrid({
   section,
@@ -42,7 +43,7 @@ export function CategoryGrid({
         {categories.map((cat) => (
           <Link
             key={cat.id}
-            href={`/${portalSlug}?view=find&lane=events&categories=${cat.id}`}
+            href={buildExploreUrl({ portalSlug, lane: "events", categories: cat.id })}
             className="flex flex-col items-center gap-2 p-4 rounded-xl border border-[var(--twilight)] hover:border-[var(--coral)]/50 transition-all group min-h-[80px] relative bg-[var(--card-bg)]"
           >
             <CategoryIcon

@@ -1,4 +1,3 @@
-import { headers } from "next/headers";
 import type { Portal, PortalBranding } from "@/lib/portal-context";
 import { applyPreset } from "@/lib/apply-preset";
 import {
@@ -9,6 +8,7 @@ import {
 
 interface PortalThemeProps {
   portal: Portal;
+  nonce?: string;
 }
 
 /**
@@ -48,9 +48,7 @@ function sanitizeFontFamily(value: string): string | null {
  * Renders a <style> tag with CSS custom properties that override defaults.
  * Now supports deep white-labeling with visual presets and component styles.
  */
-export async function PortalTheme({ portal }: PortalThemeProps) {
-  const headerList = await headers();
-  const nonce = headerList.get("x-nonce") ?? "";
+export async function PortalTheme({ portal, nonce = "" }: PortalThemeProps) {
   const branding = portal.branding || {};
   const settings = portal.settings || {};
 

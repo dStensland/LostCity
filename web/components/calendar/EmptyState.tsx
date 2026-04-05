@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { DEFAULT_PORTAL_SLUG } from "@/lib/portal-context";
 import { useCalendar } from "@/lib/calendar/CalendarProvider";
+import { buildExploreUrl } from "@/lib/find-url";
 
 export function EmptyState() {
   const { openSheet } = useCalendar();
@@ -105,7 +106,7 @@ export function EmptyState() {
 
       <div className="mt-8">
         <Link
-          href={`/${DEFAULT_PORTAL_SLUG}?view=find&lane=events`}
+          href={buildExploreUrl({ portalSlug: DEFAULT_PORTAL_SLUG, lane: "events" })}
           className="inline-block bg-[var(--coral)] text-[var(--void)] font-mono text-sm font-medium rounded-lg px-6 py-2.5 hover:opacity-90 transition-opacity"
         >
           Browse Events

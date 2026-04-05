@@ -93,6 +93,7 @@ export interface UseInstantSearchOptions {
   findType?: string | null;
   debounceMs?: number;
   enabled?: boolean;
+  enablePreSearch?: boolean;
   /** Ranking context overrides */
   viewMode?: "feed" | "find" | "community";
   userPreferences?: RankingContext["userPreferences"];
@@ -253,6 +254,7 @@ export function useInstantSearch({
   findType,
   debounceMs = 100,
   enabled = true,
+  enablePreSearch = true,
   viewMode = "find",
   userPreferences,
   initialQuery = "",
@@ -294,7 +296,11 @@ export function useInstantSearch({
 
   // Fetch pre-search data on mount (when query is empty)
   useEffect(() => {
-    if (!enabled) return;
+    if (!enabled || !enablePreSearch) {
+      setPreSearchData(null);
+      setPreSearchLoading(false);
+      return;
+    }
 
     // Serve curated fallback immediately so the UI has something to show
     setPreSearchData({ trending: TRENDING_SEARCHES, popularNow: [] });
@@ -330,7 +336,7 @@ export function useInstantSearch({
       cancelled = true;
       controller.abort();
     };
-  }, [portalSlug, portalId, enabled]);
+  }, [portalSlug, portalId, enabled, enablePreSearch]);
 
   // Fetch suggestions as user types
   useEffect(() => {

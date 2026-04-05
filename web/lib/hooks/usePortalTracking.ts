@@ -99,7 +99,6 @@ export function usePortalTracking(portalSlug: string) {
     const utmMedium = searchParams.get("utm_medium");
     const utmCampaign = searchParams.get("utm_campaign");
 
-    // Fire tracking request (fire-and-forget)
     const payload: Record<string, unknown> = { page_type: pageType };
     if (entityId) payload.entity_id = entityId;
     if (utmSource) payload.utm_source = utmSource;
@@ -107,12 +106,51 @@ export function usePortalTracking(portalSlug: string) {
     if (utmCampaign) payload.utm_campaign = utmCampaign;
     if (document.referrer) payload.referrer = document.referrer;
 
-    fetch(`/api/portals/${portalSlug}/track`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    }).catch(() => {
-      // Silently ignore tracking errors
-    });
+    const url = `/api/portals/${portalSlug}/track`;
+    let cancelled = false;
+
+    const send = () => {
+      if (cancelled) return;
+
+      const body = JSON.stringify(payload);
+      try {
+        if (navigator.sendBeacon) {
+          const blob = new Blob([body], { type: "application/json" });
+          if (navigator.sendBeacon(url, blob)) {
+            return;
+          }
+        }
+      } catch {
+        // Fall through to fetch.
+      }
+
+      fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body,
+        keepalive: true,
+      }).catch(() => {
+        // Silently ignore tracking errors.
+      });
+    };
+
+    let timeoutId: ReturnType<typeof globalThis.setTimeout> | null = null;
+    let idleId: number | null = null;
+
+    if ("requestIdleCallback" in window) {
+      idleId = window.requestIdleCallback(send, { timeout: 1500 });
+    } else {
+      timeoutId = globalThis.setTimeout(send, 1200);
+    }
+
+    return () => {
+      cancelled = true;
+      if (idleId !== null && "cancelIdleCallback" in window) {
+        window.cancelIdleCallback(idleId);
+      }
+      if (timeoutId !== null) {
+        globalThis.clearTimeout(timeoutId);
+      }
+    };
   }, [pathname, portalSlug, searchParams]);
 }

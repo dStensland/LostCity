@@ -784,7 +784,13 @@ export default function PlaceFilterBar({
         </div>
       )}
       <div className="mb-3">
-        <FindSearchInput portalSlug={portalSlug} portalId={portalId} findType="destinations" placeholder="Search spots..." />
+        <FindSearchInput
+          portalSlug={portalSlug}
+          portalId={portalId}
+          basePath={`/${portalSlug}/explore`}
+          findType="destinations"
+          placeholder="Search spots..."
+        />
       </div>
 
       {/* Tab chips — visible on all breakpoints */}

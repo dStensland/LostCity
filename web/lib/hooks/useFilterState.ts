@@ -1,14 +1,14 @@
 "use client";
 
-import { useSearchParams } from "next/navigation";
 import { useCallback } from "react";
+import { useReplaceStateParams } from "@/lib/hooks/useReplaceStateParams";
 
 /**
  * Read a single filter param from URL (supports back/forward).
  * Write via replaceState (fast, no Suspense thrash).
  */
 export function useFilterParam(key: string): [string | null, (value: string | null) => void] {
-  const searchParams = useSearchParams();
+  const searchParams = useReplaceStateParams();
   const value = searchParams?.get(key) ?? null;
 
   const setValue = useCallback(
@@ -19,7 +19,7 @@ export function useFilterParam(key: string): [string | null, (value: string | nu
       } else {
         url.searchParams.set(key, newValue);
       }
-      window.history.replaceState(null, "", url.toString());
+      window.history.replaceState(window.history.state, "", url.toString());
     },
     [key]
   );
@@ -34,7 +34,7 @@ export function useFilterParam(key: string): [string | null, (value: string | nu
 export function useFilterParams<K extends string>(
   keys: readonly K[]
 ): [Record<K, string | null>, (updates: Partial<Record<K, string | null>>) => void] {
-  const searchParams = useSearchParams();
+  const searchParams = useReplaceStateParams();
 
   const values = {} as Record<K, string | null>;
   for (const key of keys) {
@@ -51,7 +51,7 @@ export function useFilterParams<K extends string>(
           url.searchParams.set(key, val);
         }
       }
-      window.history.replaceState(null, "", url.toString());
+      window.history.replaceState(window.history.state, "", url.toString());
     },
     []
   );

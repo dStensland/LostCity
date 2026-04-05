@@ -10,6 +10,17 @@ vi.mock("@/lib/supabase", () => ({
   },
 }));
 
+vi.mock("@/lib/shared-cache", () => ({
+  getOrSetSharedCacheJson: vi.fn(
+    async (
+      _namespace: string,
+      _key: string,
+      _ttlMs: number,
+      loader: () => Promise<unknown>,
+    ) => await loader(),
+  ),
+}));
+
 import {
   entityFamilyUsesCategoryConstraints,
   getPortalSourceAccess,

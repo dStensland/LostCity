@@ -10,6 +10,7 @@ import FeedSectionHeader, {
 import { Cake } from "@phosphor-icons/react";
 import type { FeedSectionData } from "./types";
 import { getSeeAllUrl } from "./types";
+import { buildExploreUrl } from "@/lib/find-url";
 
 // ============================================================
 // Holiday / themed icon helpers
@@ -120,7 +121,7 @@ export function HolidayGrid({
           const glowColor = cardStyle?.glowColor || accentColor;
           const tag = section.auto_filter?.tags?.[0];
           const filterUrl = tag
-            ? `/${portalSlug}?tags=${tag}&view=find&lane=events`
+            ? buildExploreUrl({ portalSlug, lane: "events", tags: tag })
             : getSeeAllUrl(section, portalSlug);
           const eventCount = section.events.length;
 

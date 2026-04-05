@@ -1,16 +1,15 @@
 import { notFound } from "next/navigation";
-import { cache, Suspense } from "react";
+import { cache } from "react";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { format, parseISO } from "date-fns";
-import { getCachedPortalBySlug, getPortalVertical } from "@/lib/portal";
 import { createServiceClient } from "@/lib/supabase/service";
 import { formatTime } from "@/lib/formats";
 import { createClient } from "@/lib/supabase/server";
 import { getCivicEventHref } from "@/lib/civic-routing";
 import { GroupSubscribeButton } from "@/components/civic/GroupSubscribeButton";
-import { CivicTabBar } from "@/components/civic/CivicTabBar";
 import ScrollToTop from "@/components/ScrollToTop";
+import { resolveCommunityPageRequest } from "../../_surfaces/community/resolve-community-page-request";
 import {
   ArrowLeft,
   ShareNetwork,
@@ -20,7 +19,7 @@ import {
   UsersThree,
 } from "@phosphor-icons/react/dist/ssr";
 
-export const revalidate = 60;
+export const revalidate = 180;
 
 // ─── Design tokens (light theme) ─────────────────────────────────────────────
 
@@ -169,7 +168,11 @@ type Props = { params: Promise<{ portal: string; slug: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug, portal: portalSlug } = await params;
-  const portal = await getCachedPortalBySlug(portalSlug);
+  const request = await resolveCommunityPageRequest({
+    portalSlug,
+    pathname: `/${portalSlug}/groups/${slug}`,
+  });
+  const portal = request?.portal ?? null;
 
   if (!portal) {
     return { title: "Group Not Found", robots: { index: false, follow: false } };
@@ -303,7 +306,11 @@ function MatchedEventCard({
 export default async function GroupDetailPage({ params }: Props) {
   const { slug, portal: portalSlug } = await params;
 
-  const portal = await getCachedPortalBySlug(portalSlug);
+  const request = await resolveCommunityPageRequest({
+    portalSlug,
+    pathname: `/${portalSlug}/groups/${slug}`,
+  });
+  const portal = request?.portal ?? null;
   if (!portal) notFound();
 
   const channel = await getCachedChannelBySlug(portal.id, slug);
@@ -316,15 +323,7 @@ export default async function GroupDetailPage({ params }: Props) {
 
   const accentColor = channelAccentColor(channel.channel_type as ChannelType);
   const typeLabel = channelTypeLabel(channel.channel_type as ChannelType);
-
-  const vertical = getPortalVertical(portal);
-  const isCommunity = vertical === "community";
-  const actLabel =
-    typeof portal.settings?.nav_labels === "object" &&
-    portal.settings.nav_labels !== null &&
-    typeof (portal.settings.nav_labels as Record<string, unknown>).feed === "string"
-      ? (portal.settings.nav_labels as Record<string, string>).feed
-      : "Act";
+  const vertical = request?.vertical ?? null;
 
   return (
     <>
@@ -482,16 +481,6 @@ export default async function GroupDetailPage({ params }: Props) {
 
         </main>
       </div>
-
-      {/* ── CivicTabBar (community vertical only) ── */}
-      {isCommunity && (
-        <>
-          <Suspense fallback={null}>
-            <CivicTabBar portalSlug={portalSlug} actLabel={actLabel} />
-          </Suspense>
-          <div className="h-14 sm:hidden" />
-        </>
-      )}
     </>
   );
 }

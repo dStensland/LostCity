@@ -1,6 +1,5 @@
 import ScrollToTop from "@/components/ScrollToTop";
 import { getEventById, getRelatedEvents } from "@/lib/supabase";
-import { getCachedPortalBySlug } from "@/lib/portal";
 import { format, parseISO } from "date-fns";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
@@ -14,8 +13,10 @@ import {
 import { mapEventServerDataToViewData } from "@/lib/mappers/event-detail-mapper";
 import { getNearbyDestinationsForVenue } from "@/lib/spot-detail";
 import EventDetailWrapper from "./EventDetailWrapper";
+import { buildExploreUrl } from "@/lib/find-url";
+import { resolveDetailPageRequest } from "../../_surfaces/detail/resolve-detail-page-request";
 
-export const revalidate = 60;
+export const revalidate = 120;
 
 type Props = {
   params: Promise<{ portal: string; id: string }>;
@@ -30,7 +31,10 @@ const getCachedEventById = cache(async (id: number) => {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id, portal: portalSlug } = await params;
   const event = await getCachedEventById(parseInt(id, 10));
-  const portal = await getCachedPortalBySlug(portalSlug);
+  const request = await resolveDetailPageRequest({
+    portalSlug,
+    pathname: `/${portalSlug}/events/${id}`,
+  });
 
   if (!event) {
     return {
@@ -42,7 +46,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     };
   }
 
-  const portalName = portal?.name || "Lost City";
+  const activePortalSlug = request?.portal.slug || portalSlug;
+  const portalName = request?.portal.name || "Lost City";
   const dateObj = parseISO(event.start_date);
   const formattedDate = format(dateObj, "EEEE, MMMM d, yyyy");
   const venueName = event.venue?.name || "TBA";
@@ -54,7 +59,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     title: `${event.title} | ${venueName} | ${portalName}`,
     description,
     alternates: {
-      canonical: `/${portalSlug}/events/${event.id}`,
+      canonical: `/${activePortalSlug}/events/${event.id}`,
     },
     openGraph: {
       title: event.title,
@@ -62,7 +67,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       type: "website",
       images: [
         {
-          url: `/${portalSlug}/events/${event.id}/opengraph-image`,
+          url: `/${activePortalSlug}/events/${event.id}/opengraph-image`,
           width: 1200,
           height: 630,
           alt: event.title,
@@ -75,7 +80,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       description,
       images: [
         {
-          url: `/${portalSlug}/events/${event.id}/twitter-image`,
+          url: `/${activePortalSlug}/events/${event.id}/twitter-image`,
           width: 1200,
           height: 600,
           alt: event.title,
@@ -249,21 +254,23 @@ function withPerformerSchema(
 export default async function PortalEventPage({ params }: Props) {
   const { id, portal: portalSlug } = await params;
   const event = await getCachedEventById(parseInt(id, 10));
-  const portal = await getCachedPortalBySlug(portalSlug);
+  const request = await resolveDetailPageRequest({
+    portalSlug,
+    pathname: `/${portalSlug}/events/${id}`,
+  });
 
   if (!event) {
     notFound();
   }
 
-  const activePortalSlug = portal?.slug || portalSlug;
-  const activePortalName =
-    portal?.name || portalSlug.charAt(0).toUpperCase() + portalSlug.slice(1);
+  const activePortalSlug = request?.portal.slug || portalSlug;
+  const activePortalName = request?.portal.name || portalSlug.charAt(0).toUpperCase() + portalSlug.slice(1);
 
   // Fetch related data in parallel
   const [{ venueEvents, sameDateEvents }, eventArtists, nearbyDestinations] = await Promise.all([
     getRelatedEvents(event, {
-      portalId: portal?.id,
-      portalCity: portal?.filters?.city ?? "Atlanta",
+      portalId: request?.portal.id,
+      portalCity: request?.portal.filters?.city ?? "Atlanta",
     }),
     getEventArtists(event.id),
     event.venue
@@ -313,7 +320,7 @@ export default async function PortalEventPage({ params }: Props) {
           __html: safeJsonLd(
             buildBreadcrumbSchema([
               { name: activePortalName, href: `/${activePortalSlug}` },
-              { name: "Events", href: `/${activePortalSlug}?view=find&lane=events` },
+              { name: "Events", href: buildExploreUrl({ portalSlug: activePortalSlug, lane: "events" }) },
               { name: event.title },
             ])
           ),

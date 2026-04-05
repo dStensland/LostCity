@@ -1,7 +1,6 @@
 import { notFound } from "next/navigation";
 import { cache } from "react";
 import { format, parseISO } from "date-fns";
-import { getCachedPortalBySlug } from "@/lib/portal";
 import {
   getArtistBySlug,
   getArtistEvents,
@@ -26,8 +25,9 @@ import { formatTimeSplit, safeJsonLd } from "@/lib/formats";
 import type { Metadata } from "next";
 import ScopedStylesServer from "@/components/ScopedStylesServer";
 import { createCssVarClass } from "@/lib/css-utils";
+import { resolveDetailPageRequest } from "../../_surfaces/detail/resolve-detail-page-request";
 
-export const revalidate = 300;
+export const revalidate = 120;
 
 type Props = {
   params: Promise<{ portal: string; slug: string }>;
@@ -38,7 +38,10 @@ const getCachedArtistBySlug = cache(getArtistBySlug);
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug, portal: portalSlug } = await params;
   const artist = await getCachedArtistBySlug(slug);
-  const portal = await getCachedPortalBySlug(portalSlug);
+  const request = await resolveDetailPageRequest({
+    portalSlug,
+    pathname: `/${portalSlug}/artists/${slug}`,
+  });
 
   if (!artist) {
     return {
@@ -50,7 +53,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     };
   }
 
-  const portalName = portal?.name || "Lost City";
+  const activePortalSlug = request?.portal.slug || portalSlug;
+  const portalName = request?.portal.name || "Lost City";
   const description = artist.bio
     ? artist.bio.slice(0, 160)
     : `${artist.name} — ${getDisciplineLabel(artist.discipline)}. Find upcoming events and festival appearances.`;
@@ -59,7 +63,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     title: `${artist.name} | ${portalName}`,
     description,
     alternates: {
-      canonical: `/${portal?.slug || portalSlug}/artists/${slug}`,
+      canonical: `/${activePortalSlug}/artists/${slug}`,
     },
     openGraph: {
       title: artist.name,
@@ -67,7 +71,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       type: "profile",
       images: [
         {
-          url: `/${portal?.slug || portalSlug}/artists/${slug}/opengraph-image`,
+          url: `/${activePortalSlug}/artists/${slug}/opengraph-image`,
           width: 1200,
           height: 630,
           alt: artist.name,
@@ -80,7 +84,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       description,
       images: [
         {
-          url: `/${portal?.slug || portalSlug}/artists/${slug}/opengraph-image`,
+          url: `/${activePortalSlug}/artists/${slug}/opengraph-image`,
           width: 1200,
           height: 630,
           alt: artist.name,
@@ -137,14 +141,17 @@ function generateArtistSchema(
 export default async function PortalArtistPage({ params }: Props) {
   const { slug, portal: portalSlug } = await params;
   const artist = await getCachedArtistBySlug(slug);
-  const portal = await getCachedPortalBySlug(portalSlug);
+  const request = await resolveDetailPageRequest({
+    portalSlug,
+    pathname: `/${portalSlug}/artists/${slug}`,
+  });
 
   if (!artist) {
     notFound();
   }
 
-  const activePortalSlug = portal?.slug || portalSlug;
-  const activePortalName = portal?.name || portalSlug.charAt(0).toUpperCase() + portalSlug.slice(1);
+  const activePortalSlug = request?.portal.slug || portalSlug;
+  const activePortalName = request?.portal.name || portalSlug.charAt(0).toUpperCase() + portalSlug.slice(1);
 
   const [upcomingEvents, festivals, exhibitions] = await Promise.all([
     getArtistEvents(artist.id, true),

@@ -6,21 +6,13 @@ import type { EventWithLocation } from "@/lib/search";
 import type { Festival } from "@/lib/festivals";
 import { fetchWithRetry } from "@/lib/fetchWithRetry";
 import { useReplaceStateParams } from "@/lib/hooks/useReplaceStateParams";
-
-/**
- * Response from /api/timeline — events + festivals in one stream
- */
-interface TimelineResponse {
-  events: EventWithLocation[];
-  festivals: Festival[];
-  cursor: string | null;
-  hasMore: boolean;
-}
+import type { TimelineResponse } from "@/lib/explore-platform/lane-data";
 
 interface UseTimelineOptions {
   portalId?: string;
   portalExclusive?: boolean;
   initialData?: EventWithLocation[];
+  initialPage?: TimelineResponse | null;
   enabled?: boolean;
   /** Smart date default to inject when no explicit date is in the URL */
   dateOverride?: string;
@@ -35,7 +27,14 @@ interface UseTimelineOptions {
  * where future festivals pushed the infinite-scroll sentinel out of view.
  */
 export function useTimeline(options: UseTimelineOptions = {}) {
-  const { portalId, portalExclusive, initialData, enabled = true, dateOverride } = options;
+  const {
+    portalId,
+    portalExclusive,
+    initialData,
+    initialPage,
+    enabled = true,
+    dateOverride,
+  } = options;
   // Use replaceState-aware params so filter changes from useFilterEngine
   // (which writes via window.history.replaceState) trigger refetches.
   const searchParams = useReplaceStateParams();
@@ -121,6 +120,12 @@ export function useTimeline(options: UseTimelineOptions = {}) {
       return res.json();
     },
     initialPageParam: null as string | null,
+    initialData: initialPage
+      ? {
+          pages: [initialPage],
+          pageParams: [null],
+        }
+      : undefined,
     getNextPageParam: (lastPage) => lastPage.cursor,
     enabled,
     staleTime: 30 * 1000,

@@ -1,13 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState, useMemo, useCallback } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
 import type { Spot } from "@/lib/spots-constants";
-import {
-  getTabChips,
-  getTabVenueTypes,
-  type SpotsTab,
-} from "@/lib/spots-constants";
+import { useReplaceStateParams } from "@/lib/hooks/useReplaceStateParams";
+import { type SpotsTab } from "@/lib/spots-constants";
 import {
   DEFAULT_DESTINATIONS_FILTERS,
   applyDestinationsQueryState,
@@ -18,6 +14,8 @@ import {
   createFindFilterSnapshot,
   trackFindZeroResults,
 } from "@/lib/analytics/find-tracking";
+import { buildExplorePlacesRequestParams } from "@/lib/explore-platform/places-request";
+import type { PlaceSeedSpot, PlacesLaneInitialData } from "@/lib/explore-platform/lane-data";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -44,6 +42,43 @@ interface UsePlaceDiscoveryOptions {
   portalId: string;
   portalSlug: string;
   isExclusive?: boolean;
+  initialPayload?: PlacesLaneInitialData | null;
+}
+
+function inflateSeedSpot(spot: PlaceSeedSpot): Spot {
+  return {
+    id: spot.id,
+    name: spot.name,
+    slug: spot.slug,
+    address: null,
+    neighborhood: spot.neighborhood,
+    city: "",
+    state: "GA",
+    lat: spot.lat ?? null,
+    lng: spot.lng ?? null,
+    place_type: spot.place_type,
+    location_designator: spot.location_designator ?? "standard",
+    venue_types: null,
+    description: null,
+    short_description: spot.short_description,
+    price_level: spot.price_level,
+    website: null,
+    instagram: null,
+    hours_display: null,
+    vibes: null,
+    genres: null,
+    image_url: spot.image_url,
+    featured: false,
+    active: true,
+    claimed_by: null,
+    is_verified: null,
+    event_count: spot.event_count,
+    upcoming_events: spot.upcoming_events,
+    is_open: spot.is_open,
+    closes_at: spot.closes_at,
+    is_24_hours: spot.is_24_hours,
+    distance_km: spot.distance_km ?? null,
+  };
 }
 
 export type UserLocation = { lat: number; lng: number };
@@ -82,14 +117,24 @@ function getCachedSpotPayload(cacheKey: string) {
   return cached;
 }
 
+function normalizeFetchedSpots(
+  spots: Spot[] | PlaceSeedSpot[] | undefined,
+  compact: boolean,
+): Spot[] {
+  const nextSpots = spots ?? [];
+  return compact
+    ? nextSpots.map((spot) => inflateSeedSpot(spot as PlaceSeedSpot))
+    : (nextSpots as Spot[]);
+}
+
 export function usePlaceDiscovery({
   portalId,
   portalSlug,
   isExclusive = false,
+  initialPayload = null,
 }: UsePlaceDiscoveryOptions): UsePlaceDiscoveryReturn {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const queryString = searchParams?.toString() || "";
+  const searchParams = useReplaceStateParams();
+  const queryString = searchParams.toString();
   const queryState = useMemo(
     () => parseDestinationsQueryState(queryString),
     [queryString]
@@ -97,13 +142,20 @@ export function usePlaceDiscovery({
   const filters = queryState.filters;
   const activeTab = queryState.activeTab;
 
-  const [spots, setSpots] = useState<Spot[]>([]);
-  const [loading, setLoading] = useState(true);
+  const hydratedInitialSpots = useMemo(
+    () => initialPayload?.spots.map(inflateSeedSpot) ?? [],
+    [initialPayload],
+  );
+  const [spots, setSpots] = useState<Spot[]>(() => hydratedInitialSpots);
+  const [loading, setLoading] = useState(() => !initialPayload);
   const [fetchError, setFetchError] = useState<string | null>(null);
-  const [meta, setMeta] = useState<{ openCount: number; neighborhoods: string[] }>({
-    openCount: 0,
-    neighborhoods: [],
-  });
+  const [meta, setMeta] = useState<{ openCount: number; neighborhoods: string[] }>(
+    () =>
+      initialPayload?.meta ?? {
+        openCount: 0,
+        neighborhoods: [],
+      },
+  );
   const [userLocation, setUserLocation] = useState<UserLocation | null>(() => {
     if (typeof window === "undefined") return null;
     try {
@@ -118,8 +170,8 @@ export function usePlaceDiscovery({
   const zeroResultsSignatureRef = useRef<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
 
-  const urlSearch = searchParams?.get("search") || "";
-  const contextLabel = searchParams?.get("label") || null;
+  const urlSearch = searchParams.get("search") || "";
+  const contextLabel = searchParams.get("label") || null;
 
   // ── Analytics snapshot ─────────────────────────────────────────────────
   const filterSnapshot = useMemo(
@@ -151,69 +203,46 @@ export function usePlaceDiscovery({
 
   // ── Build server-side query params ─────────────────────────────────────
   const buildQueryParams = useCallback(() => {
-    const params = new URLSearchParams();
-    if (portalId) params.set("portal_id", portalId);
-    if (isExclusive) params.set("exclusive", "true");
-
-    // Resolve effective venueTypes, vibes, cuisine considering tab defaults + occasion overrides
-    let effectiveVenueTypes = filters.venueTypes;
-    let effectiveVibes = filters.vibes;
-    let effectiveCuisine = filters.cuisine;
-
-    // If user hasn't manually set venueTypes, use the tab's defaults
-    if (effectiveVenueTypes.length === 0) {
-      effectiveVenueTypes = getTabVenueTypes(activeTab);
-    }
-
-    // If an occasion chip is active, merge its overrides (scoped to active tab — no cross-tab collision)
-    if (filters.occasion) {
-      const chip = getTabChips(activeTab).find((c) => c.key === filters.occasion);
-      if (chip) {
-        const ov = chip.filterOverrides;
-        if (ov.venueTypes) effectiveVenueTypes = [...ov.venueTypes];
-        if (ov.vibes) effectiveVibes = [...effectiveVibes, ...ov.vibes.filter((v) => !effectiveVibes.includes(v))];
-        if (ov.cuisine) effectiveCuisine = [...effectiveCuisine, ...ov.cuisine.filter((c) => !effectiveCuisine.includes(c))];
-      }
-    }
-
-    if (effectiveVenueTypes.length > 0) params.set("venue_type", effectiveVenueTypes.join(","));
-    // Enrich Things to Do venues with upcoming event details
-    if (activeTab === "things-to-do") params.set("include_events", "true");
-    if (filters.neighborhoods.length > 0) params.set("neighborhood", filters.neighborhoods.join(","));
-    if (effectiveVibes.length > 0) params.set("vibes", effectiveVibes.join(","));
-    if (effectiveCuisine.length > 0) params.set("cuisine", effectiveCuisine.join(","));
-    if (urlSearch) params.set("q", urlSearch);
-    if (userLocation) {
-      params.set("center_lat", String(userLocation.lat));
-      params.set("center_lng", String(userLocation.lng));
-    }
-    return params;
+    return buildExplorePlacesRequestParams({
+      portalId,
+      isExclusive,
+      queryString,
+      userLocation,
+      limit: 120,
+    });
   }, [
     portalId,
     isExclusive,
-    filters.venueTypes,
-    filters.neighborhoods,
-    filters.vibes,
-    filters.cuisine,
-    filters.occasion,
-    activeTab,
-    urlSearch,
+    queryString,
     userLocation,
   ]);
+
+  useEffect(() => {
+    if (!initialPayload) return;
+    clientSpotsCache.set(initialPayload.requestKey, {
+      cachedAt: Date.now(),
+      spots: hydratedInitialSpots,
+      meta: initialPayload.meta,
+    });
+  }, [hydratedInitialSpots, initialPayload]);
 
   const commitQueryState = useCallback(
     (nextState: { activeTab: SpotsTab; filters: FilterState }) => {
       const nextParams = applyDestinationsQueryState(
-        new URLSearchParams(searchParams?.toString() || ""),
+        new URLSearchParams(searchParams.toString()),
         nextState
       );
       const next = nextParams.toString();
-      const current = searchParams?.toString() || "";
+      const current = searchParams.toString();
       if (next !== current) {
-        router.replace(`/${portalSlug}?${next}`, { scroll: false });
+        window.history.replaceState(
+          window.history.state,
+          "",
+          `/${portalSlug}?${next}`,
+        );
       }
     },
-    [portalSlug, router, searchParams]
+    [portalSlug, searchParams]
   );
 
   const setFilters = useCallback<React.Dispatch<React.SetStateAction<FilterState>>>(
@@ -279,7 +308,10 @@ export function usePlaceDiscovery({
           const res = await fetch(`/api/spots?${params}`, { signal: controller.signal });
           if (!res.ok) throw new Error(`Server error (${res.status})`);
           const data = await res.json();
-          const nextSpots = data.spots || [];
+          const nextSpots = normalizeFetchedSpots(
+            data.spots,
+            params.get("compact") === "1" || data.compact === true,
+          );
           const nextMeta = data.meta || { openCount: 0, neighborhoods: [] };
           clientSpotsCache.set(requestKey, {
             cachedAt: Date.now(),
@@ -358,7 +390,10 @@ export function usePlaceDiscovery({
         return res.json();
       })
       .then((data) => {
-        const nextSpots = data.spots || [];
+        const nextSpots = normalizeFetchedSpots(
+          data.spots,
+          params.get("compact") === "1" || data.compact === true,
+        );
         const nextMeta = data.meta || { openCount: 0, neighborhoods: [] };
         clientSpotsCache.set(requestKey, {
           cachedAt: Date.now(),

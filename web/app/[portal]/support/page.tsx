@@ -11,15 +11,15 @@ import {
   ShieldCheck,
   UsersThree,
 } from "@phosphor-icons/react/dist/ssr";
-import { getCachedPortalBySlug } from "@/lib/portal";
 import {
   getHelpAtlSupportDirectorySections,
   getHelpAtlSupportDirectoryStats,
   getHelpAtlTrustedPartners,
 } from "@/lib/helpatl-support-directory";
 import { isHelpAtlSupportDirectoryEnabled } from "@/lib/helpatl-support";
+import { resolveCommunityPageRequest } from "../_surfaces/community/resolve-community-page-request";
 
-export const revalidate = 3600;
+export const revalidate = 180;
 
 export default async function PortalSupportPage({
   params,
@@ -27,7 +27,11 @@ export default async function PortalSupportPage({
   params: Promise<{ portal: string }>;
 }) {
   const { portal: portalSlug } = await params;
-  const portal = await getCachedPortalBySlug(portalSlug);
+  const request = await resolveCommunityPageRequest({
+    portalSlug,
+    pathname: `/${portalSlug}/support`,
+  });
+  const portal = request?.portal ?? null;
 
   if (!portal || !isHelpAtlSupportDirectoryEnabled(portal.slug)) {
     notFound();

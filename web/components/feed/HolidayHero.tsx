@@ -8,6 +8,7 @@ import {
   getActiveHeroSlugs,
   getActiveHoliday,
 } from "@/config/holidays";
+import { buildExploreUrl } from "@/lib/find-url";
 
 /** Extract a mid-tone color from a CSS gradient string for photo fade-out */
 function extractFadeColor(gradient: string): string {
@@ -92,7 +93,7 @@ function HolidayCard({
 
         {/* Content area — right side */}
         <Link
-          href={`/${portalSlug}?tags=${holiday.tag}&view=find&lane=events`}
+          href={buildExploreUrl({ portalSlug, lane: "events", tags: holiday.tag })}
           className="relative flex flex-col justify-center min-h-[240px] sm:min-h-[260px] pl-[48%] sm:pl-[38%] pr-5 sm:pr-8 py-6 sm:py-8 group/main"
         >
           {/* Countdown badge — dark glass with neon border */}
@@ -256,7 +257,7 @@ function HolidayCard({
 
       {/* Main content area — links to events page */}
       <Link
-        href={`/${portalSlug}?tags=${holiday.tag}&view=find&lane=events`}
+        href={buildExploreUrl({ portalSlug, lane: "events", tags: holiday.tag })}
         className="relative flex items-center gap-5 px-5 py-5 sm:px-6 sm:py-6 group/main"
       >
         {/* Icon */}

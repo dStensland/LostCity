@@ -21,6 +21,7 @@ import type {
   YonderRuntimeInventorySnapshot,
 } from "@/lib/yonder-provider-inventory";
 import { ArrowRight, Mountains } from "@phosphor-icons/react";
+import { buildExploreUrl } from "@/lib/find-url";
 
 type Props = {
   portalSlug: string;
@@ -299,7 +300,7 @@ export default function YonderRegionalEscapesSection({
         priority="secondary"
         accentColor="var(--gold)"
         icon={<Mountains weight="duotone" className="w-5 h-5" />}
-        seeAllHref={`/${portalSlug}?view=find&lane=places`}
+        seeAllHref={buildExploreUrl({ portalSlug, lane: "places" })}
         seeAllLabel="All spots"
       />
 

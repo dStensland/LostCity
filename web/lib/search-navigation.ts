@@ -1,4 +1,5 @@
 import type { SearchResult } from "@/lib/unified-search";
+import { buildExploreUrl } from "@/lib/find-url";
 
 const DEFAULT_SEARCH_PORTAL = "atlanta";
 
@@ -49,9 +50,17 @@ export function buildSearchResultHref(
     case "list":
       return `/${portal}/curations/${slug}`;
     case "neighborhood":
-      return `/${portal}?view=find&lane=events&neighborhoods=${encodeURIComponent(result.title)}`;
+      return buildExploreUrl({
+        portalSlug: portal,
+        lane: "events",
+        extraParams: { neighborhoods: result.title },
+      });
     case "category":
-      return `/${portal}?view=find&lane=events&categories=${encodeURIComponent(result.title)}`;
+      return buildExploreUrl({
+        portalSlug: portal,
+        lane: "events",
+        categories: result.title,
+      });
     case "program":
       // Programs link to the family portal programs view, filtered by slug when available
       return slug ? `/family?program=${slug}` : `/family?view=programs`;

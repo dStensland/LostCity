@@ -9,6 +9,7 @@ import CalendarViewToggle from "@/components/calendar/CalendarViewToggle";
 import { DEFAULT_PORTAL_SLUG } from "@/lib/portal-context";
 import { STATUS_FILTER_OPTIONS } from "@/lib/types/calendar";
 import type { CalendarSummary, Friend } from "@/lib/types/calendar";
+import { buildExploreUrl } from "@/lib/find-url";
 
 interface CalendarHeaderProps {
   summary?: CalendarSummary;
@@ -173,7 +174,14 @@ export function CalendarHeader({ summary, friends, feedUrls, isLoading }: Calend
               </div>
 
               <Link
-                href={`/${portalSlug}?view=find&lane=calendar${selectedDate ? `&date=${format(selectedDate, "yyyy-MM-dd")}` : ""}`}
+                href={buildExploreUrl({
+                  portalSlug,
+                  lane: "events",
+                  extraParams: {
+                    display: "calendar",
+                    ...(selectedDate ? { date: format(selectedDate, "yyyy-MM-dd") } : {}),
+                  },
+                })}
                 className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-[var(--twilight)]/75 bg-[var(--void)]/65 text-[var(--soft)] hover:text-[var(--cream)] hover:bg-[var(--twilight)]/45 font-mono text-xs transition-colors"
               >
                 Find Calendar

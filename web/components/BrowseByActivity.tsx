@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import CategoryIcon, { CATEGORY_CONFIG } from "./CategoryIcon";
 import { CATEGORIES } from "@/lib/search-constants";
 import { usePortal } from "@/lib/portal-context";
+import { buildExploreUrl } from "@/lib/find-url";
 
 type DateFilter = "today" | "week" | "month";
 
@@ -228,30 +229,46 @@ export default function BrowseByActivity({ portalSlug }: BrowseByActivityProps) 
 
   // Build URL for activity
   function buildUrl(activity: ActivityWithCount, subcats?: string[]): string {
-    const params = new URLSearchParams();
-    params.set("view", "find");
-    params.set("type", "events");
+    const extraParams: Record<string, string> = {};
+    let date: "today" | "week" | (string & {}) | undefined;
 
-    // Apply date filter
     if (dateFilter === "today") {
-      params.set("date", "today");
+      date = "today";
     } else if (dateFilter === "week") {
-      params.set("date", "week");
+      date = "week";
     } else if (dateFilter === "month") {
-      params.set("date", "month");
+      extraParams.date = "month";
     }
 
     if (subcats && subcats.length > 0) {
-      params.set("subcategories", subcats.join(","));
-      params.set("genres", subcats.map(subactivityKeyToGenre).join(","));
-    } else if (activity.type === "subcategory") {
-      params.set("subcategories", activity.value);
-      params.set("genres", subactivityKeyToGenre(activity.value));
-    } else {
-      params.set("categories", activity.value);
+      extraParams.subcategories = subcats.join(",");
+      return buildExploreUrl({
+        portalSlug,
+        lane: "events",
+        date,
+        genres: subcats.map(subactivityKeyToGenre).join(","),
+        extraParams,
+      });
     }
 
-    return `/${portalSlug}?${params.toString()}`;
+    if (activity.type === "subcategory") {
+      extraParams.subcategories = activity.value;
+      return buildExploreUrl({
+        portalSlug,
+        lane: "events",
+        date,
+        genres: subactivityKeyToGenre(activity.value),
+        extraParams,
+      });
+    }
+
+    return buildExploreUrl({
+      portalSlug,
+      lane: "events",
+      date,
+      categories: activity.value,
+      extraParams,
+    });
   }
 
   // Check if a category has subcategories with events

@@ -9,6 +9,7 @@ import { useMapSpots } from "@/lib/hooks/useMapSpots";
 import { useViewportFilter } from "@/lib/hooks/useViewportFilter";
 import { useMapLocation } from "@/lib/hooks/useMapLocation";
 import { VENUE_CATEGORY_PRESETS } from "@/lib/spots-constants";
+import { buildExploreUrl } from "@/lib/find-url";
 
 type DisplayMode = "list" | "map";
 
@@ -264,7 +265,7 @@ export default function SpotsFinder({
             <DestinationsMapFilterBar portalSlug={portalSlug} />
           </div>
           <div style={{ height: MAP_DESKTOP_HEIGHT }}>
-            <MapErrorBoundary listHref={`/${portalSlug}?view=find&lane=places`}>
+            <MapErrorBoundary listHref={buildExploreUrl({ portalSlug, lane: "places" })}>
               <MapViewWrapper
                 portalId={portalId}
                 portalExclusive={portalExclusive}

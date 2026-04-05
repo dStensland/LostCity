@@ -82,6 +82,11 @@ export function usePortalInterestChannels({
       }
 
       const data = await response.json();
+      if (data?.disabled) {
+        setChannels([]);
+        setIsDisabled(true);
+        return;
+      }
       setChannels((data.channels || []) as PortalChannel[]);
       setIsDisabled(false);
     } catch (loadError) {

@@ -48,6 +48,16 @@ describe("applyPortalScopeToQuery", () => {
     expect(query.ops).toEqual(["eq:portal_id:portal-123"]);
   });
 
+  it("can include public rows alongside the portal scope", () => {
+    const query = new MockQuery();
+    applyPortalScopeToQuery(query, {
+      portalId: "portal-123",
+      portalExclusive: false,
+      includePublicWhenPortal: true,
+    });
+    expect(query.ops).toEqual(["or:portal_id.eq.portal-123,portal_id.is.null"]);
+  });
+
   it("applies public-only scope when no portal is provided and policy requires it", () => {
     const query = new MockQuery();
     applyPortalScopeToQuery(query, {

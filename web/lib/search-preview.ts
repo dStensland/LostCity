@@ -15,6 +15,7 @@ import { getSearchSuggestionsWithFallback } from "@/lib/search-suggestions";
 import { mapSuggestionToSearchResult } from "@/lib/search-suggestion-results";
 import { getFindSearchSubtitle } from "@/lib/find-labels";
 import type { FindType } from "@/lib/find-filter-schema";
+import { buildExploreUrl } from "@/lib/find-url";
 
 export type PreviewSearchType = "event" | "venue" | "organizer";
 
@@ -120,7 +121,7 @@ export function buildDirectQueryFallbackResults(
   findType?: FindType | null,
 ): SearchResult[] {
   const results: SearchResult[] = [];
-  const eventTarget = findType === "classes" ? "classes" : "events";
+  const eventLane = findType === "classes" ? "classes" : "events";
 
   if (requestedTypes.includes("event")) {
     results.push({
@@ -128,7 +129,11 @@ export function buildDirectQueryFallbackResults(
       type: "event",
       title: query,
       subtitle: findType === "classes" ? "Search classes" : "Search events",
-      href: `/${portalSlug}?view=find&lane=events&search=${encodeURIComponent(query)}`,
+      href: buildExploreUrl({
+        portalSlug,
+        lane: eventLane,
+        search: query,
+      }),
       score: 560,
     });
   }
@@ -139,7 +144,11 @@ export function buildDirectQueryFallbackResults(
       type: "venue",
       title: query,
       subtitle: getFindSearchSubtitle("venue"),
-      href: `/${portalSlug}?view=find&lane=places&search=${encodeURIComponent(query)}`,
+      href: buildExploreUrl({
+        portalSlug,
+        lane: "places",
+        search: query,
+      }),
       score: 540,
     });
   }

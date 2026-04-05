@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { getCachedPortalBySlug } from "@/lib/portal";
 import { createClient } from "@/lib/supabase/server";
 import {
   formatCommitmentLevel,
@@ -14,8 +13,9 @@ import {
 import { VolunteerInterestButton } from "@/components/volunteer/VolunteerInterestButton";
 import { VolunteerApplyLink } from "@/components/volunteer/VolunteerApplyLink";
 import { VolunteerProfilePanel } from "@/components/volunteer/VolunteerProfilePanel";
+import { resolveCommunityPageRequest } from "../../_surfaces/community/resolve-community-page-request";
 
-export const revalidate = 60;
+export const revalidate = 180;
 export const dynamic = "force-dynamic";
 
 type SearchParams = {
@@ -68,7 +68,11 @@ function withFilter(
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { portal: portalSlug } = await params;
-  const portal = await getCachedPortalBySlug(portalSlug);
+  const request = await resolveCommunityPageRequest({
+    portalSlug,
+    pathname: `/${portalSlug}/volunteer/opportunities`,
+  });
+  const portal = request?.portal ?? null;
 
   if (!portal) {
     return { title: "Volunteer Opportunities", robots: { index: false, follow: false } };
@@ -88,7 +92,11 @@ export default async function VolunteerOpportunitiesPage({
   searchParams,
 }: Props) {
   const { portal: portalSlug } = await params;
-  const portal = await getCachedPortalBySlug(portalSlug);
+  const request = await resolveCommunityPageRequest({
+    portalSlug,
+    pathname: `/${portalSlug}/volunteer/opportunities`,
+  });
+  const portal = request?.portal ?? null;
   if (!portal) notFound();
 
   const supabase = await createClient();

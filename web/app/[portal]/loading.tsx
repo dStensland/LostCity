@@ -55,120 +55,35 @@ export default function PortalLoading({ params }: Props) {
 function CityFeedPortalLoading() {
   return (
     <div data-skeleton-route="portal-root" data-skeleton-vertical="city" className="min-h-screen">
-      <main className="max-w-3xl mx-auto px-4 pb-16">
-        {/* GreetingBar hero skeleton — matches the full-bleed photo hero */}
-        <div
-          className="relative overflow-hidden -mx-4"
-          style={{ minHeight: 300 }}
-        >
-          {/* Dark base + subtle gradient overlay matching real hero */}
-          <div className="absolute inset-0 bg-[var(--night)]" />
-          <div className="absolute inset-0 bg-gradient-to-b from-[var(--night)]/50 via-transparent to-[var(--void)]" />
-
-          {/* Masthead text skeleton */}
-          <div className="relative z-10 flex flex-col justify-end min-h-[260px] sm:min-h-[300px] px-6 pb-7 pt-5">
-            <div className="mb-auto pt-2">
-              <S className="h-3 w-20 rounded-full" />
-            </div>
-            <div className="space-y-2">
-              <S className="h-10 w-48 sm:w-64 rounded" delay="0.05s" />
-              <S className="h-6 w-32 sm:w-40 rounded" delay="0.1s" />
-              <S className="h-4 w-56 sm:w-72 rounded mt-3" delay="0.15s" />
-              {/* Quick links skeleton */}
-              <div className="flex flex-wrap gap-1.5 mt-3">
-                {[0, 1, 2, 3].map((i) => (
-                  <S key={i} className="h-7 w-20 rounded-full" delay={`${i * 0.04 + 0.2}s`} />
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* CityBriefing skeleton — "TODAY IN ATLANTA" news card */}
-        <div className="mt-4 rounded-xl bg-[var(--night)] border border-[var(--twilight)]/75 p-3.5">
-          {/* Section header row */}
-          <div className="flex items-center gap-2 mb-3">
-            <S className="h-2.5 w-3 rounded" delay="0.25s" />
-            <S className="h-2.5 w-28 rounded" delay="0.27s" />
-          </div>
-          {/* 3 news item rows */}
-          {[0, 1, 2].map((i) => (
-            <div key={i} className={`flex gap-2.5 items-start ${i > 0 ? "mt-2.5" : ""}`}>
-              <S className="w-10 h-10 rounded-md flex-shrink-0" delay={`${i * 0.05 + 0.3}s`} />
-              <div className="flex-1 min-w-0 py-0.5">
-                <S className="h-3.5 w-[75%] rounded mb-1.5" delay={`${i * 0.05 + 0.32}s`} />
-                <S className="h-3 w-[50%] rounded" delay={`${i * 0.05 + 0.34}s`} />
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Lineup section skeleton — event card rows */}
-        <div className="mt-4" style={{ minHeight: 400 }}>
-          {/* Tab bar skeleton */}
-          <div className="flex items-center gap-2 mb-4">
-            <S className="h-4 w-3 rounded" delay="0.35s" />
-            <S className="h-3 w-20 rounded" delay="0.35s" />
-          </div>
-          <div className="flex gap-2 mb-5">
-            {[0, 1, 2].map((i) => (
-              <S key={i} className="h-9 w-24 rounded-lg" delay={`${i * 0.04 + 0.4}s`} />
-            ))}
-          </div>
-
-          {/* Event card skeletons */}
-          <div className="space-y-2.5">
-            {[0, 1, 2, 3, 4].map((i) => (
-              <div key={i} className="rounded-xl border border-[var(--twilight)]/75 bg-[var(--night)] p-3 sm:p-3.5">
-                <div className="flex gap-2.5 sm:gap-3">
-                  {/* Date rail (desktop) */}
-                  <div className="hidden sm:flex flex-col items-center w-[100px] -ml-3.5 -my-3.5 rounded-l-xl overflow-hidden">
-                    <S className="w-full h-full" delay={`${i * 0.06 + 0.5}s`} />
-                  </div>
-                  {/* Content */}
-                  <div className="flex-1 min-w-0 py-0.5">
-                    <div className="flex items-center gap-2 mb-2 sm:hidden">
-                      <S className="h-3 w-14 rounded" delay={`${i * 0.06 + 0.5}s`} />
-                    </div>
-                    <div className="flex items-start gap-2.5">
-                      <S className="w-8 h-8 rounded-lg flex-shrink-0" delay={`${i * 0.06 + 0.52}s`} />
-                      <div className="flex-1">
-                        <S className="h-5 w-[70%] rounded mb-1.5" delay={`${i * 0.06 + 0.54}s`} />
-                        <S className="h-4 w-[50%] rounded mb-1" delay={`${i * 0.06 + 0.56}s`} />
-                        <S className="h-3 w-[40%] rounded" delay={`${i * 0.06 + 0.58}s`} />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Below-fold section divider + placeholder */}
-        <div className="mt-8">
-          <div className="h-px bg-[var(--twilight)]" />
-          <div className="pt-6" style={{ minHeight: 300 }}>
-            <div className="flex items-center gap-2 mb-4">
-              <S className="w-3.5 h-3.5 rounded" delay="0.9s" />
-              <S className="h-3 w-28 rounded" delay="0.92s" />
-              <div className="flex-1" />
-              <S className="h-3 w-14 rounded" delay="0.94s" />
-            </div>
-            <div className="space-y-2.5">
-              {[0, 1, 2].map((i) => (
-                <div key={i} className="rounded-xl border border-[var(--twilight)]/75 bg-[var(--night)] p-3">
-                  <div className="flex gap-3 items-center">
-                    <S className="w-10 h-10 rounded-lg flex-shrink-0" delay={`${i * 0.05 + 1}s`} />
-                    <div className="flex-1">
-                      <S className="h-4 w-[60%] rounded mb-1" delay={`${i * 0.05 + 1.02}s`} />
-                      <S className="h-3 w-[40%] rounded" delay={`${i * 0.05 + 1.04}s`} />
-                    </div>
-                  </div>
-                </div>
+      <main className="max-w-3xl mx-auto px-4 pb-12 pt-4">
+        <div className="rounded-[28px] border border-[var(--twilight)]/70 bg-[var(--night)]/90 p-5 sm:p-6">
+          <div className="space-y-3">
+            <S className="h-3 w-24 rounded-full" />
+            <S className="h-9 w-52 rounded" delay="0.05s" />
+            <S className="h-4 w-64 max-w-full rounded" delay="0.1s" />
+            <div className="flex flex-wrap gap-2 pt-2">
+              {[0, 1, 2, 3].map((i) => (
+                <S key={i} className="h-8 w-20 rounded-full" delay={`${i * 0.04 + 0.14}s`} />
               ))}
             </div>
           </div>
+        </div>
+
+        <div className="mt-4 grid gap-3">
+          {[0, 1, 2].map((i) => (
+            <div
+              key={i}
+              className="rounded-2xl border border-[var(--twilight)]/70 bg-[var(--night)]/85 p-3.5"
+            >
+              <div className="flex items-start gap-3">
+                <S className="h-9 w-9 rounded-lg flex-shrink-0" delay={`${i * 0.05 + 0.24}s`} />
+                <div className="flex-1 space-y-2">
+                  <S className="h-4 w-[68%] rounded" delay={`${i * 0.05 + 0.26}s`} />
+                  <S className="h-3 w-[46%] rounded" delay={`${i * 0.05 + 0.28}s`} />
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       </main>
     </div>

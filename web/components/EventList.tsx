@@ -22,6 +22,7 @@ import {
   createFindFilterSnapshot,
   trackFindZeroResults,
 } from "@/lib/analytics/find-tracking";
+import type { TimelineResponse } from "@/lib/explore-platform/lane-data";
 
 // Max events to display (prevent memory issues)
 const MAX_EVENTS = 500;
@@ -39,6 +40,7 @@ type VirtualFlatItem =
 
 interface Props {
   initialEvents?: EventWithLocation[];
+  initialPage?: TimelineResponse | null;
   initialTotal?: number;
   hasActiveFilters?: boolean;
   portalId?: string;
@@ -56,6 +58,7 @@ interface Props {
  */
 export default function EventList({
   initialEvents,
+  initialPage,
   portalId,
   portalExclusive,
   portalSlug,
@@ -84,13 +87,42 @@ export default function EventList({
     portalId,
     portalExclusive,
     initialData: initialEvents,
+    initialPage,
     dateOverride: effectiveDate,
   });
   const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE_EVENTS);
   const [hasUserExpanded, setHasUserExpanded] = useState(false);
 
   // Friends going data
-  const eventIds = useMemo(() => events.map((e) => e.id), [events]);
+  const [friendsGoingEnabled, setFriendsGoingEnabled] = useState(false);
+  useEffect(() => {
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+    let idleId: number | null = null;
+
+    if (typeof window !== "undefined" && "requestIdleCallback" in window) {
+      idleId = window.requestIdleCallback(
+        () => setFriendsGoingEnabled(true),
+        { timeout: 1200 },
+      );
+    } else {
+      timeoutId = setTimeout(() => setFriendsGoingEnabled(true), 1000);
+    }
+
+    return () => {
+      if (typeof window === "undefined") return;
+      if (timeoutId !== null) {
+        clearTimeout(timeoutId);
+      }
+      if (idleId !== null && "cancelIdleCallback" in window) {
+        window.cancelIdleCallback(idleId);
+      }
+    };
+  }, []);
+
+  const eventIds = useMemo(
+    () => (friendsGoingEnabled ? events.map((event) => event.id) : []),
+    [events, friendsGoingEnabled],
+  );
   const { getFriendsForEvent } = useFriendsGoing(eventIds);
 
   // Limit displayed events
@@ -164,7 +196,6 @@ export default function EventList({
 
   useEffect(() => {
     const initial = hasActiveFilters ? 60 : INITIAL_VISIBLE_EVENTS;
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- Intentional UX reset when filter signature changes
     setVisibleCount(initial);
     setHasUserExpanded(false);
   }, [filtersResetKey, hasActiveFilters]);

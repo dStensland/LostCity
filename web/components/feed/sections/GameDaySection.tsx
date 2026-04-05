@@ -47,6 +47,7 @@ import {
   type TeamSchedule,
   type GameDayResponse,
 } from "@/lib/teams-config";
+import { buildExploreUrl } from "@/lib/find-url";
 
 // ── Constants ────────────────────────────────────────────────────────
 
@@ -264,7 +265,7 @@ export default function GameDaySection({ portalSlug }: GameDaySectionProps) {
           priority="secondary"
           accentColor="var(--neon-cyan)"
           icon={<Trophy weight="duotone" className="w-5 h-5" />}
-          seeAllHref={`/${portalSlug}?view=find&lane=game-day`}
+          seeAllHref={buildExploreUrl({ portalSlug, lane: "game-day" })}
         />
         <div className="flex gap-3 overflow-hidden">
           {[0, 1, 2].map((i) => (
@@ -297,7 +298,7 @@ export default function GameDaySection({ portalSlug }: GameDaySectionProps) {
         priority="secondary"
         accentColor="var(--neon-cyan)"
         icon={<Trophy weight="duotone" className="w-5 h-5" />}
-        seeAllHref={`/${portalSlug}?view=find&lane=game-day`}
+        seeAllHref={buildExploreUrl({ portalSlug, lane: "game-day" })}
         actionIcon={user ? <GearSix weight="bold" className="w-3.5 h-3.5" /> : undefined}
         onAction={user ? () => setCustomizerOpen((v) => !v) : undefined}
         actionActive={customizerOpen}
@@ -550,7 +551,12 @@ function TeamCard({
           {/* +N more overflow link */}
           {overflowCount > 0 && (
             <Link
-              href={`/${portalSlug}?view=find&lane=events&category=sports&q=${encodeURIComponent(team.shortName)}`}
+              href={buildExploreUrl({
+                portalSlug,
+                lane: "events",
+                extraParams: { category: "sports" },
+                search: team.shortName,
+              })}
               className="block px-3 py-1 font-mono text-xs font-medium text-[var(--neon-cyan)] hover:opacity-80 transition-colors"
             >
               +{overflowCount} more →

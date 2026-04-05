@@ -8,6 +8,7 @@ interface Meta {
 }
 
 interface ApiResponse<T> {
+  date: string;
   shows: T[];
   meta?: Meta;
 }
@@ -17,10 +18,17 @@ interface CachedData<T> {
   loaded: boolean;
 }
 
-export interface UseShowListingsConfig {
-  /** API path, e.g. "/api/whats-on/music" */
+export interface UseShowListingsInitialPayload<T> {
+  date: string;
+  meta: Meta;
+  shows: T[];
+  requestKey: string;
+}
+
+export interface UseShowListingsConfig<T> {
   apiPath: string;
   portalSlug: string;
+  initialPayload?: UseShowListingsInitialPayload<T> | null;
 }
 
 export interface UseShowListingsResult<T> {
@@ -32,36 +40,57 @@ export interface UseShowListingsResult<T> {
   datePills: string[];
 }
 
-/**
- * Shared hook for show listing views (Music, Stage).
- * Handles meta+data fetching, client-side caching, adjacent-date prefetch,
- * and AbortController for fetch race conditions.
- */
+function scheduleIdle(callback: () => void): () => void {
+  if (typeof window === "undefined") {
+    return () => undefined;
+  }
+
+  if ("requestIdleCallback" in window) {
+    const id = window.requestIdleCallback(callback, { timeout: 1500 });
+    return () => window.cancelIdleCallback(id);
+  }
+
+  const timeoutId = globalThis.setTimeout(callback, 1200);
+  return () => globalThis.clearTimeout(timeoutId);
+}
+
 export function useShowListings<T extends { event_id: number }>(
-  config: UseShowListingsConfig,
+  config: UseShowListingsConfig<T>,
 ): UseShowListingsResult<T> {
-  const { apiPath } = config;
+  const { apiPath, portalSlug, initialPayload } = config;
   const today = getLocalDateString(new Date());
 
-  const [selectedDate, setSelectedDate] = useState<string>(today);
-  const [shows, setShows] = useState<T[]>([]);
-  const [meta, setMeta] = useState<Meta | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [metaLoading, setMetaLoading] = useState(true);
+  const [selectedDate, setSelectedDate] = useState<string>(
+    initialPayload?.date ?? today,
+  );
+  const [shows, setShows] = useState<T[]>(initialPayload?.shows ?? []);
+  const [meta, setMeta] = useState<Meta | null>(initialPayload?.meta ?? null);
+  const [loading, setLoading] = useState(!initialPayload);
+  const [metaLoading, setMetaLoading] = useState(!initialPayload);
 
   const cacheRef = useRef<Map<string, CachedData<T>>>(new Map());
   const abortRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    if (!initialPayload) return;
+    cacheRef.current.set(initialPayload.date, {
+      shows: initialPayload.shows,
+      loaded: true,
+    });
+  }, [initialPayload]);
 
   const prefetchDate = useCallback(
     (date: string) => {
       if (cacheRef.current.has(date)) return;
       cacheRef.current.set(date, { shows: [], loaded: false });
+
       const url = new URL(apiPath, window.location.origin);
       url.searchParams.set("date", date);
-      url.searchParams.set("portal", config.portalSlug);
+      url.searchParams.set("portal", portalSlug);
+
       fetch(url.toString())
-        .then((res) => (res.ok ? res.json() : null))
-        .then((data: ApiResponse<T> | null) => {
+        .then((res) => (res.ok ? (res.json() as Promise<ApiResponse<T>>) : null))
+        .then((data) => {
           if (!data) {
             cacheRef.current.delete(date);
             return;
@@ -72,25 +101,38 @@ export function useShowListings<T extends { event_id: number }>(
           cacheRef.current.delete(date);
         });
     },
-    [apiPath, config.portalSlug],
+    [apiPath, portalSlug],
   );
 
   const prefetchAdjacent = useCallback(
     (date: string, dates: string[]) => {
       const idx = dates.indexOf(date);
-      if (idx >= 0) {
-        if (idx > 0) prefetchDate(dates[idx - 1]);
-        if (idx < dates.length - 1) prefetchDate(dates[idx + 1]);
-      }
+      if (idx < 0) return;
+      const adjacent = [
+        idx > 0 ? dates[idx - 1] : null,
+        idx < dates.length - 1 ? dates[idx + 1] : null,
+      ].filter((value): value is string => !!value);
+
+      const cancel = scheduleIdle(() => {
+        for (const adjacentDate of adjacent) {
+          prefetchDate(adjacentDate);
+        }
+      });
+
+      return cancel;
     },
     [prefetchDate],
   );
+
+  useEffect(() => {
+    if (!initialPayload?.meta?.available_dates?.length) return;
+    return prefetchAdjacent(initialPayload.date, initialPayload.meta.available_dates);
+  }, [initialPayload, prefetchAdjacent]);
 
   const fetchShows = useCallback(
     async (date: string) => {
       if (!date) return;
 
-      // Abort any in-flight request for a different date
       abortRef.current?.abort();
 
       const cached = cacheRef.current.get(date);
@@ -108,34 +150,41 @@ export function useShowListings<T extends { event_id: number }>(
       try {
         const url = new URL(apiPath, window.location.origin);
         url.searchParams.set("date", date);
-        url.searchParams.set("portal", config.portalSlug);
+        url.searchParams.set("portal", portalSlug);
         const res = await fetch(url.toString(), {
           signal: controller.signal,
         });
         if (!res.ok) return;
-        const data: ApiResponse<T> = await res.json();
-        const fetched = data.shows || [];
 
-        // Only update state if this request wasn't aborted
-        if (!controller.signal.aborted) {
-          setShows(fetched);
-          cacheRef.current.set(date, { shows: fetched, loaded: true });
-          prefetchAdjacent(date, meta?.available_dates || []);
-        }
-      } catch (err) {
-        if (err instanceof DOMException && err.name === "AbortError") return;
+        const data: ApiResponse<T> = await res.json();
+        if (controller.signal.aborted) return;
+
+        const fetched = data.shows || [];
+        setShows(fetched);
+        cacheRef.current.set(date, { shows: fetched, loaded: true });
+        prefetchAdjacent(date, meta?.available_dates || []);
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") return;
       } finally {
         if (!controller.signal.aborted) {
           setLoading(false);
         }
       }
     },
-    [apiPath, config.portalSlug, meta?.available_dates, prefetchAdjacent],
+    [apiPath, meta?.available_dates, portalSlug, prefetchAdjacent],
   );
 
-  // Fetch meta + initial data on mount
   useEffect(() => {
+    if (initialPayload) {
+      setMeta(initialPayload.meta);
+      setShows(initialPayload.shows);
+      setMetaLoading(false);
+      setLoading(false);
+      return;
+    }
+
     const controller = new AbortController();
+
     async function fetchMeta() {
       setMetaLoading(true);
       try {
@@ -143,16 +192,18 @@ export function useShowListings<T extends { event_id: number }>(
         const url = new URL(apiPath, window.location.origin);
         url.searchParams.set("date", dateStr);
         url.searchParams.set("meta", "true");
-        url.searchParams.set("portal", config.portalSlug);
+        url.searchParams.set("portal", portalSlug);
         const res = await fetch(url.toString(), {
           signal: controller.signal,
         });
         if (!res.ok) return;
-        const data: ApiResponse<T> = await res.json();
 
+        const data: ApiResponse<T> = await res.json();
         if (controller.signal.aborted) return;
 
-        if (data.meta) setMeta(data.meta);
+        if (data.meta) {
+          setMeta(data.meta);
+        }
 
         const fetched = data.shows || [];
         setShows(fetched);
@@ -163,20 +214,9 @@ export function useShowListings<T extends { event_id: number }>(
           initialDate = data.meta.available_dates[0];
         }
         setSelectedDate(initialDate);
-
-        if (data.meta?.available_dates?.length) {
-          const dates = data.meta.available_dates;
-          const idx = dates.indexOf(initialDate);
-          const adjacent = [
-            idx > 0 ? dates[idx - 1] : null,
-            idx < dates.length - 1 ? dates[idx + 1] : null,
-          ].filter((d): d is string => d !== null);
-          for (const d of adjacent) {
-            prefetchDate(d);
-          }
-        }
-      } catch (err) {
-        if (err instanceof DOMException && err.name === "AbortError") return;
+        prefetchAdjacent(initialDate, data.meta?.available_dates || []);
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") return;
       } finally {
         if (!controller.signal.aborted) {
           setMetaLoading(false);
@@ -184,30 +224,29 @@ export function useShowListings<T extends { event_id: number }>(
         }
       }
     }
+
     fetchMeta();
     return () => controller.abort();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [apiPath, initialPayload, portalSlug, prefetchAdjacent]);
 
-  // Re-fetch when date changes (skip initial load)
-  const isInitialMount = useRef(true);
+  const initialMountRef = useRef(true);
   useEffect(() => {
-    if (isInitialMount.current) {
-      isInitialMount.current = false;
+    if (initialMountRef.current) {
+      initialMountRef.current = false;
       return;
     }
     fetchShows(selectedDate);
-  }, [selectedDate, fetchShows]);
+  }, [fetchShows, selectedDate]);
 
-  // Date pills with 7-day fallback
   const datePills = meta?.available_dates?.length
     ? meta.available_dates
     : (() => {
         const pills: string[] = [];
         const now = new Date();
-        for (let i = 0; i < 7; i++) {
-          const d = new Date(now);
-          d.setDate(d.getDate() + i);
-          pills.push(getLocalDateString(d));
+        for (let i = 0; i < 7; i += 1) {
+          const date = new Date(now);
+          date.setDate(date.getDate() + i);
+          pills.push(getLocalDateString(date));
         }
         return pills;
       })();

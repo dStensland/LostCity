@@ -8,6 +8,7 @@ import { addRecentSearch } from "@/lib/searchHistory";
 import { SuggestionGroup } from "@/components/search";
 import { MobileSearchOverlay } from "@/components/search/MobileSearchOverlay";
 import type { SearchResult } from "@/lib/unified-search";
+import { buildExploreUrl } from "@/lib/find-url";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -122,7 +123,13 @@ export default function HeaderSearchButton({ portalSlug }: HeaderSearchButtonPro
           search.setShowDropdown(false);
           setIsFocused(false);
           inputRef.current?.blur();
-          router.push(`/${slug}?view=find&lane=events&search=${encodeURIComponent(trimmed)}`);
+          router.push(
+            buildExploreUrl({
+              portalSlug: slug,
+              lane: "events",
+              search: trimmed,
+            })
+          );
           search.clear();
         }
         return;

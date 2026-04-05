@@ -3,6 +3,7 @@
 import Link from "next/link";
 import SmartImage from "@/components/SmartImage";
 import { useMemo, useState } from "react";
+import { buildExploreUrl } from "@/lib/find-url";
 import type { Destination } from "@/lib/forth-types";
 
 const DEFAULT_DESTINATION_IMAGE = "https://forthatlanta.com/hubfs/Forth/Website/Images/Club/hero-banner-club-faq-desktop.jpg";
@@ -62,7 +63,7 @@ function contextBadgeLabel(destination: Destination, daypartContext: DaypartCont
 function resolveDestinationHref(portalSlug: string, destination: Destination): string {
   const slug = typeof destination.venue.slug === "string" ? destination.venue.slug.trim() : "";
   if (slug) return `/${portalSlug}?spot=${slug}`;
-  return `/${portalSlug}?view=find&lane=places&search=${encodeURIComponent(destination.venue.name)}`;
+  return buildExploreUrl({ portalSlug, lane: "places", search: destination.venue.name });
 }
 
 export default function HotelDestinationCard({

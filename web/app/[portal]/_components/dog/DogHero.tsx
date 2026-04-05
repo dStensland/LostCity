@@ -1,4 +1,5 @@
 import type { Portal } from "@/lib/portal-context";
+import { buildDogMapUrl } from "@/lib/find-url";
 
 interface Props {
   portal: Portal;
@@ -12,7 +13,9 @@ export default function DogHero({ portal }: Props) {
       (s.dog_hero_subhead as string) ||
       "Dog-friendly Atlanta. Events, parks, trails, patios — and the good stuff in between.",
     cta_text: (s.dog_hero_cta_text as string) || "Explore the map",
-    cta_url: (s.dog_hero_cta_url as string) || "?view=find",
+    cta_url:
+      (s.dog_hero_cta_url as string) ||
+      buildDogMapUrl({ portalSlug: portal.slug }),
   };
 
   return (

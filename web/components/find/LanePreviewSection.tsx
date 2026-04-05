@@ -45,7 +45,7 @@ export const LanePreviewSection = memo(function LanePreviewSection({
 
   const config = LANE_CONFIG[lane];
   const LaneIcon = LANE_ICONS[config.icon] ?? Ticket;
-  const seeAllHref = `/${portalSlug}?view=find&lane=${lane}`;
+  const seeAllHref = `/${portalSlug}/explore?lane=${lane}`;
 
   return (
     <section>

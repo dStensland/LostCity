@@ -1,9 +1,11 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { useSearchParams } from "next/navigation";
-import dynamic from "next/dynamic";
 import { useClassesData } from "@/lib/hooks/useClassesData";
+import { useExploreUrlState } from "@/lib/explore-platform/url-state";
+import { ClassStudiosList } from "./classes/ClassStudiosList";
+import { ClassStudioSchedule } from "./classes/ClassStudioSchedule";
+import type { ClassesLaneInitialData } from "@/lib/explore-platform/lane-data";
 
 // ---------------------------------------------------------------------------
 // Props
@@ -12,51 +14,19 @@ import { useClassesData } from "@/lib/hooks/useClassesData";
 export interface ClassesViewProps {
   portalId: string;
   portalSlug: string;
+  initialData?: ClassesLaneInitialData | null;
 }
 
-// ---------------------------------------------------------------------------
-// Lazy-loaded sub-views
-// ---------------------------------------------------------------------------
-
-function LoadingFallback() {
-  return (
-    <div className="px-4 py-8 space-y-3">
-      {[0, 1, 2].map((i) => (
-        <div
-          key={i}
-          className="h-20 rounded-card bg-[var(--night)] border border-[var(--twilight)]/40 animate-pulse"
-        />
-      ))}
-    </div>
-  );
-}
-
-const ClassStudiosList = dynamic(
-  () =>
-    import("./classes/ClassStudiosList").then((m) => m.ClassStudiosList),
-  { loading: () => <LoadingFallback /> },
-);
-
-const ClassStudioSchedule = dynamic(
-  () =>
-    import("./classes/ClassStudioSchedule").then((m) => m.ClassStudioSchedule),
-  { loading: () => <LoadingFallback /> },
-);
-
-// ---------------------------------------------------------------------------
-// ClassesView
-// ---------------------------------------------------------------------------
-
-export function ClassesView({ portalSlug }: ClassesViewProps) {
-  const searchParams = useSearchParams();
+export function ClassesView({ portalSlug, initialData = null }: ClassesViewProps) {
+  const state = useExploreUrlState();
 
   // Initialize state from URL on mount. useSearchParams does NOT re-render on
   // window.history.replaceState, so we drive all filter state through useState.
-  const [category, setCategory] = useState(searchParams.get("category"));
-  const [dateWindow, setDateWindow] = useState(searchParams.get("window"));
-  const [skillLevel, setSkillLevel] = useState(searchParams.get("skill"));
-  const [search, setSearch] = useState(searchParams.get("q"));
-  const [studioSlug, setStudioSlug] = useState(searchParams.get("studio"));
+  const [category, setCategory] = useState(state.params.get("category"));
+  const [dateWindow, setDateWindow] = useState(state.params.get("window"));
+  const [skillLevel, setSkillLevel] = useState(state.params.get("skill"));
+  const [search, setSearch] = useState(state.params.get("q"));
+  const [studioSlug, setStudioSlug] = useState(state.params.get("studio"));
 
   // Data hook — receives state values, not URL search params
   const { studios, schedule, studiosLoading, scheduleLoading, error } =
@@ -67,6 +37,7 @@ export function ClassesView({ portalSlug }: ClassesViewProps) {
       skillLevel,
       search,
       studioSlug,
+      initialPayload: initialData,
     });
 
   // Update one or more filter values and sync to URL without triggering navigation.
@@ -97,38 +68,20 @@ export function ClassesView({ portalSlug }: ClassesViewProps) {
       if ("studio" in params) setStudioSlug(params.studio ?? null);
 
       // --- Sync URL ---
-      const url = new URL(window.location.href);
+      const nextParams: Record<string, string | null> = {};
 
-      if ("category" in params) {
-        if (params.category === null) url.searchParams.delete("category");
-        else url.searchParams.set("category", params.category);
-      }
-      if ("window" in params || "dateWindow" in params) {
-        const val = "window" in params ? params.window : params.dateWindow;
-        if (val === null) url.searchParams.delete("window");
-        else url.searchParams.set("window", val);
-      }
-      if ("skill" in params || "skillLevel" in params) {
-        const val = "skill" in params ? params.skill : params.skillLevel;
-        if (val === null) url.searchParams.delete("skill");
-        else url.searchParams.set("skill", val);
-      }
-      if ("search" in params) {
-        if (params.search === null) url.searchParams.delete("q");
-        else url.searchParams.set("q", params.search);
-      }
-      if ("q" in params) {
-        if (params.q === null) url.searchParams.delete("q");
-        else url.searchParams.set("q", params.q);
-      }
-      if ("studio" in params) {
-        if (params.studio === null) url.searchParams.delete("studio");
-        else url.searchParams.set("studio", params.studio);
-      }
+      if ("category" in params) nextParams.category = params.category;
+      if ("window" in params) nextParams.window = params.window;
+      if ("dateWindow" in params) nextParams.window = params.dateWindow;
+      if ("skill" in params) nextParams.skill = params.skill;
+      if ("skillLevel" in params) nextParams.skill = params.skillLevel;
+      if ("search" in params) nextParams.q = params.search;
+      if ("q" in params) nextParams.q = params.q;
+      if ("studio" in params) nextParams.studio = params.studio;
 
-      window.history.replaceState(window.history.state, "", url.toString());
+      state.setLaneParams(nextParams, "replace");
     },
-    [],
+    [state],
   );
 
   // Studio detail view

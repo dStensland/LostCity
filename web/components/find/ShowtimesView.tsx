@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import Link from "next/link";
 import SmartImage from "@/components/SmartImage";
-import { useSearchParams } from "next/navigation";
 import CategoryIcon from "@/components/CategoryIcon";
 import { CalendarBlank } from "@phosphor-icons/react";
 import {
@@ -12,51 +11,19 @@ import {
 } from "@/lib/analytics/find-tracking";
 import Dot from "@/components/ui/Dot";
 import { prefetchEventDetail, formatShowtime, toLocalIsoDate } from "@/lib/show-card-utils";
+import { useExploreUrlState } from "@/lib/explore-platform/url-state";
+import type {
+  ShowsFilmInitialData,
+  ShowtimeEntry,
+  ShowtimesFilm as Film,
+  ShowtimesMeta,
+  ShowtimesTheaterGroup as TheaterGroup,
+} from "@/lib/explore-platform/lane-data";
 
 interface ShowtimesViewProps {
   portalId: string;
   portalSlug: string;
-}
-
-interface ShowtimeEntry {
-  time: string;
-  event_id: number;
-}
-
-interface Theater {
-  venue_id: number;
-  venue_name: string;
-  venue_slug: string;
-  neighborhood: string | null;
-  times: ShowtimeEntry[];
-}
-
-interface Film {
-  title: string;
-  series_id: string | null;
-  series_slug: string | null;
-  image_url: string | null;
-  theaters: Theater[];
-}
-
-interface TheaterGroup {
-  venue_id: number;
-  venue_name: string;
-  venue_slug: string;
-  neighborhood: string | null;
-  films: {
-    title: string;
-    series_id: string | null;
-    series_slug: string | null;
-    image_url: string | null;
-    times: ShowtimeEntry[];
-  }[];
-}
-
-interface ShowtimesMeta {
-  available_dates: string[];
-  available_theaters: { venue_id: number; venue_name: string; venue_slug: string; neighborhood: string | null }[];
-  available_films: { title: string; series_id: string | null; series_slug: string | null; image_url: string | null }[];
+  initialData?: ShowsFilmInitialData | null;
 }
 
 function resolveDateParam(raw: string | null): string | null {
@@ -86,6 +53,15 @@ function formatDatePill(dateStr: string): string {
   const [y, m, d] = dateStr.split("-").map(Number);
   const date = new Date(y, m - 1, d);
   return date.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+}
+
+function scheduleIdlePrefetch(callback: () => void): void {
+  if (typeof window === "undefined") return;
+  if ("requestIdleCallback" in window) {
+    window.requestIdleCallback(callback, { timeout: 1500 });
+    return;
+  }
+  globalThis.setTimeout(callback, 1200);
 }
 
 // --------------- Shared sub-components ---------------
@@ -401,22 +377,37 @@ function ShowtimesSkeleton() {
 
 // --------------- Main component ---------------
 
-export default function ShowtimesView({ portalId, portalSlug }: ShowtimesViewProps) {
-  const searchParams = useSearchParams();
-  const requestedDateParam = searchParams?.get("date") ?? null;
+export default function ShowtimesView({
+  portalId,
+  portalSlug,
+  initialData,
+}: ShowtimesViewProps) {
+  const state = useExploreUrlState();
+  const requestedDateParam = state.params.get("date");
   const requestedDate = useMemo(
     () => resolveDateParam(requestedDateParam),
     [requestedDateParam],
   );
+  const requestedModeParam = state.params.get("mode");
+  const requestedMode =
+    requestedModeParam === "by-movie" || requestedModeParam === "by-theater"
+      ? requestedModeParam
+      : null;
 
-  const [selectedDate, setSelectedDate] = useState<string>("");
-  const [viewMode, setViewMode] = useState<"by-movie" | "by-theater">("by-theater");
+  const [selectedDate, setSelectedDate] = useState<string>(
+    requestedDate || initialData?.date || toLocalIsoDate(new Date()),
+  );
+  const [viewMode, setViewMode] = useState<"by-movie" | "by-theater">(
+    requestedMode || initialData?.viewMode || "by-theater",
+  );
 
-  const [films, setFilms] = useState<Film[]>([]);
-  const [theaters, setTheaters] = useState<TheaterGroup[]>([]);
-  const [meta, setMeta] = useState<ShowtimesMeta | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [metaLoading, setMetaLoading] = useState(true);
+  const [films, setFilms] = useState<Film[]>(initialData?.films ?? []);
+  const [theaters, setTheaters] = useState<TheaterGroup[]>(
+    initialData?.theaters ?? [],
+  );
+  const [meta, setMeta] = useState<ShowtimesMeta | null>(initialData?.meta ?? null);
+  const [loading, setLoading] = useState(!initialData);
+  const [metaLoading, setMetaLoading] = useState(!initialData);
   const [error, setError] = useState<string | null>(null);
   const zeroResultsSignatureRef = useRef<string | null>(null);
 
@@ -426,63 +417,17 @@ export default function ShowtimesView({ portalId, portalSlug }: ShowtimesViewPro
   // Client-side cache: date|mode → { films, theaters }
   const cacheRef = useRef<Map<string, { films?: Film[]; theaters?: TheaterGroup[] }>>(new Map());
 
-  // Fetch meta on mount (dates, theaters, films)
   useEffect(() => {
-    async function fetchMeta() {
-      setMetaLoading(true);
-      try {
-        const dateStr = requestedDate || toLocalIsoDate(new Date());
-        const params = new URLSearchParams({
-          date: dateStr,
-          meta: "true",
-          include_chains: "true",
-          portal: portalSlug,
-        });
-        const res = await fetch(`/api/showtimes?${params.toString()}`);
-        if (!res.ok) return;
-        const data = await res.json();
-        setMeta(data.meta || null);
-        setFilms(data.films || []);
-        // Cache the initial fetch
-        if (data.films) {
-          cacheRef.current.set(`${dateStr}|by-movie`, { films: data.films });
-        }
-        // Set initial date from meta if available
-        let initialDate = dateStr;
-        if (data.meta?.available_dates?.length > 0) {
-          if (
-            requestedDate &&
-            data.meta.available_dates.includes(requestedDate)
-          ) {
-            initialDate = requestedDate;
-          } else {
-            initialDate = data.meta.available_dates[0];
-          }
-        }
-        setSelectedDate(initialDate);
-        // If we got data for a different date than the initial, cache still valid for dateStr
-        // Prefetch adjacent dates in background
-        if (data.meta?.available_dates?.length > 0) {
-          const dates = data.meta.available_dates as string[];
-          const idx = dates.indexOf(initialDate);
-          const adjacentDates = [
-            idx > 0 ? dates[idx - 1] : null,
-            idx < dates.length - 1 ? dates[idx + 1] : null,
-          ].filter(Boolean) as string[];
-          for (const d of adjacentDates) {
-            prefetchDate(d, "by-movie");
-          }
-        }
-      } catch {
-        setError("Something went wrong loading showtimes");
-        setSelectedDate(requestedDate || toLocalIsoDate(new Date()));
-      } finally {
-        setMetaLoading(false);
-        setLoading(false);
-      }
+    if (!initialData) return;
+    cacheRef.current.set(`${initialData.date}|by-theater`, {
+      theaters: initialData.theaters,
+    });
+    if (initialData.films) {
+      cacheRef.current.set(`${initialData.date}|by-movie`, {
+        films: initialData.films,
+      });
     }
-    fetchMeta();
-  }, [requestedDate]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [initialData]);
 
   // Prefetch a date+mode combo in background (no state updates)
   const prefetchDate = useCallback((date: string, mode: string) => {
@@ -503,6 +448,77 @@ export default function ShowtimesView({ portalId, portalSlug }: ShowtimesViewPro
       })
       .catch(() => { cacheRef.current.delete(key); });
   }, [portalSlug]);
+
+  // Fetch meta on mount when no seeded payload exists
+  useEffect(() => {
+    if (initialData?.meta) {
+      setMeta(initialData.meta);
+      setMetaLoading(false);
+      setLoading(false);
+      return;
+    }
+
+    async function fetchMeta() {
+      setMetaLoading(true);
+      try {
+        const dateStr = requestedDate || toLocalIsoDate(new Date());
+        const params = new URLSearchParams({
+          date: dateStr,
+          meta: "true",
+          include_chains: "true",
+          portal: portalSlug,
+        });
+        const res = await fetch(`/api/showtimes?${params.toString()}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        setMeta(data.meta || null);
+        setFilms(data.films || []);
+        if (data.films) {
+          cacheRef.current.set(`${dateStr}|by-movie`, { films: data.films });
+        }
+        let initialDate = dateStr;
+        if (data.meta?.available_dates?.length > 0) {
+          if (requestedDate && data.meta.available_dates.includes(requestedDate)) {
+            initialDate = requestedDate;
+          } else {
+            initialDate = data.meta.available_dates[0];
+          }
+        }
+        setSelectedDate(initialDate);
+        if (data.meta?.available_dates?.length > 0) {
+          const dates = data.meta.available_dates as string[];
+          const idx = dates.indexOf(initialDate);
+          const adjacentDates = [
+            idx > 0 ? dates[idx - 1] : null,
+            idx < dates.length - 1 ? dates[idx + 1] : null,
+          ].filter(Boolean) as string[];
+          for (const adjacentDate of adjacentDates) {
+            prefetchDate(adjacentDate, "by-movie");
+          }
+        }
+      } catch {
+        setError("Something went wrong loading showtimes");
+        setSelectedDate(requestedDate || toLocalIsoDate(new Date()));
+      } finally {
+        setMetaLoading(false);
+        setLoading(false);
+      }
+    }
+
+    fetchMeta();
+  }, [initialData, portalSlug, prefetchDate, requestedDate]);
+
+  useEffect(() => {
+    if (requestedDate && requestedDate !== selectedDate) {
+      setSelectedDate(requestedDate);
+    }
+  }, [requestedDate, selectedDate]);
+
+  useEffect(() => {
+    if (requestedMode && requestedMode !== viewMode) {
+      setViewMode(requestedMode);
+    }
+  }, [requestedMode, viewMode]);
 
   // Fetch showtimes when date or view mode changes
   const fetchShowtimes = useCallback(async (date: string, mode: string) => {
@@ -529,8 +545,10 @@ export default function ShowtimesView({ portalId, portalSlug }: ShowtimesViewPro
         const dates = meta?.available_dates || [];
         const idx = dates.indexOf(date);
         if (idx >= 0) {
-          if (idx > 0) prefetchDate(dates[idx - 1], mode);
-          if (idx < dates.length - 1) prefetchDate(dates[idx + 1], mode);
+          scheduleIdlePrefetch(() => {
+            if (idx > 0) prefetchDate(dates[idx - 1], mode);
+            if (idx < dates.length - 1) prefetchDate(dates[idx + 1], mode);
+          });
         }
         return;
       }
@@ -555,8 +573,10 @@ export default function ShowtimesView({ portalId, portalSlug }: ShowtimesViewPro
       const dates = meta?.available_dates || [];
       const idx = dates.indexOf(date);
       if (idx >= 0) {
-        if (idx > 0) prefetchDate(dates[idx - 1], mode);
-        if (idx < dates.length - 1) prefetchDate(dates[idx + 1], mode);
+        scheduleIdlePrefetch(() => {
+          if (idx > 0) prefetchDate(dates[idx - 1], mode);
+          if (idx < dates.length - 1) prefetchDate(dates[idx + 1], mode);
+        });
       }
     } catch {
       setError("Something went wrong loading showtimes");
@@ -570,6 +590,14 @@ export default function ShowtimesView({ portalId, portalSlug }: ShowtimesViewPro
   useEffect(() => {
     if (isInitialMount.current) {
       isInitialMount.current = false;
+      const initialCacheKey = `${selectedDate}|${viewMode}`;
+      const cached = cacheRef.current.get(initialCacheKey);
+      const hasSeededData =
+        (viewMode === "by-theater" && !!cached?.theaters) ||
+        (viewMode === "by-movie" && !!cached?.films);
+      if (!hasSeededData) {
+        fetchShowtimes(selectedDate, viewMode);
+      }
       return;
     }
     fetchShowtimes(selectedDate, viewMode);
@@ -655,7 +683,10 @@ export default function ShowtimesView({ portalId, portalSlug }: ShowtimesViewPro
             return (
               <button
                 key={dateStr}
-                onClick={() => setSelectedDate(dateStr)}
+                onClick={() => {
+                  setSelectedDate(dateStr);
+                  state.setLaneParams({ date: dateStr }, "replace");
+                }}
                 className={`flex-shrink-0 px-3.5 py-2 rounded-full font-mono text-xs whitespace-nowrap transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--coral)]/70 focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--void)] ${
                   isActive
                     ? "bg-gradient-to-r from-[var(--gold)] to-[var(--coral)] text-[var(--void)] font-semibold shadow-[0_4px_12px_rgba(0,0,0,0.25)]"
@@ -685,7 +716,10 @@ export default function ShowtimesView({ portalId, portalSlug }: ShowtimesViewPro
                 max={datePills[datePills.length - 1]}
                 value={selectedDate}
                 onChange={(e) => {
-                  if (e.target.value) setSelectedDate(e.target.value);
+                  if (e.target.value) {
+                    setSelectedDate(e.target.value);
+                    state.setLaneParams({ date: e.target.value }, "replace");
+                  }
                 }}
               />
             </div>
@@ -709,7 +743,10 @@ export default function ShowtimesView({ portalId, portalSlug }: ShowtimesViewPro
       <div className="flex items-center gap-2 mb-3">
         <div className="inline-flex rounded-lg border border-[var(--twilight)]/60 overflow-hidden">
           <button
-            onClick={() => setViewMode("by-movie")}
+            onClick={() => {
+              setViewMode("by-movie");
+              state.setLaneParams({ mode: "by-movie" }, "replace");
+            }}
             className={`px-3 py-1.5 font-mono text-xs transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--coral)]/70 focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--void)] ${
               viewMode === "by-movie"
                 ? "bg-[var(--coral)]/20 text-[var(--coral)] font-semibold"
@@ -719,7 +756,10 @@ export default function ShowtimesView({ portalId, portalSlug }: ShowtimesViewPro
             By Movie
           </button>
           <button
-            onClick={() => setViewMode("by-theater")}
+            onClick={() => {
+              setViewMode("by-theater");
+              state.setLaneParams({ mode: "by-theater" }, "replace");
+            }}
             className={`px-3 py-1.5 font-mono text-xs border-l border-[var(--twilight)]/60 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--coral)]/70 focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--void)] ${
               viewMode === "by-theater"
                 ? "bg-[var(--coral)]/20 text-[var(--coral)] font-semibold"

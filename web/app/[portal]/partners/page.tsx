@@ -1,13 +1,14 @@
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ArrowRight } from "@phosphor-icons/react/dist/ssr";
-import { PortalHeader } from "@/components/headers";
-import { getCachedPortalBySlug, getPortalVertical } from "@/lib/portal";
 import FilmPortalNav from "../_components/film/FilmPortalNav";
+import { resolveFilmPageRequest } from "../_surfaces/detail/resolve-film-page-request";
 
 type Props = {
   params: Promise<{ portal: string }>;
 };
+
+export const revalidate = 120;
 
 const packages = [
   {
@@ -70,21 +71,19 @@ const tractionSignals = [
 
 export default async function FilmPartnersPage({ params }: Props) {
   const { portal: slug } = await params;
-  const portal = await getCachedPortalBySlug(slug);
+  const request = await resolveFilmPageRequest({
+    portalSlug: slug,
+    pathname: `/${slug}/partners`,
+  });
 
-  if (!portal) {
+  if (!request) {
     notFound();
-  }
-
-  if (getPortalVertical(portal) !== "film") {
-    redirect(`/${portal.slug}?view=community`);
   }
 
   return (
     <div className="min-h-screen bg-[#090d16] text-[#f6f7fb]">
-      <PortalHeader portalSlug={portal.slug} portalName={portal.name} />
       <main className="mx-auto max-w-6xl px-4 pb-16 pt-6 space-y-6">
-        <FilmPortalNav portalSlug={portal.slug} />
+        <FilmPortalNav portalSlug={request.portal.slug} />
         <header>
           <p className="text-xs uppercase tracking-[0.18em] text-[#8fa2c4]">Atlanta Film</p>
           <h1 className="mt-1 font-[var(--font-film-editorial)] text-4xl text-[#f7f7fb]">Partner Programs</h1>
@@ -138,7 +137,7 @@ export default async function FilmPartnersPage({ params }: Props) {
         </section>
 
         <Link
-          href={`mailto:coach@lostcity.ai?subject=${encodeURIComponent(`${portal.name} - Partnership Inquiry`)}`}
+          href={`mailto:coach@lostcity.ai?subject=${encodeURIComponent(`${request.portal.name} - Partnership Inquiry`)}`}
           className="inline-flex items-center gap-2 rounded-xl border border-[#8da8ea66] bg-[#121b2f] px-4 py-2 text-xs uppercase tracking-[0.13em] text-[#d9e4ff] hover:border-[#8da8ea]"
         >
           Start Vendor Conversation

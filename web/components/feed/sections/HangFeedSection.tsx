@@ -15,6 +15,7 @@ import {
 import { ActiveHangBanner } from "@/components/hangs/ActiveHangBanner";
 import FeedSectionHeader from "@/components/feed/FeedSectionHeader";
 import type { HotVenue, FriendHang, HangVisibility } from "@/lib/types/hangs";
+import { buildExploreUrl } from "@/lib/find-url";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -172,7 +173,7 @@ function HangsEmptyState({ portalSlug }: { portalSlug: string }) {
         </p>
       </div>
       <Link
-        href={`/${portalSlug}?view=find&lane=events`}
+        href={buildExploreUrl({ portalSlug, lane: "events" })}
         className="flex-shrink-0 px-3 py-1.5 rounded-lg bg-[var(--neon-green)]/15 border border-[var(--neon-green)]/25 text-xs font-mono font-medium text-[var(--neon-green)] hover:bg-[var(--neon-green)]/25 transition-colors active:scale-95"
       >
         I&apos;m Out

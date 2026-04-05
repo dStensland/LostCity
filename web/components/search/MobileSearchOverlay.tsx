@@ -10,6 +10,7 @@ import { buildSearchResultHref } from "@/lib/search-navigation";
 import { addRecentSearch } from "@/lib/searchHistory";
 import { TRENDING_SEARCHES } from "@/lib/search-presearch";
 import type { SearchResult } from "@/lib/unified-search";
+import { buildExploreUrl } from "@/lib/find-url";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -159,7 +160,7 @@ export function MobileSearchOverlay({
       const q = query.trim();
       if (!q) return;
       addRecentSearch(q);
-      router.push(`/${portalSlug}?view=find&lane=events&search=${encodeURIComponent(q)}`);
+      router.push(buildExploreUrl({ portalSlug, lane: "events", search: q }));
       onClose();
     },
     [query, portalSlug, router, onClose]
@@ -168,7 +169,7 @@ export function MobileSearchOverlay({
   // Trending pill click — treat like submit
   const handleTrendingClick = useCallback(
     (term: string) => {
-      router.push(`/${portalSlug}?view=find&lane=events&search=${encodeURIComponent(term)}`);
+      router.push(buildExploreUrl({ portalSlug, lane: "events", search: term }));
       onClose();
     },
     [portalSlug, router, onClose]
@@ -349,4 +350,3 @@ export function MobileSearchOverlay({
 
   return createPortal(content, document.body);
 }
-

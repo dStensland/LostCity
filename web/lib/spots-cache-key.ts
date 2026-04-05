@@ -19,6 +19,7 @@ const SPOTS_CACHE_KEY_PARAMS = new Set([
   "radius_km",
   "sort",
   "limit",
+  "compact",
 ]);
 
 const SPOTS_MULTI_VALUE_PARAMS = new Set([

@@ -1,6 +1,6 @@
 import NetworkFeedPage from "@/components/feed/sections/NetworkFeedPage";
 
-export const revalidate = 60;
+export const revalidate = 300;
 
 type Props = {
   params: Promise<{ portal: string }>;

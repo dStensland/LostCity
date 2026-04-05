@@ -31,7 +31,7 @@ export interface HolidayConfig {
   iconBgGlow?: boolean;
   /** Enable pulsing glow ring around the icon */
   iconGlowRing?: boolean;
-  /** Quick-link CTAs rendered as pills below the title. href is appended to /{portalSlug} */
+  /** Quick-link CTAs rendered as pills below the title. href should be portal-relative. */
   quickLinks?: { label: string; href: string }[];
 }
 
@@ -142,10 +142,10 @@ export const HOLIDAYS: HolidayConfig[] = [
     iconBgGlow: true,
     iconGlowRing: true,
     quickLinks: [
-      { label: "Events", href: "?tags=st-patricks-day&view=find&lane=events" },
-      { label: "Irish Pubs", href: "?venue_type=bar&search=irish&view=find&lane=places" },
-      { label: "Parades", href: "?tags=st-patricks-day&search=parade&view=find&lane=events" },
-      { label: "Pub Crawls", href: "?tags=st-patricks-day&search=crawl&view=find&lane=events" },
+      { label: "Events", href: "/explore?lane=events&tags=st-patricks-day" },
+      { label: "Irish Pubs", href: "/explore?lane=places&venue_type=bar&search=irish" },
+      { label: "Parades", href: "/explore?lane=events&tags=st-patricks-day&search=parade" },
+      { label: "Pub Crawls", href: "/explore?lane=events&tags=st-patricks-day&search=crawl" },
     ],
   },
 ];

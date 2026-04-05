@@ -20,6 +20,8 @@ import { useGroup, useGroupSpots, useGroupActivity, useGroupHangs, useLeaveGroup
 import { useAuth } from "@/lib/auth-context";
 import { ENABLE_GROUPS_V1 } from "@/lib/launch-flags";
 import { useAuthenticatedFetch } from "@/lib/hooks/useAuthenticatedFetch";
+import { DEFAULT_PORTAL_SLUG } from "@/lib/constants";
+import { buildExploreUrl } from "@/lib/find-url";
 import type { GroupActivity, GroupJoinRequest } from "@/lib/types/groups";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -733,7 +735,7 @@ export default function GroupDetailPage({
             </button>
             {/* Check In — links to find venues via feed */}
             <Link
-              href={`/?view=find&lane=places`}
+              href={buildExploreUrl({ portalSlug: DEFAULT_PORTAL_SLUG, lane: "places" })}
               className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg border border-[var(--neon-green)]/40 text-[var(--neon-green)] font-mono text-xs font-medium hover:bg-[var(--neon-green)]/5 transition-colors whitespace-nowrap"
             >
               <Users weight="bold" className="w-3.5 h-3.5" />

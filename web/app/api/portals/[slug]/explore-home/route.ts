@@ -1,7 +1,11 @@
 // web/app/api/portals/[slug]/explore-home/route.ts
 
+import { after } from "next/server";
 import { NextResponse } from "next/server";
-import { getExploreHomeData } from "@/lib/explore-home-data";
+import {
+  getCachedExploreHomeSeed,
+  getExploreHomeData,
+} from "@/lib/explore-home-data";
 import {
   getSharedCacheJson,
   setSharedCacheJson,
@@ -43,6 +47,34 @@ export async function GET(
     return NextResponse.json(cached, {
       headers: {
         "Cache-Control": "public, s-maxage=120, stale-while-revalidate=300",
+      },
+    });
+  }
+
+  const seed = await getCachedExploreHomeSeed(slug);
+  if (seed) {
+    after(async () => {
+      const fresh = await getExploreHomeData(slug);
+      if (!fresh) return;
+
+      const laneEntries = Object.entries(fresh.lanes);
+      const nonClassesLanes = laneEntries.filter(([key]) => key !== "classes");
+      const zeroCount = nonClassesLanes.filter(
+        ([, lane]) => lane.state === "zero",
+      ).length;
+      const shouldCache = zeroCount <= Math.floor(nonClassesLanes.length / 2);
+
+      if (shouldCache) {
+        await setSharedCacheJson(CACHE_NAMESPACE, cacheKey, fresh, CACHE_TTL_MS, {
+          maxEntries: CACHE_MAX_ENTRIES,
+        });
+      }
+    });
+
+    return NextResponse.json(seed.data, {
+      headers: {
+        "Cache-Control": "public, s-maxage=120, stale-while-revalidate=300",
+        "X-LostCity-Explore-Home-Seed": seed.isStale ? "stale" : "exact",
       },
     });
   }

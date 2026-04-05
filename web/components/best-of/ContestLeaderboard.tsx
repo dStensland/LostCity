@@ -8,6 +8,7 @@ import { useAuthenticatedFetch } from "@/lib/hooks/useAuthenticatedFetch";
 import type { BestOfContest, ContestLeaderboardEntry } from "@/lib/best-of-contests";
 import { formatTimeRemaining } from "@/lib/best-of-contests";
 import { getRankColor } from "@/lib/best-of";
+import { buildBestOfUrl } from "@/lib/find-url";
 import MakeYourCaseSheet from "./MakeYourCaseSheet";
 import NominateSpotSheet from "./NominateSpotSheet";
 
@@ -162,7 +163,7 @@ export function ContestLeaderboard({
       <div className="mb-6">
         {/* Back link */}
         <a
-          href={`/${portalSlug}?view=community&tab=bestof`}
+          href={buildBestOfUrl({ portalSlug })}
           className="inline-flex items-center gap-1.5 text-xs text-[var(--muted)] hover:text-[var(--cream)] transition-all mb-4 group rounded-sm px-1 -ml-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--action-primary)]"
         >
           <svg

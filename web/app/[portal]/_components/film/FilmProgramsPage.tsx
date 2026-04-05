@@ -2,11 +2,10 @@ import { notFound } from "next/navigation";
 import SmartImage from "@/components/SmartImage";
 import Link from "next/link";
 import { ArrowRight } from "@phosphor-icons/react/dist/ssr";
-import { PortalHeader } from "@/components/headers";
-import { getCachedPortalBySlug, getPortalVertical } from "@/lib/portal";
 import { createClient } from "@/lib/supabase/server";
 import { getLocalDateString } from "@/lib/formats";
 import { getPortalSourceAccess } from "@/lib/federation";
+import { resolveFilmPageRequest } from "../../_surfaces/detail/resolve-film-page-request";
 import FilmPortalNav from "./FilmPortalNav";
 
 type RawProgramRow = {
@@ -178,17 +177,20 @@ type FilmProgramsPageProps = {
 };
 
 export default async function FilmProgramsPage({ portalSlug }: FilmProgramsPageProps) {
-  const portal = await getCachedPortalBySlug(portalSlug);
+  const request = await resolveFilmPageRequest({
+    portalSlug,
+    pathname: `/${portalSlug}/screening-programs`,
+  });
 
-  if (!portal || getPortalVertical(portal) !== "film") {
+  if (!request) {
     notFound();
   }
+  const portal = request.portal;
 
   const programs = await getFilmPrograms(portal.id);
 
   return (
     <div className="min-h-screen bg-[#090d16] text-[#f6f7fb]">
-      <PortalHeader portalSlug={portal.slug} portalName={portal.name} />
       <main className="mx-auto max-w-6xl px-4 pb-16 pt-6 space-y-6">
         <FilmPortalNav portalSlug={portal.slug} />
 

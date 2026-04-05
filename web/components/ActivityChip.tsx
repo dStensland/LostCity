@@ -43,6 +43,9 @@ function buildActivityUrl(
   // Clear any existing activity filters to avoid conflicts
   params.delete("tags");
   params.delete("categories");
+  params.delete("view");
+  params.delete("type");
+  params.set("lane", "events");
 
   // Set the appropriate filter (use plural param names to match convention)
   if (type === "tag") {
@@ -51,12 +54,8 @@ function buildActivityUrl(
     params.set("categories", value);
   }
 
-  // Keep the find view active
-  params.set("view", "find");
-  params.set("type", "events");
-
+  const basePath = portalSlug ? `/${portalSlug}/explore` : "/explore";
   const queryString = params.toString();
-  const basePath = portalSlug ? `/${portalSlug}` : "";
   return queryString ? `${basePath}?${queryString}` : basePath;
 }
 
@@ -152,11 +151,10 @@ export function GenreChip({
 }) {
   const router = useRouter();
   const params = new URLSearchParams();
-  params.set("view", "find");
-  params.set("type", "events");
+  params.set("lane", "events");
   if (category) params.set("categories", category);
   params.set("genres", genre);
-  const basePath = portalSlug ? `/${portalSlug}` : "";
+  const basePath = portalSlug ? `/${portalSlug}/explore` : "/explore";
   const href = `${basePath}?${params.toString()}`;
 
   return (
@@ -175,4 +173,3 @@ export function GenreChip({
     </button>
   );
 }
-

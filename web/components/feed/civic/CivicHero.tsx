@@ -21,6 +21,7 @@ import type { CityPulseSection, CityPulseEventItem } from "@/lib/city-pulse/type
 import { isHelpAtlSupportDirectoryEnabled } from "@/lib/helpatl-support";
 import { pickHeroItem } from "@/lib/civic-hero-priority";
 import type { HeroItem } from "@/lib/civic-hero-priority";
+import { buildExploreUrl } from "@/lib/find-url";
 
 interface CivicHeroProps {
   portalSlug: string;
@@ -287,7 +288,7 @@ export default function CivicHero({
           {/* Meetings pill — amber, always visible when we have data */}
           {weekCount > 0 && (
             <Link
-              href={`/${portalSlug}?view=find&lane=events`}
+              href={buildExploreUrl({ portalSlug, lane: "events" })}
               className="civic-pill inline-flex items-center gap-2 rounded-xl border-[1.5px] border-amber-300 bg-amber-50 px-4 min-h-11 text-sm transition-colors hover:bg-amber-100"
             >
               <CalendarDots weight="duotone" className="w-4 h-4 text-amber-600 shrink-0" />

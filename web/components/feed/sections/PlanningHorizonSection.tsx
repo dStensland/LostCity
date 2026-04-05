@@ -13,6 +13,7 @@ import type { CityPulseSection, CityPulseEventItem } from "@/lib/city-pulse/type
 import { Binoculars } from "@phosphor-icons/react";
 import FeedSectionHeader from "@/components/feed/FeedSectionHeader";
 import { PlanningHorizonCard } from "@/components/feed/PlanningHorizonCard";
+import { buildExploreUrl } from "@/lib/find-url";
 
 interface Props {
   section: CityPulseSection;
@@ -69,7 +70,11 @@ export default function PlanningHorizonSection({ section, portalSlug }: Props) {
         priority="secondary"
         accentColor="var(--gold)"
         icon={<Binoculars weight="duotone" className="w-5 h-5" />}
-        seeAllHref={`/${portalSlug}?view=find&lane=events&dateRange=month`}
+        seeAllHref={buildExploreUrl({
+          portalSlug,
+          lane: "events",
+          extraParams: { dateRange: "month" },
+        })}
         seeAllLabel="All big events"
       />
 

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { Lightning, UsersThree, CalendarBlank, Lifebuoy } from "@phosphor-icons/react";
 import { isHelpAtlSupportDirectoryEnabled } from "@/lib/helpatl-support";
+import { buildExploreUrl } from "@/lib/find-url";
 
 export type CivicTabKey = "act" | "groups" | "calendar" | "support";
 
@@ -33,8 +34,10 @@ export function isCivicTabActive(
       // Active on /groups sub-route
       return pathname.startsWith(`/${portalSlug}/groups`);
     case "calendar":
-      // Active on portal root with view=find and lane=calendar
-      return isPortalRoot && viewParam === "find" && (tabParam === "calendar" || searchParams.get("lane") === "calendar" || searchParams.get("display") === "calendar");
+      return (
+        pathname === `/${portalSlug}/explore` &&
+        (tabParam === "calendar" || searchParams.get("display") === "calendar")
+      );
     case "support":
       return pathname.startsWith(`/${portalSlug}/support`);
     default:
@@ -62,7 +65,7 @@ export function getCivicTabs(portalSlug: string, actLabel = "Act"): Tab[] {
       key: "calendar",
       label: "Calendar",
       icon: CalendarBlank,
-      href: `/${portalSlug}?view=find&lane=calendar`,
+      href: `${buildExploreUrl({ portalSlug, lane: "events" })}&display=calendar`,
     },
     ...(showSupport
       ? [

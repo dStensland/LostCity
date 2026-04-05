@@ -7,6 +7,7 @@ import ExhibitionCard from "./ExhibitionCard";
 import CompactEventRow from "./CompactEventRow";
 import { ArtsSecondaryNav } from "@/components/arts/ArtsSecondaryNav";
 import { usePortal } from "@/lib/portal-context";
+import { buildExploreUrl } from "@/lib/find-url";
 import type { FeedEventData } from "@/components/EventCard";
 
 interface ArtsFeedShellProps {
@@ -239,7 +240,12 @@ export default function ArtsFeedShell({ portalSlug }: ArtsFeedShellProps) {
             subtitle="closing soon"
             priority="secondary"
             accentColor={accentPink}
-            seeAllHref={`/${portalSlug}?view=find&lane=events&category=art&sort=ending_soon`}
+            seeAllHref={buildExploreUrl({
+              portalSlug,
+              lane: "events",
+              categories: "art",
+              extraParams: { sort: "ending_soon" },
+            })}
             seeAllLabel="all closing soon"
           />
           <div className="space-y-2">
@@ -263,7 +269,11 @@ export default function ArtsFeedShell({ portalSlug }: ArtsFeedShellProps) {
             title="happening this week"
             priority="secondary"
             accentColor={accentYellow}
-            seeAllHref={`/${portalSlug}?view=find&lane=events&date=this_week`}
+            seeAllHref={buildExploreUrl({
+              portalSlug,
+              lane: "events",
+              extraParams: { date: "this_week" },
+            })}
             seeAllLabel="full calendar"
           />
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
@@ -287,7 +297,11 @@ export default function ArtsFeedShell({ portalSlug }: ArtsFeedShellProps) {
             subtitle="learn from local artists"
             priority="secondary"
             accentColor={accentCopper}
-            seeAllHref={`/${portalSlug}?view=find&lane=events&tags=class,workshop`}
+            seeAllHref={buildExploreUrl({
+              portalSlug,
+              lane: "events",
+              tags: "class,workshop",
+            })}
             seeAllLabel="all classes"
           />
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">

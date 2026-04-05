@@ -4,6 +4,7 @@ import Link from "next/link";
 import { format, parseISO } from "date-fns";
 import { DEFAULT_PORTAL_SLUG } from "@/lib/portal-context";
 import type { CalendarEvent } from "@/lib/types/calendar";
+import { buildExploreUrl } from "@/lib/find-url";
 
 interface OpenTimeBlockProps {
   events: CalendarEvent[];
@@ -65,7 +66,7 @@ export function OpenTimeBlock({ events, selectedDate }: OpenTimeBlockProps) {
   if (!gap) return null;
 
   const dateParam = format(selectedDate, "yyyy-MM-dd");
-  const exploreHref = `/${DEFAULT_PORTAL_SLUG}?view=find&lane=events&date=${dateParam}`;
+  const exploreHref = `${buildExploreUrl({ portalSlug: DEFAULT_PORTAL_SLUG, lane: "events" })}&date=${dateParam}`;
 
   return (
     <div className="bg-gradient-to-r from-[var(--coral)]/10 to-[var(--gold)]/10 border border-[var(--coral)]/20 rounded-xl p-4">

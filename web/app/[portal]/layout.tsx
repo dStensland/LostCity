@@ -1,21 +1,14 @@
 import { notFound } from "next/navigation";
-import { getCachedPortalBySlug, getCachedPortalByVerticalAndCity, getPortalVertical } from "@/lib/portal";
 import { PortalProvider } from "@/lib/portal-context";
 import { PortalTheme } from "@/components/PortalTheme";
 import PortalThemeClient from "@/components/PortalThemeClient";
-import CannyWidget from "@/components/CannyWidget";
-import PortalFooter from "@/components/PortalFooter";
-import { PortalTracker } from "./_components/PortalTracker";
 import { NavigationProgress } from "@/components/ui/NavigationProgress";
 import { Cormorant_Garamond, DM_Sans, IBM_Plex_Mono, Inter, Playfair_Display, Plus_Jakarta_Sans, Space_Grotesk } from "next/font/google";
 import { Suspense } from "react";
-import { isPCMDemoPortal } from "@/lib/marketplace-art";
-import { applyPreset } from "@/lib/apply-preset";
-import type { PortalBranding } from "@/lib/portal-context";
 import { getVerticalStyles } from "@/lib/portal-animation-config";
 import { buildPortalOrigin } from "@/lib/site-url";
-import { shouldDisableAmbientEffects, isFilmPortalVertical } from "@/lib/portal-taxonomy";
-import PortalHeader from "@/components/headers/PortalHeader";
+import { resolvePortalRequest } from "@/lib/portal-runtime/resolvePortalRequest";
+import { RESERVED_PORTAL_ROUTE_SLUGS } from "@/lib/portal-runtime/types";
 
 import type { Metadata } from "next";
 import { headers } from "next/headers";
@@ -89,15 +82,8 @@ type Props = {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { portal: slug } = await params;
   const headersList = await headers();
-  const vertical = headersList.get("x-lc-vertical");
-
-  let portal;
-  if (vertical) {
-    portal = await getCachedPortalByVerticalAndCity(vertical, slug);
-    if (!portal) portal = await getCachedPortalBySlug(slug);
-  } else {
-    portal = await getCachedPortalBySlug(slug);
-  }
+  const request = await resolvePortalRequest({ slug, headersList });
+  const portal = request?.portal;
 
   if (!portal) {
     return { title: "Not Found | Lost City" };
@@ -126,81 +112,36 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function PortalLayout({ children, params }: Props) {
   const { portal: slug } = await params;
 
-  // Special handling for known non-portal routes to avoid conflicts
-  const reservedRoutes = ["admin", "api", "auth", "calendar", "claim", "collections", "community", "dashboard", "data", "design", "events", "festivals", "find-friends", "foryou", "friends", "goblinday", "happening-now", "invite", "invite-friends", "logo-concepts", "notifications", "onboarding", "people", "plans", "privacy", "profile", "saved", "series", "settings", "spots", "submit", "terms", "venue", "welcome"];
-  if (reservedRoutes.includes(slug)) {
+  if ((RESERVED_PORTAL_ROUTE_SLUGS as readonly string[]).includes(slug)) {
     notFound();
   }
 
-  // Resolve portal: check for vertical subdomain header first
   const headersList = await headers();
-  const subdomainVertical = headersList.get("x-lc-vertical");
-
-  let portal;
-  if (subdomainVertical) {
-    // Subdomain routing: vertical from middleware header, city from path segment
-    portal = await getCachedPortalByVerticalAndCity(subdomainVertical, slug);
-    // Fallback to slug-based lookup for backward compat
-    if (!portal) portal = await getCachedPortalBySlug(slug);
-  } else {
-    // Standard path routing (root domain or no subdomain)
-    portal = await getCachedPortalBySlug(slug);
-  }
-
-  if (!portal) {
+  const request = await resolvePortalRequest({ slug, headersList });
+  if (!request) {
     notFound();
   }
 
-  // Detect vertical type to apply appropriate styling and components.
-  // Slug-based overrides (Emory demo → hospital, PCM demo → marketplace) are
-  // resolved here so getVerticalStyles receives the canonical vertical key.
-  const vertical = getPortalVertical(portal);
-  const isHotel = vertical === "hotel";
-  const isFamily = vertical === "family";
-  const isAdventure = vertical === "adventure";
-  const isArts = vertical === "arts";
-  const isDog = vertical === "dog";
-  const isFilm = isFilmPortalVertical(vertical);
-  const resolvedBranding = applyPreset((portal.branding || {}) as PortalBranding);
-  const isLightTheme = resolvedBranding.theme_mode === "light";
-  const isMarketplace = vertical === "marketplace" || isPCMDemoPortal(portal.slug);
-
-  // Resolve the effective vertical key for animation/style config. Slug-based
-  // demo portals use their canonical vertical name regardless of what
-  // getPortalVertical() returns for their DB record.
-  const effectiveVertical = isMarketplace
-    ? "marketplace"
-    : vertical;
-
-  const verticalStyles = getVerticalStyles(effectiveVertical);
-  const suppressPortalStyleAtmosphere = shouldDisableAmbientEffects(vertical);
+  const verticalStyles = getVerticalStyles(request.effectiveVertical);
 
   return (
-    <PortalProvider portal={portal}>
-      <PortalTheme portal={portal} />
-      <PortalThemeClient portal={portal} />
+    <PortalProvider portal={request.portal}>
+      <PortalTheme portal={request.portal} nonce={headersList.get("x-nonce") ?? ""} />
+      <PortalThemeClient portal={request.portal} />
       {verticalStyles && <style>{verticalStyles}</style>}
       <div
-        data-vertical={vertical}
-        data-atmosphere={suppressPortalStyleAtmosphere ? "disabled" : "default"}
-        data-theme={isLightTheme ? "light" : undefined}
+        data-vertical={request.vertical}
+        data-atmosphere={request.disableAmbientEffects ? "disabled" : "default"}
+        data-theme={request.isLightTheme ? "light" : undefined}
         className={[
-          isHotel ? `${cormorantGaramond.variable} ${inter.variable}` : "",
-          isFamily ? `${plusJakartaSans.variable} ${dmSans.variable}` : "",
-          isAdventure ? spaceGrotesk.variable : "",
-          isArts ? `${ibmPlexMono.variable} ${playfairDisplay.variable}` : "",
+          request.isHotel ? `${cormorantGaramond.variable} ${inter.variable}` : "",
+          request.isFamily ? `${plusJakartaSans.variable} ${dmSans.variable}` : "",
+          request.isAdventure ? spaceGrotesk.variable : "",
+          request.vertical === "arts" ? `${ibmPlexMono.variable} ${playfairDisplay.variable}` : "",
         ].filter(Boolean).join(" ")}
-      >
-        <NavigationProgress />
-        <Suspense fallback={null}>
-          <PortalTracker portalSlug={portal.slug} />
-        </Suspense>
-        {!isHotel && !isMarketplace && !isFilm && !isDog && (
-          <PortalHeader portalSlug={portal.slug} portalName={portal.name} />
-        )}
-        {children}
-        <PortalFooter />
-        <CannyWidget />
+        >
+          <NavigationProgress />
+          <Suspense fallback={null}>{children}</Suspense>
       </div>
     </PortalProvider>
   );

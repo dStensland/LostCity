@@ -166,7 +166,7 @@ export function useEventFilters(options?: {
 
       const queryString = params.toString();
       const url = queryString ? `${pathname}?${queryString}` : pathname;
-      window.history.replaceState(null, "", url);
+      window.history.replaceState(window.history.state, "", url);
       dispatchReplaceState();
     },
     [searchParams, pathname]
@@ -189,7 +189,7 @@ export function useEventFilters(options?: {
 
       const queryString = params.toString();
       const url = queryString ? `${pathname}?${queryString}` : pathname;
-      window.history.replaceState(null, "", url);
+      window.history.replaceState(window.history.state, "", url);
       dispatchReplaceState();
     },
     [searchParams, pathname]
@@ -205,7 +205,7 @@ export function useEventFilters(options?: {
       }
       const queryString = params.toString();
       const url = queryString ? `${pathname}?${queryString}` : pathname;
-      window.history.replaceState(null, "", url);
+      window.history.replaceState(window.history.state, "", url);
       dispatchReplaceState();
     },
     [searchParams, pathname]

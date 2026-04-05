@@ -1,32 +1,31 @@
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ArrowRight } from "@phosphor-icons/react/dist/ssr";
-import { PortalHeader } from "@/components/headers";
-import { getCachedPortalBySlug, getPortalVertical } from "@/lib/portal";
 import FilmPortalNav from "../_components/film/FilmPortalNav";
 import FilmShowtimeBoard from "../_components/film/FilmShowtimeBoard";
+import { resolveFilmPageRequest } from "../_surfaces/detail/resolve-film-page-request";
 
 type Props = {
   params: Promise<{ portal: string }>;
 };
 
+export const revalidate = 120;
+
 export default async function FilmShowtimesPage({ params }: Props) {
   const { portal: slug } = await params;
-  const portal = await getCachedPortalBySlug(slug);
+  const request = await resolveFilmPageRequest({
+    portalSlug: slug,
+    pathname: `/${slug}/showtimes`,
+  });
 
-  if (!portal) {
+  if (!request) {
     notFound();
-  }
-
-  if (getPortalVertical(portal) !== "film") {
-    redirect(`/${portal.slug}?view=find&lane=events`);
   }
 
   return (
     <div className="min-h-screen bg-[#090d16] text-[#f6f7fb]">
-      <PortalHeader portalSlug={portal.slug} portalName={portal.name} />
       <main className="mx-auto max-w-6xl px-4 pb-16 pt-6 space-y-7">
-        <FilmPortalNav portalSlug={portal.slug} />
+        <FilmPortalNav portalSlug={request.portal.slug} />
         <header className="space-y-2">
           <p className="text-xs uppercase tracking-[0.18em] text-[#8fa2c4]">Atlanta Film</p>
           <h1 className="mt-1 font-[var(--font-film-editorial)] text-4xl text-[#f7f7fb]">Showtimes</h1>
@@ -38,23 +37,23 @@ export default async function FilmShowtimesPage({ params }: Props) {
         <section className="space-y-4">
           <header className="flex flex-wrap items-center justify-between gap-2">
             <h2 className="font-[var(--font-film-editorial)] text-2xl text-[#f7f7fb]">By Film</h2>
-            <Link href={`/${portal.slug}/calendar`} className="inline-flex items-center gap-1 text-xs uppercase tracking-[0.14em] text-[#c9d9ff] hover:text-[#e1eaff]">
+            <Link href={`/${request.portal.slug}/calendar`} className="inline-flex items-center gap-1 text-xs uppercase tracking-[0.14em] text-[#c9d9ff] hover:text-[#e1eaff]">
               Open calendar
               <ArrowRight size={12} />
             </Link>
           </header>
-          <FilmShowtimeBoard portalSlug={portal.slug} mode="by-film" />
+          <FilmShowtimeBoard portalSlug={request.portal.slug} mode="by-film" />
         </section>
 
         <section className="space-y-4">
           <header className="flex flex-wrap items-center justify-between gap-2">
             <h2 className="font-[var(--font-film-editorial)] text-2xl text-[#f7f7fb]">By Venue</h2>
-            <Link href={`/${portal.slug}/venues`} className="inline-flex items-center gap-1 text-xs uppercase tracking-[0.14em] text-[#c9d9ff] hover:text-[#e1eaff]">
+            <Link href={`/${request.portal.slug}/venues`} className="inline-flex items-center gap-1 text-xs uppercase tracking-[0.14em] text-[#c9d9ff] hover:text-[#e1eaff]">
               Open venue page
               <ArrowRight size={12} />
             </Link>
           </header>
-          <FilmShowtimeBoard portalSlug={portal.slug} mode="by-theater" hideDateRail />
+          <FilmShowtimeBoard portalSlug={request.portal.slug} mode="by-theater" hideDateRail />
         </section>
       </main>
     </div>

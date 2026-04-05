@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { MagnifyingGlass } from "@phosphor-icons/react";
+import { buildExploreUrl } from "@/lib/find-url";
 
 type FilmPortalNavProps = {
   portalSlug: string;
@@ -17,7 +18,7 @@ const NAV_ITEMS = [
   { key: "calendar", label: "Calendar", path: "/calendar" },
   { key: "venues", label: "Venues", path: "/venues" },
   { key: "community", label: "Community", path: "/community-hub" },
-  { key: "explore", label: "Explore", path: "?view=feed&tab=explore" },
+  { key: "explore", label: "Explore", path: "/explore?lane=events&categories=film" },
 ];
 
 function isActive(pathname: string, href: string): boolean {
@@ -36,7 +37,11 @@ export default function FilmPortalNav({ portalSlug }: FilmPortalNavProps) {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === "k") {
         e.preventDefault();
-        router.push(`/${portalSlug}?view=find&lane=events&categories=film`);
+        router.push(buildExploreUrl({
+          portalSlug,
+          lane: "events",
+          categories: "film",
+        }));
       }
     };
     window.addEventListener("keydown", handleKeyDown);
@@ -72,7 +77,13 @@ export default function FilmPortalNav({ portalSlug }: FilmPortalNavProps) {
         <button
           type="button"
           onClick={() =>
-            router.push(`/${portalSlug}?view=find&lane=events&categories=film`)
+            router.push(
+              buildExploreUrl({
+                portalSlug,
+                lane: "events",
+                categories: "film",
+              }),
+            )
           }
           className="ml-auto flex shrink-0 items-center justify-center rounded-xl border border-transparent bg-[#10182b] p-2 text-[#a4b5d3] transition-colors hover:border-[#33405f] hover:text-[#d8e2f5]"
           aria-label="Search films (⌘K)"

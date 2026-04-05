@@ -1,9 +1,9 @@
 "use client";
 
 import { useCallback, useMemo, useRef, useState, useEffect } from "react";
-import { useSearchParams, usePathname } from "next/navigation";
+import { usePathname } from "next/navigation";
 import FilterChip, { getTagVariant } from "./FilterChip";
-import { dispatchReplaceState } from "@/lib/hooks/useReplaceStateParams";
+import { dispatchReplaceState, useReplaceStateParams } from "@/lib/hooks/useReplaceStateParams";
 
 // Group configuration for visual separation
 type TagGroup = "access" | "vibe" | "special";
@@ -57,7 +57,7 @@ interface QuickTagsRowProps {
 
 export default function QuickTagsRow({ className = "", showGroupLabels = false }: QuickTagsRowProps) {
   const pathname = usePathname();
-  const searchParams = useSearchParams();
+  const searchParams = useReplaceStateParams();
   const scrollRef = useRef<HTMLDivElement>(null);
   const [overflowCount, setOverflowCount] = useState(0);
 
@@ -117,7 +117,7 @@ export default function QuickTagsRow({ className = "", showGroupLabels = false }
       params.delete("page");
 
       const newUrl = params.toString() ? `${pathname}?${params.toString()}` : pathname;
-      window.history.replaceState(null, "", newUrl);
+      window.history.replaceState(window.history.state, "", newUrl);
       dispatchReplaceState();
     },
     [pathname, searchParams, activeTags]

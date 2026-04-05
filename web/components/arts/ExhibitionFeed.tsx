@@ -192,7 +192,7 @@ function updateUrl({
   const newUrl = query
     ? `${window.location.pathname}?${query}`
     : window.location.pathname;
-  window.history.replaceState(null, "", newUrl);
+  window.history.replaceState(window.history.state, "", newUrl);
 }
 
 function EmptyState({

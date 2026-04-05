@@ -1,30 +1,29 @@
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
-import { getCachedPortalBySlug, getPortalVertical } from "@/lib/portal";
-import { isDogPortal } from "@/lib/dog-art";
 import { getDogTrainingEvents } from "@/lib/dog-data";
 import { TRAINING_FILTER_OPTIONS } from "@/lib/dog-tags";
 import DogDeepPageShell from "@/app/[portal]/_components/dog/DogDeepPageShell";
 import DogFilterChips from "@/app/[portal]/_components/dog/DogFilterChips";
 import { DogEventCard } from "@/app/[portal]/_components/dog/DogCard";
 import DogEmptyState from "@/app/[portal]/_components/dog/DogEmptyState";
+import { resolveFeedPageRequest } from "../_surfaces/feed/resolve-feed-page-request";
 
 type Props = {
   params: Promise<{ portal: string }>;
   searchParams: Promise<{ filter?: string }>;
 };
 
-export const revalidate = 60;
+export const revalidate = 300;
 
 export default async function DogTrainingPage({ params, searchParams }: Props) {
   const { portal: portalSlug } = await params;
   const sp = await searchParams;
 
-  const portal = await getCachedPortalBySlug(portalSlug);
-  if (!portal) notFound();
-
-  const vertical = getPortalVertical(portal);
-  if (vertical !== "dog" && !isDogPortal(portal.slug)) notFound();
+  const request = await resolveFeedPageRequest({
+    portalSlug,
+    pathname: `/${portalSlug}/training`,
+  });
+  if (!request || !request.isDog) notFound();
 
   const events = await getDogTrainingEvents(sp.filter, 50);
 

@@ -23,6 +23,7 @@ import { FriendSearch } from "@/components/community/FriendSearch";
 import { PendingRequests } from "@/components/community/PendingRequests";
 import { FriendOnboarding } from "@/components/community/FriendOnboarding";
 import FeedSectionHeader from "@/components/feed/FeedSectionHeader";
+import { buildCommunityHubUrl } from "@/lib/find-url";
 import type { FriendHang, HangVisibility, HotVenue } from "@/lib/types/hangs";
 import type { FriendPlan } from "@/lib/hooks/useFriendPlans";
 
@@ -225,7 +226,7 @@ const FriendPlanCard = memo(function FriendPlanCard({
 
 // ─── Friends Out Now Section ──────────────────────────────────────────────────
 
-function FriendsOutNowSection({ portalSlug }: { portalSlug: string }) {
+function FriendsOutNowSection() {
   const { user } = useAuth();
   const myHangs = useMyHangs();
   const friendHangs = useFriendHangs();
@@ -490,7 +491,7 @@ function UnauthenticatedHero({ portalSlug }: { portalSlug: string }) {
           Build plans with friends from real events and venues across the city.
         </p>
         <Link
-          href={`/auth/login?redirect=/${portalSlug}?view=community`}
+          href={`/auth/login?redirect=${encodeURIComponent(buildCommunityHubUrl({ portalSlug }))}`}
           className="inline-flex items-center gap-2 px-5 py-2.5 bg-[var(--coral)] text-[var(--void)] rounded-lg font-mono text-sm font-medium hover:bg-[var(--rose)] transition-all active:scale-95 shadow-lg shadow-[var(--coral)]/20"
         >
           Sign In to Get Started
@@ -529,7 +530,7 @@ export default function CommunityHub({
 
       {/* 3. Friends Out Now — secondary, requires social graph */}
       {ENABLE_HANGS_V1 && (
-        <FriendsOutNowSection portalSlug={portalSlug} />
+        <FriendsOutNowSection />
       )}
 
       {/* 4. Hot Spots — venues with active hangs */}

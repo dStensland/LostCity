@@ -12,6 +12,7 @@ import Link from "next/link";
 import type { CityPulseSection } from "@/lib/city-pulse/types";
 import Image from "@/components/SmartImage";
 import { Sun, CloudRain, Snowflake, ArrowRight, MapPin } from "@phosphor-icons/react";
+import { buildExploreUrl } from "@/lib/find-url";
 
 interface Props {
   section: CityPulseSection;
@@ -60,7 +61,7 @@ export default function WeatherDiscoverySection({
           </h2>
         </div>
         <Link
-          href={`/${portalSlug}?view=find&lane=places`}
+          href={buildExploreUrl({ portalSlug, lane: "places" })}
           className="text-xs flex items-center gap-1 transition-colors hover:opacity-80"
           style={{ color: accentColor }}
         >

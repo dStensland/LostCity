@@ -31,8 +31,17 @@ type UserSubscriptionRow = {
 
 function apiDisabledResponse() {
   return NextResponse.json(
-    { error: "Interest Channels API is disabled." },
-    { status: 404 },
+    {
+      disabled: true,
+      channels: [],
+      portal: null,
+    },
+    {
+      status: 200,
+      headers: {
+        "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600",
+      },
+    },
   );
 }
 

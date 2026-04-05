@@ -2,7 +2,6 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { format, parseISO } from "date-fns";
-import { getCachedPortalBySlug } from "@/lib/portal";
 import { createClient } from "@/lib/supabase/server";
 import ScrollToTop from "@/components/ScrollToTop";
 import {
@@ -23,8 +22,9 @@ import {
   type Program,
 } from "@/lib/types/programs";
 import { ISO_DAY_LABELS } from "@/lib/types/programs";
+import { resolveDetailPageRequest } from "../../_surfaces/detail/resolve-detail-page-request";
 
-export const revalidate = 60;
+export const revalidate = 120;
 
 type Props = {
   params: Promise<{ portal: string; slug: string }>;
@@ -106,9 +106,12 @@ async function getProgramBySlug(
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug, portal: portalSlug } = await params;
-  const [program, portal] = await Promise.all([
+  const [program, request] = await Promise.all([
     getProgramBySlug(slug, portalSlug),
-    getCachedPortalBySlug(portalSlug),
+    resolveDetailPageRequest({
+      portalSlug,
+      pathname: `/${portalSlug}/programs/${slug}`,
+    }),
   ]);
 
   if (!program) {
@@ -118,7 +121,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     };
   }
 
-  const portalName = portal?.name || "Lost City: Family";
+  const portalName = request?.portal.name || "Lost City: Family";
+  const activePortalSlug = request?.portal.slug || portalSlug;
   const ageLabel = formatAgeRange(program.age_min, program.age_max);
   const description = program.description
     ? program.description.slice(0, 160)
@@ -128,7 +132,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     title: `${program.name} | ${portalName}`,
     description,
     alternates: {
-      canonical: `/${portalSlug}/programs/${slug}`,
+      canonical: `/${activePortalSlug}/programs/${slug}`,
     },
   };
 }
@@ -206,17 +210,20 @@ function CostBadge({ amount, period, notes }: { amount: number | null; period: P
 
 export default async function ProgramDetailPage({ params }: Props) {
   const { slug, portal: portalSlug } = await params;
-  const [program, portal] = await Promise.all([
+  const [program, request] = await Promise.all([
     getProgramBySlug(slug, portalSlug),
-    getCachedPortalBySlug(portalSlug),
+    resolveDetailPageRequest({
+      portalSlug,
+      pathname: `/${portalSlug}/programs/${slug}`,
+    }),
   ]);
 
   if (!program) {
     notFound();
   }
 
-  const portalName = portal?.name || "Lost City: Family";
-  const activePortalSlug = portal?.slug || portalSlug;
+  const portalName = request?.portal.name || "Lost City: Family";
+  const activePortalSlug = request?.portal.slug || portalSlug;
 
   const hasImage = !!program.venue?.image_url;
   const imageUrl = program.venue?.image_url ?? null;

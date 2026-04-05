@@ -51,6 +51,7 @@ import {
 import type { ComponentType } from "react";
 import type { IconProps } from "@phosphor-icons/react";
 import { triggerHaptic } from "@/lib/haptics";
+import { buildExploreUrl } from "@/lib/find-url";
 
 // ---------------------------------------------------------------------------
 // Icon resolver — maps iconName string → Phosphor component
@@ -103,7 +104,7 @@ const TABS: TabConfig[] = [
     dateFilter: (e) => e.start_date <= getToday(),
     accent: "var(--coral)",
     icon: Lightning,
-    seeAllHref: (s) => `/${s}?view=find&lane=events&date=today`,
+    seeAllHref: (s) => buildExploreUrl({ portalSlug: s, lane: "events", date: "today" }),
   },
   {
     id: "this_week",
@@ -115,7 +116,12 @@ const TABS: TabConfig[] = [
     },
     accent: "var(--neon-green)",
     icon: CalendarBlank,
-    seeAllHref: (s) => `/${s}?view=find&lane=events&date=next_7_days`,
+    seeAllHref: (s) =>
+      buildExploreUrl({
+        portalSlug: s,
+        lane: "events",
+        extraParams: { date: "next_7_days" },
+      }),
   },
   {
     id: "coming_up",
@@ -127,7 +133,12 @@ const TABS: TabConfig[] = [
     },
     accent: "var(--gold)",
     icon: CalendarBlank,
-    seeAllHref: (s) => `/${s}?view=happening&date=next_30_days`,
+    seeAllHref: (s) =>
+      buildExploreUrl({
+        portalSlug: s,
+        lane: "events",
+        extraParams: { date: "next_30_days" },
+      }),
   },
 ];
 
@@ -510,7 +521,7 @@ export default function LineupSection({
         priority="secondary"
         accentColor={sectionAccentColor}
         icon={<Lightning weight="duotone" className="w-5 h-5" />}
-        seeAllHref={`/${portalSlug}?view=find&lane=events`}
+        seeAllHref={buildExploreUrl({ portalSlug, lane: "events" })}
       />
 
       {/* Date tabs — counts are lineup-filtered */}

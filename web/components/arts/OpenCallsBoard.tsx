@@ -35,22 +35,24 @@ export function OpenCallsBoard({
     updateUrl({ type: activeType, tier: value });
   }
 
-  const applyFilters = (calls: OpenCallWithOrg[]) =>
-    calls.filter((call) => {
-      if (activeType !== "all" && call.call_type !== activeType) return false;
-      if (activeTier !== "all" && call.confidence_tier !== activeTier)
-        return false;
-      return true;
-    });
-
   const filteredLocal = useMemo(
-    () => applyFilters(localCalls),
-    [localCalls, activeType, activeTier] // eslint-disable-line react-hooks/exhaustive-deps
+    () =>
+      localCalls.filter((call) => {
+        if (activeType !== "all" && call.call_type !== activeType) return false;
+        if (activeTier !== "all" && call.confidence_tier !== activeTier) return false;
+        return true;
+      }),
+    [localCalls, activeType, activeTier]
   );
 
   const filteredNational = useMemo(
-    () => applyFilters(nationalCalls),
-    [nationalCalls, activeType, activeTier] // eslint-disable-line react-hooks/exhaustive-deps
+    () =>
+      nationalCalls.filter((call) => {
+        if (activeType !== "all" && call.call_type !== activeType) return false;
+        if (activeTier !== "all" && call.confidence_tier !== activeTier) return false;
+        return true;
+      }),
+    [nationalCalls, activeType, activeTier]
   );
 
   const hasAny = filteredLocal.length > 0 || filteredNational.length > 0;
@@ -154,7 +156,7 @@ function updateUrl({
   const newUrl = query
     ? `${window.location.pathname}?${query}`
     : window.location.pathname;
-  window.history.replaceState(null, "", newUrl);
+  window.history.replaceState(window.history.state, "", newUrl);
 }
 
 function EmptyState({ isFiltered }: { isFiltered: boolean }) {

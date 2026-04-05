@@ -2,7 +2,6 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { unstable_cache } from "next/cache";
 import { supabase } from "@/lib/supabase";
-import { getCachedPortalBySlug } from "@/lib/portal";
 import ScopedStylesServer from "@/components/ScopedStylesServer";
 import { createCssVarClass } from "@/lib/css-utils";
 import FollowButton from "@/components/FollowButton";
@@ -27,8 +26,9 @@ import {
   getVolunteerOpportunitiesForOrganization,
   type VolunteerOpportunity,
 } from "@/lib/volunteer-opportunities";
+import { resolveCommunityPageRequest } from "../../_surfaces/community/resolve-community-page-request";
 
-export const revalidate = 300;
+export const revalidate = 180;
 
 // Org type configuration
 const ORG_TYPE_CONFIG: Record<string, { label: string; color: string }> = {
@@ -202,8 +202,13 @@ type Props = {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug, portal: portalSlug } = await params;
-  const organization = await getOrganization(slug);
-  const portal = await getCachedPortalBySlug(portalSlug);
+  const [organization, request] = await Promise.all([
+    getOrganization(slug),
+    resolveCommunityPageRequest({
+      portalSlug,
+      pathname: `/${portalSlug}/community/${slug}`,
+    }),
+  ]);
 
   if (!organization) {
     return {
@@ -215,14 +220,15 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     };
   }
 
-  const portalName = portal?.name || "Lost City";
+  const activePortalSlug = request?.portal.slug || portalSlug;
+  const portalName = request?.portal.name || "Lost City";
   const description = organization.description || `Discover events and experiences from ${organization.name} in Atlanta.`;
 
   return {
     title: `${organization.name} | ${portalName}`,
     description,
     alternates: {
-      canonical: `/${portal?.slug || portalSlug}/community/${slug}`,
+      canonical: `/${activePortalSlug}/community/${slug}`,
     },
     openGraph: {
       title: organization.name,
@@ -286,16 +292,19 @@ function generateOrganizationSchema(organization: Organization) {
 
 export default async function PortalOrganizerPage({ params }: Props) {
   const { portal: portalSlug, slug } = await params;
-  const organization = await getOrganization(slug);
-  const portal = await getCachedPortalBySlug(portalSlug);
+  const [organization, request] = await Promise.all([
+    getOrganization(slug),
+    resolveCommunityPageRequest({
+      portalSlug,
+      pathname: `/${portalSlug}/community/${slug}`,
+    }),
+  ]);
 
   if (!organization) {
     notFound();
   }
 
-  // Use the URL portal or fall back
-  const activePortalSlug = portal?.slug || portalSlug;
-  const activePortalName = portal?.name || portalSlug.charAt(0).toUpperCase() + portalSlug.slice(1);
+  const activePortalSlug = request?.portal.slug || portalSlug;
   const claimHref = `/claim?${new URLSearchParams({
     type: "organization",
     id: organization.id,

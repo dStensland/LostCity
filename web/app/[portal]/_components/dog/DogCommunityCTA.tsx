@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { buildDogMapUrl } from "@/lib/find-url";
 
 interface Props {
   portalSlug: string;
@@ -18,7 +19,7 @@ export default function DogCommunityCTA({ portalSlug }: Props) {
         Help us map every dog-friendly place in Atlanta.
       </p>
       <Link
-        href={`/${portalSlug}?view=find`}
+        href={buildDogMapUrl({ portalSlug })}
         className="dog-btn-secondary inline-block mt-4 text-sm"
       >
         Tag a spot

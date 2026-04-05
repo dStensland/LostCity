@@ -10,6 +10,7 @@ import {
   Warehouse,
 } from "@phosphor-icons/react";
 import type { ElementType } from "react";
+import { buildCommunityHubUrl } from "@/lib/find-url";
 
 interface ArtsTab {
   key: string;
@@ -42,7 +43,7 @@ function getArtsTabs(portalSlug: string): ArtsTab[] {
       key: "artists",
       label: "Artists",
       icon: UserCircle,
-      href: `/${portalSlug}?view=community`,
+      href: buildCommunityHubUrl({ portalSlug }),
     },
     {
       key: "studios",
@@ -60,18 +61,15 @@ function isArtsTabActive(
   portalSlug: string
 ): boolean {
   const isRoot = pathname === `/${portalSlug}`;
-  const viewParam = searchParams.get("view");
-
   switch (tabKey) {
     case "whats-on":
-      // Active on portal root with no view param, or view=feed/happening (but NOT view=community)
-      return isRoot && (!viewParam || viewParam === "feed" || viewParam === "happening");
+      return isRoot;
     case "exhibitions":
       return pathname === `/${portalSlug}/exhibitions`;
     case "open-calls":
       return pathname === `/${portalSlug}/open-calls`;
     case "artists":
-      return isRoot && viewParam === "community";
+      return pathname === `/${portalSlug}/community-hub` || pathname.startsWith(`/${portalSlug}/community/`);
     case "studios":
       return pathname === `/${portalSlug}/studios`;
     default:

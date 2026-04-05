@@ -1,31 +1,21 @@
 import { notFound } from "next/navigation";
-import { headers } from "next/headers";
-import { getCachedPortalBySlug, getCachedPortalByVerticalAndCity, getPortalVertical } from "@/lib/portal";
 import PortalGroupsClient from "@/components/channels/PortalGroupsClient";
-import { CivicTabBar } from "@/components/civic/CivicTabBar";
-import { Suspense } from "react";
 import { getInterestChannelPresentation } from "@/lib/interest-channel-presentation";
+import { resolveCommunityPageRequest } from "../_surfaces/community/resolve-community-page-request";
 
-export const revalidate = 60;
+export const revalidate = 180;
 
 type Props = {
   params: Promise<{ portal: string }>;
 };
 
-/** Resolve portal using subdomain vertical header when present, falling back to slug lookup. */
-async function resolveGroupsPortal(slug: string) {
-  const headersList = await headers();
-  const subdomainVertical = headersList.get("x-lc-vertical");
-  if (subdomainVertical) {
-    const portal = await getCachedPortalByVerticalAndCity(subdomainVertical, slug);
-    if (portal) return portal;
-  }
-  return getCachedPortalBySlug(slug);
-}
-
 export async function generateMetadata({ params }: Props) {
   const { portal: slug } = await params;
-  const portal = await resolveGroupsPortal(slug);
+  const request = await resolveCommunityPageRequest({
+    portalSlug: slug,
+    pathname: `/${slug}/groups`,
+  });
+  const portal = request?.portal ?? null;
 
   if (!portal) {
     return {
@@ -45,7 +35,11 @@ export async function generateMetadata({ params }: Props) {
 
 export default async function PortalGroupsPage({ params }: Props) {
   const { portal: pathSlug } = await params;
-  const portal = await resolveGroupsPortal(pathSlug);
+  const request = await resolveCommunityPageRequest({
+    portalSlug: pathSlug,
+    pathname: `/${pathSlug}/groups`,
+  });
+  const portal = request?.portal ?? null;
   if (!portal) notFound();
   // Use the canonical portal slug (e.g. "helpatl") for child components, not the URL path segment.
   const portalSlug = portal.slug;
@@ -56,15 +50,6 @@ export default async function PortalGroupsPage({ params }: Props) {
   const groupsDescription = typeof portal.settings.groups_page_description === "string"
     ? portal.settings.groups_page_description
     : "Follow city, county, school board, and topic groups to keep the feed aligned with what you care about.";
-
-  const vertical = getPortalVertical(portal);
-  const isCommunity = vertical === "community";
-  const actLabel =
-    typeof portal.settings.nav_labels === "object" &&
-    portal.settings.nav_labels !== null &&
-    typeof (portal.settings.nav_labels as Record<string, unknown>).feed === "string"
-      ? (portal.settings.nav_labels as Record<string, string>).feed
-      : "Act";
 
   return (
     <div className="min-h-screen">
@@ -81,15 +66,6 @@ export default async function PortalGroupsPage({ params }: Props) {
 
         <PortalGroupsClient portalSlug={portalSlug} />
       </main>
-
-      {isCommunity && (
-        <>
-          <Suspense fallback={null}>
-            <CivicTabBar portalSlug={portalSlug} actLabel={actLabel} />
-          </Suspense>
-          <div className="h-14 sm:hidden" />
-        </>
-      )}
     </div>
   );
 }

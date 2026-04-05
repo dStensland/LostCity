@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { usePortalSlug } from "@/lib/portal-context";
+import { buildCurationsUrl } from "@/lib/find-url";
 import { IconButton } from "./ui/Button";
 
 interface SaveToListButtonProps {
@@ -231,7 +232,7 @@ export const SaveToListButton = memo(function SaveToListButton({
                   You don&apos;t have any curations yet
                 </p>
                 <Link
-                  href={`/${portalSlug}?view=community&tab=curations`}
+                  href={buildCurationsUrl({ portalSlug })}
                   className="inline-flex items-center gap-2 px-4 py-2 bg-[var(--coral)] text-[var(--void)] rounded-lg text-sm font-mono hover:bg-[var(--rose)] transition-colors"
                 >
                   <PlusIcon className="w-4 h-4" />
@@ -286,7 +287,7 @@ export const SaveToListButton = memo(function SaveToListButton({
                 {/* Create new list button */}
                 <div className="border-t border-[var(--twilight)] p-2">
                   <Link
-                    href={`/${portalSlug}?view=community&tab=curations`}
+                    href={buildCurationsUrl({ portalSlug })}
                     className="w-full flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-mono text-[var(--muted)] hover:text-[var(--cream)] hover:bg-[var(--twilight)] transition-colors"
                   >
                     <PlusIcon className="w-4 h-4" />

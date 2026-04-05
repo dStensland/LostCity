@@ -3,7 +3,6 @@ import Link from "next/link";
 import type { ReactElement } from "react";
 import { cache } from "react";
 import ScrollToTop from "@/components/ScrollToTop";
-import { getCachedPortalBySlug } from "@/lib/portal";
 import {
   getSeriesBySlug,
   getSeriesEvents,
@@ -28,8 +27,10 @@ import { buildBreadcrumbSchema } from "@/lib/breadcrumb-schema";
 import type { Metadata } from "next";
 import ScopedStylesServer from "@/components/ScopedStylesServer";
 import { createCssVarClass } from "@/lib/css-utils";
+import { buildExploreUrl } from "@/lib/find-url";
+import { resolveDetailPageRequest } from "../../_surfaces/detail/resolve-detail-page-request";
 
-export const revalidate = 300; // 5 minutes
+export const revalidate = 120;
 
 type Props = {
   params: Promise<{ portal: string; slug: string }>;
@@ -41,7 +42,10 @@ const getCachedSeriesBySlug = cache(getSeriesBySlug);
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug, portal: portalSlug } = await params;
   const series = await getCachedSeriesBySlug(slug);
-  const portal = await getCachedPortalBySlug(portalSlug);
+  const request = await resolveDetailPageRequest({
+    portalSlug,
+    pathname: `/${portalSlug}/series/${slug}`,
+  });
 
   if (!series) {
     return {
@@ -53,7 +57,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     };
   }
 
-  const portalName = portal?.name || "Lost City";
+  const activePortalSlug = request?.portal.slug || portalSlug;
+  const portalName = request?.portal.name || "Lost City";
   const contextLabel = series.festival
     ? series.series_type === "festival_program"
       ? `Program in ${series.festival.name}`
@@ -68,7 +73,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     title: `${series.title} | ${portalName}`,
     description,
     alternates: {
-      canonical: `/${portal?.slug || portalSlug}/series/${slug}`,
+      canonical: `/${activePortalSlug}/series/${slug}`,
     },
     openGraph: {
       title: series.title,
@@ -76,7 +81,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       type: "website",
       images: [
         {
-          url: `/${portal?.slug || portalSlug}/series/${slug}/opengraph-image`,
+          url: `/${activePortalSlug}/series/${slug}/opengraph-image`,
           width: 1200,
           height: 630,
           alt: series.title,
@@ -89,7 +94,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       description,
       images: [
         {
-          url: `/${portal?.slug || portalSlug}/series/${slug}/opengraph-image`,
+          url: `/${activePortalSlug}/series/${slug}/opengraph-image`,
           width: 1200,
           height: 630,
           alt: series.title,
@@ -303,15 +308,18 @@ function groupEventsByDate(
 export default async function PortalSeriesPage({ params }: Props) {
   const { slug, portal: portalSlug } = await params;
   const series = await getCachedSeriesBySlug(slug);
-  const portal = await getCachedPortalBySlug(portalSlug);
+  const request = await resolveDetailPageRequest({
+    portalSlug,
+    pathname: `/${portalSlug}/series/${slug}`,
+  });
 
   if (!series) {
     notFound();
   }
 
   // Use the URL portal or fall back to default
-  const activePortalSlug = portal?.slug || portalSlug;
-  const activePortalName = portal?.name || portalSlug.charAt(0).toUpperCase() + portalSlug.slice(1);
+  const activePortalSlug = request?.portal.slug || portalSlug;
+  const activePortalName = request?.portal.name || portalSlug.charAt(0).toUpperCase() + portalSlug.slice(1);
 
   const [events, relatedSeries] = await Promise.all([
     getSeriesEvents(series.id),
@@ -349,13 +357,16 @@ export default async function PortalSeriesPage({ params }: Props) {
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
-          __html: safeJsonLd(
-            buildBreadcrumbSchema([
-              { name: activePortalName, href: `/${activePortalSlug}` },
-              { name: getSeriesTypeLabel(series.series_type), href: `/${activePortalSlug}?view=find&lane=events` },
-              { name: series.title },
-            ])
-          ),
+              __html: safeJsonLd(
+                buildBreadcrumbSchema([
+                  { name: activePortalName, href: `/${activePortalSlug}` },
+                  {
+                    name: getSeriesTypeLabel(series.series_type),
+                    href: buildExploreUrl({ portalSlug: activePortalSlug, lane: "events" }),
+                  },
+                  { name: series.title },
+                ])
+              ),
         }}
       />
 

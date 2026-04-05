@@ -22,6 +22,7 @@ import { decodeHtmlEntities, formatCompactCount, formatTimeSplit } from "@/lib/f
 import { DEFAULT_PORTAL_SLUG } from "@/lib/portal-context";
 import { useCalendarEvents, type CalendarEvent } from "@/lib/hooks/useCalendarEvents";
 import WeekStrip, { type WeekStripDay } from "@/components/calendar/WeekStrip";
+import { buildExploreUrl } from "@/lib/find-url";
 
 interface Props {
   portalId?: string;
@@ -458,7 +459,7 @@ export default function MobileCalendarView({
       {/* View all link */}
       {selectedDayEvents.length > 3 && (
         <Link
-          href={`/${portalSlug}?view=find&lane=events&date_start=${format(selectedDate, "yyyy-MM-dd")}&date_end=${format(selectedDate, "yyyy-MM-dd")}`}
+          href={`${buildExploreUrl({ portalSlug, lane: "events" })}&date_start=${format(selectedDate, "yyyy-MM-dd")}&date_end=${format(selectedDate, "yyyy-MM-dd")}`}
           className="block mt-4 mx-1 text-center py-2.5 rounded-xl border border-[var(--twilight)] text-[var(--muted)] hover:text-[var(--cream)] hover:border-[var(--coral)]/50 transition-colors font-mono text-xs"
         >
           View all {formatCompactCount(selectedDayEvents.length)} events →

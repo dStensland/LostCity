@@ -10,6 +10,7 @@ import { useFriendRequests } from "@/lib/hooks/useFriendRequests";
 import { useFriendSuggestions } from "@/lib/hooks/useFriendSuggestions";
 import CrewThisWeekCard from "@/components/dashboard/CrewThisWeekCard";
 import FeedSectionHeader from "@/components/feed/FeedSectionHeader";
+import { buildCommunityHubUrl } from "@/lib/find-url";
 
 const FindPeopleIcon = ({ className }: { className?: string }) => (
   <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor">
@@ -124,7 +125,7 @@ function UnauthenticatedView() {
             See what they&apos;re up to and never miss the vibes. Connect with friends and discover events through the people you trust.
           </p>
           <Link
-            href="/auth/login?redirect=/atl?view=community"
+            href={`/auth/login?redirect=${encodeURIComponent(buildCommunityHubUrl({ portalSlug: "atlanta" }))}`}
             className="inline-flex items-center gap-2 px-5 py-2.5 bg-[var(--coral)] text-[var(--void)] rounded-lg font-mono text-sm font-medium hover:bg-[var(--rose)] transition-all hover:scale-105 shadow-lg shadow-[var(--coral)]/20 animate-stagger-3"
           >
             Sign In to Connect

@@ -6,6 +6,7 @@ import Image from "@/components/SmartImage";
 import CategoryIcon from "@/components/CategoryIcon";
 import CategorySkeleton from "@/components/CategorySkeleton";
 import { formatCompactCount } from "@/lib/formats";
+import { buildCommunityOrgUrl, buildExploreUrl } from "@/lib/find-url";
 
 type Organization = {
   id: string;
@@ -80,7 +81,7 @@ function OrganizationCard({
   const hasSocialProof = followerCount > 0 || recommendationCount > 0;
   return (
     <Link
-      href={`/${portalSlug}?org=${organization.slug}`}
+      href={buildCommunityOrgUrl({ portalSlug, orgSlug: organization.slug })}
       scroll={false}
       data-org-type={organization.org_type}
       className="block p-5 rounded-xl border border-[var(--twilight)] card-atmospheric group transition-all duration-300 hover:translate-y-[-2px] org-card"
@@ -323,7 +324,7 @@ export default function PortalCommunityView({ portalId, portalSlug, portalName }
           Organizations in {portalName} will appear here. We&apos;re working on bringing more community groups to the platform.
         </p>
         <Link
-          href={`/${portalSlug}?view=find&lane=events`}
+          href={buildExploreUrl({ portalSlug, lane: "events" })}
           className="inline-flex items-center gap-2 px-5 py-2.5 bg-[var(--coral)] text-[var(--void)] rounded-lg font-mono text-sm font-medium hover:bg-[var(--rose)] transition-colors"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

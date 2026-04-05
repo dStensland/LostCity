@@ -141,9 +141,17 @@ export function buildSeeAllHref(
   category: PlacesToGoCategoryConfig
 ): string {
   if (category.seeAllTab) {
-    return `/${portalSlug}?view=find&lane=places&tab=${category.seeAllTab}`;
+    return buildExploreUrl({
+      portalSlug,
+      lane: "places",
+      extraParams: { tab: category.seeAllTab },
+    });
   }
-  return `/${portalSlug}?view=find&lane=places&venue_type=${category.placeTypes.join(",")}`;
+  return buildExploreUrl({
+    portalSlug,
+    lane: "places",
+    extraParams: { venue_type: category.placeTypes.join(",") },
+  });
 }
 
 /**
@@ -173,3 +181,4 @@ export const CHAIN_VENUE_PREFIXES: readonly string[] = [
   "painting it forward",
   "sip and stroke",
 ];
+import { buildExploreUrl } from "@/lib/find-url";

@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import Link from "next/link";
 import { getSunMoonData } from "@/lib/sun-moon";
 import type { FeedContext } from "@/lib/city-pulse/types";
+import { buildExploreUrl } from "@/lib/find-url";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -121,7 +122,7 @@ export function SignalStrip({ context, sportsTentpole, portalSlug = "atlanta" }:
   const rain = isRaining(context.weather?.condition);
   const holiday = context.active_holidays?.[0] ?? null;
 
-  const happeningHref = `/${portalSlug}?view=find&lane=events`;
+  const happeningHref = buildExploreUrl({ portalSlug, lane: "events" });
 
   // Sports time label — compute once
   const sportsLabel = useMemo(() => {

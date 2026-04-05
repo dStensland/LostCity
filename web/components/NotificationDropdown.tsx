@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "@/components/SmartImage";
 import { useAuth } from "@/lib/auth-context";
 import { usePortalOptional, DEFAULT_PORTAL } from "@/lib/portal-context";
+import { buildCommunityHubUrl } from "@/lib/find-url";
 import { formatDistanceToNow } from "date-fns";
 
 type NotificationType =
@@ -386,7 +387,7 @@ function NotificationItem({
   const getNotificationLink = (): string => {
     if (notification.type === "friend_request" || notification.type === "friend_accepted") {
       // Link to community view where friend requests are managed
-      return portal?.slug ? `/${portal.slug}?view=community` : "/atl?view=community";
+      return buildCommunityHubUrl({ portalSlug: portal?.slug || DEFAULT_PORTAL.slug });
     }
     if (notification.type === "new_follower" && notification.actor) {
       return `/profile/${notification.actor.username}`;

@@ -1,12 +1,16 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useInstantSearch } from "@/lib/hooks/useInstantSearch";
 import { buildSearchResultHref } from "@/lib/search-navigation";
 import { trackSearchResultClick } from "@/lib/analytics/find-tracking";
 import { addRecentSearch } from "@/lib/searchHistory";
-import { dispatchReplaceState } from "@/lib/hooks/useReplaceStateParams";
+import { buildCommunityHubUrl, buildExploreUrl } from "@/lib/find-url";
+import {
+  useReplaceStateParams,
+  useReplaceStateSearch,
+} from "@/lib/hooks/useReplaceStateParams";
 import { SuggestionGroup, QuickActionsList } from "@/components/search";
 import type { SearchResult } from "@/lib/unified-search";
 import type { QuickAction } from "@/lib/search-ranking";
@@ -16,11 +20,16 @@ import { TRENDING_SEARCHES } from "@/lib/search-presearch";
 interface FindSearchInputProps {
   portalSlug: string;
   portalId?: string;
+  basePath?: string;
   findType?: string | null;
   placeholder?: string;
   autoFocus?: boolean;
+  queryParam?: string;
+  onSubmitQuery?: (query: string) => void;
   /** Called whenever preSearchData or preSearchLoading changes. Used by parent to render PreSearchState. */
   onPreSearchChange?: (data: PreSearchPayload | null, loading: boolean) => void;
+  enablePreSearch?: boolean;
+  onInputFocus?: () => void;
 }
 
 function resolveViewAllHref(params: {
@@ -29,47 +38,56 @@ function resolveViewAllHref(params: {
   query: string;
   findType?: string | null;
 }): string {
-  const encodedQuery = encodeURIComponent(params.query);
-
   if (params.resultType === "festival") {
-    return `/${params.portalSlug}/festivals?search=${encodedQuery}`;
+    return `/${params.portalSlug}/festivals?search=${encodeURIComponent(params.query)}`;
   }
 
   if (params.resultType === "organizer") {
-    return `/${params.portalSlug}?view=community&search=${encodedQuery}`;
+    return buildCommunityHubUrl({ portalSlug: params.portalSlug, search: params.query });
   }
 
   if (params.resultType === "venue") {
-    return `/${params.portalSlug}?view=find&lane=places&search=${encodedQuery}`;
+    return buildExploreUrl({ portalSlug: params.portalSlug, lane: "places", search: params.query });
   }
 
   if (params.findType === "classes") {
-    return `/${params.portalSlug}?view=find&lane=events&content=classes&search=${encodedQuery}`;
+    return buildExploreUrl({
+      portalSlug: params.portalSlug,
+      lane: "events",
+      search: params.query,
+      extraParams: { content: "classes" },
+    });
   }
 
-  return `/${params.portalSlug}?view=find&lane=events&search=${encodedQuery}`;
+  return buildExploreUrl({ portalSlug: params.portalSlug, lane: "events", search: params.query });
 }
 
 export default function FindSearchInput({
   portalSlug,
   portalId,
+  basePath,
   findType,
   placeholder = "Search events...",
   autoFocus,
+  queryParam = "search",
+  onSubmitQuery,
   onPreSearchChange,
+  enablePreSearch = true,
+  onInputFocus,
 }: FindSearchInputProps) {
   const router = useRouter();
-  const searchParams = useSearchParams();
+  const searchParams = useReplaceStateParams();
+  const searchParamsStr = useReplaceStateSearch();
   const inputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const urlSyncRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const skipUrlSyncRef = useRef(0);
   const [browseMode, setBrowseMode] = useState(false);
-  const pathname = `/${portalSlug}`;
+  const pathname = basePath ?? `/${portalSlug}`;
 
   // Seed query from URL on mount so the debounced URL-sync effect doesn't
   // overwrite a pre-existing ?search= param before the URL→query sync runs.
-  const initialQuery = searchParams?.get("search") || "";
+  const initialQuery = searchParams.get(queryParam) || "";
 
   const search = useInstantSearch({
     portalSlug,
@@ -77,6 +95,7 @@ export default function FindSearchInput({
     findType,
     viewMode: "find",
     initialQuery,
+    enablePreSearch,
   });
 
   // Notify parent when pre-search data changes
@@ -87,7 +106,7 @@ export default function FindSearchInput({
   }, [search.preSearchData, search.preSearchLoading]);
 
   // Sync URL search param → query on mount and external changes.
-  const urlSearch = searchParams?.get("search") || "";
+  const urlSearch = searchParams.get(queryParam) || "";
   const prevUrlSearchRef = useRef(urlSearch);
   useEffect(() => {
     if (urlSearch !== prevUrlSearchRef.current) {
@@ -112,21 +131,20 @@ export default function FindSearchInput({
       return;
     }
     urlSyncRef.current = setTimeout(() => {
-      const params = new URLSearchParams(searchParams?.toString() || "");
+      const params = new URLSearchParams(searchParamsStr);
       const trimmed = search.query.trim();
       if (trimmed) {
-        params.set("search", trimmed);
+        params.set(queryParam, trimmed);
       } else {
-        params.delete("search");
+        params.delete(queryParam);
       }
       params.delete("page");
       const newUrl = params.toString() ? `${pathname}?${params.toString()}` : pathname;
-      window.history.replaceState(null, "", newUrl);
-      dispatchReplaceState();
+      window.history.replaceState(window.history.state, "", newUrl);
     }, 300);
 
     return () => clearTimeout(urlSyncRef.current);
-  }, [search.query, searchParams, pathname]);
+  }, [pathname, queryParam, search.query, searchParamsStr]);
 
   // Handle suggestion selection → navigate to detail
   const handleSelectSuggestion = useCallback(
@@ -192,14 +210,20 @@ export default function FindSearchInput({
 
         const trimmed = search.query.trim();
         if (trimmed) {
+          addRecentSearch(trimmed);
+          if (onSubmitQuery) {
+            onSubmitQuery(trimmed);
+            search.setShowDropdown(false);
+            inputRef.current?.blur();
+            return;
+          }
+
           clearTimeout(urlSyncRef.current);
           skipUrlSyncRef.current = 1;
-          addRecentSearch(trimmed);
-          const params = new URLSearchParams(searchParams?.toString() || "");
-          params.set("search", trimmed);
+          const params = new URLSearchParams(searchParams.toString());
+          params.set(queryParam, trimmed);
           params.delete("page");
-          window.history.replaceState(null, "", `${pathname}?${params.toString()}`);
-          dispatchReplaceState();
+          window.history.replaceState(window.history.state, "", `${pathname}?${params.toString()}`);
           setBrowseMode(true);
         }
         search.setShowDropdown(false);
@@ -208,7 +232,16 @@ export default function FindSearchInput({
       }
       search.handleKeyDown(e);
     },
-    [search, searchParams, pathname, handleSelectSuggestion, handleSelectQuickAction, handleSelectRecent]
+    [
+      handleSelectQuickAction,
+      handleSelectRecent,
+      handleSelectSuggestion,
+      onSubmitQuery,
+      pathname,
+      queryParam,
+      search,
+      searchParams,
+    ]
   );
 
   // Handle trending search click (used in no-results fallback in dropdown)
@@ -289,7 +322,10 @@ export default function FindSearchInput({
           if (browseMode) setBrowseMode(false);
           search.setQuery(e.target.value);
         }}
-        onFocus={search.handleFocus}
+        onFocus={() => {
+          onInputFocus?.();
+          search.handleFocus();
+        }}
         onBlur={search.handleBlur}
         onKeyDown={handleKeyDown}
         onClick={handleExitBrowseMode}

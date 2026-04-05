@@ -9,10 +9,13 @@ import { useShowListings } from "@/lib/hooks/useShowListings";
 import { TransitionContainer } from "@/components/ui/TransitionContainer";
 import { VenueShowsCard, type VenueShowsCardVenue } from "@/components/find/shows/VenueShowsCard";
 import { type BaseShow } from "@/components/find/shows/ShowRow";
+import { useExploreUrlState } from "@/lib/explore-platform/url-state";
+import type { ShowsListingsInitialData } from "@/lib/explore-platform/lane-data";
 
 export interface MusicListingsViewProps {
   portalId: string;
   portalSlug: string;
+  initialData?: ShowsListingsInitialData<"music"> | null;
 }
 
 type MusicFilter = "all" | "rock" | "hip-hop" | "jazz" | "electronic" | "r-and-b" | "country" | "latin";
@@ -28,12 +31,16 @@ const MUSIC_FILTERS: { key: MusicFilter; label: string }[] = [
   { key: "latin", label: "Latin" },
 ];
 
-function getInitialGenre(): MusicFilter {
-  if (typeof window === "undefined") return "all";
-  const param = new URLSearchParams(window.location.search).get("genre");
-  const valid: MusicFilter[] = ["all", "rock", "hip-hop", "jazz", "electronic", "r-and-b", "country", "latin"];
-  return (valid.includes(param as MusicFilter) ? param : "all") as MusicFilter;
-}
+const VALID_FILTERS = new Set<MusicFilter>([
+  "all",
+  "rock",
+  "hip-hop",
+  "jazz",
+  "electronic",
+  "r-and-b",
+  "country",
+  "latin",
+]);
 
 function MusicSkeleton() {
   return (
@@ -67,8 +74,19 @@ function MusicSkeleton() {
   );
 }
 
-export default function MusicListingsView({ portalId: _portalId, portalSlug }: MusicListingsViewProps) {
-  const [activeFilter, setActiveFilter] = useState<MusicFilter>(getInitialGenre);
+export default function MusicListingsView({
+  portalSlug,
+  initialData,
+}: MusicListingsViewProps) {
+  const state = useExploreUrlState();
+  const rawGenre = state.params.get("genre");
+  const rawDate = state.params.get("date");
+  const genreFromUrl =
+    rawGenre && VALID_FILTERS.has(rawGenre as MusicFilter)
+      ? (rawGenre as MusicFilter)
+      : "all";
+
+  const [activeFilter, setActiveFilter] = useState<MusicFilter>(genreFromUrl);
   const [isPending, startTransition] = useTransition();
 
   const {
@@ -81,24 +99,39 @@ export default function MusicListingsView({ portalId: _portalId, portalSlug }: M
   } = useShowListings<MusicShow>({
     apiPath: "/api/whats-on/music",
     portalSlug,
+    initialPayload: initialData
+      ? {
+          date: initialData.date,
+          meta: initialData.meta,
+          shows: initialData.shows,
+          requestKey: initialData.requestKey,
+        }
+      : null,
   });
+
+  useEffect(() => {
+    setActiveFilter(genreFromUrl);
+  }, [genreFromUrl]);
+
+  useEffect(() => {
+    if (rawDate && rawDate !== selectedDate) {
+      setSelectedDate(rawDate);
+    }
+  }, [rawDate, selectedDate, setSelectedDate]);
 
   function handleDateSelect(date: string) {
     startTransition(() => {
       setSelectedDate(date);
+      state.setLaneParams({ date }, "replace");
     });
   }
 
-  // Sync genre filter to URL without triggering navigation
-  useEffect(() => {
-    const url = new URL(window.location.href);
-    if (activeFilter === "all") {
-      url.searchParams.delete("genre");
-    } else {
-      url.searchParams.set("genre", activeFilter);
-    }
-    window.history.replaceState({}, "", url.toString());
-  }, [activeFilter]);
+  function handleFilterSelect(filter: MusicFilter) {
+    startTransition(() => {
+      setActiveFilter(filter);
+      state.setLaneParams({ genre: filter === "all" ? null : filter }, "replace");
+    });
+  }
 
   // Genre counts from ALL shows (before filtering) for chip labels
   const genreCounts = useMemo(() => {
@@ -170,7 +203,7 @@ export default function MusicListingsView({ portalId: _portalId, portalSlug }: M
           return (
             <button
               key={key}
-              onClick={() => setActiveFilter(key)}
+              onClick={() => handleFilterSelect(key)}
               className={`flex-shrink-0 min-h-[36px] px-3.5 py-1.5 rounded-full font-mono text-xs font-medium border transition-all ${
                 isActive
                   ? "bg-[var(--neon-magenta)]/15 text-[var(--neon-magenta)] border-[var(--neon-magenta)]/40"
