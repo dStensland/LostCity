@@ -129,6 +129,27 @@ def test_convention_source_hints_capture_unconventional_expo_types():
     assert conjuration["festival_type"] == "convention"
 
 
+def test_force_event_model_sources_can_default_to_tentpole_events():
+    from db import get_festival_source_hint, source_should_default_tentpole_event
+
+    assert get_festival_source_hint(
+        "atlanta-ice-cream-festival", "Atlanta Ice Cream Festival"
+    ) is None
+    assert source_should_default_tentpole_event(
+        "atlanta-ice-cream-festival", "Atlanta Ice Cream Festival"
+    )
+
+    assert get_festival_source_hint(
+        "east-atlanta-strut", "East Atlanta Strut"
+    ) is None
+    assert source_should_default_tentpole_event(
+        "east-atlanta-strut", "East Atlanta Strut"
+    )
+
+    assert get_festival_source_hint("out-on-film", "Out on Film") is None
+    assert not source_should_default_tentpole_event("out-on-film", "Out on Film")
+
+
 @patch(
     "db.sources.get_source_info",
     return_value={"integration_method": "festival_schedule"},
@@ -528,6 +549,67 @@ class TestGetOrCreateVenue:
 
         assert venue_id == 2206
 
+    @patch("db.places._maybe_update_existing_venue")
+    @patch("db.places.get_client")
+    def test_finds_existing_venue_by_exact_equivalent_name(self, mock_get_client, _mock_update, sample_venue_data):
+        client = MagicMock()
+        mock_get_client.return_value = client
+
+        table = MagicMock()
+        client.table.return_value = table
+        table.select.return_value = table
+        table.eq.return_value = table
+
+        table.execute.side_effect = [
+            MagicMock(data=[]),  # No match by slug
+            MagicMock(data=[]),  # No exact match by name
+            MagicMock(data=[{"id": 111, "is_active": True}]),  # Explicit equivalent-name match
+        ]
+
+        from db import get_or_create_place
+
+        venue_id = get_or_create_place(
+            {
+                **sample_venue_data,
+                "name": "Atlanta Symphony Hall",
+                "slug": "atlanta-symphony-hall",
+            }
+        )
+
+        assert venue_id == 111
+
+    @patch("db.places._maybe_update_existing_venue")
+    @patch("db.places.get_client")
+    def test_finds_existing_venue_by_aliases_array_name(self, mock_get_client, _mock_update, sample_venue_data):
+        client = MagicMock()
+        mock_get_client.return_value = client
+
+        table = MagicMock()
+        client.table.return_value = table
+        table.select.return_value = table
+        table.eq.return_value = table
+        table.contains.return_value = table
+
+        table.execute.side_effect = [
+            MagicMock(data=[]),  # No match by slug
+            MagicMock(data=[]),  # No exact match by name
+            MagicMock(data=[]),  # No deterministic alias-by-name match
+            MagicMock(data=[{"id": 263, "is_active": True}]),  # aliases[] contains incoming name
+        ]
+
+        from db import get_or_create_place
+
+        venue_id = get_or_create_place(
+            {
+                **sample_venue_data,
+                "name": "The Painted Pin",
+                "slug": "the-painted-pin",
+            }
+        )
+
+        assert venue_id == 263
+        table.contains.assert_called_with("aliases", ["The Painted Pin"])
+
     @patch("db.places.get_client")
     def test_creates_new_venue(self, mock_get_client, sample_venue_data):
         """Should create new venue when no match found."""
@@ -738,6 +820,51 @@ class TestInsertEvent:
         assert event_id == 321
         inserted_data = table.insert.call_args_list[0][0][0]
         assert inserted_data["is_active"] is True
+
+    @patch("db.events.get_festival_source_hint", return_value=None)
+    @patch("db.events.events_support_field_metadata_columns", return_value=False)
+    @patch("db.events.events_support_content_kind_column", return_value=True)
+    @patch("db.events.events_support_is_active_column", return_value=True)
+    @patch("db.events.find_cross_source_canonical_for_insert", return_value=None)
+    @patch("db.events.find_existing_event_for_insert", return_value=None)
+    @patch("db.events.get_source_info")
+    @patch("db.events.get_venue_by_id_cached")
+    @patch("db.events.get_client")
+    def test_insert_event_defaults_force_event_model_sources_to_tentpole(
+        self,
+        mock_get_client,
+        mock_get_venue,
+        mock_get_source_info,
+        _mock_find_existing,
+        _mock_find_cross_source,
+        _mock_events_active,
+        _mock_content_kind,
+        _mock_field_cols,
+        _mock_festival_hint,
+        sample_event_data,
+    ):
+        client = MagicMock()
+        mock_get_client.return_value = client
+        mock_get_venue.return_value = {"vibes": []}
+        mock_get_source_info.return_value = {
+            "slug": "atlanta-ice-cream-festival",
+            "name": "Atlanta Ice Cream Festival",
+            "url": "https://www.atlantaicecreamfestival.com/",
+            "source_type": "organization",
+        }
+
+        table = MagicMock()
+        client.table.return_value = table
+        table.insert.return_value = table
+        table.execute.return_value = MagicMock(data=[{"id": 321}])
+
+        from db import insert_event
+
+        event_id = insert_event(sample_event_data)
+
+        assert event_id == 321
+        inserted_data = table.insert.call_args_list[0][0][0]
+        assert inserted_data["is_tentpole"] is True
 
     @patch("db.events.upsert_event_links")
     @patch("db.events.upsert_event_images")

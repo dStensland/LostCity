@@ -19,6 +19,12 @@ def test_parse_session_builds_recurring_bachata_occurrences():
 
     assert parsed is not None
     assert parsed["title"] == "Bachata/Salsa at Rhodes Jordan Park Community Recreation Center"
+    assert (
+        parsed["description"]
+        == "Bachata/Salsa at Rhodes Jordan Park Community Recreation Center. "
+        "Public Latin dance class through Gwinnett County Parks & Recreation. "
+        "Reserve through the official county catalog for current availability."
+    )
     assert parsed["start_time"] == "19:30"
     assert parsed["end_time"] == "20:45"
     assert parsed["occurrences"] == [

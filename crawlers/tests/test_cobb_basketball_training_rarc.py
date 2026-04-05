@@ -27,6 +27,12 @@ def test_parse_session_builds_recurring_basketball_training_class():
 
     assert parsed is not None
     assert parsed["title"] == "Youth Basketball Training at Ron Anderson Recreation Center"
+    assert (
+        parsed["description"]
+        == "Youth Basketball Training at Ron Anderson Recreation Center. "
+        "Public youth basketball training through Cobb County Parks. "
+        "Reserve through the official county catalog for current availability."
+    )
     assert parsed["start_time"] == "18:00"
     assert parsed["end_time"] == "20:30"
     assert parsed["price_min"] == 225.0

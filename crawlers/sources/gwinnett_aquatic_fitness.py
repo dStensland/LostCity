@@ -20,6 +20,7 @@ from db import (
 from dedupe import generate_content_hash
 from entity_lanes import SourceEntityCapabilities, TypedEntityEnvelope
 from entity_persistence import persist_typed_entity_envelope
+from pipeline.program_descriptions import build_program_description
 from sources._rec1_base import (
     _get_checkout_key,
     _get_groups_for_tab,
@@ -37,7 +38,15 @@ TARGET_TAB = "Aquatics"
 TARGET_GROUP = "Aquatics Fitness"
 WEEKS_AHEAD = 8
 DAY_CODES = ["MO", "TU", "WE", "TH", "FR", "SA", "SU"]
-DAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+DAY_NAMES = [
+    "Monday",
+    "Tuesday",
+    "Wednesday",
+    "Thursday",
+    "Friday",
+    "Saturday",
+    "Sunday",
+]
 
 SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
     events=True,
@@ -129,7 +138,8 @@ def _build_destination_envelope(place_data: dict, venue_id: int) -> TypedEntityE
             "source_url": CATALOG_URL,
             "metadata": {
                 "source_type": "family_destination_enrichment",
-                "place_type": place_data.get("place_type") or place_data.get("place_type"),
+                "place_type": place_data.get("place_type")
+                or place_data.get("place_type"),
                 "county": "gwinnett",
             },
         },
@@ -153,7 +163,9 @@ def _build_destination_envelope(place_data: dict, venue_id: int) -> TypedEntityE
 
 def parse_days_value(raw_value: str) -> list[int]:
     weekdays: list[int] = []
-    for token in [part.strip().lower() for part in (raw_value or "").split(",") if part.strip()]:
+    for token in [
+        part.strip().lower() for part in (raw_value or "").split(",") if part.strip()
+    ]:
         weekday = DAY_INDEX.get(token)
         if weekday is not None and weekday not in weekdays:
             weekdays.append(weekday)
@@ -195,7 +207,10 @@ def parse_session(session: dict, today: date) -> dict | None:
     if session.get("registrationOver") or session.get("sessionFull"):
         return None
 
-    features = {feature.get("name"): feature.get("value") for feature in session.get("features") or []}
+    features = {
+        feature.get("name"): feature.get("value")
+        for feature in session.get("features") or []
+    }
     location = (features.get("location") or "").strip().lower()
     place_data = VENUE_DATA_BY_LOCATION.get(location)
     if not place_data:
@@ -223,9 +238,10 @@ def parse_session(session: dict, today: date) -> dict | None:
     if not occurrences:
         return None
 
-    description = (
-        f"Aquatics fitness class at {place_data['name']} through Gwinnett County Parks & Recreation. "
-        "Reserve through the official county catalog for current availability."
+    description = build_program_description(
+        title,
+        summary="Public aquatic fitness class through Gwinnett County Parks & Recreation.",
+        facts=["Reserve through the official county catalog for current availability."],
     )
 
     return {
@@ -267,15 +283,22 @@ def crawl(source: dict) -> tuple[int, int, int]:
         return 0, 0, 0
 
     tabs = _get_tabs(TENANT_SLUG, checkout_key)
-    aquatics_tab_id = next((tab["id"] for tab in tabs if tab.get("label") == TARGET_TAB), None)
+    aquatics_tab_id = next(
+        (tab["id"] for tab in tabs if tab.get("label") == TARGET_TAB), None
+    )
     if not aquatics_tab_id:
         logger.error("Gwinnett aquatic fitness crawl aborted: Aquatics tab missing")
         return 0, 0, 0
 
     groups = _get_groups_for_tab(TENANT_SLUG, checkout_key, str(aquatics_tab_id))
-    target_group = next((group for section_name, group in groups if group.get("name") == TARGET_GROUP), None)
+    target_group = next(
+        (group for section_name, group in groups if group.get("name") == TARGET_GROUP),
+        None,
+    )
     if not target_group:
-        logger.error("Gwinnett aquatic fitness crawl aborted: Aquatics Fitness group missing")
+        logger.error(
+            "Gwinnett aquatic fitness crawl aborted: Aquatics Fitness group missing"
+        )
         return 0, 0, 0
 
     sessions = _get_sessions_for_group(
@@ -330,7 +353,11 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 "price_min": parsed["price_min"],
                 "price_max": parsed["price_max"],
                 "price_note": parsed["price_note"],
-                "is_free": parsed["price_min"] == 0 if parsed["price_min"] is not None else False,
+                "is_free": (
+                    parsed["price_min"] == 0
+                    if parsed["price_min"] is not None
+                    else False
+                ),
                 "source_url": parsed["source_url"],
                 "ticket_url": parsed["ticket_url"],
                 "image_url": None,

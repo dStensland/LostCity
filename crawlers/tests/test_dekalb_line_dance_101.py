@@ -30,6 +30,12 @@ def test_parse_item_builds_recurring_line_dance_occurrences():
 
     assert parsed is not None
     assert parsed["title"] == "Line Dance 101 at East Central DeKalb Community & Senior Center"
+    assert (
+        parsed["description"]
+        == "Line Dance 101 at East Central DeKalb Community & Senior Center. "
+        "Public line dance class through DeKalb County Recreation. "
+        "Reserve through the official county catalog for current availability."
+    )
     assert parsed["start_time"] == "17:45"
     assert parsed["end_time"] == "18:45"
     assert parsed["is_free"] is True

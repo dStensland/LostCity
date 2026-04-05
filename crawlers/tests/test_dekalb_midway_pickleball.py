@@ -29,6 +29,13 @@ def test_parse_item_builds_recurring_midway_pickleball_occurrences():
 
     assert parsed is not None
     assert parsed["title"] == "Midway Pickleball at Midway Recreation Center"
+    assert (
+        parsed["description"]
+        == "Midway Pickleball at Midway Recreation Center. "
+        "Public pickleball open play through DeKalb County Recreation. "
+        "All levels are welcome. "
+        "Reserve through the official county catalog for current availability."
+    )
     assert parsed["start_time"] == "11:00"
     assert parsed["end_time"] == "14:30"
     assert parsed["is_free"] is True

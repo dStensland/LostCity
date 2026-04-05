@@ -19,6 +19,12 @@ def test_parse_session_builds_bethesda_yoga_occurrences():
 
     assert parsed is not None
     assert parsed["title"] == "Yoga at Bethesda Park Senior Center"
+    assert (
+        parsed["description"]
+        == "Yoga at Bethesda Park Senior Center. "
+        "Public yoga class through Gwinnett County Parks & Recreation. "
+        "Reserve through the official county catalog for current availability."
+    )
     assert parsed["start_time"] == "14:00"
     assert parsed["end_time"] == "15:00"
     assert parsed["occurrences"] == [

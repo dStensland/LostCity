@@ -23,6 +23,12 @@ def test_parse_item_builds_rosel_fann_water_aerobics():
 
     assert parsed is not None
     assert parsed["title"] == "Water Aerobics at Rosel Fann Recreation & Aquatic Center"
+    assert (
+        parsed["description"]
+        == "Water Aerobics at Rosel Fann Recreation & Aquatic Center. "
+        "Public aquatic fitness class through Atlanta DPR. "
+        "Reserve through the official city registration catalog for current availability."
+    )
     assert parsed["weekdays"] == [0, 1, 2, 3, 4]
     assert parsed["start_time"] == "12:00"
     assert parsed["is_free"] is True
@@ -47,6 +53,12 @@ def test_parse_item_builds_ct_martin_water_awareness():
 
     assert parsed is not None
     assert parsed["title"] == "Senior Water Awareness at CT Martin Recreation & Aquatic Center"
+    assert (
+        parsed["description"]
+        == "Senior Water Awareness at CT Martin Recreation & Aquatic Center. "
+        "Public aquatic fitness class through Atlanta DPR. "
+        "Reserve through the official city registration catalog for current availability."
+    )
     assert parsed["weekdays"] == [2]
     assert "seniors" in parsed["tags"]
 

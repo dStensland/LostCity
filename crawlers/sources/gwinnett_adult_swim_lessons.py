@@ -18,6 +18,7 @@ from db import (
     smart_update_existing_event,
 )
 from dedupe import generate_content_hash
+from pipeline.program_descriptions import build_program_description
 from sources._rec1_base import (
     _get_checkout_key,
     _get_groups_for_tab,
@@ -35,7 +36,15 @@ TARGET_TAB = "Aquatics"
 TARGET_GROUP = "Adult - Swim Lessons"
 WEEKS_AHEAD = 20
 DAY_CODES = ["MO", "TU", "WE", "TH", "FR", "SA", "SU"]
-DAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+DAY_NAMES = [
+    "Monday",
+    "Tuesday",
+    "Wednesday",
+    "Thursday",
+    "Friday",
+    "Saturday",
+    "Sunday",
+]
 
 DAY_INDEX = {
     "m": 0,
@@ -85,7 +94,9 @@ PLACE_DATA = {
 
 def parse_days_value(raw_value: str) -> list[int]:
     weekdays: list[int] = []
-    for token in [part.strip().lower() for part in (raw_value or "").split(",") if part.strip()]:
+    for token in [
+        part.strip().lower() for part in (raw_value or "").split(",") if part.strip()
+    ]:
         if "-" in token:
             start_token, end_token = [part.strip() for part in token.split("-", 1)]
             start_day = DAY_INDEX.get(start_token)
@@ -155,7 +166,10 @@ def parse_session(session: dict, today: date) -> dict | None:
     if not raw_title.lower().startswith("adult"):
         return None
 
-    features = {feature.get("name"): feature.get("value") for feature in session.get("features") or []}
+    features = {
+        feature.get("name"): feature.get("value")
+        for feature in session.get("features") or []
+    }
     location = (features.get("location") or "").strip().lower()
     if location != "lenora park pool":
         return None
@@ -180,9 +194,10 @@ def parse_session(session: dict, today: date) -> dict | None:
     price_value = float(price) if price is not None else None
     time_label = format_title_time(start_time)
     title = f"Adult Swim Lessons ({time_label}) at {PLACE_DATA['name']}"
-    description = (
-        f"Public adult swim lessons at {PLACE_DATA['name']} through Gwinnett County Parks & Recreation. "
-        "Reserve through the official county catalog for current availability."
+    description = build_program_description(
+        title,
+        summary="Public adult swim lessons through Gwinnett County Parks & Recreation",
+        facts=["Reserve through the official county catalog for current availability"],
     )
 
     return {
@@ -197,9 +212,11 @@ def parse_session(session: dict, today: date) -> dict | None:
         "price_note": (
             "Gwinnett Parks currently lists this class as free."
             if price_value == 0
-            else f"Gwinnett Parks currently lists this class at ${price_value:.2f}."
-            if price_value is not None
-            else "Check Gwinnett Parks for current class pricing."
+            else (
+                f"Gwinnett Parks currently lists this class at ${price_value:.2f}."
+                if price_value is not None
+                else "Check Gwinnett Parks for current class pricing."
+            )
         ),
         "ticket_url": CATALOG_URL,
         "source_url": CATALOG_URL,
@@ -226,13 +243,17 @@ def crawl(source: dict) -> tuple[int, int, int]:
         return 0, 0, 0
 
     tabs = _get_tabs(TENANT_SLUG, checkout_key)
-    tab_id = next((str(tab["id"]) for tab in tabs if tab.get("label") == TARGET_TAB), None)
+    tab_id = next(
+        (str(tab["id"]) for tab in tabs if tab.get("label") == TARGET_TAB), None
+    )
     if not tab_id:
         logger.error("Gwinnett adult swim lessons crawl aborted: Aquatics tab missing")
         return 0, 0, 0
 
     groups = _get_groups_for_tab(TENANT_SLUG, checkout_key, tab_id)
-    target_group = next((group for _, group in groups if group.get("name") == TARGET_GROUP), None)
+    target_group = next(
+        (group for _, group in groups if group.get("name") == TARGET_GROUP), None
+    )
     if not target_group:
         logger.error("Gwinnett adult swim lessons crawl aborted: target group missing")
         return 0, 0, 0
@@ -259,7 +280,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
         for event_date, weekday in parsed["occurrences"]:
             events_found += 1
             start_date = event_date.strftime("%Y-%m-%d")
-            content_hash = generate_content_hash(parsed["title"], PLACE_DATA["name"], start_date)
+            content_hash = generate_content_hash(
+                parsed["title"], PLACE_DATA["name"], start_date
+            )
             current_hashes.add(content_hash)
 
             event_record = {

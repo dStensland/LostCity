@@ -6,7 +6,7 @@ All tests use MagicMock to avoid real database calls.
 from unittest.mock import MagicMock, call
 import pytest
 
-from series import find_series_by_title, slugify, normalize_title
+from series import find_series_by_title, get_or_create_series, slugify, normalize_title
 
 
 # ---------------------------------------------------------------------------
@@ -133,6 +133,121 @@ class TestFindSeriesByTitleWithDayOfWeek:
 
         assert result is None
         assert client.table().execute.call_count == 2
+
+
+class TestGetOrCreateSeries:
+    def test_backfills_missing_metadata_on_existing_film_series(self):
+        client = MagicMock()
+        table = MagicMock()
+        client.table.return_value = table
+        table.select.return_value = table
+        table.eq.return_value = table
+        table.ilike.return_value = table
+        table.update.return_value = table
+        table.execute.side_effect = [
+            MagicMock(data=[{"id": "atlanta-film-festival", "festival_type": None, "website": None}]),
+            MagicMock(
+                data=[
+                    {
+                        "id": "series-1",
+                        "title": "Power Ballad",
+                        "festival_id": "atlanta-film-festival",
+                        "series_type": "film",
+                        "description": None,
+                        "image_url": None,
+                        "director": None,
+                        "runtime_minutes": None,
+                        "year": None,
+                        "rating": None,
+                        "imdb_id": None,
+                        "genres": None,
+                    }
+                ]
+            ),
+            MagicMock(data=[{"id": "series-1"}]),
+        ]
+
+        series_id = get_or_create_series(
+            client,
+            {
+                "series_type": "film",
+                "series_title": "Power Ballad",
+                "festival_name": "Atlanta Film Festival",
+                "description": "Film synopsis",
+                "image_url": "https://example.com/poster.jpg",
+                "director": "John Carney",
+                "runtime_minutes": 98,
+                "year": 2026,
+                "imdb_id": "tt1234567",
+            },
+            category="film",
+        )
+
+        assert series_id == "series-1"
+        update_payload = table.update.call_args_list[-1].args[0]
+        assert update_payload["description"] == "Film synopsis"
+        assert update_payload["image_url"] == "https://example.com/poster.jpg"
+        assert update_payload["director"] == "John Carney"
+        assert update_payload["runtime_minutes"] == 98
+        assert update_payload["year"] == 2026
+        assert update_payload["imdb_id"] == "tt1234567"
+
+    def test_backfills_whitespace_only_metadata_on_existing_film_series(self):
+        client = MagicMock()
+        table = MagicMock()
+        client.table.return_value = table
+        table.select.return_value = table
+        table.eq.return_value = table
+        table.ilike.return_value = table
+        table.update.return_value = table
+        table.execute.side_effect = [
+            MagicMock(data=[{"id": "atlanta-film-festival", "festival_type": None, "website": None}]),
+            MagicMock(
+                data=[
+                    {
+                        "id": "series-1",
+                        "title": "Building Bombs",
+                        "festival_id": "atlanta-film-festival",
+                        "series_type": "film",
+                        "description": "   ",
+                        "image_url": " ",
+                        "director": " ",
+                        "runtime_minutes": None,
+                        "year": 1989,
+                        "rating": None,
+                        "imdb_id": " ",
+                        "genres": [],
+                    }
+                ]
+            ),
+            MagicMock(data=[{"id": "series-1"}]),
+        ]
+
+        series_id = get_or_create_series(
+            client,
+            {
+                "series_type": "film",
+                "series_title": "Building Bombs",
+                "festival_name": "Atlanta Film Festival",
+                "description": "Feature synopsis",
+                "image_url": "https://example.com/building-bombs.jpg",
+                "director": "Paul Devlin",
+                "runtime_minutes": 97,
+                "year": 1989,
+                "imdb_id": "tt0099185",
+                "genres": ["documentary"],
+            },
+            category="film",
+        )
+
+        assert series_id == "series-1"
+        update_payload = table.update.call_args_list[-1].args[0]
+        assert update_payload["description"] == "Feature synopsis"
+        assert update_payload["image_url"] == "https://example.com/building-bombs.jpg"
+        assert update_payload["director"] == "Paul Devlin"
+        assert update_payload["runtime_minutes"] == 97
+        assert update_payload["imdb_id"] == "tt0099185"
+        assert update_payload["genres"] == ["documentary"]
 
     def test_class_series_also_keeps_day_boundaries(self):
         """class_series should not reuse a different-day series record either."""

@@ -22,6 +22,7 @@ from db import (
     smart_update_existing_event,
 )
 from dedupe import generate_content_hash
+from pipeline.program_descriptions import build_program_description
 from sources.dekalb_parks_rec import _extract_prices, _fetch_page, _init_session
 
 logger = logging.getLogger(__name__)
@@ -33,7 +34,15 @@ TARGET_NAME = "Pickle Ball at Tobie Grant"
 MAX_PAGES = 25
 WEEKS_AHEAD = 8
 DAY_CODES = ["MO", "TU", "WE", "TH", "FR", "SA", "SU"]
-DAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+DAY_NAMES = [
+    "Monday",
+    "Tuesday",
+    "Wednesday",
+    "Thursday",
+    "Friday",
+    "Saturday",
+    "Sunday",
+]
 
 DAY_INDEX = {
     "tuesday": 1,
@@ -66,7 +75,9 @@ def _to_24_hour(raw_value: str) -> str:
     normalized = raw_value.strip().lower().replace(" ", "")
     if normalized in {"noon", "12noon"}:
         return "12:00"
-    parsed = datetime.strptime(normalized, "%I%p" if ":" not in normalized else "%I:%M%p")
+    parsed = datetime.strptime(
+        normalized, "%I%p" if ":" not in normalized else "%I:%M%p"
+    )
     return parsed.strftime("%H:%M")
 
 
@@ -142,9 +153,10 @@ def parse_item(item: dict, today: date) -> dict | None:
         is_free = True
 
     title = f"Tobie Grant Pickleball Open Play at {PLACE_DATA['name']}"
-    description = (
-        f"Public pickleball open play at {PLACE_DATA['name']} through DeKalb County Recreation. "
-        "Reserve through the official county catalog for current availability."
+    description = build_program_description(
+        title,
+        summary="Public pickleball open play through DeKalb County Recreation.",
+        facts=["Reserve through the official county catalog for current availability."],
     )
 
     return {
@@ -159,11 +171,17 @@ def parse_item(item: dict, today: date) -> dict | None:
         "price_note": (
             "DeKalb County currently lists this session as free."
             if is_free
-            else f"DeKalb County currently lists this session from ${price_min:.2f} to ${price_max:.2f}."
-            if price_min is not None and price_max is not None and price_min != price_max
-            else f"DeKalb County currently lists this session at ${price_min:.2f}."
-            if price_min is not None
-            else "Check DeKalb County for current session pricing."
+            else (
+                f"DeKalb County currently lists this session from ${price_min:.2f} to ${price_max:.2f}."
+                if price_min is not None
+                and price_max is not None
+                and price_min != price_max
+                else (
+                    f"DeKalb County currently lists this session at ${price_min:.2f}."
+                    if price_min is not None
+                    else "Check DeKalb County for current session pricing."
+                )
+            )
         ),
         "ticket_url": (item.get("enroll_now") or {}).get("href")
         or (item.get("action_link") or {}).get("href")
@@ -189,7 +207,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
     first = _fetch_page(session, csrf, 1)
     if first is None:
-        logger.error("DeKalb Tobie Grant pickleball crawl aborted: failed to fetch page 1")
+        logger.error(
+            "DeKalb Tobie Grant pickleball crawl aborted: failed to fetch page 1"
+        )
         return 0, 0, 0
 
     _, _, total_pages = first

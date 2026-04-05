@@ -19,6 +19,7 @@ from db import (
     smart_update_existing_event,
 )
 from dedupe import generate_content_hash
+from pipeline.program_descriptions import build_program_description
 from sources._rec1_base import (
     _extract_feature,
     _get_checkout_key,
@@ -212,9 +213,10 @@ def parse_session(session: dict, today: date) -> dict | None:
     price = session.get("price")
     price_value = float(price) if price is not None else None
     title = f"{title_core} at {place_data['name']}"
-    description = (
-        f"Public pickleball class at {place_data['name']} through Cobb County Parks. "
-        "Reserve through the official county catalog for current availability."
+    description = build_program_description(
+        title,
+        summary="Public pickleball class through Cobb County Parks.",
+        facts=["Reserve through the official county catalog for current availability."],
     )
 
     return {
@@ -230,9 +232,11 @@ def parse_session(session: dict, today: date) -> dict | None:
         "price_note": (
             "Cobb County currently lists this class as free."
             if price_value == 0
-            else f"Cobb County currently lists this class at ${price_value:.2f}."
-            if price_value is not None
-            else "Check Cobb County for current class pricing."
+            else (
+                f"Cobb County currently lists this class at ${price_value:.2f}."
+                if price_value is not None
+                else "Check Cobb County for current class pricing."
+            )
         ),
         "ticket_url": CATALOG_URL,
         "source_url": CATALOG_URL,
@@ -258,11 +262,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
         return 0, 0, 0
 
     tabs = _get_tabs(TENANT_SLUG, checkout_key)
-    tab_ids = {
-        str(tab["id"])
-        for tab in tabs
-        if str(tab.get("id")) in TARGET_GROUPS
-    }
+    tab_ids = {str(tab["id"]) for tab in tabs if str(tab.get("id")) in TARGET_GROUPS}
     if not tab_ids:
         logger.error("Cobb pickleball classes crawl aborted: target tabs missing")
         return 0, 0, 0

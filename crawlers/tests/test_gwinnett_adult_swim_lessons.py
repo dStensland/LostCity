@@ -23,6 +23,12 @@ def test_parse_session_builds_unique_time_specific_swim_title():
 
     assert parsed is not None
     assert parsed["title"] == "Adult Swim Lessons (10:00 AM) at Lenora Park Pool"
+    assert (
+        parsed["description"]
+        == "Adult Swim Lessons (10:00 AM) at Lenora Park Pool. "
+        "Public adult swim lessons through Gwinnett County Parks & Recreation. "
+        "Reserve through the official county catalog for current availability."
+    )
     assert parsed["start_time"] == "10:00"
     assert parsed["end_time"] == "10:30"
     assert parsed["occurrences"][:4] == [

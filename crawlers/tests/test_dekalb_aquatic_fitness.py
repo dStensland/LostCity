@@ -36,6 +36,12 @@ def test_parse_item_builds_occurrences():
 
     assert parsed is not None
     assert parsed["title"] == "East Central - Water Fitness at East Central DeKalb Community & Senior Center"
+    assert (
+        parsed["description"]
+        == "East Central - Water Fitness at East Central DeKalb Community & Senior Center. "
+        "Public aquatic fitness class through DeKalb County Recreation. "
+        "Reserve through the official county catalog for current availability."
+    )
     assert parsed["start_time"] == "16:00"
     assert parsed["end_time"] == "17:00"
     assert parsed["price_min"] == 30.0

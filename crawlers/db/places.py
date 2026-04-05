@@ -110,11 +110,17 @@ _EVENT_ONLY_VENUE_FIELDS = {
 
 # ===== HELPERS =====
 
+
 def _normalize_venue_name(value: Optional[str]) -> str:
     return re.sub(r"\s+", " ", (value or "").strip().lower())
 
 
 _LEADING_ARTICLES = {"the", "a", "an"}
+
+_EXACT_NAME_EQUIVALENTS = {
+    "atlanta symphony hall": ["Symphony Hall"],
+    "the painted pin": ["Painted Pin"],
+}
 
 
 def _strip_article(name: str) -> str:
@@ -233,7 +239,11 @@ def infer_location_designator(venue_data: dict) -> str:
     """Infer location designator for venue-level rendering/quality logic."""
     slug = (venue_data.get("slug") or "").strip().lower()
     name = _normalize_venue_name(venue_data.get("name"))
-    venue_type = (venue_data.get("place_type") or venue_data.get("place_type") or "").strip().lower()
+    venue_type = (
+        (venue_data.get("place_type") or venue_data.get("place_type") or "")
+        .strip()
+        .lower()
+    )
 
     if (
         venue_type == "virtual"
@@ -308,7 +318,10 @@ def _fetch_venue_web_metadata(url: str) -> dict:
                     if any(
                         lower.startswith(p)
                         for p in [
-                            "welcome to", "just another", "coming soon", "page not found",
+                            "welcome to",
+                            "just another",
+                            "coming soon",
+                            "page not found",
                         ]
                     ):
                         continue
@@ -382,9 +395,18 @@ def _sanitize_venue_payload(venue_data: dict) -> dict:
 # Fields eligible for NULL→non-NULL backfill on existing venue records.
 # Identity/administrative fields (name, slug, city, state, active) are excluded.
 _VENUE_BACKFILL_FIELDS = {
-    "address", "zip", "neighborhood", "description", "image_url",
-    "hero_image_url", "website", "place_type", "vibes", "spot_type",
-    "hours", "phone",
+    "address",
+    "zip",
+    "neighborhood",
+    "description",
+    "image_url",
+    "hero_image_url",
+    "website",
+    "place_type",
+    "vibes",
+    "spot_type",
+    "hours",
+    "phone",
 }
 
 
@@ -401,7 +423,14 @@ def _maybe_update_existing_venue(venue_id: int, venue_data: dict) -> None:
 
     updates: dict = {}
 
-    for field in _VENUE_BACKFILL_FIELDS - {"description", "lat", "lng", "image_url", "hero_image_url", "vibes"}:
+    for field in _VENUE_BACKFILL_FIELDS - {
+        "description",
+        "lat",
+        "lng",
+        "image_url",
+        "hero_image_url",
+        "vibes",
+    }:
         incoming_val = venue_data.get(field)
         current_val = current.get(field)
         if incoming_val and not current_val:
@@ -410,7 +439,9 @@ def _maybe_update_existing_venue(venue_id: int, venue_data: dict) -> None:
     # Special case: description — prefer longer even if existing is non-NULL
     incoming_desc = venue_data.get("description") or ""
     current_desc = current.get("description") or ""
-    if incoming_desc and (not current_desc or len(incoming_desc) > len(current_desc) + 50):
+    if incoming_desc and (
+        not current_desc or len(incoming_desc) > len(current_desc) + 50
+    ):
         updates["description"] = incoming_desc
 
     # Special case: lat/lng — both must be NULL, both must be provided
@@ -466,6 +497,7 @@ def _maybe_update_existing_venue(venue_id: int, venue_data: dict) -> None:
 
 # ===== ENRICHMENT HELPER =====
 
+
 def _persist_venue_enrichment(
     venue_id: int,
     details: Optional[dict],
@@ -481,10 +513,17 @@ def _persist_venue_enrichment(
     if details:
         try:
             from db.place_vertical import upsert_place_vertical_details
+
             upsert_place_vertical_details(venue_id, details)
-            logger.debug("_persist_venue_enrichment: destination_details for venue_id=%s", venue_id)
+            logger.debug(
+                "_persist_venue_enrichment: destination_details for venue_id=%s",
+                venue_id,
+            )
         except Exception:
-            logger.exception("_persist_venue_enrichment: destination_details failed for venue_id=%s", venue_id)
+            logger.exception(
+                "_persist_venue_enrichment: destination_details failed for venue_id=%s",
+                venue_id,
+            )
 
     if features:
         try:
@@ -496,11 +535,14 @@ def _persist_venue_enrichment(
                 venue_id,
             )
         except Exception:
-            logger.exception("_persist_venue_enrichment: features failed for venue_id=%s", venue_id)
+            logger.exception(
+                "_persist_venue_enrichment: features failed for venue_id=%s", venue_id
+            )
 
     if specials:
         try:
             from db.place_specials import upsert_place_special
+
             for special in specials:
                 upsert_place_special(venue_id, special)
             logger.debug(
@@ -509,10 +551,13 @@ def _persist_venue_enrichment(
                 venue_id,
             )
         except Exception:
-            logger.exception("_persist_venue_enrichment: specials failed for venue_id=%s", venue_id)
+            logger.exception(
+                "_persist_venue_enrichment: specials failed for venue_id=%s", venue_id
+            )
 
 
 # ===== VENUE CRUD =====
+
 
 def get_or_create_virtual_venue() -> int:
     """Get or create canonical virtual venue. Returns venue ID."""
@@ -551,6 +596,8 @@ def get_or_create_place(venue_data: dict) -> Optional[int]:
         name_value = value.strip()
         aliases: list[str] = []
         lowered = name_value.lower()
+
+        aliases.extend(_EXACT_NAME_EQUIVALENTS.get(lowered, []))
 
         if lowered.endswith(" fairground"):
             aliases.append(name_value + "s")
@@ -615,7 +662,9 @@ def get_or_create_place(venue_data: dict) -> Optional[int]:
         try:
             client.table("places").update(
                 {"verified_at": datetime.now(timezone.utc).isoformat()}
-            ).eq("id", venue_id).execute()  # verified_at column unchanged
+            ).eq(
+                "id", venue_id
+            ).execute()  # verified_at column unchanged
         except Exception:
             pass  # Non-critical — don't fail the crawl
 
@@ -625,7 +674,9 @@ def get_or_create_place(venue_data: dict) -> Optional[int]:
             if not writes_enabled():
                 _log_write_skip(f"update places id={venue_id} reactivate")
             else:
-                client.table("places").update({"is_active": True}).eq("id", venue_id).execute()
+                client.table("places").update({"is_active": True}).eq(
+                    "id", venue_id
+                ).execute()
                 logger.info(
                     "Reactivated venue %s from explicit crawler signal",
                     venue_data.get("slug") or venue_data.get("name") or venue_id,
@@ -643,24 +694,43 @@ def get_or_create_place(venue_data: dict) -> Optional[int]:
     # ── Existing venue lookup (before creation-only validation) ──
     slug = venue_data.get("slug")
     if slug:
-        result = client.table("places").select("id, is_active").eq("slug", slug).execute()
+        result = (
+            client.table("places").select("id, is_active").eq("slug", slug).execute()
+        )
         if result.data and len(result.data) > 0:
             venue_id = _maybe_reactivate_existing_venue(result.data[0])
             _maybe_update_existing_venue(venue_id, venue_data)
-            _persist_venue_enrichment(venue_id, _enrichment_details, _enrichment_features, _enrichment_specials)
+            _persist_venue_enrichment(
+                venue_id,
+                _enrichment_details,
+                _enrichment_features,
+                _enrichment_specials,
+            )
             return venue_id
 
     name = venue_data.get("name")
     if name:
-        result = client.table("places").select("id, is_active").eq("name", name).execute()
+        result = (
+            client.table("places").select("id, is_active").eq("name", name).execute()
+        )
         if result.data and len(result.data) > 0:
             venue_id = _maybe_reactivate_existing_venue(result.data[0])
             _maybe_update_existing_venue(venue_id, venue_data)
-            _persist_venue_enrichment(venue_id, _enrichment_details, _enrichment_features, _enrichment_specials)
+            _persist_venue_enrichment(
+                venue_id,
+                _enrichment_details,
+                _enrichment_features,
+                _enrichment_specials,
+            )
             return venue_id
 
         for alias in _venue_name_aliases(name):
-            result = client.table("places").select("id, is_active").eq("name", alias).execute()
+            result = (
+                client.table("places")
+                .select("id, is_active")
+                .eq("name", alias)
+                .execute()
+            )
             if result.data and len(result.data) > 0:
                 logger.info(
                     "Venue alias match: reusing '%s' for '%s'",
@@ -669,8 +739,66 @@ def get_or_create_place(venue_data: dict) -> Optional[int]:
                 )
                 venue_id = _maybe_reactivate_existing_venue(result.data[0])
                 _maybe_update_existing_venue(venue_id, venue_data)
-                _persist_venue_enrichment(venue_id, _enrichment_details, _enrichment_features, _enrichment_specials)
+                _persist_venue_enrichment(
+                    venue_id,
+                    _enrichment_details,
+                    _enrichment_features,
+                    _enrichment_specials,
+                )
                 return venue_id
+
+        try:
+            result = (
+                client.table("places")
+                .select("id, is_active")
+                .contains("aliases", [name])
+                .execute()
+            )
+            if result.data and len(result.data) > 0:
+                logger.info(
+                    "Venue aliases[] match: reusing alias entry for '%s'",
+                    name,
+                )
+                venue_id = _maybe_reactivate_existing_venue(result.data[0])
+                _maybe_update_existing_venue(venue_id, venue_data)
+                _persist_venue_enrichment(
+                    venue_id,
+                    _enrichment_details,
+                    _enrichment_features,
+                    _enrichment_specials,
+                )
+                return venue_id
+        except Exception:
+            logger.debug(
+                "Venue aliases[] lookup failed for name=%r", name, exc_info=True
+            )
+
+    if slug:
+        try:
+            result = (
+                client.table("places")
+                .select("id, is_active")
+                .contains("aliases", [slug])
+                .execute()
+            )
+            if result.data and len(result.data) > 0:
+                logger.info(
+                    "Venue aliases[] match: reusing alias slug '%s'",
+                    slug,
+                )
+                venue_id = _maybe_reactivate_existing_venue(result.data[0])
+                _maybe_update_existing_venue(venue_id, venue_data)
+                _persist_venue_enrichment(
+                    venue_id,
+                    _enrichment_details,
+                    _enrichment_features,
+                    _enrichment_specials,
+                )
+                return venue_id
+        except Exception:
+            logger.debug(
+                "Venue aliases[] lookup failed for slug=%r", slug, exc_info=True
+            )
 
     # ── Creation-only validation (geo scope, minimum fields) ──
     context = get_crawl_context()
@@ -711,7 +839,12 @@ def get_or_create_place(venue_data: dict) -> Optional[int]:
                         )
                         _touch_verified_at(row["id"])
                         _maybe_update_existing_venue(row["id"], venue_data)
-                        _persist_venue_enrichment(row["id"], _enrichment_details, _enrichment_features, _enrichment_specials)
+                        _persist_venue_enrichment(
+                            row["id"],
+                            _enrichment_details,
+                            _enrichment_features,
+                            _enrichment_specials,
+                        )
                         return row["id"]
         except Exception as e:
             logger.debug(f"Proximity dedup check failed: {e}")
@@ -780,10 +913,15 @@ def get_or_create_place(venue_data: dict) -> Optional[int]:
         )
 
     # Auto-infer neighborhood from coordinates when not already set.
-    if venue_data.get("lat") and venue_data.get("lng") and not venue_data.get("neighborhood"):
+    if (
+        venue_data.get("lat")
+        and venue_data.get("lng")
+        and not venue_data.get("neighborhood")
+    ):
         try:
             inferred_hood = infer_neighborhood_from_coords(
-                venue_data["lat"], venue_data["lng"],
+                venue_data["lat"],
+                venue_data["lng"],
                 city=venue_data.get("city", "Atlanta"),
             )
             if inferred_hood:
@@ -819,7 +957,9 @@ def get_or_create_place(venue_data: dict) -> Optional[int]:
         return _next_temp_id()
     result = client.table("places").insert(venue_data).execute()
     new_venue_id = result.data[0]["id"]
-    _persist_venue_enrichment(new_venue_id, _enrichment_details, _enrichment_features, _enrichment_specials)
+    _persist_venue_enrichment(
+        new_venue_id, _enrichment_details, _enrichment_features, _enrichment_specials
+    )
     return new_venue_id
 
 
@@ -910,7 +1050,9 @@ def upsert_venue_feature(venue_id: int, feature_data: dict) -> Optional[int]:
         if result.data:
             return result.data[0]["id"]
     except Exception:
-        logger.exception("Failed to upsert venue feature '%s' for venue %s", title, venue_id)
+        logger.exception(
+            "Failed to upsert venue feature '%s' for venue %s", title, venue_id
+        )
     return None
 
 
@@ -949,4 +1091,3 @@ def get_sibling_venue_ids(venue_id: int) -> list[int]:
             return [v["id"] for v in result.data]
 
     return [venue_id]
-

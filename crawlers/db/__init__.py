@@ -62,6 +62,7 @@ from db.sources import (
     _FESTIVAL_SOURCE_SLUGS,
     infer_festival_type_from_name,
     get_festival_source_hint,
+    source_should_default_tentpole_event,
     infer_program_title,
     get_source_info,
     get_source_by_slug,

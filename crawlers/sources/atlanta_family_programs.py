@@ -58,7 +58,9 @@ _BLOCKED_KEYWORDS = [
 ]
 
 
-def _flush_program_envelope(program_envelope: TypedEntityEnvelope) -> TypedEntityEnvelope:
+def _flush_program_envelope(
+    program_envelope: TypedEntityEnvelope,
+) -> TypedEntityEnvelope:
     if not program_envelope.programs:
         return program_envelope
 
@@ -106,9 +108,11 @@ def _build_program_record(
         date_range_description=item.get("date_range_description"),
         desc_text=desc_text,
     )
-    schedule_start_time, schedule_end_time = infer_activecommunities_schedule_time_range(
-        date_range_description=item.get("date_range_description"),
-        desc_text=desc_text,
+    schedule_start_time, schedule_end_time = (
+        infer_activecommunities_schedule_time_range(
+            date_range_description=item.get("date_range_description"),
+            desc_text=desc_text,
+        )
     )
     registration_opens = infer_activecommunities_registration_open(
         activity_online_start_time=item.get("activity_online_start_time"),
@@ -146,7 +150,9 @@ def _build_program_record(
             "date_range_description": item.get("date_range_description"),
             "total_open": item.get("total_open"),
             "already_enrolled": item.get("already_enrolled"),
-            "urgent_status": (item.get("urgent_message") or {}).get("status_description"),
+            "urgent_status": (item.get("urgent_message") or {}).get(
+                "status_description"
+            ),
             "location_label": (item.get("location") or {}).get("label"),
             "ages_label": item.get("ages"),
         },
@@ -177,13 +183,23 @@ def _consolidate_daily_sessions(raw_items: list[dict]) -> list[dict]:
     """
     from collections import defaultdict
 
-    # Key: (normalized_title, location_label)
+    activity_counts: dict[object, int] = defaultdict(int)
+    for item in raw_items:
+        activity_id = item.get("id")
+        if activity_id not in (None, ""):
+            activity_counts[activity_id] += 1
+
+    # Key: source-stable activity id when repeated, else (normalized_title, location_label)
     groups: dict[tuple[str, str], list[dict]] = defaultdict(list)
     for item in raw_items:
         raw_name = (item.get("name") or "").strip()
         normalized = normalize_activecommunities_session_title(raw_name)
         location_label = (item.get("location") or {}).get("label") or ""
-        key = (normalized.lower(), location_label.lower().strip())
+        activity_id = item.get("id")
+        if activity_id not in (None, "") and activity_counts[activity_id] > 1:
+            key = (f"activity:{activity_id}", location_label.lower().strip())
+        else:
+            key = (normalized.lower(), location_label.lower().strip())
         groups[key].append(item)
 
     consolidated: list[dict] = []
@@ -292,7 +308,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 continue
 
             desc_html: str = item.get("desc") or ""
-            desc_text = BeautifulSoup(desc_html, "html.parser").get_text(" ", strip=True)
+            desc_text = BeautifulSoup(desc_html, "html.parser").get_text(
+                " ", strip=True
+            )
 
             if _should_skip_dedicated_item(name, desc_text):
                 continue
@@ -311,8 +329,12 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             # ACTIVENet returns 0 (not None) when there is no age restriction.
             # normalize_activecommunities_age converts 0 and >90 to None.
-            age_min: Optional[int] = normalize_activecommunities_age(item.get("age_min_year"))
-            age_max: Optional[int] = normalize_activecommunities_age(item.get("age_max_year"))
+            age_min: Optional[int] = normalize_activecommunities_age(
+                item.get("age_min_year")
+            )
+            age_max: Optional[int] = normalize_activecommunities_age(
+                item.get("age_max_year")
+            )
             # Fallback: extract age range from the program name when the
             # API didn't supply structured age data.
             if age_min is None and age_max is None:
@@ -333,7 +355,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
             location_label: str = item.get("location", {}).get("label") or ""
             venue_key = location_label.lower().strip()
             if venue_key not in venue_cache:
-                venue_cache[venue_key] = get_or_create_place(_resolve_venue_data(location_label))
+                venue_cache[venue_key] = get_or_create_place(
+                    _resolve_venue_data(location_label)
+                )
             venue_id = venue_cache[venue_key]
 
             price_min, price_max, is_free = _extract_prices(desc_html)
@@ -344,9 +368,11 @@ def crawl(source: dict) -> tuple[int, int, int]:
             # sessions don't re-insert on next crawl.
             hash_key = start_raw if start_raw else str(item.get("id"))
             content_hash = generate_content_hash(name, venue_name, hash_key)
-            schedule_start_time, schedule_end_time = infer_activecommunities_schedule_time_range(
-                date_range_description=item.get("date_range_description"),
-                desc_text=desc_text,
+            schedule_start_time, schedule_end_time = (
+                infer_activecommunities_schedule_time_range(
+                    date_range_description=item.get("date_range_description"),
+                    desc_text=desc_text,
+                )
             )
 
             event_record: dict = {
@@ -358,7 +384,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 "start_time": schedule_start_time,
                 "end_date": end_raw,
                 "end_time": schedule_end_time,
-                "is_all_day": False if schedule_start_time else (True if not start_raw else False),
+                "is_all_day": (
+                    False if schedule_start_time else (True if not start_raw else False)
+                ),
                 "category": category,
                 "subcategory": None,
                 "tags": tags,
@@ -402,7 +430,11 @@ def crawl(source: dict) -> tuple[int, int, int]:
             if program_record:
                 program_envelope.add("programs", program_record)
         except Exception as exc:
-            logger.error("Atlanta family programs: error processing item %s: %s", item.get("id"), exc)
+            logger.error(
+                "Atlanta family programs: error processing item %s: %s",
+                item.get("id"),
+                exc,
+            )
             continue
 
     program_envelope = _flush_program_envelope(program_envelope)

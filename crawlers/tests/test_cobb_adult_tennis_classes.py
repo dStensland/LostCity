@@ -23,6 +23,12 @@ def test_parse_session_builds_recurring_adult_tennis_class():
 
     assert parsed is not None
     assert parsed["title"] == "Adult Tennis Level 1 - Beginner (Keenan) at Fair Oaks Tennis Center"
+    assert (
+        parsed["description"]
+        == "Adult Tennis Level 1 - Beginner (Keenan) at Fair Oaks Tennis Center. "
+        "Public adult tennis class through Cobb County Parks. "
+        "Reserve through the official county catalog for current availability."
+    )
     assert parsed["start_time"] == "18:00"
     assert parsed["end_time"] == "19:00"
     assert parsed["price_min"] == 108.0

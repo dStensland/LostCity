@@ -47,10 +47,10 @@ _ENRICHMENT_RE = re.compile(
 
 # Rec1 registration type → program type
 _REG_TYPE_TO_PROGRAM_TYPE = {
-    "1": "league",       # League
-    "2": "class",        # Program/Class
+    "1": "league",  # League
+    "2": "class",  # Program/Class
     "5": "rec_program",  # Drop-In
-    "8": "camp",         # Camps
+    "8": "camp",  # Camps
 }
 
 
@@ -83,9 +83,18 @@ def infer_program_type(
 # ---------------------------------------------------------------------------
 
 _SEASON_MONTH_MAP = {
-    1: "winter", 2: "winter", 3: "spring", 4: "spring", 5: "spring",
-    6: "summer", 7: "summer", 8: "summer", 9: "fall", 10: "fall",
-    11: "fall", 12: "winter",
+    1: "winter",
+    2: "winter",
+    3: "spring",
+    4: "spring",
+    5: "spring",
+    6: "summer",
+    7: "summer",
+    8: "summer",
+    9: "fall",
+    10: "fall",
+    11: "fall",
+    12: "winter",
 }
 
 _SEASON_RE = re.compile(
@@ -118,7 +127,9 @@ def infer_season(
 # ---------------------------------------------------------------------------
 
 _COST_PERIOD_RE = {
-    "per_session": re.compile(r"\bper session\b|\bper class\b|\bdrop.?in\b", re.IGNORECASE),
+    "per_session": re.compile(
+        r"\bper session\b|\bper class\b|\bdrop.?in\b", re.IGNORECASE
+    ),
     "per_week": re.compile(r"\bper week\b|\bweekly\b", re.IGNORECASE),
     "per_month": re.compile(r"\bper month\b|\bmonthly\b", re.IGNORECASE),
 }
@@ -182,9 +193,60 @@ def _generate_disambiguated_program_slug(
 # ---------------------------------------------------------------------------
 
 
-def generate_program_hash(name: str, venue_id: int, session_start: Optional[str]) -> str:
-    """MD5 hash on (name, venue_id, session_start) for dedup."""
-    key = f"{name.strip().lower()}|{venue_id}|{session_start or ''}"
+def _extract_program_identity_seed(metadata: Optional[dict]) -> Optional[str]:
+    if not metadata:
+        return None
+    for field in ("activity_id", "session_id", "program_id", "registration_id"):
+        value = metadata.get(field)
+        if value not in (None, ""):
+            return f"{field}:{value}"
+    return None
+
+
+def _normalize_program_family_text(value: Optional[object]) -> str:
+    return _SLUG_RE.sub(" ", str(value or "").lower()).strip()
+
+
+def build_program_family_key(program_data: dict) -> str:
+    venue_id = program_data.get("place_id") or program_data.get("venue_id") or ""
+    source_id = program_data.get("source_id") or ""
+    name = _normalize_program_family_text(program_data.get("name"))
+    provider_name = _normalize_program_family_text(program_data.get("provider_name"))
+    season = _normalize_program_family_text(program_data.get("season"))
+    program_type = _normalize_program_family_text(program_data.get("program_type"))
+    age_min = program_data.get("age_min")
+    age_max = program_data.get("age_max")
+    before_after_care = "1" if program_data.get("before_after_care") else "0"
+    lunch_included = "1" if program_data.get("lunch_included") else "0"
+    return "|".join(
+        [
+            str(source_id),
+            str(venue_id),
+            name,
+            provider_name,
+            season,
+            program_type,
+            "" if age_min is None else str(age_min),
+            "" if age_max is None else str(age_max),
+            before_after_care,
+            lunch_included,
+        ]
+    )
+
+
+def generate_program_hash(
+    name: str,
+    venue_id: int,
+    session_start: Optional[str],
+    *,
+    source_id: Optional[int] = None,
+    identity_seed: Optional[str] = None,
+) -> str:
+    """MD5 hash on stable source identity when available, else (name, venue_id, session_start)."""
+    if identity_seed:
+        key = f"{source_id or ''}|{name.strip().lower()}|{venue_id}|{identity_seed}"
+    else:
+        key = f"{name.strip().lower()}|{venue_id}|{session_start or ''}"
     return hashlib.md5(key.encode()).hexdigest()
 
 
@@ -193,19 +255,27 @@ def _program_identity_key(
     source_id: Optional[int],
     venue_id: int,
     name: str,
-    session_start: Optional[str],
+    identity_token: Optional[str],
 ) -> tuple[Optional[int], int, str, Optional[str]]:
-    return (source_id, venue_id, name, session_start)
+    return (source_id, venue_id, name, identity_token)
 
 
-def _cache_program_identity(program_id: str, *, content_hash: str, source_id: Optional[int], venue_id: int, name: str, session_start: Optional[str]) -> None:
+def _cache_program_identity(
+    program_id: str,
+    *,
+    content_hash: str,
+    source_id: Optional[int],
+    venue_id: int,
+    name: str,
+    identity_token: Optional[str],
+) -> None:
     _SEEN_PROGRAM_HASHES[content_hash] = program_id
     _SEEN_PROGRAM_IDENTITIES[
         _program_identity_key(
             source_id=source_id,
             venue_id=venue_id,
             name=name,
-            session_start=session_start,
+            identity_token=identity_token,
         )
     ] = program_id
 
@@ -253,9 +323,11 @@ def find_program_by_identity(
     venue_id: int,
     session_start: Optional[str],
     source_id: Optional[int] = None,
+    metadata: Optional[dict] = None,
 ) -> Optional[dict]:
     """Fallback lookup when legacy rows are missing metadata.content_hash."""
     client = get_client()
+    identity_seed = _extract_program_identity_seed(metadata)
     query = (
         client.table("programs")
         .select("id, name, place_id, session_start, updated_at")
@@ -263,12 +335,16 @@ def find_program_by_identity(
         .eq("place_id", venue_id)
         .limit(1)
     )
-    if session_start is None:
+    if source_id is not None:
+        query = query.eq("source_id", source_id)
+
+    if identity_seed:
+        identity_field, identity_value = identity_seed.split(":", 1)
+        query = query.eq(f"metadata->>{identity_field}", identity_value)
+    elif session_start is None:
         query = query.is_("session_start", "null")
     else:
         query = query.eq("session_start", session_start)
-    if source_id is not None:
-        query = query.eq("source_id", source_id)
     result = query.execute()
     if result.data:
         return result.data[0]
@@ -280,13 +356,34 @@ def find_program_by_identity(
 # ---------------------------------------------------------------------------
 
 _PROGRAM_COLUMNS = {
-    "portal_id", "source_id", "place_id", "name", "slug", "description",
-    "program_type", "provider_name", "age_min", "age_max", "season",
-    "session_start", "session_end", "schedule_days", "schedule_start_time",
-    "schedule_end_time", "cost_amount", "cost_period", "cost_notes",
-    "registration_status", "registration_opens", "registration_closes",
-    "registration_url", "before_after_care", "lunch_included", "tags",
-    "status", "metadata",
+    "portal_id",
+    "source_id",
+    "place_id",
+    "name",
+    "slug",
+    "description",
+    "program_type",
+    "provider_name",
+    "age_min",
+    "age_max",
+    "season",
+    "session_start",
+    "session_end",
+    "schedule_days",
+    "schedule_start_time",
+    "schedule_end_time",
+    "cost_amount",
+    "cost_period",
+    "cost_notes",
+    "registration_status",
+    "registration_opens",
+    "registration_closes",
+    "registration_url",
+    "before_after_care",
+    "lunch_included",
+    "tags",
+    "status",
+    "metadata",
 }
 
 
@@ -327,18 +424,29 @@ def insert_program(program_data: dict) -> Optional[str]:
     # Generate content hash for dedup
     session_start = program_data.get("session_start")
     source_id = program_data.get("source_id")
-    content_hash = generate_program_hash(name, venue_id, session_start)
     metadata = dict(program_data.get("metadata") or {})
+    identity_seed = _extract_program_identity_seed(metadata)
+    identity_token = identity_seed or session_start
+    metadata["program_family_key"] = build_program_family_key(program_data)
+    content_hash = generate_program_hash(
+        name,
+        venue_id,
+        session_start,
+        source_id=source_id,
+        identity_seed=identity_seed,
+    )
     metadata["content_hash"] = content_hash
     program_data["metadata"] = metadata
     identity_key = _program_identity_key(
         source_id=source_id,
         venue_id=venue_id,
         name=name,
-        session_start=session_start,
+        identity_token=identity_token,
     )
 
-    cached_program_id = _SEEN_PROGRAM_HASHES.get(content_hash) or _SEEN_PROGRAM_IDENTITIES.get(identity_key)
+    cached_program_id = _SEEN_PROGRAM_HASHES.get(
+        content_hash
+    ) or _SEEN_PROGRAM_IDENTITIES.get(identity_key)
     if cached_program_id:
         update_program(cached_program_id, program_data)
         return cached_program_id
@@ -351,9 +459,12 @@ def insert_program(program_data: dict) -> Optional[str]:
             venue_id=venue_id,
             session_start=session_start,
             source_id=source_id,
+            metadata=metadata,
         )
     if existing:
-        logger.debug("Program %r already exists (id=%s), updating", name, existing["id"])
+        logger.debug(
+            "Program %r already exists (id=%s), updating", name, existing["id"]
+        )
         update_program(existing["id"], program_data)
         _cache_program_identity(
             existing["id"],
@@ -361,7 +472,7 @@ def insert_program(program_data: dict) -> Optional[str]:
             source_id=source_id,
             venue_id=venue_id,
             name=name,
-            session_start=session_start,
+            identity_token=identity_token,
         )
         return existing["id"]
 
@@ -391,7 +502,9 @@ def insert_program(program_data: dict) -> Optional[str]:
     max_slug_attempts = 6
     for attempt in range(max_slug_attempts):
         if attempt > 0:
-            filtered["slug"] = _generate_disambiguated_program_slug(base_slug, content_hash, attempt - 1)
+            filtered["slug"] = _generate_disambiguated_program_slug(
+                base_slug, content_hash, attempt - 1
+            )
         try:
             result = _insert_program_record(client, filtered)
             program_id = result.data[0]["id"]
@@ -410,7 +523,7 @@ def insert_program(program_data: dict) -> Optional[str]:
                 source_id=source_id,
                 venue_id=venue_id,
                 name=name,
-                session_start=session_start,
+                identity_token=identity_token,
             )
             return program_id
         except Exception as exc:
@@ -420,7 +533,9 @@ def insert_program(program_data: dict) -> Optional[str]:
             logger.error("Failed to insert program %r: %s", name, exc)
             return None
 
-    logger.error("Failed to insert program %r after %d slug attempts", name, max_slug_attempts)
+    logger.error(
+        "Failed to insert program %r after %d slug attempts", name, max_slug_attempts
+    )
     return None
 
 
@@ -439,7 +554,8 @@ def update_program(program_id: str, updates: dict) -> None:
 
     # Filter to valid columns, excluding immutable fields
     filtered = {
-        k: v for k, v in updates.items()
+        k: v
+        for k, v in updates.items()
         if k in _PROGRAM_COLUMNS and k not in ("slug", "metadata")
     }
 

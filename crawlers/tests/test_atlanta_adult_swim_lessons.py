@@ -23,6 +23,12 @@ def test_parse_item_builds_washington_adult_swim_occurrences():
 
     assert parsed is not None
     assert parsed["title"] == "Adult Swim Lessons (5:00 PM) at Washington Park Aquatic Center"
+    assert (
+        parsed["description"]
+        == "Adult Swim Lessons (5:00 PM) at Washington Park Aquatic Center. "
+        "Public adult swim lessons through Atlanta DPR. "
+        "Reserve through the official city registration catalog for current availability."
+    )
     assert parsed["weekdays"] == [0, 2]
     assert parsed["start_time"] == "17:00"
     assert parsed["end_time"] == "17:45"

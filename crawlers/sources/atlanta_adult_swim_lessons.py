@@ -22,6 +22,7 @@ from db import (
     smart_update_existing_event,
 )
 from dedupe import generate_content_hash
+from pipeline.program_descriptions import build_program_description
 from sources.atlanta_dpr import (
     _extract_prices,
     _fetch_page,
@@ -35,7 +36,15 @@ logger = logging.getLogger(__name__)
 SOURCE_URL = "https://anc.apm.activecommunities.com/atlantadprca/Activity_Search"
 WEEKS_AHEAD = 12
 DAY_CODES = ["MO", "TU", "WE", "TH", "FR", "SA", "SU"]
-DAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+DAY_NAMES = [
+    "Monday",
+    "Tuesday",
+    "Wednesday",
+    "Thursday",
+    "Friday",
+    "Saturday",
+    "Sunday",
+]
 
 TARGET_VENUE_KEYS = {
     "ct martin": "CT Martin Recreation & Aquatic Center",
@@ -113,7 +122,9 @@ def _format_time_label(start_time: str) -> str:
 
 
 def _parse_schedule(description_html: str) -> Optional[tuple[list[int], str, str]]:
-    text = " ".join(BeautifulSoup(description_html or "", "html.parser").get_text(" ").split())
+    text = " ".join(
+        BeautifulSoup(description_html or "", "html.parser").get_text(" ").split()
+    )
     match = TIME_SEGMENT_RE.search(text)
     if not match:
         return None
@@ -167,9 +178,12 @@ def parse_item(item: dict, today: date) -> Optional[dict]:
     price_min, price_max, is_free = _extract_prices(description_html)
     time_label = _format_time_label(start_time)
     normalized_title = f"Adult Swim Lessons ({time_label}) at {place_data['name']}"
-    description = (
-        f"Public adult swim lessons at {place_data['name']} through Atlanta DPR. "
-        "Reserve through the official city registration catalog for current availability."
+    description = build_program_description(
+        normalized_title,
+        summary="Public adult swim lessons through Atlanta DPR.",
+        facts=[
+            "Reserve through the official city registration catalog for current availability."
+        ],
     )
 
     return {
@@ -193,12 +207,18 @@ def parse_item(item: dict, today: date) -> Optional[dict]:
         "is_free": is_free,
         "price_note": (
             f"Atlanta DPR currently lists this class from ${price_min:.2f} to ${price_max:.2f}."
-            if price_min is not None and price_max is not None and price_min != price_max
-            else f"Atlanta DPR currently lists this class at ${price_min:.2f}."
             if price_min is not None
-            else "Check Atlanta DPR for current class pricing."
+            and price_max is not None
+            and price_min != price_max
+            else (
+                f"Atlanta DPR currently lists this class at ${price_min:.2f}."
+                if price_min is not None
+                else "Check Atlanta DPR for current class pricing."
+            )
         ),
-        "raw_text": " ".join(BeautifulSoup(description_html, "html.parser").get_text(" ").split()),
+        "raw_text": " ".join(
+            BeautifulSoup(description_html, "html.parser").get_text(" ").split()
+        ),
     }
 
 
@@ -212,7 +232,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
     session, csrf = _init_session()
     if not session or not csrf:
-        logger.error("Atlanta adult swim lessons crawl aborted: DPR session init failed")
+        logger.error(
+            "Atlanta adult swim lessons crawl aborted: DPR session init failed"
+        )
         return 0, 0, 0
 
     page_number = 1
@@ -306,7 +328,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
     if fetched_any_page:
         stale_removed = remove_stale_source_events(source_id, current_hashes)
         if stale_removed:
-            logger.info("Removed %s stale Atlanta adult swim lesson rows", stale_removed)
+            logger.info(
+                "Removed %s stale Atlanta adult swim lesson rows", stale_removed
+            )
 
     logger.info(
         "Atlanta adult swim lessons crawl complete: found=%s new=%s updated=%s",

@@ -18,6 +18,7 @@ from db import (
     smart_update_existing_event,
 )
 from dedupe import generate_content_hash
+from pipeline.program_descriptions import build_program_description
 from sources._rec1_base import (
     _get_checkout_key,
     _get_groups_for_tab,
@@ -63,7 +64,10 @@ def parse_session(session: dict, today: date) -> dict | None:
     if not raw_title.startswith(TARGET_PREFIX):
         return None
 
-    features = {feature.get("name"): feature.get("value") for feature in session.get("features") or []}
+    features = {
+        feature.get("name"): feature.get("value")
+        for feature in session.get("features") or []
+    }
     location = (features.get("location") or "").strip().lower()
     if location != "community resource center at georgia belle court":
         return None
@@ -79,9 +83,10 @@ def parse_session(session: dict, today: date) -> dict | None:
     price = session.get("price")
     price_value = float(price) if price is not None else None
     title = f"{raw_title} at {PLACE_DATA['name']}"
-    description = (
-        f"Public meditation workshop at {PLACE_DATA['name']} through Gwinnett County Parks & Recreation. "
-        "Reserve through the official county catalog for current availability."
+    description = build_program_description(
+        title,
+        summary="Public meditation workshop through Gwinnett County Parks & Recreation.",
+        facts=["Reserve through the official county catalog for current availability."],
     )
 
     return {
@@ -96,9 +101,11 @@ def parse_session(session: dict, today: date) -> dict | None:
         "price_note": (
             "Gwinnett Parks currently lists this class as free."
             if price_value == 0
-            else f"Gwinnett Parks currently lists this class at ${price_value:.2f}."
-            if price_value is not None
-            else "Check Gwinnett Parks for current class pricing."
+            else (
+                f"Gwinnett Parks currently lists this class at ${price_value:.2f}."
+                if price_value is not None
+                else "Check Gwinnett Parks for current class pricing."
+            )
         ),
         "ticket_url": CATALOG_URL,
         "source_url": CATALOG_URL,
@@ -125,15 +132,21 @@ def crawl(source: dict) -> tuple[int, int, int]:
         return 0, 0, 0
 
     tabs = _get_tabs(TENANT_SLUG, checkout_key)
-    tab_id = next((str(tab["id"]) for tab in tabs if tab.get("label") == TARGET_TAB), None)
+    tab_id = next(
+        (str(tab["id"]) for tab in tabs if tab.get("label") == TARGET_TAB), None
+    )
     if not tab_id:
         logger.error("Gwinnett basic meditation crawl aborted: Wellness tab missing")
         return 0, 0, 0
 
     groups = _get_groups_for_tab(TENANT_SLUG, checkout_key, tab_id)
-    target_group = next((group for _, group in groups if group.get("name") == TARGET_GROUP), None)
+    target_group = next(
+        (group for _, group in groups if group.get("name") == TARGET_GROUP), None
+    )
     if not target_group:
-        logger.error("Gwinnett basic meditation crawl aborted: Flexibility/Focus group missing")
+        logger.error(
+            "Gwinnett basic meditation crawl aborted: Flexibility/Focus group missing"
+        )
         return 0, 0, 0
 
     sessions = _get_sessions_for_group(

@@ -31,6 +31,20 @@ logger = logging.getLogger(__name__)
 
 MERGE_PLAN = [
     {
+        "kill_id": 113,
+        "keep_id": 111,
+        "name": "Atlanta Symphony Hall → Symphony Hall",
+        "reason": "Same address and domain; 111 is already the richer canonical venue",
+        "alias_names": ["Atlanta Symphony Hall"],
+    },
+    {
+        "kill_id": 4942,
+        "keep_id": 263,
+        "name": "The Painted Pin → Painted Pin",
+        "reason": "Same address and domain; keep the richer entertainment venue record",
+        "alias_names": ["The Painted Pin"],
+    },
+    {
         "kill_id": 726,
         "keep_id": 1105,
         "name": "MODA (726→1105)",
@@ -282,7 +296,7 @@ def _table_has_column(client: Any, table: str, column: str) -> bool:
 def _get_venue_by_id(client: Any, venue_id: int) -> Optional[Dict[str, Any]]:
     result = (
         client.table("places")
-        .select("id, slug, name, active, aliases")
+        .select("id, slug, name, is_active, aliases")
         .eq("id", venue_id)
         .limit(1)
         .execute()
@@ -318,25 +332,43 @@ def _repoint_refs(
     if dry_run:
         return count
     try:
-        client.table(table).update({column: to_venue_id}).eq(column, from_venue_id).execute()
+        client.table(table).update({column: to_venue_id}).eq(
+            column, from_venue_id
+        ).execute()
     except Exception as exc:
         error_str = str(exc).lower()
-        if "unique" in error_str or "duplicate key" in error_str or "23505" in error_str:
+        if (
+            "unique" in error_str
+            or "duplicate key" in error_str
+            or "23505" in error_str
+        ):
             # Unique constraint conflict — keeper already has equivalent rows.
             # For events: deactivate instead of delete (avoids cascade timeouts).
             # For other tables: try delete, fall back to deactivate.
-            logger.info("    %s: unique conflict — deactivating %d orphan rows from kill venue", table, count)
+            logger.info(
+                "    %s: unique conflict — deactivating %d orphan rows from kill venue",
+                table,
+                count,
+            )
             try:
                 if table == "events":
-                    client.table(table).update({"is_active": False}).eq(column, from_venue_id).execute()
+                    client.table(table).update({"is_active": False}).eq(
+                        column, from_venue_id
+                    ).execute()
                 else:
                     client.table(table).delete().eq(column, from_venue_id).execute()
             except Exception:
                 # Last resort: deactivate if delete fails
                 try:
-                    client.table(table).update({"is_active": False}).eq(column, from_venue_id).execute()
+                    client.table(table).update({"is_active": False}).eq(
+                        column, from_venue_id
+                    ).execute()
                 except Exception:
-                    logger.warning("    %s: could not clean up orphan rows for venue %d", table, from_venue_id)
+                    logger.warning(
+                        "    %s: could not clean up orphan rows for venue %d",
+                        table,
+                        from_venue_id,
+                    )
         else:
             raise
     return count
@@ -346,17 +378,24 @@ def _append_alias_slug(
     client: Any,
     keeper: Dict[str, Any],
     slug_to_add: Optional[str],
+    alias_names: Optional[List[str]],
     dry_run: bool,
 ) -> None:
-    """Append slug_to_add to the keeper's aliases array if not already present."""
-    if not slug_to_add:
+    """Append slug/name aliases to the keeper's aliases array if not already present."""
+    alias_terms = [term for term in [slug_to_add, *(alias_names or [])] if term]
+    if not alias_terms:
         return
     existing: List[str] = keeper.get("aliases") or []
-    if slug_to_add in existing:
+    merged = list(existing)
+    changed = False
+    for term in alias_terms:
+        if term not in merged:
+            merged.append(term)
+            changed = True
+    if not changed:
         return
-    merged = list(existing) + [slug_to_add]
     if dry_run:
-        logger.info("    [dry-run] would append alias slug '%s' to keeper", slug_to_add)
+        logger.info("    [dry-run] would append aliases %s to keeper", alias_terms)
         return
     client.table("places").update({"aliases": merged}).eq("id", keeper["id"]).execute()
 
@@ -384,7 +423,7 @@ def _probe_tables(client: Any) -> Dict[str, bool]:
     return availability
 
 
-def run(apply_changes: bool) -> None:
+def run(apply_changes: bool, *, only_kill_ids: Optional[set[int]] = None) -> None:
     dry_run = not apply_changes
     client = get_client()
 
@@ -408,7 +447,17 @@ def run(apply_changes: bool) -> None:
     pairs_processed = 0
     pairs_skipped = 0
 
+    merge_plan: list[dict[str, Any]] = []
+    seen_kill_ids: set[int] = set()
     for item in MERGE_PLAN:
+        if only_kill_ids and item["kill_id"] not in only_kill_ids:
+            continue
+        if item["kill_id"] in seen_kill_ids:
+            continue
+        merge_plan.append(item)
+        seen_kill_ids.add(item["kill_id"])
+
+    for item in merge_plan:
         kill_id: int = item["kill_id"]
         keep_id: int = item["keep_id"]
         name: str = item["name"]
@@ -460,21 +509,31 @@ def run(apply_changes: bool) -> None:
                 table_totals[col_key] += moved
 
         # Append the killer's slug to the keeper's aliases array.
-        _append_alias_slug(client, keeper, killer.get("slug"), dry_run)
+        _append_alias_slug(
+            client,
+            keeper,
+            killer.get("slug"),
+            item.get("alias_names"),
+            dry_run,
+        )
 
         # Deactivate the killer venue.
         if killer.get("is_active") is not False:
             _deactivate_venue(client, kill_id, dry_run)
             venues_deactivated += 1
         else:
-            logger.info("  Kill venue %d already inactive, skipping deactivate", kill_id)
+            logger.info(
+                "  Kill venue %d already inactive, skipping deactivate", kill_id
+            )
 
         pairs_processed += 1
 
     # Final summary.
     logger.info("")
     logger.info("=" * 72)
-    logger.info("Summary  [%s]", "APPLIED" if apply_changes else "DRY RUN — no changes written")
+    logger.info(
+        "Summary  [%s]", "APPLIED" if apply_changes else "DRY RUN — no changes written"
+    )
     logger.info("Pairs processed: %d  |  Skipped: %d", pairs_processed, pairs_skipped)
     logger.info("Venues deactivated: %d", venues_deactivated)
     logger.info("")
@@ -498,5 +557,14 @@ if __name__ == "__main__":
         action="store_true",
         help="Write changes to the database (default is dry-run).",
     )
+    parser.add_argument(
+        "--kill-id",
+        action="append",
+        type=int,
+        help="Limit execution to one or more specific kill_id entries from MERGE_PLAN.",
+    )
     args = parser.parse_args()
-    run(apply_changes=args.apply)
+    run(
+        apply_changes=args.apply,
+        only_kill_ids=set(args.kill_id or []),
+    )

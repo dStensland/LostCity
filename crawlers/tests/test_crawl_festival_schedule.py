@@ -7,7 +7,9 @@ from types import SimpleNamespace
 from crawl_festival_schedule import (
     SessionData,
     _apply_llm_quality_gate,
+    _build_factual_festival_session_description,
     _find_existing_festival_session,
+    _parse_month_day_tab_label,
     _parse_human_datetime,
     _parse_iso_datetime,
     _parse_jsonld_event,
@@ -18,6 +20,7 @@ from crawl_festival_schedule import (
     extract_sessions_toylanta_schedule,
     extract_sessions_atlanta_pen_show_schedule,
     extract_sessions_ipms_event_page,
+    extract_sessions_tabbed_button_schedule,
     resolve_session_venue,
 )
 
@@ -213,6 +216,110 @@ class TestLlmQualityGate:
         assert any(reason.endswith("past_date") for reason in reasons)
 
 
+class TestFactualFestivalSessionDescription:
+    def test_uses_meta_summary_for_missing_parent_description(self, monkeypatch):
+        monkeypatch.setattr(
+            festival_crawler,
+            "_get_page_summary",
+            lambda *_args, **_kwargs: (
+                "Calling all sponsors! We’re back at it September 26, 2026 in East Atlanta Village "
+                "with parade events, neighborhood vendors, and community programming."
+            ),
+        )
+        session = SessionData(
+            title="East Atlanta Strut",
+            start_date="2026-09-26",
+            source_url="https://www.eastatlantastrut.com/",
+        )
+
+        description = _build_factual_festival_session_description(session, "East Atlanta Strut")
+
+        assert "September 26, 2026" in description
+        assert "East Atlanta Village" in description
+        assert description.startswith("East Atlanta Strut is part of the published East Atlanta Strut schedule.")
+
+    def test_builds_structured_fallback_when_description_missing(self, monkeypatch):
+        monkeypatch.setattr(festival_crawler, "_get_page_summary", lambda *_args, **_kwargs: None)
+        session = SessionData(
+            title="Networking Now",
+            start_date="2026-06-02",
+            start_time="08:00",
+            venue_name="Meetup space Floor 3",
+            category="community",
+        )
+
+        description = _build_factual_festival_session_description(session, "RenderATL")
+
+        assert "Networking Now is a networking meetup during RenderATL." in description
+        assert "Location: Meetup space Floor 3." in description
+        assert "Scheduled start: 08:00." in description
+
+    def test_combines_page_summary_with_factual_context(self, monkeypatch):
+        monkeypatch.setattr(
+            festival_crawler,
+            "_get_page_summary",
+            lambda *_args, **_kwargs: (
+                "Show floor hours, panel times, VIP events, afterhours schedule, early access shopping, "
+                "general admission, lobby swaps, karaoke and more!"
+            ),
+        )
+        session = SessionData(
+            title="Toylanta",
+            start_date="2026-03-27",
+            venue_name="Gas South Convention Center",
+            source_url="https://www.toylanta.net/schedule",
+        )
+
+        description = _build_factual_festival_session_description(session, "Toylanta")
+
+        assert "Gas South Convention Center" in description
+        assert "Show floor hours, panel times" in description
+        assert len(description) >= 120
+
+
+class TestTabbedButtonSchedule:
+    def test_parses_tabbed_schedule_rows(self):
+        html = """
+        <html>
+          <head>
+            <meta property="og:title" content="RenderATL 2026 | August 12 & 13, 2026" />
+          </head>
+          <body>
+            <button role="tab" aria-controls="day-1">Jun 2</button>
+            <div id="day-1">
+              <div role="button">
+                <div>8:00 AM — 8:45 AM</div>
+                <div>Networking Now</div>
+                <div>Meetup space Floor 3</div>
+                <div><button>Networking</button></div>
+              </div>
+              <div role="button">
+                <div>Time TBD</div>
+                <div>Day 3 Registration Opens</div>
+                <div>AmericasMart Entry</div>
+                <div><button>Show Operations</button></div>
+              </div>
+            </div>
+          </body>
+        </html>
+        """
+
+        sessions = extract_sessions_tabbed_button_schedule(
+            html,
+            "https://www.renderatl.com/schedule",
+        )
+
+        assert len(sessions) == 1
+        assert sessions[0].title == "Networking Now"
+        assert sessions[0].start_date == "2026-06-02"
+        assert sessions[0].start_time == "08:00"
+        assert sessions[0].venue_name == "Meetup space Floor 3"
+        assert sessions[0].program_track == "Networking"
+
+    def test_parses_month_day_tab_label(self):
+        assert _parse_month_day_tab_label("Jun 2", 2026) == "2026-06-02"
+
+
 class TestResolveSessionVenue:
     def test_returns_none_for_unknown_venue_without_default(self):
         session = SessionData(
@@ -282,6 +389,69 @@ class TestResolveSessionVenue:
         assert captured["state"] == "Georgia"
         assert captured["zip"] == "30101"
         assert captured["website"] == "https://vfw5408.org/"
+
+
+class TestFestivalProgramSeriesTitle:
+    def test_collapses_generic_toylanta_buckets_to_parent_festival(self):
+        session = SessionData(
+            title="Toylanta Lobby Swap",
+            start_date="2026-03-28",
+            start_time="19:30",
+        )
+
+        title = festival_crawler._build_festival_program_series_title(
+            session,
+            "Toylanta",
+        )
+
+        assert title == "Toylanta"
+
+
+class TestInsertSessions:
+    def test_existing_rows_still_flow_through_insert_event(self, monkeypatch):
+        session = SessionData(
+            title="Toylanta Lobby Swap",
+            start_date="2026-03-28",
+            start_time="19:30",
+            end_time="22:00",
+            venue_name="Gas South Convention Center",
+            source_url="https://www.toylanta.net/schedule",
+        )
+        captured = {}
+
+        monkeypatch.setattr(festival_crawler, "resolve_session_venue", lambda *args, **kwargs: 123)
+        monkeypatch.setattr(festival_crawler, "generate_content_hash", lambda *args, **kwargs: "abc123")
+        monkeypatch.setattr(
+            festival_crawler,
+            "find_event_by_hash",
+            lambda _content_hash: {"id": 99, "place_id": 123},
+        )
+        monkeypatch.setattr(
+            festival_crawler,
+            "_find_existing_festival_session",
+            lambda **_kwargs: None,
+        )
+
+        def fake_insert_event(event_record, series_hint=None):
+            captured["event_record"] = event_record
+            captured["series_hint"] = series_hint
+            return 99
+
+        monkeypatch.setattr(festival_crawler, "insert_event", fake_insert_event)
+
+        found, new, skipped = festival_crawler.insert_sessions(
+            [session],
+            festival_slug="toylanta",
+            festival_name="Toylanta",
+            source_id=1,
+            default_venue_id=123,
+            dry_run=False,
+        )
+
+        assert (found, new, skipped) == (1, 0, 1)
+        assert captured["event_record"]["place_id"] == 123
+        assert captured["series_hint"]["series_type"] == "festival_program"
+        assert captured["series_hint"]["series_title"] == "Toylanta"
 
 
 class TestAtlantaPenShowSchedule:
@@ -465,6 +635,7 @@ class TestToylantaSchedule:
         assert sessions[0].start_time == "18:00"
         assert sessions[0].end_time == "20:00"
         assert sessions[0].venue_name == "Gas South Convention Center"
+        assert "Public general admission hours" in sessions[0].description
         assert sessions[1].start_date == "2026-03-28"
         assert sessions[1].start_time == "10:00"
         assert sessions[2].title == "Toylanta"
@@ -474,6 +645,7 @@ class TestToylantaSchedule:
         assert sessions[3].start_date == "2026-03-28"
         assert sessions[3].start_time == "19:30"
         assert sessions[3].end_time == "22:00"
+        assert "after-hours meetup" in sessions[3].description
 
 
 class TestCollectAConPage:

@@ -70,7 +70,14 @@ crawlers/scripts/private/
 # Scratch/temporary analysis files
 tmp/
 crawlers/tmp/
+crawlers/backups/
+crawlers/llm-tasks/
+crawlers/llm-results/
+crawlers/reports/festival_quality_report_*
+crawlers/reports/festival_promotion_gate_*
+crawlers/reports/festival_remediation_manifest_*
 web/tmp/
+.playwright-cli/
 crawl_assessment*.txt
 crawlers/crawl_assessment*.txt
 output/playwright/

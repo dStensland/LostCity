@@ -37,7 +37,12 @@ from db.validation import (
 )
 from db.places import get_venue_by_id_cached
 from crawl_context import get_crawl_context
-from db.sources import get_source_info, get_festival_source_hint, infer_program_title
+from db.sources import (
+    get_source_info,
+    get_festival_source_hint,
+    infer_program_title,
+    source_should_default_tentpole_event,
+)
 from db.enrichment import _queue_event_blurhash
 from db.series_linking import _force_update_series_day
 from db.artists import (
@@ -132,7 +137,13 @@ _AGGREGATOR_SOURCE_SLUGS = {
 # ---------------------------------------------------------------------------
 
 _RRULE_BYDAY_TO_WEEKDAY = {
-    "MO": 0, "TU": 1, "WE": 2, "TH": 3, "FR": 4, "SA": 5, "SU": 6,
+    "MO": 0,
+    "TU": 1,
+    "WE": 2,
+    "TH": 3,
+    "FR": 4,
+    "SA": 5,
+    "SU": 6,
 }
 _WEEKDAY_TO_BYDAY = {v: k for k, v in _RRULE_BYDAY_TO_WEEKDAY.items()}
 _BYDAY_RE = re.compile(r"BYDAY=([A-Z]{2})", re.IGNORECASE)
@@ -187,6 +198,7 @@ def _fix_recurrence_day_mismatch(event_data: dict) -> None:
 # URL helpers
 # ---------------------------------------------------------------------------
 
+
 def _normalize_url_path(url: str) -> str:
     try:
         parsed = urlparse(url)
@@ -208,7 +220,13 @@ def _is_listing_like_url(url: Optional[str]) -> bool:
         return True
     path = _normalize_url_path(value)
     return path in {
-        "/", "/events", "/event", "/calendar", "/shows", "/upcoming", "/upcoming-events",
+        "/",
+        "/events",
+        "/event",
+        "/calendar",
+        "/shows",
+        "/upcoming",
+        "/upcoming-events",
     }
 
 
@@ -260,7 +278,9 @@ def _looks_like_explicit_ticket_url(url: Optional[str]) -> bool:
     )
 
 
-def _should_promote_incoming_url(existing_url: Optional[str], incoming_url: Optional[str]) -> bool:
+def _should_promote_incoming_url(
+    existing_url: Optional[str], incoming_url: Optional[str]
+) -> bool:
     incoming = (incoming_url or "").strip()
     if not incoming:
         return False
@@ -283,7 +303,9 @@ def _should_promote_incoming_ticket_url(
     if not incoming or not existing or existing == incoming:
         return False
 
-    return _looks_like_explicit_ticket_url(incoming) and not _looks_like_explicit_ticket_url(existing)
+    return _looks_like_explicit_ticket_url(
+        incoming
+    ) and not _looks_like_explicit_ticket_url(existing)
 
 
 def _normalize_entity_key(value: str) -> str:
@@ -338,9 +360,11 @@ def _should_replace_placeholder_artists(
 # Insert pipeline context
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class InsertContext:
     """Shared state passed through the insert pipeline."""
+
     client: object = None
     source_info: dict = None
     source_slug: str = None
@@ -364,6 +388,7 @@ class InsertContext:
 # ---------------------------------------------------------------------------
 # Pipeline step functions
 # ---------------------------------------------------------------------------
+
 
 def _step_normalize_category(event_data: dict, ctx: InsertContext) -> dict:
     """Normalize category and validate against VALID_CATEGORIES."""
@@ -507,7 +532,11 @@ def _step_resolve_source(event_data: dict, ctx: InsertContext) -> dict:
             ctx.source_name = ctx.source_info.get("name")
             ctx.source_url = ctx.source_info.get("url")
 
-    if not ctx.is_sensitive_flag and ctx.source_info and ctx.source_info.get("is_sensitive"):
+    if (
+        not ctx.is_sensitive_flag
+        and ctx.source_info
+        and ctx.source_info.get("is_sensitive")
+    ):
         ctx.is_sensitive_flag = True
 
     # Apply source_url fallback chain now that source_info is available
@@ -647,7 +676,9 @@ def _step_enrich_music(event_data: dict, ctx: InsertContext) -> dict:
     # Use pre-parsed headliner name if available (from _step_parse_artists),
     # otherwise fall back to the raw title for extraction.
     if ctx.parsed_artists:
-        _music_title_for_enrich = ctx.parsed_artists[0].get("name") or event_data.get("title", "")
+        _music_title_for_enrich = ctx.parsed_artists[0].get("name") or event_data.get(
+            "title", ""
+        )
     else:
         _music_title_for_enrich = event_data.get("title", "")
     _music_image_for_enrich = event_data.get("image_url")
@@ -681,12 +712,16 @@ def _step_parse_artists(event_data: dict, ctx: InsertContext) -> dict:
     """Parse lineup from title for music/comedy/nightlife events."""
     if event_data.get("_suppress_title_participants"):
         return event_data
-    event_category = str(
-        event_data.get("category") or event_data.get("category_id") or ""
-    ).strip().lower()
+    event_category = (
+        str(event_data.get("category") or event_data.get("category_id") or "")
+        .strip()
+        .lower()
+    )
     if event_category in ("music", "comedy", "nightlife"):
         event_genres = set(event_data.get("genres") or [])
-        skip = event_category == "nightlife" and bool(event_genres & _NIGHTLIFE_SKIP_GENRES)
+        skip = event_category == "nightlife" and bool(
+            event_genres & _NIGHTLIFE_SKIP_GENRES
+        )
         if not skip and not event_data.get("_parsed_artists"):
             parsed = parse_lineup_from_title(event_data.get("title", ""))
             if parsed:
@@ -718,10 +753,14 @@ def _step_infer_category(event_data: dict, ctx: InsertContext) -> dict:
         return event_data
 
     if not ctx.is_class_flag:
-        if infer_is_class(event_data, source_slug=ctx.source_slug, venue_type=ctx.venue_type):
+        if infer_is_class(
+            event_data, source_slug=ctx.source_slug, venue_type=ctx.venue_type
+        ):
             ctx.is_class_flag = True
 
-    if infer_is_religious(event_data, source_slug=ctx.source_slug, venue_type=ctx.venue_type):
+    if infer_is_religious(
+        event_data, source_slug=ctx.source_slug, venue_type=ctx.venue_type
+    ):
         event_data["category"] = "religious"
 
     if infer_is_support_group(event_data, source_slug=ctx.source_slug):
@@ -739,17 +778,47 @@ def _step_infer_category(event_data: dict, ctx: InsertContext) -> dict:
         all_signals = set(tags + genres)
 
         # Music signals
-        if any(s in all_signals for s in ("live-music", "concert", "dj", "open-mic", "karaoke", "jazz", "blues")):
+        if any(
+            s in all_signals
+            for s in (
+                "live-music",
+                "concert",
+                "dj",
+                "open-mic",
+                "karaoke",
+                "jazz",
+                "blues",
+            )
+        ):
             event_data["category"] = "music"
         # Comedy signals
-        elif any(s in all_signals for s in ("comedy", "stand-up", "improv", "open-mic-comedy")):
+        elif any(
+            s in all_signals
+            for s in ("comedy", "stand-up", "improv", "open-mic-comedy")
+        ):
             event_data["category"] = "comedy"
         # Outdoor signals
-        elif any(s in all_signals for s in ("hiking", "trail", "outdoor", "nature", "kayak", "camping")):
+        elif any(
+            s in all_signals
+            for s in ("hiking", "trail", "outdoor", "nature", "kayak", "camping")
+        ):
             event_data["category"] = "outdoors"
         # Learning signals (from library/museum sources)
-        elif any(s in all_signals for s in ("workshop", "class", "education", "lecture", "seminar", "training")):
-            if not any(s in all_signals for s in ("volunteer", "civic", "nonprofit", "fundraiser")):
+        elif any(
+            s in all_signals
+            for s in (
+                "workshop",
+                "class",
+                "education",
+                "lecture",
+                "seminar",
+                "training",
+            )
+        ):
+            if not any(
+                s in all_signals
+                for s in ("volunteer", "civic", "nonprofit", "fundraiser")
+            ):
                 event_data["category"] = "learning"
 
     return event_data
@@ -782,9 +851,13 @@ def _step_resolve_series(event_data: dict, ctx: InsertContext) -> dict:
                 }
 
         if festival_hint and series_hint:
-            if festival_hint.get("festival_name") and not series_hint.get("festival_name"):
+            if festival_hint.get("festival_name") and not series_hint.get(
+                "festival_name"
+            ):
                 series_hint["festival_name"] = festival_hint["festival_name"]
-            if festival_hint.get("festival_type") and not series_hint.get("festival_type"):
+            if festival_hint.get("festival_type") and not series_hint.get(
+                "festival_type"
+            ):
                 series_hint["festival_type"] = festival_hint["festival_type"]
             if ctx.source_url and not series_hint.get("festival_website"):
                 series_hint["festival_website"] = ctx.source_url
@@ -901,6 +974,13 @@ def _step_classify_v2(event_data: dict, ctx: InsertContext) -> dict:
     title = event_data.get("title", "")
     old_category = event_data.get("category", "")
 
+    if old_category == "film" and get_festival_source_hint(
+        ctx.source_slug, ctx.source_name
+    ):
+        event_data["_classification_confidence"] = 1.0
+        event_data["classification_prompt_version"] = "source-grounded-film"
+        return event_data
+
     start = _time.monotonic()
     result = classify_event(
         title=title,
@@ -913,12 +993,21 @@ def _step_classify_v2(event_data: dict, ctx: InsertContext) -> dict:
     )
     elapsed = _time.monotonic() - start
     if elapsed > 2.0:
-        logger.info("classify_v2 took %.1fs for '%s' (source=%s)", elapsed, title[:40], result.source)
+        logger.info(
+            "classify_v2 took %.1fs for '%s' (source=%s)",
+            elapsed,
+            title[:40],
+            result.source,
+        )
 
     # Log disagreements between old and new classification
     if result.category and old_category and result.category != old_category:
-        logger.info("classify_v2 disagrees: old=%s new=%s title='%s'",
-                    old_category, result.category, title[:60])
+        logger.info(
+            "classify_v2 disagrees: old=%s new=%s title='%s'",
+            old_category,
+            result.category,
+            title[:60],
+        )
 
     if _should_rewrite_category_from_v2(
         old_category, result.category, result.confidence
@@ -1017,9 +1106,11 @@ def _compute_is_show(event_data: dict, venue_type: Optional[str]) -> bool:
     if content_kind in {"exhibit", "special"}:
         return False
 
-    category = str(
-        event_data.get("category_id") or event_data.get("category") or ""
-    ).strip().lower()
+    category = (
+        str(event_data.get("category_id") or event_data.get("category") or "")
+        .strip()
+        .lower()
+    )
     title = str(event_data.get("title") or "").strip()
     normalized_venue_type = str(venue_type or "").strip().lower()
     signal_tags = {
@@ -1172,13 +1263,26 @@ def _step_set_flags(event_data: dict, ctx: InsertContext) -> dict:
     else:
         event_data.pop("is_active", None)
 
+    if (
+        not bool(event_data.get("is_tentpole"))
+        and not ctx.is_class_flag
+        and not event_data.get("is_recurring")
+        and not series_hint
+        and source_should_default_tentpole_event(ctx.source_slug, ctx.source_name)
+    ):
+        event_data["is_tentpole"] = True
+
     existing_desc = event_data.get("description") or ""
-    desc_is_weak = len(existing_desc) < 80 or is_likely_truncated_description(existing_desc)
+    desc_is_weak = len(existing_desc) < 80 or is_likely_truncated_description(
+        existing_desc
+    )
     if ctx.film_metadata and ctx.film_metadata.plot and desc_is_weak:
         event_data["description"] = ctx.film_metadata.plot[:2000]
 
     existing_desc = event_data.get("description") or ""
-    desc_is_weak = len(existing_desc) < 80 or is_likely_truncated_description(existing_desc)
+    desc_is_weak = len(existing_desc) < 80 or is_likely_truncated_description(
+        existing_desc
+    )
     if ctx.music_info and ctx.music_info.bio and desc_is_weak:
         event_data["description"] = ctx.music_info.bio[:2000]
 
@@ -1239,7 +1343,11 @@ def _step_set_flags(event_data: dict, ctx: InsertContext) -> dict:
 def _step_show_signals(event_data: dict, ctx: InsertContext) -> dict:
     """Derive show signals from event data."""
     signal_fields = (
-        "doors_time", "age_policy", "ticket_status", "reentry_policy", "set_times_mentioned",
+        "doors_time",
+        "age_policy",
+        "ticket_status",
+        "reentry_policy",
+        "set_times_mentioned",
     )
     if events_support_show_signal_columns():
         event_data.update(derive_show_signals(event_data))
@@ -1276,6 +1384,7 @@ def _step_data_quality(event_data: dict, ctx: InsertContext) -> dict:
     """Compute and attach data_quality score."""
     try:
         from compute_data_quality import score_record, EVENT_WEIGHTS
+
         event_data["data_quality"] = score_record(event_data, EVENT_WEIGHTS)
     except Exception as e:
         logger.debug(
@@ -1293,7 +1402,11 @@ def _step_finalize(event_data: dict, ctx: InsertContext) -> dict:
 
     # Film series hint enrichment
     series_hint = ctx.series_hint
-    if series_hint and series_hint.get("series_type") == "film" and ctx.parsed_film_title:
+    if (
+        series_hint
+        and series_hint.get("series_type") == "film"
+        and ctx.parsed_film_title
+    ):
         series_hint["series_title"] = ctx.parsed_film_title
 
     if ctx.film_metadata and series_hint and series_hint.get("series_type") == "film":
@@ -1316,7 +1429,9 @@ def _step_finalize(event_data: dict, ctx: InsertContext) -> dict:
         if genres and not series_hint.get("genres"):
             series_hint["genres"] = genres
         series_id = get_or_create_series(
-            ctx.client, series_hint, event_data.get("category"),
+            ctx.client,
+            series_hint,
+            event_data.get("category"),
             venue_id=series_hint.get("venue_id"),
         )
         if series_id:
@@ -1341,8 +1456,12 @@ def _step_finalize(event_data: dict, ctx: InsertContext) -> dict:
             if series_hint.get("series_type") in ("recurring_show", "class_series"):
                 backfill = {}
                 for field in (
-                    "description", "image_url", "day_of_week", "start_time",
-                    "frequency", "price_note",
+                    "description",
+                    "image_url",
+                    "day_of_week",
+                    "start_time",
+                    "frequency",
+                    "price_note",
                 ):
                     if series_hint.get(field):
                         backfill[field] = series_hint[field]
@@ -1360,8 +1479,13 @@ def _step_finalize(event_data: dict, ctx: InsertContext) -> dict:
                             str(event_data["start_date"]), "%Y-%m-%d"
                         )
                         actual_dow = [
-                            "monday", "tuesday", "wednesday",
-                            "thursday", "friday", "saturday", "sunday",
+                            "monday",
+                            "tuesday",
+                            "wednesday",
+                            "thursday",
+                            "friday",
+                            "saturday",
+                            "sunday",
                         ][ev_date.weekday()]
                         if hint_dow == actual_dow:
                             _force_update_series_day(
@@ -1423,7 +1547,7 @@ INSERT_PIPELINE = [
     _step_infer_genres,
     _step_set_flags,
     _step_infer_tags,
-    _step_classify_v2,          # NEW — taxonomy v2 derived columns
+    _step_classify_v2,  # NEW — taxonomy v2 derived columns
     _step_infer_content_kind,
     _step_show_signals,
     _step_infer_is_show,
@@ -1437,7 +1561,13 @@ INSERT_PIPELINE = [
 # Extraction column routing (Phase C: event_extractions table)
 # ---------------------------------------------------------------------------
 
-_EXTRACTION_COLUMNS = {"raw_text", "extraction_confidence", "field_provenance", "field_confidence", "extraction_version"}
+_EXTRACTION_COLUMNS = {
+    "raw_text",
+    "extraction_confidence",
+    "field_provenance",
+    "field_confidence",
+    "extraction_version",
+}
 
 
 def _pop_extraction_columns(event_data: dict) -> dict:
@@ -1456,7 +1586,9 @@ def _write_event_extraction(client, event_id: int, extraction_data: dict) -> Non
         return
     try:
         payload = {"event_id": event_id, **extraction_data}
-        client.table("event_extractions").upsert(payload, on_conflict="event_id").execute()
+        client.table("event_extractions").upsert(
+            payload, on_conflict="event_id"
+        ).execute()
     except Exception as e:
         logger.debug("Failed to write event_extractions for event %s: %s", event_id, e)
 
@@ -1481,7 +1613,9 @@ def _write_event_extraction(client, event_id: int, extraction_data: dict) -> Non
 #   - Admin/billing noise (title patterns)
 #   - Tier 3 and below venues (Tabernacle, Masquerade, Eastern, etc.)
 
-_IMPORTANCE_ELIGIBLE_CATEGORIES_TIER5 = frozenset({"music", "theater", "comedy", "art", "food_drink", "family"})
+_IMPORTANCE_ELIGIBLE_CATEGORIES_TIER5 = frozenset(
+    {"music", "theater", "comedy", "art", "food_drink", "family"}
+)
 _IMPORTANCE_ELIGIBLE_CATEGORIES_TIER4 = frozenset({"music"})
 
 _IMPORTANCE_SKIP_TITLE_RES = [
@@ -1535,9 +1669,17 @@ def _maybe_infer_importance(event_id: int, event_data: dict) -> None:
             venue = get_venue_by_id_cached(int(venue_id))
             capacity_tier = venue.get("capacity_tier") if venue else None
 
-            if capacity_tier and capacity_tier >= 5 and category in _IMPORTANCE_ELIGIBLE_CATEGORIES_TIER5:
+            if (
+                capacity_tier
+                and capacity_tier >= 5
+                and category in _IMPORTANCE_ELIGIBLE_CATEGORIES_TIER5
+            ):
                 should_upgrade = True
-            elif capacity_tier and capacity_tier >= 4 and category in _IMPORTANCE_ELIGIBLE_CATEGORIES_TIER4:
+            elif (
+                capacity_tier
+                and capacity_tier >= 4
+                and category in _IMPORTANCE_ELIGIBLE_CATEGORIES_TIER4
+            ):
                 should_upgrade = True
 
     if should_upgrade:
@@ -1559,6 +1701,7 @@ def _maybe_infer_importance(event_id: int, event_data: dict) -> None:
 # Event insert
 # ---------------------------------------------------------------------------
 
+
 @retry_on_network_error(max_retries=4, base_delay=0.5)
 def insert_event(
     event_data: dict, series_hint: dict = None, genres: list = None
@@ -1568,7 +1711,9 @@ def insert_event(
     venue_id = event_data.get("place_id") or event_data.get("venue_id")
     if venue_id is None or (isinstance(venue_id, int) and venue_id < 0):
         title = event_data.get("title", "untitled")
-        logger.warning("Skipping event insert — invalid venue_id=%s for '%s'", venue_id, title[:80])
+        logger.warning(
+            "Skipping event insert — invalid venue_id=%s for '%s'", venue_id, title[:80]
+        )
         return _next_temp_id()
 
     client = get_client()
@@ -1610,7 +1755,9 @@ def insert_event(
     event_data.pop("_suppress_title_participants", None)
 
     if not writes_enabled():
-        _log_write_skip(f"insert events title={event_data.get('title', 'untitled')[:60]}")
+        _log_write_skip(
+            f"insert events title={event_data.get('title', 'untitled')[:60]}"
+        )
         return _next_temp_id()
 
     # If event_extractions table exists, route extraction columns there instead
@@ -1679,7 +1826,9 @@ def _is_recoverable_event_duplicate(exc: Exception) -> bool:
     text = str(exc or "")
     if "duplicate key value violates unique constraint" not in text:
         return False
-    return any(index_name in text for index_name in _RECOVERABLE_EVENT_DUPLICATE_INDEXES)
+    return any(
+        index_name in text for index_name in _RECOVERABLE_EVENT_DUPLICATE_INDEXES
+    )
 
 
 def update_event(event_id: int, event_data: dict) -> None:
@@ -1711,9 +1860,11 @@ def smart_update_existing_event(existing: dict, incoming: dict) -> bool:
     updates: dict = {}
     classification_rewrite_applied = False
     existing_category = str(existing.get("category_id") or "").strip().lower()
-    incoming_category = str(
-        incoming.get("category_id") or incoming.get("category") or ""
-    ).strip().lower()
+    incoming_category = (
+        str(incoming.get("category_id") or incoming.get("category") or "")
+        .strip()
+        .lower()
+    )
     existing_source_id = existing.get("source_id")
     incoming_source_id = incoming.get("source_id")
 
@@ -1730,12 +1881,8 @@ def smart_update_existing_event(existing: dict, incoming: dict) -> bool:
             existing_desc_truncated = is_likely_truncated_description(existing_desc)
             incoming_desc_truncated = is_likely_truncated_description(incoming_desc)
             if (
-                len(incoming_desc) > len(existing_desc)
-                and not incoming_desc_truncated
-            ) or (
-                existing_desc_truncated
-                and not incoming_desc_truncated
-            ):
+                len(incoming_desc) > len(existing_desc) and not incoming_desc_truncated
+            ) or (existing_desc_truncated and not incoming_desc_truncated):
                 updates["description"] = incoming_desc
 
     existing_img = existing.get("image_url") or ""
@@ -1768,7 +1915,8 @@ def smart_update_existing_event(existing: dict, incoming: dict) -> bool:
             and existing_source_id == incoming_source_id
             and (existing.get("place_id") or existing.get("venue_id"))
             and (incoming.get("place_id") or incoming.get("venue_id"))
-            and (existing.get("place_id") or existing.get("venue_id")) == (incoming.get("place_id") or incoming.get("venue_id"))
+            and (existing.get("place_id") or existing.get("venue_id"))
+            == (incoming.get("place_id") or incoming.get("venue_id"))
             and existing.get("start_date")
             and incoming.get("start_date")
             and existing.get("start_date") == incoming.get("start_date")
@@ -1791,9 +1939,13 @@ def smart_update_existing_event(existing: dict, incoming: dict) -> bool:
     if incoming.get("price_note") and not existing.get("price_note"):
         updates["price_note"] = incoming["price_note"]
 
-    if _should_promote_incoming_ticket_url(existing.get("ticket_url"), incoming.get("ticket_url")):
+    if _should_promote_incoming_ticket_url(
+        existing.get("ticket_url"), incoming.get("ticket_url")
+    ):
         updates["ticket_url"] = incoming["ticket_url"]
-    if _should_promote_incoming_url(existing.get("source_url"), incoming.get("source_url")):
+    if _should_promote_incoming_url(
+        existing.get("source_url"), incoming.get("source_url")
+    ):
         updates["source_url"] = incoming["source_url"]
 
     # Planning horizon fields — only set if incoming has value AND existing is empty
@@ -1814,12 +1966,16 @@ def smart_update_existing_event(existing: dict, incoming: dict) -> bool:
     _IMPORTANCE_RANK = {"flagship": 3, "major": 2, "standard": 1}
     incoming_importance = incoming.get("importance", "standard")
     existing_importance = existing.get("importance", "standard")
-    if _IMPORTANCE_RANK.get(incoming_importance, 0) > _IMPORTANCE_RANK.get(existing_importance, 0):
+    if _IMPORTANCE_RANK.get(incoming_importance, 0) > _IMPORTANCE_RANK.get(
+        existing_importance, 0
+    ):
         updates["importance"] = incoming_importance
 
     # ticket_status: update when incoming has a value (show signals ran)
     incoming_ticket_status = incoming.get("ticket_status")
-    if incoming_ticket_status and incoming_ticket_status != existing.get("ticket_status"):
+    if incoming_ticket_status and incoming_ticket_status != existing.get(
+        "ticket_status"
+    ):
         updates["ticket_status"] = incoming_ticket_status
 
     # ticket_status_checked_at: always take the most recent
@@ -1841,7 +1997,11 @@ def smart_update_existing_event(existing: dict, incoming: dict) -> bool:
         if incoming_portal_id:
             updates["portal_id"] = incoming_portal_id
 
-    if incoming_source_id and existing_source_id and incoming_source_id != existing_source_id:
+    if (
+        incoming_source_id
+        and existing_source_id
+        and incoming_source_id != existing_source_id
+    ):
         existing_source = get_source_info(existing_source_id) or {}
         incoming_source = get_source_info(incoming_source_id) or {}
         existing_priority = _source_priority_for_dedupe(
@@ -1852,35 +2012,38 @@ def smart_update_existing_event(existing: dict, incoming: dict) -> bool:
         )
         if incoming_priority < existing_priority:
             updates["source_id"] = incoming_source_id
-            incoming_portal_id = incoming.get("portal_id") or incoming_source.get("owner_portal_id")
+            incoming_portal_id = incoming.get("portal_id") or incoming_source.get(
+                "owner_portal_id"
+            )
             if incoming_portal_id:
                 updates["portal_id"] = incoming_portal_id
 
     if incoming_category in VALID_CATEGORIES:
         if not existing_category:
             updates["category_id"] = incoming_category
-        elif (
-            incoming_category != existing_category
-            and (
-                (
-                    existing_category in {"community", "other"}
-                    and incoming_category not in {"community", "other"}
+        elif incoming_category != existing_category and (
+            (
+                existing_category in {"community", "other"}
+                and incoming_category not in {"community", "other"}
+            )
+            or (
+                _should_rewrite_category_from_v2(
+                    existing_category,
+                    incoming_category,
+                    incoming.get("_classification_confidence"),
                 )
-                or (
-                    _should_rewrite_category_from_v2(
-                        existing_category,
-                        incoming_category,
-                        incoming.get("_classification_confidence"),
-                    )
-                    and incoming.get("classification_prompt_version")
-                )
+                and incoming.get("classification_prompt_version")
             )
         ):
             # Never override the category of a volunteer event — it is
             # intentionally ``community`` regardless of venue type or title
             # signals from other sources (e.g. a farmers-market venue type
             # would otherwise push it to ``food_drink``).
-            existing_subcategory = str(existing.get("subcategory") or existing.get("subcategory_id") or "").strip().lower()
+            existing_subcategory = (
+                str(existing.get("subcategory") or existing.get("subcategory_id") or "")
+                .strip()
+                .lower()
+            )
             existing_tags = existing.get("tags") or []
             existing_is_volunteer = (
                 existing_subcategory == "volunteer"
@@ -1891,8 +2054,12 @@ def smart_update_existing_event(existing: dict, incoming: dict) -> bool:
                 classification_rewrite_applied = True
 
     if incoming.get("classification_prompt_version"):
-        existing_prompt_version = str(existing.get("classification_prompt_version") or "").strip()
-        incoming_prompt_version = str(incoming.get("classification_prompt_version") or "").strip()
+        existing_prompt_version = str(
+            existing.get("classification_prompt_version") or ""
+        ).strip()
+        incoming_prompt_version = str(
+            incoming.get("classification_prompt_version") or ""
+        ).strip()
         if incoming_prompt_version and (
             classification_rewrite_applied
             or not existing_prompt_version
@@ -1936,17 +2103,25 @@ def smart_update_existing_event(existing: dict, incoming: dict) -> bool:
 
     if events_support_is_active_column() and existing.get("is_active") is False:
         should_reactivate = True
-        venue_id = incoming.get("place_id") or incoming.get("venue_id") or existing.get("place_id") or existing.get("venue_id")
+        venue_id = (
+            incoming.get("place_id")
+            or incoming.get("venue_id")
+            or existing.get("place_id")
+            or existing.get("venue_id")
+        )
         if venue_id:
             venue = get_venue_by_id_cached(int(venue_id))
             venue_slug = str((venue or {}).get("slug") or "").strip().lower()
-            if (venue or {}).get("is_active") is False or venue_slug in CLOSED_VENUE_SLUGS:
+            if (venue or {}).get(
+                "is_active"
+            ) is False or venue_slug in CLOSED_VENUE_SLUGS:
                 should_reactivate = False
         if should_reactivate:
             updates["is_active"] = True
 
     if events_support_content_kind_column():
         from db.validation import _CONTENT_KIND_ALLOWED
+
         existing_kind = str(existing.get("content_kind") or "").strip().lower()
         incoming_kind = str(incoming.get("content_kind") or "").strip().lower()
         if incoming_kind in _CONTENT_KIND_ALLOWED:
@@ -1968,15 +2143,20 @@ def smart_update_existing_event(existing: dict, incoming: dict) -> bool:
             updates["film_release_year"] = incoming["film_release_year"]
         if incoming.get("film_imdb_id") and not existing.get("film_imdb_id"):
             updates["film_imdb_id"] = incoming["film_imdb_id"]
-        if incoming.get("film_external_genres") and not existing.get("film_external_genres"):
+        if incoming.get("film_external_genres") and not existing.get(
+            "film_external_genres"
+        ):
             updates["film_external_genres"] = incoming["film_external_genres"]
-        if incoming.get("film_identity_source") and not existing.get("film_identity_source"):
+        if incoming.get("film_identity_source") and not existing.get(
+            "film_identity_source"
+        ):
             updates["film_identity_source"] = incoming["film_identity_source"]
 
     existing_tags = set(existing.get("tags") or [])
     incoming_tags = set(incoming.get("tags") or [])
     if incoming_tags:
         from tag_inference import ALL_TAGS as _ALL_TAGS
+
         manual_tags = existing_tags - _ALL_TAGS
         reconciled = incoming_tags | manual_tags
         if reconciled != existing_tags:
@@ -1987,7 +2167,12 @@ def smart_update_existing_event(existing: dict, incoming: dict) -> bool:
         from tag_inference import infer_genres as _infer_genres
         from genre_normalize import normalize_genres as _normalize_genres_su
 
-        venue_id = incoming.get("place_id") or incoming.get("venue_id") or existing.get("place_id") or existing.get("venue_id")
+        venue_id = (
+            incoming.get("place_id")
+            or incoming.get("venue_id")
+            or existing.get("place_id")
+            or existing.get("venue_id")
+        )
         venue = get_venue_by_id_cached(int(venue_id)) if venue_id else None
         inferred = _normalize_genres_su(
             _infer_genres(
@@ -2017,13 +2202,21 @@ def smart_update_existing_event(existing: dict, incoming: dict) -> bool:
 
     if updates:
         try:
-            from compute_data_quality import score_record as _score_record, EVENT_WEIGHTS as _EW
+            from compute_data_quality import (
+                score_record as _score_record,
+                EVENT_WEIGHTS as _EW,
+            )
+
             merged = {**existing, **updates}
             if "category_id" in merged and "category" not in merged:
                 merged["category"] = merged["category_id"]
             updates["data_quality"] = _score_record(merged, _EW)
         except Exception as e:
-            logger.debug("data_quality scoring failed for '%s': %s", existing.get("title", "")[:50], e)
+            logger.debug(
+                "data_quality scoring failed for '%s': %s",
+                existing.get("title", "")[:50],
+                e,
+            )
 
     if updates:
         if not writes_enabled():
@@ -2041,11 +2234,15 @@ def smart_update_existing_event(existing: dict, incoming: dict) -> bool:
                 logger.error(f"Failed to smart-update event {event_id}: {e}")
                 return False
 
-    category = str(
-        updates.get("category_id") or incoming_category or existing_category or ""
-    ).strip().lower()
+    category = (
+        str(updates.get("category_id") or incoming_category or existing_category or "")
+        .strip()
+        .lower()
+    )
     event_genres = set(incoming.get("genres") or existing.get("genres") or [])
-    _skip_nightlife = category == "nightlife" and bool(event_genres & _NIGHTLIFE_SKIP_GENRES)
+    _skip_nightlife = category == "nightlife" and bool(
+        event_genres & _NIGHTLIFE_SKIP_GENRES
+    )
     if category in ("music", "comedy", "nightlife", "sports") and not _skip_nightlife:
         try:
             client = get_client()
@@ -2065,13 +2262,10 @@ def smart_update_existing_event(existing: dict, incoming: dict) -> bool:
 
             if parsed:
                 title = incoming.get("title") or existing.get("title") or ""
-                should_replace = (
-                    not existing_artists
-                    or (
-                        bool(incoming.get("_parsed_artists"))
-                        and _should_replace_placeholder_artists(
-                            title, existing_artists, parsed
-                        )
+                should_replace = not existing_artists or (
+                    bool(incoming.get("_parsed_artists"))
+                    and _should_replace_placeholder_artists(
+                        title, existing_artists, parsed
                     )
                 )
                 if should_replace:
@@ -2092,7 +2286,7 @@ def smart_update_existing_event(existing: dict, incoming: dict) -> bool:
 # ---------------------------------------------------------------------------
 
 _PRESENTER_PREFIX_RE = re.compile(
-    r'^(?:presents?:\s*|presented\s+by\s+.+?[-:]\s*|live\s+nation\s+presents?\s*[-:]\s*)',
+    r"^(?:presents?:\s*|presented\s+by\s+.+?[-:]\s*|live\s+nation\s+presents?\s*[-:]\s*)",
     re.IGNORECASE,
 )
 _SPORTS_MATCHUP_SEPARATOR_RE = re.compile(
@@ -2145,7 +2339,7 @@ def _normalize_title_for_natural_key(title: Optional[str]) -> str:
 
     t = title or ""
     # Strip presenter prefixes that cause cross-source dedup misses
-    t = _PRESENTER_PREFIX_RE.sub('', t)
+    t = _PRESENTER_PREFIX_RE.sub("", t)
     # Collapse matchup separators so "v", "v.", and "vs." dedupe together.
     t = _SPORTS_MATCHUP_SEPARATOR_RE.sub(" vs ", t)
     return normalize_text(t)
@@ -2161,7 +2355,12 @@ def _is_specific_event_url(url: Optional[str]) -> bool:
     if parsed.scheme not in {"http", "https"} or not parsed.netloc:
         return False
 
-    query_keys = {key.lower() for key in parsed.query.split("&") if "=" in key for key in [key.split("=", 1)[0]]}
+    query_keys = {
+        key.lower()
+        for key in parsed.query.split("&")
+        if "=" in key
+        for key in [key.split("=", 1)[0]]
+    }
     if query_keys & _SPECIFIC_EVENT_QUERY_KEYS:
         return True
 
@@ -2219,7 +2418,11 @@ def prefetch_hashes(source_id: int = None, venue_id: int = None) -> set[str]:
             query = query.eq("place_id", venue_id)
         query = query.eq("is_active", True)
         result = query.execute()
-        return {row["content_hash"] for row in (result.data or []) if row.get("content_hash")}
+        return {
+            row["content_hash"]
+            for row in (result.data or [])
+            if row.get("content_hash")
+        }
     except Exception as e:
         logger.warning(f"Failed to prefetch hashes: {e}")
         return set()
@@ -2308,7 +2511,8 @@ def find_existing_event_by_natural_key(event_data: dict) -> Optional[dict]:
     title_matches = [
         candidate
         for candidate in fallback_candidates
-        if _normalize_title_for_natural_key(candidate.get("title")) == incoming_title_norm
+        if _normalize_title_for_natural_key(candidate.get("title"))
+        == incoming_title_norm
     ]
     if len(title_matches) == 1:
         candidate = title_matches[0]
@@ -2529,7 +2733,7 @@ def remove_stale_source_events(source_id: int, current_hashes: set[str]) -> int:
     deleted = 0
     batch_size = 50
     for i in range(0, len(stale_ids), batch_size):
-        batch = stale_ids[i: i + batch_size]
+        batch = stale_ids[i : i + batch_size]
         client.table("events").delete().in_("id", batch).execute()
         deleted += len(batch)
 
@@ -2553,6 +2757,7 @@ def find_events_by_date_and_venue(date: str, venue_id: int) -> list[dict]:
 def find_events_by_date_and_venue_family(date: str, venue_id: int) -> list[dict]:
     """Find events on a specific date at a venue OR any of its sibling rooms."""
     from db.places import get_sibling_venue_ids
+
     client = get_client()
     sibling_ids = get_sibling_venue_ids(venue_id)
 

@@ -20,6 +20,12 @@ def test_parse_session_builds_tap_occurrences():
 
     assert parsed is not None
     assert parsed["title"] == "Tap-Intermediate at Rhodes Jordan Park Community Recreation Center"
+    assert (
+        parsed["description"]
+        == "Tap-Intermediate at Rhodes Jordan Park Community Recreation Center. "
+        "Public active-adult tap class through Gwinnett County Parks & Recreation. "
+        "Reserve through the official county catalog for current availability."
+    )
     assert parsed["occurrences"] == [
         (date(2026, 3, 31), 1),
         (date(2026, 4, 7), 1),

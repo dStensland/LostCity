@@ -18,6 +18,7 @@ import argparse
 import json
 import logging
 import re
+import subprocess
 import sys
 import time
 from datetime import datetime, timedelta
@@ -31,9 +32,14 @@ from dotenv import load_dotenv
 env_path = Path(__file__).parent.parent / ".env"
 load_dotenv(env_path)
 
-sys.path.insert(0, str(Path(__file__).parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from db import get_client
-from festival_date_confidence import classify_url, compute_confidence, should_update, validate_festival_dates
+from festival_date_confidence import (
+    classify_url,
+    compute_confidence,
+    should_update,
+    validate_festival_dates,
+)
 
 logging.basicConfig(level=logging.INFO, format="%(message)s")
 logger = logging.getLogger(__name__)
@@ -42,10 +48,30 @@ UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
 CURRENT_YEAR = datetime.now().year
 
 MONTH_MAP = {
-    "jan": 1, "january": 1, "feb": 2, "february": 2, "mar": 3, "march": 3,
-    "apr": 4, "april": 4, "may": 5, "jun": 6, "june": 6,
-    "jul": 7, "july": 7, "aug": 8, "august": 8, "sep": 9, "sept": 9, "september": 9,
-    "oct": 10, "october": 10, "nov": 11, "november": 11, "dec": 12, "december": 12,
+    "jan": 1,
+    "january": 1,
+    "feb": 2,
+    "february": 2,
+    "mar": 3,
+    "march": 3,
+    "apr": 4,
+    "april": 4,
+    "may": 5,
+    "jun": 6,
+    "june": 6,
+    "jul": 7,
+    "july": 7,
+    "aug": 8,
+    "august": 8,
+    "sep": 9,
+    "sept": 9,
+    "september": 9,
+    "oct": 10,
+    "october": 10,
+    "nov": 11,
+    "november": 11,
+    "dec": 12,
+    "december": 12,
 }
 
 # Same-month range: "October 3-5, 2026"
@@ -75,6 +101,25 @@ SINGLE_DATE_RE = re.compile(
     re.IGNORECASE,
 )
 
+# Month/day without year, used only when the page already clearly references
+# the current year elsewhere (common on festival homepages with schedule cards).
+MONTH_DAY_ONLY_RE = re.compile(
+    r"(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?|"
+    r"sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)"
+    r"\s+(\d{1,2})\b",
+    re.IGNORECASE,
+)
+
+_GENERIC_SLUG_TOKENS = {
+    "festival",
+    "fest",
+    "conference",
+    "convention",
+    "expo",
+    "show",
+    "meeting",
+}
+
 
 def _month_num(name: str) -> Optional[int]:
     return MONTH_MAP.get(name.lower().rstrip("."))
@@ -87,7 +132,88 @@ def _safe_date(year: int, month: int, day: int) -> Optional[str]:
         return None
 
 
-def extract_dates_from_html(html: str) -> tuple[Optional[str], Optional[str], str]:
+def _best_date_cluster(dates: list[str]) -> list[str]:
+    """Pick the strongest contiguous cluster from visible-text date hits.
+
+    Festival pages often include one stray publish/update date plus the actual
+    weekend or festival range. Favor the longest low-gap cluster instead of the
+    raw min/max across every matched single date.
+    """
+    if not dates:
+        return []
+
+    unique_dates = sorted(set(dates))
+    clusters: list[list[str]] = []
+    current_cluster: list[str] = []
+
+    for value in unique_dates:
+        if not current_cluster:
+            current_cluster = [value]
+            continue
+        prev = datetime.fromisoformat(current_cluster[-1]).date()
+        curr = datetime.fromisoformat(value).date()
+        if (curr - prev).days <= 2:
+            current_cluster.append(value)
+        else:
+            clusters.append(current_cluster)
+            current_cluster = [value]
+
+    if current_cluster:
+        clusters.append(current_cluster)
+
+    clusters.sort(key=lambda cluster: (len(cluster), cluster[-1]), reverse=True)
+    return clusters[0]
+
+
+def _slug_context_tokens(slug: str) -> list[str]:
+    tokens = []
+    for token in (slug or "").split("-"):
+        token = token.strip().lower()
+        if len(token) < 4:
+            continue
+        if token in _GENERIC_SLUG_TOKENS:
+            continue
+        tokens.append(token)
+    return tokens
+
+
+def _choose_slug_targeted_single_date(text: str, festival_slug: str) -> Optional[str]:
+    tokens = _slug_context_tokens(festival_slug)
+    if not tokens:
+        return None
+
+    best_score = 0
+    best_date = None
+    for line in text.splitlines():
+        normalized_line = line.strip()
+        if not normalized_line:
+            continue
+        lowered = normalized_line.lower()
+        score = sum(1 for token in tokens if token in lowered)
+        if score <= 0:
+            continue
+        for match in SINGLE_DATE_RE.finditer(normalized_line):
+            if match.group(3) != str(CURRENT_YEAR):
+                continue
+            month = _month_num(match.group(1))
+            day = int(match.group(2))
+            if not month:
+                continue
+            candidate = _safe_date(CURRENT_YEAR, month, day)
+            if not candidate:
+                continue
+            if score > best_score:
+                best_score = score
+                best_date = candidate
+
+    if best_score > 0:
+        return best_date
+    return None
+
+
+def extract_dates_from_html(
+    html: str, festival_slug: str = ""
+) -> tuple[Optional[str], Optional[str], str]:
     """
     Extract start/end dates from HTML. Returns (start, end, method).
     Tries JSON-LD -> meta tags -> regex, plain HTTP only.
@@ -114,24 +240,17 @@ def extract_dates_from_html(html: str) -> tuple[Optional[str], Optional[str], st
     time_dates = []
     for tag in soup.find_all("time"):
         dt = tag.get("datetime", "")
-        if str(CURRENT_YEAR) in dt and len(dt) >= 10 and re.match(r"\d{4}-\d{2}-\d{2}", dt):
+        if (
+            str(CURRENT_YEAR) in dt
+            and len(dt) >= 10
+            and re.match(r"\d{4}-\d{2}-\d{2}", dt)
+        ):
             time_dates.append(dt[:10])
     if time_dates:
         return min(time_dates), max(time_dates), "time-el"
 
-    # 3. <meta> tags with date content — collect ALL, use min/max for range
-    meta_dates = []
-    for meta in soup.find_all("meta"):
-        prop = (meta.get("property", "") + meta.get("name", "")).lower()
-        content = meta.get("content", "")
-        if "date" in prop and str(CURRENT_YEAR) in content:
-            m = re.match(r"(\d{4}-\d{2}-\d{2})", content)
-            if m:
-                meta_dates.append(m.group(1))
-    if meta_dates:
-        return min(meta_dates), max(meta_dates), "meta"
-
-    # 4. Regex on visible text
+    # 3. Regex on visible text
+    line_text = soup.get_text("\n", strip=True)
     text = soup.get_text(" ", strip=True)
     year_str = str(CURRENT_YEAR)
 
@@ -162,18 +281,90 @@ def extract_dates_from_html(html: str) -> tuple[Optional[str], Optional[str], st
             if start and end:
                 return start, end, "regex-range"
 
-    # Single date
-    m = SINGLE_DATE_RE.search(text)
-    if m and m.group(3) == year_str:
+    # For multi-city pages, prefer a date whose nearby context matches the slug.
+    targeted_single = _choose_slug_targeted_single_date(line_text, festival_slug)
+    if targeted_single:
+        return targeted_single, targeted_single, "regex-single-targeted"
+
+    # Multiple single dates on schedule pages: use min/max across all distinct hits.
+    single_dates = []
+    for m in SINGLE_DATE_RE.finditer(text):
+        if m.group(3) != year_str:
+            continue
         month = _month_num(m.group(1))
         day = int(m.group(2))
         year = int(m.group(3))
-        if month:
-            d = _safe_date(year, month, day)
+        if not month:
+            continue
+        d = _safe_date(year, month, day)
+        if d:
+            single_dates.append(d)
+    best_single_cluster = _best_date_cluster(single_dates)
+    if len(best_single_cluster) >= 2:
+        return best_single_cluster[0], best_single_cluster[-1], "regex-multi-single"
+    if len(best_single_cluster) == 1:
+        return best_single_cluster[0], best_single_cluster[0], "regex-single"
+
+    # Month/day-only clusters under a clear page-level current-year banner,
+    # e.g. "Festival 2026 ... September 19 ... September 20 ..."
+    if year_str in text:
+        month_day_only_dates = []
+        for m in MONTH_DAY_ONLY_RE.finditer(text):
+            month = _month_num(m.group(1))
+            day = int(m.group(2))
+            if not month:
+                continue
+            d = _safe_date(CURRENT_YEAR, month, day)
             if d:
-                return d, d, "regex-single"
+                month_day_only_dates.append(d)
+        unique_month_day_only_dates = sorted(set(month_day_only_dates))
+        if len(unique_month_day_only_dates) >= 2:
+            return (
+                unique_month_day_only_dates[0],
+                unique_month_day_only_dates[-1],
+                "regex-month-day-cluster",
+            )
+
+    # 4. <meta> tags with date content — use only as fallback after visible text.
+    meta_dates = []
+    for meta in soup.find_all("meta"):
+        prop = (meta.get("property", "") + meta.get("name", "")).lower()
+        content = meta.get("content", "")
+        if "date" in prop and str(CURRENT_YEAR) in content:
+            m = re.match(r"(\d{4}-\d{2}-\d{2})", content)
+            if m:
+                meta_dates.append(m.group(1))
+    if meta_dates:
+        return min(meta_dates), max(meta_dates), "meta"
 
     return None, None, ""
+
+
+def fetch_html(url: str) -> str:
+    """Fetch festival HTML, falling back to curl for TLS-hostile sites."""
+    try:
+        resp = requests.get(
+            url, headers={"User-Agent": UA}, timeout=10, allow_redirects=True
+        )
+        resp.raise_for_status()
+        return resp.text
+    except Exception:
+        result = subprocess.run(
+            [
+                "curl",
+                "-L",
+                "--max-time",
+                "20",
+                "-A",
+                UA,
+                "-sS",
+                url,
+            ],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        return result.stdout
 
 
 def check_festival_dates(
@@ -181,6 +372,7 @@ def check_festival_dates(
     month_range: Optional[tuple[int, int]] = None,
     soon_only: bool = False,
     promote_pending: bool = False,
+    slugs: Optional[set[str]] = None,
 ):
     client = get_client()
 
@@ -188,8 +380,23 @@ def check_festival_dates(
         # Review pending_start rows: re-fetch and try to promote
         result = (
             client.table("festivals")
-            .select("id,slug,name,website,typical_month,typical_duration_days,announced_start,pending_start,pending_end,date_confidence,date_source")
+            .select(
+                "id,slug,name,website,typical_month,typical_duration_days,announced_start,pending_start,pending_end,date_confidence,date_source"
+            )
             .not_.is_("pending_start", "null")
+            .not_.is_("website", "null")
+            .order("typical_month")
+            .execute()
+        )
+    elif slugs:
+        # Targeted repair mode: allow explicit slug checks even when a festival
+        # already has announced dates, so report-driven remediation can verify
+        # and correct stale windows without a one-off script.
+        result = (
+            client.table("festivals")
+            .select(
+                "id,slug,name,website,typical_month,typical_duration_days,announced_start,date_confidence,date_source"
+            )
             .not_.is_("website", "null")
             .order("typical_month")
             .execute()
@@ -198,7 +405,9 @@ def check_festival_dates(
         # Get festivals missing announced_start that have websites
         result = (
             client.table("festivals")
-            .select("id,slug,name,website,typical_month,typical_duration_days,announced_start,date_confidence,date_source")
+            .select(
+                "id,slug,name,website,typical_month,typical_duration_days,announced_start,date_confidence,date_source"
+            )
             .is_("announced_start", "null")
             .not_.is_("website", "null")
             .order("typical_month")
@@ -206,11 +415,15 @@ def check_festival_dates(
         )
     festivals = result.data or []
 
+    if slugs:
+        festivals = [f for f in festivals if f.get("slug") in slugs]
+
     # Filter by month range
     if month_range:
         lo, hi = month_range
         festivals = [
-            f for f in festivals
+            f
+            for f in festivals
             if f.get("typical_month") and lo <= f["typical_month"] <= hi
         ]
 
@@ -220,10 +433,18 @@ def check_festival_dates(
         cutoff_month = (now.month + 3 - 1) % 12 + 1
         cutoff_wraps = (now.month + 3) > 12
         festivals = [
-            f for f in festivals
-            if f.get("typical_month") and (
+            f
+            for f in festivals
+            if f.get("typical_month")
+            and (
                 (not cutoff_wraps and now.month <= f["typical_month"] <= cutoff_month)
-                or (cutoff_wraps and (f["typical_month"] >= now.month or f["typical_month"] <= cutoff_month))
+                or (
+                    cutoff_wraps
+                    and (
+                        f["typical_month"] >= now.month
+                        or f["typical_month"] <= cutoff_month
+                    )
+                )
             )
         ]
 
@@ -231,10 +452,17 @@ def check_festival_dates(
         logger.info("No festivals to check.")
         return
 
-    mode_label = "PROMOTE PENDING" if promote_pending else "CHECK MISSING"
+    if promote_pending:
+        mode_label = "PROMOTE PENDING"
+    elif slugs:
+        mode_label = "TARGETED REPAIR"
+    else:
+        mode_label = "CHECK MISSING"
     logger.info(f"Festival Date Checker — {mode_label}")
     logger.info(f"{'=' * 70}")
-    logger.info(f"Checking {len(festivals)} festivals | Mode: {'DRY RUN' if dry_run else 'LIVE'}")
+    logger.info(
+        f"Checking {len(festivals)} festivals | Mode: {'DRY RUN' if dry_run else 'LIVE'}"
+    )
     logger.info(f"{'=' * 70}\n")
 
     found_count = 0
@@ -251,33 +479,39 @@ def check_festival_dates(
         prefix = f"[{i:3d}/{len(festivals)}] {name[:40]:<40} (mo={month})"
 
         try:
-            resp = requests.get(website, headers={"User-Agent": UA}, timeout=10, allow_redirects=True)
-            html = resp.text
+            html = fetch_html(website)
         except Exception as e:
             logger.info(f"{prefix}  ERR: {str(e)[:30]}")
             failed_count += 1
             time.sleep(0.5)
             continue
 
-        start, end, method = extract_dates_from_html(html)
+        start, end, method = extract_dates_from_html(html, f.get("slug", ""))
 
         if start and method:
             found_count += 1
             url_type = classify_url(website, f["slug"])
             extracted_month = int(start[5:7])
-            confidence = compute_confidence(method, url_type, typical_month, extracted_month)
+            confidence = compute_confidence(
+                method, url_type, typical_month, extracted_month
+            )
 
             existing_source = f.get("date_source")
             existing_confidence = f.get("date_confidence")
 
-            if not should_update(existing_source, existing_confidence, method, confidence):
-                logger.info(f"{prefix}  SKIP (existing {existing_source} c={existing_confidence})")
+            if not should_update(
+                existing_source, existing_confidence, method, confidence
+            ):
+                logger.info(
+                    f"{prefix}  SKIP (existing {existing_source} c={existing_confidence})"
+                )
                 time.sleep(0.5)
                 continue
 
             # Validate dates before writing
             valid, start, end = validate_festival_dates(
-                start, end,
+                start,
+                end,
                 typical_month=typical_month,
                 typical_duration_days=f.get("typical_duration_days"),
             )
@@ -297,7 +531,9 @@ def check_festival_dates(
 
             if confidence >= 70 and months_ok:
                 promoted_count += 1
-                logger.info(f"{prefix}  PROMOTED: {start} to {end}  ({method} c={confidence})")
+                logger.info(
+                    f"{prefix}  PROMOTED: {start} to {end}  ({method} c={confidence})"
+                )
                 if not dry_run:
                     updates = {
                         "announced_start": start,
@@ -310,10 +546,14 @@ def check_festival_dates(
                     if promote_pending:
                         updates["pending_start"] = None
                         updates["pending_end"] = None
-                    client.table("festivals").update(updates).eq("id", f["id"]).execute()
+                    client.table("festivals").update(updates).eq(
+                        "id", f["id"]
+                    ).execute()
             else:
                 pending_count += 1
-                logger.info(f"{prefix}  PENDING: {start} to {end}  ({method} c={confidence} {url_type})")
+                logger.info(
+                    f"{prefix}  PENDING: {start} to {end}  ({method} c={confidence} {url_type})"
+                )
                 if not dry_run:
                     updates = {
                         "pending_start": start,
@@ -322,24 +562,46 @@ def check_festival_dates(
                     }
                     if end:
                         updates["pending_end"] = end
-                    client.table("festivals").update(updates).eq("id", f["id"]).execute()
+                    client.table("festivals").update(updates).eq(
+                        "id", f["id"]
+                    ).execute()
         else:
             logger.info(f"{prefix}  --")
 
         time.sleep(0.5)
 
     logger.info(f"\n{'=' * 70}")
-    logger.info(f"Checked: {len(festivals)} | Found: {found_count} | Promoted: {promoted_count} | Pending: {pending_count} | Rejected: {rejected_count} | Failed: {failed_count}")
+    logger.info(
+        f"Checked: {len(festivals)} | Found: {found_count} | Promoted: {promoted_count} | Pending: {pending_count} | Rejected: {rejected_count} | Failed: {failed_count}"
+    )
     if dry_run:
         logger.info("DRY RUN — no changes written")
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Check for newly announced festival dates")
-    parser.add_argument("--dry-run", action="store_true", help="Preview without writing")
-    parser.add_argument("--months", type=str, help="Month range, e.g. '1-4' for Jan-Apr")
-    parser.add_argument("--soon", action="store_true", help="Only check festivals within 3 months")
-    parser.add_argument("--promote-pending", action="store_true", help="Re-check pending_start rows and promote if confidence improves")
+    parser = argparse.ArgumentParser(
+        description="Check for newly announced festival dates"
+    )
+    parser.add_argument(
+        "--dry-run", action="store_true", help="Preview without writing"
+    )
+    parser.add_argument(
+        "--months", type=str, help="Month range, e.g. '1-4' for Jan-Apr"
+    )
+    parser.add_argument(
+        "--soon", action="store_true", help="Only check festivals within 3 months"
+    )
+    parser.add_argument(
+        "--promote-pending",
+        action="store_true",
+        help="Re-check pending_start rows and promote if confidence improves",
+    )
+    parser.add_argument(
+        "--slug",
+        action="append",
+        dest="slugs",
+        help="Check only specific festival slug(s). Repeat flag for multiple slugs.",
+    )
     args = parser.parse_args()
 
     month_range = None
@@ -352,6 +614,7 @@ def main():
         month_range=month_range,
         soon_only=args.soon,
         promote_pending=args.promote_pending,
+        slugs=set(args.slugs or []),
     )
 
 

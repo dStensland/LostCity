@@ -27,6 +27,12 @@ def test_parse_session_builds_recurring_pickleball_class():
 
     assert parsed is not None
     assert parsed["title"] == "Pickleball Level 1 - Beginner (Keenan) at Fair Oaks Tennis Center"
+    assert (
+        parsed["description"]
+        == "Pickleball Level 1 - Beginner (Keenan) at Fair Oaks Tennis Center. "
+        "Public pickleball class through Cobb County Parks. "
+        "Reserve through the official county catalog for current availability."
+    )
     assert parsed["start_time"] == "18:00"
     assert parsed["end_time"] == "19:00"
     assert parsed["price_min"] == 72.0

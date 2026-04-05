@@ -42,8 +42,6 @@ from db import (
     get_venue_by_slug,
     insert_event,
     find_event_by_hash,
-    smart_update_existing_event,
-    update_event,
 )
 from dedupe import generate_content_hash
 from utils import setup_logging, slugify, is_likely_non_event_image
@@ -76,6 +74,7 @@ _FESTIVAL_LLM_PROVIDER_OVERRIDES_PATH = (
 # ---------------------------------------------------------------------------
 # Data structures
 # ---------------------------------------------------------------------------
+
 
 class SessionData:
     """A single extracted festival session/event."""
@@ -126,6 +125,9 @@ class SessionData:
         return f"Session({self.title!r}, {self.start_date}, {self.start_time})"
 
 
+_PAGE_SUMMARY_CACHE: dict[str, Optional[str]] = {}
+
+
 def _normalize_image_url(image_url: Optional[str], base_url: str) -> Optional[str]:
     """Normalize and quality-filter an image URL."""
     if not image_url:
@@ -142,6 +144,40 @@ def _normalize_image_url(image_url: Optional[str], base_url: str) -> Optional[st
     if is_likely_non_event_image(normalized):
         return None
     return normalized
+
+
+def _clean_description_text(value: Optional[str], max_len: int = 500) -> Optional[str]:
+    normalized = re.sub(r"\s+", " ", (value or "").strip())
+    if not normalized:
+        return None
+    return normalized[:max_len]
+
+
+def _extract_meta_description(html: str) -> Optional[str]:
+    if not html:
+        return None
+
+    soup = BeautifulSoup(html, "lxml")
+    for attrs in (
+        {"name": "description"},
+        {"property": "og:description"},
+        {"name": "twitter:description"},
+    ):
+        meta = soup.find("meta", attrs=attrs)
+        if not meta:
+            continue
+        content = _clean_description_text(meta.get("content"), max_len=600)
+        if content and len(content) >= 80:
+            return content
+
+    for selector in ("main p", "article p", ".entry-content p", ".content p", "body p"):
+        paragraph = soup.select_one(selector)
+        if not paragraph:
+            continue
+        text = _clean_description_text(paragraph.get_text(" ", strip=True), max_len=600)
+        if text and len(text) >= 80:
+            return text
+    return None
 
 
 def _pick_best_image_url(image_field, base_url: str) -> Optional[str]:
@@ -176,11 +212,33 @@ def _pick_best_image_url(image_field, base_url: str) -> Optional[str]:
 # Page fetching
 # ---------------------------------------------------------------------------
 
+
 def fetch_html(url: str, render_js: bool = False) -> str:
     """Fetch HTML from a URL. Optionally uses Playwright for JS-rendered pages."""
     if render_js:
         return _fetch_with_playwright(url)
     return _fetch_with_requests(url)
+
+
+def _get_page_summary(url: Optional[str], render_js: bool = False) -> Optional[str]:
+    normalized_url = (url or "").strip()
+    if not normalized_url:
+        return None
+
+    cache_key = f"{int(render_js)}:{normalized_url}"
+    if cache_key in _PAGE_SUMMARY_CACHE:
+        return _PAGE_SUMMARY_CACHE[cache_key]
+
+    try:
+        html = fetch_html(normalized_url, render_js=render_js)
+    except Exception as exc:
+        logger.debug("Summary hydration failed for %s: %s", normalized_url, exc)
+        _PAGE_SUMMARY_CACHE[cache_key] = None
+        return None
+
+    summary = _extract_meta_description(html)
+    _PAGE_SUMMARY_CACHE[cache_key] = summary
+    return summary
 
 
 def _fetch_with_requests(url: str) -> str:
@@ -289,6 +347,7 @@ def _fetch_with_playwright(url: str) -> str:
 # ---------------------------------------------------------------------------
 # Extraction strategies
 # ---------------------------------------------------------------------------
+
 
 def extract_sessions_jsonld(html: str, base_url: str) -> list[SessionData]:
     """Extract sessions from JSON-LD @type: Event blocks."""
@@ -407,7 +466,9 @@ def extract_sessions_wp_events_calendar(html: str, base_url: str) -> list[Sessio
     for selector in selectors:
         events = soup.select(selector)
         if events:
-            logger.info(f"WP Events Calendar: matched {len(events)} items via {selector}")
+            logger.info(
+                f"WP Events Calendar: matched {len(events)} items via {selector}"
+            )
             for el in events:
                 session = _parse_wp_event_element(el, base_url)
                 if session:
@@ -447,7 +508,9 @@ def _parse_clock_time(value: str) -> Optional[str]:
     return f"{hour:02d}:{minute:02d}"
 
 
-def _parse_atl_science_festival_date_block(value: str) -> tuple[Optional[str], Optional[str], Optional[str], bool]:
+def _parse_atl_science_festival_date_block(
+    value: str,
+) -> tuple[Optional[str], Optional[str], Optional[str], bool]:
     """
     Parse ASF list date text like:
       'Saturday, 03/07/2026 - 10:00am to 2:00pm'
@@ -469,7 +532,9 @@ def _parse_atl_science_festival_date_block(value: str) -> tuple[Optional[str], O
     if "all day" in text.lower():
         return start_date, None, None, True
 
-    time_tokens = re.findall(r"(\d{1,2}(?::\d{2})?\s*(?:am|pm))", text, flags=re.IGNORECASE)
+    time_tokens = re.findall(
+        r"(\d{1,2}(?::\d{2})?\s*(?:am|pm))", text, flags=re.IGNORECASE
+    )
     if not time_tokens:
         return start_date, None, None, False
 
@@ -478,7 +543,9 @@ def _parse_atl_science_festival_date_block(value: str) -> tuple[Optional[str], O
     return start_date, start_time, end_time, False
 
 
-def extract_sessions_atl_science_festival_grid(html: str, base_url: str) -> list[SessionData]:
+def extract_sessions_atl_science_festival_grid(
+    html: str, base_url: str
+) -> list[SessionData]:
     """
     Extract sessions from Atlanta Science Festival's events grid (`.event-container` cards).
     """
@@ -505,7 +572,9 @@ def extract_sessions_atl_science_festival_grid(html: str, base_url: str) -> list
             continue
 
         date_text = date_el.get_text(" ", strip=True)
-        start_date, start_time, end_time, is_all_day = _parse_atl_science_festival_date_block(date_text)
+        start_date, start_time, end_time, is_all_day = (
+            _parse_atl_science_festival_date_block(date_text)
+        )
         if not start_date:
             continue
 
@@ -685,7 +754,9 @@ def _extract_asf_description_from_detail(soup: BeautifulSoup) -> Optional[str]:
     return None
 
 
-def _extract_atl_science_festival_detail_payload(source_url: Optional[str]) -> dict[str, Optional[str]]:
+def _extract_atl_science_festival_detail_payload(
+    source_url: Optional[str],
+) -> dict[str, Optional[str]]:
     payload: dict[str, Optional[str]] = {
         "description": None,
         "venue_name": None,
@@ -754,7 +825,9 @@ def _parse_wp_event_element(el: Tag, base_url: str) -> Optional[SessionData]:
         source_url = urljoin(base_url, source_url)
 
     # Date/time from datetime attribute
-    time_el = el.select_one("time[datetime], .tribe-events-schedule time, abbr.tribe-events-abbr")
+    time_el = el.select_one(
+        "time[datetime], .tribe-events-schedule time, abbr.tribe-events-abbr"
+    )
     start_date = None
     start_time = None
     if time_el:
@@ -784,9 +857,7 @@ def _parse_wp_event_element(el: Tag, base_url: str) -> Optional[SessionData]:
 
     # Venue
     venue_el = el.select_one(
-        ".tribe-events-calendar-list__event-venue, "
-        ".tribe-venue a, "
-        ".tribe-venue"
+        ".tribe-events-calendar-list__event-venue, " ".tribe-venue a, " ".tribe-venue"
     )
     venue_name = venue_el.get_text(strip=True) if venue_el else None
 
@@ -834,8 +905,12 @@ def extract_sessions_html_table(html: str, base_url: str) -> list[SessionData]:
 
         # Look for time/title/room columns
         time_col = _find_column(headers, ["time", "start", "when", "schedule"])
-        title_col = _find_column(headers, ["title", "session", "event", "panel", "name", "description"])
-        room_col = _find_column(headers, ["room", "location", "venue", "stage", "track"])
+        title_col = _find_column(
+            headers, ["title", "session", "event", "panel", "name", "description"]
+        )
+        room_col = _find_column(
+            headers, ["room", "location", "venue", "stage", "track"]
+        )
         date_col = _find_column(headers, ["date", "day"])
 
         if title_col is None:
@@ -876,15 +951,17 @@ def extract_sessions_html_table(html: str, base_url: str) -> list[SessionData]:
                 venue_name = room_text
                 program_track = room_text
 
-            sessions.append(SessionData(
-                title=title,
-                start_date=current_date,
-                start_time=start_time,
-                end_time=end_time,
-                venue_name=venue_name,
-                program_track=program_track,
-                source_url=base_url,
-            ))
+            sessions.append(
+                SessionData(
+                    title=title,
+                    start_date=current_date,
+                    start_time=start_time,
+                    end_time=end_time,
+                    venue_name=venue_name,
+                    program_track=program_track,
+                    source_url=base_url,
+                )
+            )
 
     logger.info(f"HTML table: extracted {len(sessions)} sessions")
     return sessions
@@ -1020,7 +1097,13 @@ def extract_sessions_collect_a_con_page(html: str, base_url: str) -> list[Sessio
             category="community",
             image_url=image_url,
             source_url=normalized_url,
-            tags=["collectibles", "trading-cards", "pop-culture", "shopping", "cosplay"],
+            tags=[
+                "collectibles",
+                "trading-cards",
+                "pop-culture",
+                "shopping",
+                "cosplay",
+            ],
             ticket_url=ticket_url,
         ),
         SessionData(
@@ -1040,7 +1123,13 @@ def extract_sessions_collect_a_con_page(html: str, base_url: str) -> list[Sessio
             category="community",
             image_url=image_url,
             source_url=normalized_url,
-            tags=["collectibles", "trading-cards", "pop-culture", "shopping", "cosplay"],
+            tags=[
+                "collectibles",
+                "trading-cards",
+                "pop-culture",
+                "shopping",
+                "cosplay",
+            ],
             ticket_url=ticket_url,
         ),
     ]
@@ -1247,6 +1336,7 @@ def extract_sessions_toylanta_schedule(html: str, base_url: str) -> list[Session
             "18:00",
             "20:00",
             "Toylanta",
+            "Public general admission hours for Toylanta at Gas South Convention Center, including access to the show floor and convention programming.",
         ),
         (
             "saturday",
@@ -1255,6 +1345,7 @@ def extract_sessions_toylanta_schedule(html: str, base_url: str) -> list[Session
             "10:00",
             "18:00",
             "Toylanta",
+            "Public general admission hours for Toylanta at Gas South Convention Center, including access to the show floor and convention programming.",
         ),
         (
             "sunday",
@@ -1263,11 +1354,20 @@ def extract_sessions_toylanta_schedule(html: str, base_url: str) -> list[Session
             "10:30",
             "16:30",
             "Toylanta",
+            "Public general admission hours for Toylanta at Gas South Convention Center, including access to the show floor and convention programming.",
         ),
     ]
 
     sessions: list[SessionData] = []
-    for _day_key, pattern, start_date, start_time, end_time, title in schedules:
+    for (
+        _day_key,
+        pattern,
+        start_date,
+        start_time,
+        end_time,
+        title,
+        description,
+    ) in schedules:
         if not re.search(pattern, page_text, re.IGNORECASE | re.DOTALL):
             continue
         sessions.append(
@@ -1276,6 +1376,7 @@ def extract_sessions_toylanta_schedule(html: str, base_url: str) -> list[Session
                 start_date=start_date,
                 start_time=start_time,
                 end_time=end_time,
+                description=description,
                 venue_name=venue_name,
                 venue_address=venue_address,
                 venue_city=venue_city,
@@ -1298,6 +1399,10 @@ def extract_sessions_toylanta_schedule(html: str, base_url: str) -> list[Session
                 start_date="2026-03-28",
                 start_time="19:30",
                 end_time="22:00",
+                description=(
+                    "Toylanta's Saturday evening lobby swap, a public after-hours meetup for collectors "
+                    "and attendees at Gas South Convention Center."
+                ),
                 venue_name=venue_name,
                 venue_address=venue_address,
                 venue_city=venue_city,
@@ -1514,9 +1619,7 @@ def extract_sessions_ipms_event_page(html: str, base_url: str) -> list[SessionDa
     if not start_date:
         return []
 
-    venue_name = (
-        venue_name_el.get_text(" ", strip=True) if venue_name_el else None
-    )
+    venue_name = venue_name_el.get_text(" ", strip=True) if venue_name_el else None
     venue_address = None
     venue_city = None
     venue_state = None
@@ -1560,20 +1663,22 @@ def extract_sessions_llm(html: str, url: str, festival_name: str) -> list[Sessio
     events = extract_events(html, url, festival_name)
     sessions = []
     for ev in events:
-        sessions.append(SessionData(
-            title=ev.title,
-            start_date=ev.start_date,
-            start_time=ev.start_time,
-            end_time=ev.end_time,
-            description=ev.description,
-            venue_name=ev.venue.name if ev.venue else None,
-            category=ev.category,
-            image_url=ev.image_url,
-            source_url=ev.detail_url or url,
-            is_all_day=ev.is_all_day,
-            tags=ev.tags,
-            artists=ev.artists,
-        ))
+        sessions.append(
+            SessionData(
+                title=ev.title,
+                start_date=ev.start_date,
+                start_time=ev.start_time,
+                end_time=ev.end_time,
+                description=ev.description,
+                venue_name=ev.venue.name if ev.venue else None,
+                category=ev.category,
+                image_url=ev.image_url,
+                source_url=ev.detail_url or url,
+                is_all_day=ev.is_all_day,
+                tags=ev.tags,
+                artists=ev.artists,
+            )
+        )
 
     logger.info(f"LLM extraction: extracted {len(sessions)} sessions")
     return sessions
@@ -1586,7 +1691,11 @@ def _load_provider_overrides() -> dict[str, str]:
     try:
         payload = json.loads(_FESTIVAL_LLM_PROVIDER_OVERRIDES_PATH.read_text())
     except Exception as exc:
-        logger.warning("Unable to parse provider override file %s: %s", _FESTIVAL_LLM_PROVIDER_OVERRIDES_PATH, exc)
+        logger.warning(
+            "Unable to parse provider override file %s: %s",
+            _FESTIVAL_LLM_PROVIDER_OVERRIDES_PATH,
+            exc,
+        )
         return {}
 
     raw = payload.get("providers_by_slug", {}) if isinstance(payload, dict) else {}
@@ -1599,7 +1708,9 @@ def _load_provider_overrides() -> dict[str, str]:
     return out
 
 
-def _resolve_llm_provider_for_slug(slug: str, override_provider: Optional[str]) -> Optional[str]:
+def _resolve_llm_provider_for_slug(
+    slug: str, override_provider: Optional[str]
+) -> Optional[str]:
     if override_provider:
         return override_provider.strip().lower()
     overrides = _load_provider_overrides()
@@ -1627,20 +1738,22 @@ def _extract_sessions_llm_with_provider(
     )
     sessions = []
     for ev in events:
-        sessions.append(SessionData(
-            title=ev.title,
-            start_date=ev.start_date,
-            start_time=ev.start_time,
-            end_time=ev.end_time,
-            description=ev.description,
-            venue_name=ev.venue.name if ev.venue else None,
-            category=ev.category,
-            image_url=ev.image_url,
-            source_url=ev.detail_url or url,
-            is_all_day=ev.is_all_day,
-            tags=ev.tags,
-            artists=ev.artists,
-        ))
+        sessions.append(
+            SessionData(
+                title=ev.title,
+                start_date=ev.start_date,
+                start_time=ev.start_time,
+                end_time=ev.end_time,
+                description=ev.description,
+                venue_name=ev.venue.name if ev.venue else None,
+                category=ev.category,
+                image_url=ev.image_url,
+                source_url=ev.detail_url or url,
+                is_all_day=ev.is_all_day,
+                tags=ev.tags,
+                artists=ev.artists,
+            )
+        )
 
     if provider:
         logger.info("LLM extraction provider for %s: %s", slug, provider)
@@ -1668,8 +1781,38 @@ def _is_generic_title(title: str, festival_name: str) -> bool:
     # Same title with only year suffix variation.
     return bool(
         normalized_festival
-        and re.sub(r"\s+\d{4}$", "", normalized_title) == re.sub(r"\s+\d{4}$", "", normalized_festival)
+        and re.sub(r"\s+\d{4}$", "", normalized_title)
+        == re.sub(r"\s+\d{4}$", "", normalized_festival)
     )
+
+
+_GENERIC_FESTIVAL_PROGRAM_MARKERS = (
+    "after hours",
+    "lobby swap",
+    "general admission",
+    "show floor",
+    "daily hours",
+)
+
+
+def _build_festival_program_series_title(
+    session: SessionData, festival_name: str
+) -> str:
+    """Collapse generic schedule buckets into the parent festival program series."""
+    if session.program_track:
+        return session.program_track
+
+    title = (session.title or "").strip()
+    if not title:
+        return festival_name
+
+    normalized = title.lower()
+    if _is_generic_title(title, festival_name):
+        return festival_name
+    if any(marker in normalized for marker in _GENERIC_FESTIVAL_PROGRAM_MARKERS):
+        return festival_name
+
+    return title
 
 
 def _parse_session_date(value: Optional[str]) -> Optional[date]:
@@ -1692,7 +1835,9 @@ def _page_has_placeholder_language(page_text: Optional[str]) -> bool:
     return any(marker in normalized for marker in _PLACEHOLDER_PAGE_MARKERS)
 
 
-def _page_mentions_specific_date(page_text: Optional[str], session_date: Optional[date]) -> bool:
+def _page_mentions_specific_date(
+    page_text: Optional[str], session_date: Optional[date]
+) -> bool:
     if session_date is None:
         return False
 
@@ -1709,7 +1854,9 @@ def _page_mentions_specific_date(page_text: Optional[str], session_date: Optiona
         rf"\b{month_short}\.?\s+{day}(?:st|nd|rd|th)?\b",
         rf"\b{day}(?:st|nd|rd|th)?\s+of\s+{month_full}\b",
     ]
-    has_month_day = any(re.search(pattern, normalized) for pattern in ordinal_day_patterns)
+    has_month_day = any(
+        re.search(pattern, normalized) for pattern in ordinal_day_patterns
+    )
     return has_month_day and year in normalized
 
 
@@ -1750,17 +1897,14 @@ def _apply_llm_quality_gate(
         jan_first = bool(only_date and only_date.month == 1 and only_date.day == 1)
         has_specific_date_evidence = _page_mentions_specific_date(page_text, only_date)
         has_placeholder_language = _page_has_placeholder_language(page_text)
-        low_signal_singleton = (
-            not only.start_time
-            and (
-                has_placeholder_language
-                or jan_first
-                or (
-                    not has_specific_date_evidence
-                    and (
-                        _is_unknown_venue(only.venue_name)
-                        or _is_generic_title(only.title, festival_name)
-                    )
+        low_signal_singleton = not only.start_time and (
+            has_placeholder_language
+            or jan_first
+            or (
+                not has_specific_date_evidence
+                and (
+                    _is_unknown_venue(only.venue_name)
+                    or _is_generic_title(only.title, festival_name)
                 )
             )
         )
@@ -1768,7 +1912,9 @@ def _apply_llm_quality_gate(
             reasons.append("batch_reject:singleton_low_signal")
             return [], reasons
 
-    unknown_venue_count = sum(1 for session in kept if _is_unknown_venue(session.venue_name))
+    unknown_venue_count = sum(
+        1 for session in kept if _is_unknown_venue(session.venue_name)
+    )
     missing_time_count = sum(1 for session in kept if not session.start_time)
     has_any_specific_date_evidence = any(
         _page_mentions_specific_date(page_text, _parse_session_date(session.start_date))
@@ -1789,6 +1935,7 @@ def _apply_llm_quality_gate(
 # ---------------------------------------------------------------------------
 # Date/time parsing helpers
 # ---------------------------------------------------------------------------
+
 
 def _parse_iso_datetime(dt_str: str) -> tuple[Optional[str], Optional[str]]:
     """Parse an ISO 8601 datetime string into (date, time) or (date, None)."""
@@ -1819,10 +1966,29 @@ def _parse_iso_datetime(dt_str: str) -> tuple[Optional[str], Optional[str]]:
 
 
 MONTH_MAP = {
-    "jan": 1, "january": 1, "feb": 2, "february": 2, "mar": 3, "march": 3,
-    "apr": 4, "april": 4, "may": 5, "jun": 6, "june": 6,
-    "jul": 7, "july": 7, "aug": 8, "august": 8, "sep": 9, "september": 9,
-    "oct": 10, "october": 10, "nov": 11, "november": 11, "dec": 12, "december": 12,
+    "jan": 1,
+    "january": 1,
+    "feb": 2,
+    "february": 2,
+    "mar": 3,
+    "march": 3,
+    "apr": 4,
+    "april": 4,
+    "may": 5,
+    "jun": 6,
+    "june": 6,
+    "jul": 7,
+    "july": 7,
+    "aug": 8,
+    "august": 8,
+    "sep": 9,
+    "september": 9,
+    "oct": 10,
+    "october": 10,
+    "nov": 11,
+    "november": 11,
+    "dec": 12,
+    "december": 12,
 }
 
 
@@ -1914,6 +2080,7 @@ def _find_column(headers: list[str], keywords: list[str]) -> Optional[int]:
 # Venue resolution
 # ---------------------------------------------------------------------------
 
+
 def resolve_session_venue(
     session: SessionData,
     festival_slug: str,
@@ -1988,9 +2155,190 @@ def _find_existing_festival_session(
     return rows[0]
 
 
+def _session_label(session: SessionData) -> str:
+    combined = " ".join(
+        part
+        for part in [
+            session.title,
+            session.program_track,
+            session.venue_name,
+            " ".join(session.tags),
+        ]
+        if part
+    ).lower()
+
+    if "registration" in combined or "check-in" in combined:
+        return "registration window"
+    if "network" in combined or "meetup" in combined:
+        return "networking meetup"
+    if "party" in combined:
+        return "festival party"
+    if "workshop" in combined:
+        return "festival workshop"
+    if "panel" in combined:
+        return "festival panel"
+    if "screening" in combined or session.category == "film":
+        return "festival screening"
+    if session.category == "music":
+        return "festival music session"
+    if session.category == "comedy":
+        return "festival comedy set"
+    if session.category == "words":
+        return "festival spoken-word session"
+    return "festival session"
+
+
+def _build_factual_festival_session_description(
+    session: SessionData,
+    festival_name: str,
+) -> Optional[str]:
+    existing = _clean_description_text(session.description)
+    if existing and len(existing) >= 100:
+        return existing
+
+    page_summary = None
+    if session.source_url and (not existing or len(existing) < 100):
+        candidate_summary = _get_page_summary(session.source_url, render_js=False)
+        if candidate_summary and (
+            not existing or len(candidate_summary) > len(existing)
+        ):
+            page_summary = candidate_summary
+
+    title = (session.title or "").strip()
+    festival = (festival_name or "").strip() or "the festival"
+    label = _session_label(session)
+    formatted_start_time = None
+    if session.start_time:
+        start_text = str(session.start_time).strip()
+        time_match = re.match(r"^(\d{1,2}:\d{2})(?::\d{2})?$", start_text)
+        formatted_start_time = time_match.group(1) if time_match else start_text
+
+    if title and title.lower() == festival.lower():
+        lead = f"{festival} is part of the published {festival} schedule."
+    elif title:
+        lead = f"{title} is a {label} during {festival}."
+    else:
+        lead = f"This is a {label} during {festival}."
+
+    parts = [lead]
+    if session.venue_name:
+        parts.append(f"Location: {session.venue_name}.")
+    if session.program_track and session.program_track != session.venue_name:
+        parts.append(f"Track: {session.program_track}.")
+    if formatted_start_time and not session.is_all_day:
+        parts.append(f"Scheduled start: {formatted_start_time}.")
+    if page_summary:
+        parts.append(page_summary)
+    if existing and not page_summary and len(existing) >= 40:
+        parts.append(existing)
+
+    return _clean_description_text(" ".join(parts))
+
+
+def _extract_page_year(html: str, fallback_year: Optional[int] = None) -> int:
+    fallback = fallback_year or datetime.utcnow().year
+    soup = BeautifulSoup(html, "lxml")
+
+    candidates: list[str] = []
+    title = soup.title.get_text(" ", strip=True) if soup.title else ""
+    if title:
+        candidates.append(title)
+
+    for attrs in (
+        {"property": "og:title"},
+        {"name": "twitter:title"},
+        {"name": "description"},
+        {"property": "og:description"},
+    ):
+        meta = soup.find("meta", attrs=attrs)
+        if meta and meta.get("content"):
+            candidates.append(str(meta["content"]))
+
+    for text in candidates:
+        years = [int(match) for match in re.findall(r"\b(20\d{2})\b", text)]
+        if years:
+            return max(years)
+    return fallback
+
+
+def _parse_month_day_tab_label(label: str, year: int) -> Optional[str]:
+    cleaned = re.sub(r"\s+", " ", (label or "").strip())
+    if not cleaned:
+        return None
+    for fmt in ("%b %d %Y", "%B %d %Y"):
+        try:
+            return datetime.strptime(f"{cleaned} {year}", fmt).strftime("%Y-%m-%d")
+        except ValueError:
+            continue
+    return None
+
+
+def extract_sessions_tabbed_button_schedule(
+    html: str, base_url: str
+) -> list[SessionData]:
+    """Extract sessions from tabbed Radix/React schedules like Render ATL."""
+    soup = BeautifulSoup(html, "lxml")
+    tabs = soup.find_all(attrs={"role": "tab"})
+    if not tabs:
+        return []
+
+    year = _extract_page_year(html)
+    sessions: list[SessionData] = []
+
+    for tab in tabs:
+        tab_label = tab.get_text(" ", strip=True)
+        start_date = _parse_month_day_tab_label(tab_label, year)
+        panel_id = tab.get("aria-controls")
+        if not start_date or not panel_id:
+            continue
+
+        panel = soup.find(id=panel_id)
+        if not panel:
+            continue
+
+        for row in panel.find_all(attrs={"role": "button"}):
+            cols = row.find_all("div", recursive=False)
+            if len(cols) < 3:
+                continue
+
+            time_text = cols[0].get_text(" ", strip=True)
+            title = cols[1].get_text(" ", strip=True)
+            venue_name = cols[2].get_text(" ", strip=True)
+            if not title or len(title) < 3:
+                continue
+
+            start_time, end_time = (None, None)
+            if "tbd" not in time_text.lower():
+                start_time, end_time = _parse_time_range_text(time_text)
+
+            program_track = None
+            if len(cols) >= 4:
+                program_track = cols[3].get_text(" ", strip=True) or None
+
+            title_lower = title.lower()
+            if "registration opens" in title_lower:
+                continue
+
+            sessions.append(
+                SessionData(
+                    title=title,
+                    start_date=start_date,
+                    start_time=start_time,
+                    end_time=end_time,
+                    venue_name=venue_name or None,
+                    program_track=program_track,
+                    source_url=base_url,
+                )
+            )
+
+    logger.info(f"Tabbed button schedule: extracted {len(sessions)} sessions")
+    return sessions
+
+
 # ---------------------------------------------------------------------------
 # Session insertion
 # ---------------------------------------------------------------------------
+
 
 def insert_sessions(
     sessions: list[SessionData],
@@ -2012,9 +2360,7 @@ def insert_sessions(
         # Festival programs can repeat with identical title/date at different times.
         if session.start_time:
             hash_title = f"{hash_title} {session.start_time}"
-        content_hash = generate_content_hash(
-            hash_title, hash_scope, session.start_date
-        )
+        content_hash = generate_content_hash(hash_title, hash_scope, session.start_date)
 
         existing = find_event_by_hash(content_hash)
         if existing and existing.get("canonical_event_id") is not None:
@@ -2060,15 +2406,21 @@ def insert_sessions(
         # Build series hint for festival program linking
         series_hint = {
             "series_type": "festival_program",
-            "series_title": session.program_track or session.title,
+            "series_title": _build_festival_program_series_title(
+                session, festival_name
+            ),
             "festival_name": festival_name,
         }
+
+        description = _build_factual_festival_session_description(
+            session, festival_name
+        )
 
         event_record = {
             "source_id": source_id,
             "place_id": venue_id,
             "title": session.title,
-            "description": session.description,
+            "description": description,
             "start_date": session.start_date,
             "start_time": session.start_time,
             "end_date": None,
@@ -2084,30 +2436,18 @@ def insert_sessions(
             "is_recurring": False,
         }
 
-        if existing:
-            incoming_update = dict(event_record)
-            incoming_update["category_id"] = incoming_update.pop("category")
-            incoming_update["id"] = existing["id"]
-
-            smart_update_existing_event(existing, incoming_update)
-
-            _existing_place_id = existing.get("place_id") or existing.get("venue_id")
-            if session.venue_name and _existing_place_id != venue_id:
-                update_event(existing["id"], {"place_id": venue_id})
-                logger.info(
-                    "Updated venue for existing session: %s (%s -> %s)",
-                    session.title,
-                    _existing_place_id,
-                    venue_id,
-                )
-
-            skipped += 1
-            continue
-
         try:
             insert_event(event_record, series_hint=series_hint)
-            new += 1
-            logger.info(f"Added: {session.title} on {session.start_date}")
+            if existing:
+                skipped += 1
+                logger.info(
+                    "Updated existing festival session via insert pipeline: %s on %s",
+                    session.title,
+                    session.start_date,
+                )
+            else:
+                new += 1
+                logger.info(f"Added: {session.title} on {session.start_date}")
         except Exception as e:
             logger.error(f"Failed to insert {session.title}: {e}")
             skipped += 1
@@ -2118,6 +2458,7 @@ def insert_sessions(
 # ---------------------------------------------------------------------------
 # Main orchestration
 # ---------------------------------------------------------------------------
+
 
 def crawl_festival_schedule(
     slug: str,
@@ -2194,6 +2535,9 @@ def crawl_festival_schedule(
             sessions = extract_sessions_html_table(html, url)
 
         if not sessions:
+            sessions = extract_sessions_tabbed_button_schedule(html, url)
+
+        if not sessions:
             sessions = extract_sessions_collect_a_con_page(html, url)
 
         if not sessions:
@@ -2259,16 +2603,25 @@ def crawl_festival_schedule(
 # CLI
 # ---------------------------------------------------------------------------
 
+
 def main():
     parser = argparse.ArgumentParser(
         description="Crawl a festival schedule page for program sessions"
     )
     parser.add_argument("--slug", required=True, help="Festival source slug")
     parser.add_argument("--url", required=True, help="Schedule page URL")
-    parser.add_argument("--render-js", action="store_true", help="Use Playwright for JS rendering")
+    parser.add_argument(
+        "--render-js", action="store_true", help="Use Playwright for JS rendering"
+    )
     parser.add_argument("--use-llm", action="store_true", help="Force LLM extraction")
-    parser.add_argument("--llm-provider", choices=["openai", "anthropic"], help="Override LLM provider for this run")
-    parser.add_argument("--llm-model", help="Override model name for the selected provider")
+    parser.add_argument(
+        "--llm-provider",
+        choices=["openai", "anthropic"],
+        help="Override LLM provider for this run",
+    )
+    parser.add_argument(
+        "--llm-model", help="Override model name for the selected provider"
+    )
     parser.add_argument("--dry-run", action="store_true", help="Log without inserting")
     parser.add_argument("--verbose", action="store_true", help="Enable debug logging")
 

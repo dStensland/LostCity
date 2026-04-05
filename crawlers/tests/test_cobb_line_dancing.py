@@ -26,6 +26,12 @@ def test_parse_session_builds_recurring_line_dancing_class():
 
     assert parsed is not None
     assert parsed["title"] == "LINE DANCING at South Cobb Recreation Center"
+    assert (
+        parsed["description"]
+        == "LINE DANCING at South Cobb Recreation Center. "
+        "Public line dancing class through Cobb County Parks. "
+        "Reserve through the official county catalog for current availability."
+    )
     assert parsed["start_time"] == "18:30"
     assert parsed["end_time"] == "20:30"
     assert parsed["price_min"] == 30.0

@@ -16,6 +16,17 @@ logger = logging.getLogger(__name__)
 _SERIES_VENUE_SCOPE_COLUMN: Optional[str] = None
 
 
+def _is_blank_series_value(value) -> bool:
+    """Treat None, empty collections, and whitespace-only strings as missing."""
+    if value is None:
+        return True
+    if isinstance(value, str):
+        return not value.strip()
+    if isinstance(value, (list, dict, tuple, set)):
+        return len(value) == 0
+    return False
+
+
 def _series_venue_column() -> Optional[str]:
     """Return the active series venue foreign-key column, if supported."""
     global _SERIES_VENUE_SCOPE_COLUMN
@@ -57,10 +68,10 @@ def _detect_series_venue_column(client: Client) -> Optional[str]:
 def slugify(text: str) -> str:
     """Generate a URL-friendly slug from text."""
     slug = text.lower()
-    slug = re.sub(r'[^a-z0-9\s-]', '', slug)
-    slug = re.sub(r'\s+', '-', slug)
-    slug = re.sub(r'-+', '-', slug)
-    return slug.strip('-')
+    slug = re.sub(r"[^a-z0-9\s-]", "", slug)
+    slug = re.sub(r"\s+", "-", slug)
+    slug = re.sub(r"-+", "-", slug)
+    return slug.strip("-")
 
 
 def infer_festival_type(festival_name: str) -> Optional[str]:
@@ -150,21 +161,36 @@ def resolve_festival_id(
     for candidate in {festival_name, slugify(festival_name)}:
         if not candidate:
             continue
-        result = client.table("festivals").select("id, festival_type, website").eq("slug", candidate).execute()
+        result = (
+            client.table("festivals")
+            .select("id, festival_type, website")
+            .eq("slug", candidate)
+            .execute()
+        )
         if result.data:
             existing = result.data[0]
             _maybe_update(existing)
             return existing["id"]
 
     # Try exact name match (case-insensitive)
-    result = client.table("festivals").select("id, festival_type, website").ilike("name", festival_name).execute()
+    result = (
+        client.table("festivals")
+        .select("id, festival_type, website")
+        .ilike("name", festival_name)
+        .execute()
+    )
     if result.data:
         existing = result.data[0]
         _maybe_update(existing)
         return existing["id"]
 
     # Try partial name match as a fallback
-    result = client.table("festivals").select("id, festival_type, website").ilike("name", f"%{festival_name}%").execute()
+    result = (
+        client.table("festivals")
+        .select("id, festival_type, website")
+        .ilike("name", f"%{festival_name}%")
+        .execute()
+    )
     if result.data:
         existing = result.data[0]
         _maybe_update(existing)
@@ -181,11 +207,11 @@ def normalize_title(title: str) -> str:
     # Remove common prefixes/suffixes
     title = title.lower().strip()
     # Remove year in parentheses
-    title = re.sub(r'\s*\(\d{4}\)\s*', '', title)
+    title = re.sub(r"\s*\(\d{4}\)\s*", "", title)
     # Remove screening/showing qualifiers
-    title = re.sub(r'\s*(screening|showing|presentation|special)\s*', '', title)
+    title = re.sub(r"\s*(screening|showing|presentation|special)\s*", "", title)
     # Remove "the" prefix
-    title = re.sub(r'^the\s+', '', title)
+    title = re.sub(r"^the\s+", "", title)
 
     # Strip trailing date suffixes so "Open Mic Night | Feb 25" and
     # "Open Mic Night | Mar 4" collapse to the same series slug.
@@ -196,30 +222,32 @@ def normalize_title(title: str) -> str:
 
     # "Title | Feb 25"  /  "Title — Feb 25, 2026"  /  "Title - February 25th"
     title = re.sub(
-        rf'\s*[|–—\-]\s*(?:{_MONTH_NAMES})\.?\s+\d{{1,2}}(?:st|nd|rd|th)?(?:\s*,?\s*\d{{4}})?\s*$',
-        '', title)
+        rf"\s*[|–—\-]\s*(?:{_MONTH_NAMES})\.?\s+\d{{1,2}}(?:st|nd|rd|th)?(?:\s*,?\s*\d{{4}})?\s*$",
+        "",
+        title,
+    )
 
     # "Title | 02/25"  /  "Title — 02/25/2026"  /  "Title - 02-25-26"
-    title = re.sub(
-        r'\s*[|–—\-]\s*\d{1,2}[/\-]\d{1,2}(?:[/\-]\d{2,4})?\s*$',
-        '', title)
+    title = re.sub(r"\s*[|–—\-]\s*\d{1,2}[/\-]\d{1,2}(?:[/\-]\d{2,4})?\s*$", "", title)
 
     # "Title (Feb 25)"  /  "Title (February 25, 2026)"  /  "Title (Feb 25th)"
     title = re.sub(
-        rf'\s*\(\s*(?:{_MONTH_NAMES})\.?\s+\d{{1,2}}(?:st|nd|rd|th)?(?:\s*,?\s*\d{{4}})?\s*\)',
-        '', title)
+        rf"\s*\(\s*(?:{_MONTH_NAMES})\.?\s+\d{{1,2}}(?:st|nd|rd|th)?(?:\s*,?\s*\d{{4}})?\s*\)",
+        "",
+        title,
+    )
 
     # "Title (2/25)"  /  "Title (02/25/2026)"
-    title = re.sub(
-        r'\s*\(\s*\d{1,2}[/\-]\d{1,2}(?:[/\-]\d{2,4})?\s*\)',
-        '', title)
+    title = re.sub(r"\s*\(\s*\d{1,2}[/\-]\d{1,2}(?:[/\-]\d{2,4})?\s*\)", "", title)
 
     # "Trivia Tuesday February 25, 2026" — trailing month+day without delimiter.
     # Only strip when both month and day are present to avoid eating "May Day
     # Celebration" or "March for Justice".
     title = re.sub(
-        rf'\s+(?:{_MONTH_NAMES})\.?\s+\d{{1,2}}(?:st|nd|rd|th)?(?:\s*,?\s*\d{{4}})?\s*$',
-        '', title)
+        rf"\s+(?:{_MONTH_NAMES})\.?\s+\d{{1,2}}(?:st|nd|rd|th)?(?:\s*,?\s*\d{{4}})?\s*$",
+        "",
+        title,
+    )
 
     return title.strip()
 
@@ -243,13 +271,10 @@ def find_series_by_title(
     rec centers does not collapse into a single series record.
     """
     normalized = normalize_title(title)
-    use_day = (
-        day_of_week
-        and series_type in ("recurring_show", "class_series")
-    )
-    use_venue = (
-        venue_id is not None
-        and series_type in ("recurring_show", "class_series")
+    use_day = day_of_week and series_type in ("recurring_show", "class_series")
+    use_venue = venue_id is not None and series_type in (
+        "recurring_show",
+        "class_series",
     )
     venue_column = _detect_series_venue_column(client) if use_venue else None
 
@@ -320,7 +345,9 @@ def create_series(client: Client, series_data: dict) -> dict:
     series_data["slug"] = slug
 
     result = client.table("series").insert(series_data).execute()
-    logger.info(f"Created new series: {series_data.get('title')} ({series_data.get('series_type')})")
+    logger.info(
+        f"Created new series: {series_data.get('title')} ({series_data.get('series_type')})"
+    )
     return result.data[0]
 
 
@@ -380,10 +407,42 @@ def get_or_create_series(
         venue_id=hint_venue_id,
     )
     if existing:
-        # Touch last_verified_at + backfill festival_id if missing
+        # Touch last_verified_at + backfill missing metadata from the new hint.
         touch_updates = {"last_verified_at": datetime.now(timezone.utc).isoformat()}
-        if festival_id and not existing.get("festival_id"):
+        if festival_id and _is_blank_series_value(existing.get("festival_id")):
             touch_updates["festival_id"] = festival_id
+        if series_type == "film":
+            for field in (
+                "director",
+                "runtime_minutes",
+                "year",
+                "rating",
+                "description",
+                "image_url",
+                "imdb_id",
+            ):
+                if not _is_blank_series_value(
+                    series_hint.get(field)
+                ) and _is_blank_series_value(existing.get(field)):
+                    touch_updates[field] = series_hint[field]
+        if series_type in ("recurring_show", "class_series", "festival_program"):
+            for field in (
+                "frequency",
+                "day_of_week",
+                "start_time",
+                "description",
+                "image_url",
+                "price_note",
+                "confidence",
+            ):
+                if not _is_blank_series_value(
+                    series_hint.get(field)
+                ) and _is_blank_series_value(existing.get(field)):
+                    touch_updates[field] = series_hint[field]
+        if not _is_blank_series_value(
+            series_hint.get("genres")
+        ) and _is_blank_series_value(existing.get("genres")):
+            touch_updates["genres"] = series_hint["genres"]
         client.table("series").update(touch_updates).eq("id", existing["id"]).execute()
         logger.debug(f"Found existing series: {series_title}")
         return existing["id"]
@@ -397,7 +456,9 @@ def get_or_create_series(
 
     # Validate category
     if category and category not in VALID_CATEGORIES:
-        logger.warning(f"Invalid series category '{category}' for '{series_title}' - setting to None")
+        logger.warning(
+            f"Invalid series category '{category}' for '{series_title}' - setting to None"
+        )
         category = None
 
     # Create new series
@@ -411,12 +472,23 @@ def get_or_create_series(
         series_data["festival_id"] = festival_id
 
     venue_column = _detect_series_venue_column(client)
-    if hint_venue_id and venue_column and series_type in ("class_series", "recurring_show"):
+    if (
+        hint_venue_id
+        and venue_column
+        and series_type in ("class_series", "recurring_show")
+    ):
         series_data[venue_column] = hint_venue_id
 
     # Add film-specific fields
     if series_type == "film":
-        for field in ("director", "runtime_minutes", "year", "rating", "description", "image_url"):
+        for field in (
+            "director",
+            "runtime_minutes",
+            "year",
+            "rating",
+            "description",
+            "image_url",
+        ):
             if series_hint.get(field):
                 series_data[field] = series_hint[field]
         if imdb_id:
@@ -424,8 +496,16 @@ def get_or_create_series(
 
     # Add recurring show / class series / festival program fields
     if series_type in ("recurring_show", "class_series", "festival_program"):
-        for field in ("frequency", "day_of_week", "start_time", "description", "image_url",
-                      "price_note", "last_verified_at", "confidence"):
+        for field in (
+            "frequency",
+            "day_of_week",
+            "start_time",
+            "description",
+            "image_url",
+            "price_note",
+            "last_verified_at",
+            "confidence",
+        ):
             if series_hint.get(field):
                 series_data[field] = series_hint[field]
 
@@ -446,7 +526,9 @@ def get_or_create_series(
             venue_image = (venue_result.data or {}).get("image_url")
             if venue_image:
                 series_data["image_url"] = venue_image
-                logger.debug(f"Using venue image as series fallback for venue_id={hint_venue_id}")
+                logger.debug(
+                    f"Using venue image as series fallback for venue_id={hint_venue_id}"
+                )
         except Exception as exc:
             logger.debug(f"Could not fetch venue image for series fallback: {exc}")
 
@@ -481,14 +563,18 @@ def update_series_metadata(client: Client, series_id: str, updates: dict) -> boo
     # Only update fields that are currently NULL
     fields_to_set = {}
     for key, value in updates.items():
-        if value is not None and existing.get(key) is None:
+        if not _is_blank_series_value(value) and _is_blank_series_value(
+            existing.get(key)
+        ):
             fields_to_set[key] = value
 
     # Always touch last_verified_at when metadata is updated
     fields_to_set["last_verified_at"] = datetime.now(timezone.utc).isoformat()
 
     client.table("series").update(fields_to_set).eq("id", series_id).execute()
-    logger.info(f"Backfilled series {existing.get('title', series_id)}: {list(fields_to_set.keys())}")
+    logger.info(
+        f"Backfilled series {existing.get('title', series_id)}: {list(fields_to_set.keys())}"
+    )
     return True
 
 
@@ -498,7 +584,9 @@ def link_event_to_series(client: Client, event_id: int, series_id: str) -> None:
     logger.debug(f"Linked event {event_id} to series {series_id}")
 
 
-def process_event_series(client: Client, event_id: int, series_hint: dict, category: str = None) -> Optional[str]:
+def process_event_series(
+    client: Client, event_id: int, series_hint: dict, category: str = None
+) -> Optional[str]:
     """
     Process series association for an event.
     Returns series_id if event was linked to a series.
@@ -509,12 +597,15 @@ def process_event_series(client: Client, event_id: int, series_hint: dict, categ
     return series_id
 
 
-def get_series_events(client: Client, series_id: str, future_only: bool = True) -> list[dict]:
+def get_series_events(
+    client: Client, series_id: str, future_only: bool = True
+) -> list[dict]:
     """Get all events for a series."""
     query = client.table("events").select("*, venues(*)").eq("series_id", series_id)
 
     if future_only:
         from datetime import date
+
         query = query.gte("start_date", date.today().isoformat())
 
     result = query.order("start_date", "start_time").execute()
@@ -531,7 +622,7 @@ def get_active_series(
     client: Client,
     series_type: Optional[str] = None,
     category: Optional[str] = None,
-    limit: int = 50
+    limit: int = 50,
 ) -> list[dict]:
     """Get active series with upcoming events."""
     query = client.table("series").select("*").eq("is_active", True)

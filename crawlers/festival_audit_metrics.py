@@ -132,6 +132,22 @@ def _parse_date(value: Any) -> Optional[date]:
         return None
 
 
+def _is_past_cycle_pending_only(festival: dict[str, Any], snapshot_date: date) -> bool:
+    announced_start = _parse_date(festival.get("announced_start"))
+    if announced_start:
+        return False
+
+    pending_end = _parse_date(festival.get("pending_end")) or _parse_date(
+        festival.get("pending_start")
+    )
+    if not pending_end or pending_end >= snapshot_date:
+        return False
+
+    return (
+        str(festival.get("date_source") or "").strip().lower() == "auto-demoted-stale"
+    )
+
+
 def _fetch_rows(
     table: str,
     fields: str,
@@ -162,6 +178,18 @@ def _fetch_rows(
     return rows
 
 
+def _is_active_event(row: dict[str, Any]) -> bool:
+    return row.get("is_active") is not False
+
+
+def _is_structurally_active_series(
+    row: dict[str, Any], active_event_count_by_series: dict[str, int]
+) -> bool:
+    if active_event_count_by_series.get(row.get("id"), 0) > 0:
+        return True
+    return row.get("is_active") is not False
+
+
 def compute_festival_audit_snapshot(*, today: Optional[date] = None) -> dict[str, Any]:
     snapshot_date = today or date.today()
 
@@ -171,22 +199,26 @@ def compute_festival_audit_snapshot(*, today: Optional[date] = None) -> dict[str
     )
     series = _fetch_rows(
         "series",
-        "id,title,slug,series_type,festival_id,description",
+        "id,title,slug,series_type,festival_id,description,is_active",
         query_builder=lambda q: q.not_.is_("festival_id", "null"),
     )
     events_with_series = _fetch_rows(
         "events",
-        "id,title,series_id,festival_id,start_date,end_date,description,source_id,venue_id,is_live,is_class",
+        "id,title,series_id,festival_id,start_date,end_date,description,source_id,place_id,is_live,is_class,is_tentpole,is_active",
         query_builder=lambda q: q.not_.is_("series_id", "null"),
     )
     events_with_direct_festival = _fetch_rows(
         "events",
-        "id,title,series_id,festival_id,start_date,end_date,description,source_id,venue_id,is_live,is_class",
-        query_builder=lambda q: q.is_("series_id", "null").not_.is_("festival_id", "null"),
+        "id,title,series_id,festival_id,start_date,end_date,description,source_id,place_id,is_live,is_class,is_tentpole,is_active",
+        query_builder=lambda q: q.is_("series_id", "null").not_.is_(
+            "festival_id", "null"
+        ),
     )
     events: list[dict[str, Any]] = []
     events_by_id: dict[Any, dict[str, Any]] = {}
     for event in events_with_series + events_with_direct_festival:
+        if not _is_active_event(event):
+            continue
         event_id = event.get("id")
         if event_id in events_by_id:
             continue
@@ -195,16 +227,12 @@ def compute_festival_audit_snapshot(*, today: Optional[date] = None) -> dict[str
     sources = _fetch_rows("sources", "id,slug,name")
 
     source_slug_by_id = {
-        row.get("id"): (row.get("slug") or row.get("name") or "unknown") for row in sources
+        row.get("id"): (row.get("slug") or row.get("name") or "unknown")
+        for row in sources
     }
 
     series_by_id = {row["id"]: row for row in series}
     series_ids = set(series_by_id.keys())
-    series_by_festival: dict[str, list[dict[str, Any]]] = defaultdict(list)
-    for row in series:
-        festival_id = row.get("festival_id")
-        if festival_id:
-            series_by_festival[festival_id].append(row)
 
     events_by_series: dict[str, list[dict[str, Any]]] = defaultdict(list)
     events_by_festival: dict[str, list[dict[str, Any]]] = defaultdict(list)
@@ -228,8 +256,25 @@ def compute_festival_audit_snapshot(*, today: Optional[date] = None) -> dict[str
             unique[event.get("id")] = event
         events_by_festival[festival_id] = list(unique.values())
 
+    active_event_count_by_series = {
+        series_id: len(series_events)
+        for series_id, series_events in events_by_series.items()
+    }
+    active_series = [
+        row
+        for row in series
+        if _is_structurally_active_series(row, active_event_count_by_series)
+    ]
+    series_by_festival: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for row in active_series:
+        festival_id = row.get("festival_id")
+        if festival_id:
+            series_by_festival[festival_id].append(row)
+
     all_festival_events = [
-        event for event in events if event.get("series_id") in series_ids or event.get("festival_id")
+        event
+        for event in events
+        if event.get("series_id") in series_ids or event.get("festival_id")
     ]
 
     scope_cutoff = snapshot_date - timedelta(days=ACTIVE_SCOPE_DAYS)
@@ -246,7 +291,9 @@ def compute_festival_audit_snapshot(*, today: Optional[date] = None) -> dict[str
         linked_event_dates = sorted(
             [
                 parsed
-                for parsed in [_parse_date(event.get("start_date")) for event in linked_events]
+                for parsed in [
+                    _parse_date(event.get("start_date")) for event in linked_events
+                ]
                 if parsed is not None
             ]
         )
@@ -258,7 +305,9 @@ def compute_festival_audit_snapshot(*, today: Optional[date] = None) -> dict[str
             last_year_start,
             latest_event_date,
         ]
-        scope_anchor = max([candidate for candidate in anchor_candidates if candidate], default=None)
+        scope_anchor = max(
+            [candidate for candidate in anchor_candidates if candidate], default=None
+        )
         in_scope = bool(scope_anchor and scope_anchor >= scope_cutoff)
         if in_scope:
             in_scope_festival_ids.add(festival_id)
@@ -272,15 +321,21 @@ def compute_festival_audit_snapshot(*, today: Optional[date] = None) -> dict[str
             }
         )
 
-    scoped_festivals = [row for row in festivals if row.get("id") in in_scope_festival_ids]
-    scoped_series = [row for row in series if row.get("festival_id") in in_scope_festival_ids]
+    scoped_festivals = [
+        row for row in festivals if row.get("id") in in_scope_festival_ids
+    ]
+    scoped_series = [
+        row for row in active_series if row.get("festival_id") in in_scope_festival_ids
+    ]
     scoped_series_ids = {row.get("id") for row in scoped_series}
     scoped_event_ids = {
         event.get("id")
         for festival_id in in_scope_festival_ids
         for event in events_by_festival.get(festival_id, [])
     }
-    scoped_festival_events = [row for row in events if row.get("id") in scoped_event_ids]
+    scoped_festival_events = [
+        row for row in events if row.get("id") in scoped_event_ids
+    ]
     scoped_festival_program_series = [
         row for row in scoped_series if row.get("series_type") == "festival_program"
     ]
@@ -291,19 +346,24 @@ def compute_festival_audit_snapshot(*, today: Optional[date] = None) -> dict[str
     if not scoped_festivals:
         in_scope_festival_ids = {row.get("id") for row in festivals}
         scoped_festivals = festivals
-        scoped_series = series
+        scoped_series = active_series
         scoped_series_ids = {row.get("id") for row in scoped_series}
         scoped_festival_events = events
         scoped_festival_program_series = festival_program_series = [
-            row for row in series if row.get("series_type") == "festival_program"
+            row for row in active_series if row.get("series_type") == "festival_program"
         ]
-        scoped_non_program_series = [row for row in series if row.get("series_type") != "festival_program"]
+        scoped_non_program_series = [
+            row for row in active_series if row.get("series_type") != "festival_program"
+        ]
     else:
-        festival_program_series = [row for row in series if row.get("series_type") == "festival_program"]
+        festival_program_series = [
+            row for row in active_series if row.get("series_type") == "festival_program"
+        ]
 
     # Date integrity
     festival_missing_all_dates: list[dict[str, Any]] = []
     festival_missing_announced_start: list[dict[str, Any]] = []
+    festival_past_cycle_pending_only: list[dict[str, Any]] = []
     festival_inverted_announced_range: list[dict[str, Any]] = []
     festival_announced_duration_gt30d: list[dict[str, Any]] = []
     festivals_with_events_outside_announced_window: list[dict[str, Any]] = []
@@ -325,13 +385,24 @@ def compute_festival_audit_snapshot(*, today: Optional[date] = None) -> dict[str
                 }
             )
 
-        if not announced_start:
+        if _is_past_cycle_pending_only(festival, snapshot_date):
+            festival_past_cycle_pending_only.append(
+                {
+                    "slug": festival.get("slug"),
+                    "name": festival.get("name"),
+                    "pending_start": festival.get("pending_start"),
+                    "pending_end": festival.get("pending_end"),
+                    "date_source": festival.get("date_source"),
+                }
+            )
+        elif not announced_start:
             festival_missing_announced_start.append(
                 {
                     "slug": festival.get("slug"),
                     "name": festival.get("name"),
                     "pending_start": festival.get("pending_start"),
                     "last_year_start": festival.get("last_year_start"),
+                    "date_source": festival.get("date_source"),
                 }
             )
 
@@ -376,7 +447,9 @@ def compute_festival_audit_snapshot(*, today: Optional[date] = None) -> dict[str
                             "title": event.get("title"),
                             "date": str(event_date),
                             "series_title": series_title,
-                            "source_slug": source_slug_by_id.get(event.get("source_id"), "unknown"),
+                            "source_slug": source_slug_by_id.get(
+                                event.get("source_id"), "unknown"
+                            ),
                         }
                     )
 
@@ -418,10 +491,15 @@ def compute_festival_audit_snapshot(*, today: Optional[date] = None) -> dict[str
     series_missing_description: list[dict[str, Any]] = []
     series_short_description: list[dict[str, Any]] = []
     series_quality_descriptions = 0
+    series_missing_by_festival: Counter[str] = Counter()
+    series_short_by_festival: Counter[str] = Counter()
 
     for row in scoped_series:
         description = (row.get("description") or "").strip()
         if not description:
+            festival_id = row.get("festival_id")
+            if festival_id:
+                series_missing_by_festival[festival_id] += 1
             series_missing_description.append(
                 {
                     "series_id": row.get("id"),
@@ -432,6 +510,9 @@ def compute_festival_audit_snapshot(*, today: Optional[date] = None) -> dict[str
             )
             continue
         if len(description) < 80:
+            festival_id = row.get("festival_id")
+            if festival_id:
+                series_short_by_festival[festival_id] += 1
             series_short_description.append(
                 {
                     "series_id": row.get("id"),
@@ -447,7 +528,8 @@ def compute_festival_audit_snapshot(*, today: Optional[date] = None) -> dict[str
     festival_events = [
         event
         for event in scoped_festival_events
-        if event.get("series_id") in scoped_series_ids or event.get("festival_id") in in_scope_festival_ids
+        if event.get("series_id") in scoped_series_ids
+        or event.get("festival_id") in in_scope_festival_ids
     ]
     event_missing_description: list[dict[str, Any]] = []
     event_short_description: list[dict[str, Any]] = []
@@ -491,12 +573,17 @@ def compute_festival_audit_snapshot(*, today: Optional[date] = None) -> dict[str
     large_spread_program_series: list[dict[str, Any]] = []
     program_multi_source_series: list[dict[str, Any]] = []
     source_program_counter: Counter[str] = Counter()
+    ghost_program_by_festival: Counter[str] = Counter()
+    single_program_by_festival: Counter[str] = Counter()
 
     for row in scoped_festival_program_series:
         series_events = events_by_series.get(row.get("id"), [])
         event_count = len(series_events)
+        festival_id = row.get("festival_id")
 
         if event_count == 0:
+            if festival_id:
+                ghost_program_by_festival[festival_id] += 1
             ghost_program_series.append(
                 {
                     "series_id": row.get("id"),
@@ -505,6 +592,8 @@ def compute_festival_audit_snapshot(*, today: Optional[date] = None) -> dict[str
                 }
             )
         elif event_count == 1:
+            if festival_id:
+                single_program_by_festival[festival_id] += 1
             single_program_series.append(
                 {
                     "series_id": row.get("id"),
@@ -513,14 +602,19 @@ def compute_festival_audit_snapshot(*, today: Optional[date] = None) -> dict[str
                 }
             )
 
-        source_ids = {event.get("source_id") for event in series_events if event.get("source_id")}
+        source_ids = {
+            event.get("source_id") for event in series_events if event.get("source_id")
+        }
         if len(source_ids) > 1:
             program_multi_source_series.append(
                 {
                     "series_id": row.get("id"),
                     "title": row.get("title"),
                     "source_count": len(source_ids),
-                    "sources": [source_slug_by_id.get(sid, "unknown") for sid in sorted(source_ids)],
+                    "sources": [
+                        source_slug_by_id.get(sid, "unknown")
+                        for sid in sorted(source_ids)
+                    ],
                 }
             )
 
@@ -553,7 +647,62 @@ def compute_festival_audit_snapshot(*, today: Optional[date] = None) -> dict[str
         for slug, count in source_program_counter.items()
         if count >= 5
     ]
-    fragmented_sources.sort(key=lambda item: item["festival_program_series"], reverse=True)
+    fragmented_sources.sort(
+        key=lambda item: item["festival_program_series"], reverse=True
+    )
+
+    festival_slug_by_id = {
+        row.get("id"): (row.get("slug") or row.get("name") or "unknown")
+        for row in festivals
+    }
+
+    top_ghost_program_festivals = sorted(
+        (
+            {
+                "festival_id": festival_id,
+                "slug": festival_slug_by_id.get(festival_id, "unknown"),
+                "ghost_program_series": count,
+            }
+            for festival_id, count in ghost_program_by_festival.items()
+        ),
+        key=lambda row: (-row["ghost_program_series"], row["slug"]),
+    )
+    top_orphan_program_festivals = sorted(
+        (
+            {
+                "festival_id": festival_id,
+                "slug": festival_slug_by_id.get(festival_id, "unknown"),
+                "orphan_program_series": ghost_program_by_festival.get(festival_id, 0)
+                + single_program_by_festival.get(festival_id, 0),
+                "ghost_program_series": ghost_program_by_festival.get(festival_id, 0),
+                "single_program_series": single_program_by_festival.get(festival_id, 0),
+            }
+            for festival_id in set(ghost_program_by_festival)
+            | set(single_program_by_festival)
+        ),
+        key=lambda row: (-row["orphan_program_series"], row["slug"]),
+    )
+    top_series_description_gap_festivals = sorted(
+        (
+            {
+                "festival_id": festival_id,
+                "slug": festival_slug_by_id.get(festival_id, "unknown"),
+                "series_description_gaps": series_missing_by_festival.get(
+                    festival_id, 0
+                )
+                + series_short_by_festival.get(festival_id, 0),
+                "series_missing_description": series_missing_by_festival.get(
+                    festival_id, 0
+                ),
+                "series_short_description": series_short_by_festival.get(
+                    festival_id, 0
+                ),
+            }
+            for festival_id in set(series_missing_by_festival)
+            | set(series_short_by_festival)
+        ),
+        key=lambda row: (-row["series_description_gaps"], row["slug"]),
+    )
 
     non_program_series = scoped_non_program_series
 
@@ -568,16 +717,22 @@ def compute_festival_audit_snapshot(*, today: Optional[date] = None) -> dict[str
         linked_series = series_by_festival.get(festival_id, [])
         linked_events = events_by_festival.get(festival_id, [])
 
-        program_series = [row for row in linked_series if row.get("series_type") == "festival_program"]
+        program_series = [
+            row for row in linked_series if row.get("series_type") == "festival_program"
+        ]
         active_program_series = [
-            row for row in program_series if len(events_by_series.get(row.get("id"), [])) > 0
+            row
+            for row in program_series
+            if len(events_by_series.get(row.get("id"), [])) > 0
         ]
 
         event_count = len(linked_events)
         dated_event_values = sorted(
             [
                 parsed
-                for parsed in [_parse_date(event.get("start_date")) for event in linked_events]
+                for parsed in [
+                    _parse_date(event.get("start_date")) for event in linked_events
+                ]
                 if parsed is not None
             ]
         )
@@ -586,8 +741,16 @@ def compute_festival_audit_snapshot(*, today: Optional[date] = None) -> dict[str
             if len(dated_event_values) >= 2
             else 0
         )
-        unique_venue_count = len({event.get("venue_id") for event in linked_events if event.get("venue_id")})
-        unique_source_count = len({event.get("source_id") for event in linked_events if event.get("source_id")})
+        unique_venue_count = len(
+            {event.get("place_id") for event in linked_events if event.get("place_id")}
+        )
+        unique_source_count = len(
+            {
+                event.get("source_id")
+                for event in linked_events
+                if event.get("source_id")
+            }
+        )
 
         announced_start = _parse_date(festival.get("announced_start"))
         announced_end = _parse_date(festival.get("announced_end"))
@@ -599,7 +762,9 @@ def compute_festival_audit_snapshot(*, today: Optional[date] = None) -> dict[str
         typical_duration_days = festival.get("typical_duration_days") or 0
         festival_type = (festival.get("festival_type") or "").lower().strip()
         primary_type = (festival.get("primary_type") or "").lower().strip()
-        has_tentpole_parent = any(bool(event.get("is_tentpole")) for event in linked_events)
+        has_tentpole_parent = any(
+            bool(event.get("is_tentpole")) for event in linked_events
+        )
 
         complex_reasons: list[str] = []
         simple_reasons: list[str] = []
@@ -623,7 +788,8 @@ def compute_festival_audit_snapshot(*, today: Optional[date] = None) -> dict[str
                 or primary_type.endswith("_conference")
                 or primary_type.endswith("_con")
                 or "convention" in primary_type
-                or primary_type in {"pop_culture_con", "music_festival", "film_festival"}
+                or primary_type
+                in {"pop_culture_con", "music_festival", "film_festival"}
                 or festival_type in {"convention", "conference"}
             )
         ):
@@ -670,6 +836,12 @@ def compute_festival_audit_snapshot(*, today: Optional[date] = None) -> dict[str
             model_fit_insufficient.append(model_row)
             continue
 
+        if event_count == 0 and len(active_program_series) == 0:
+            model_row["classification"] = "insufficient_data"
+            model_row["recommended_action"] = "collect_live_event_structure"
+            model_fit_insufficient.append(model_row)
+            continue
+
         if len(simple_reasons) >= 4 and len(complex_reasons) <= 1 and event_count <= 3:
             model_row["classification"] = "tentpole_fit_candidate"
             model_row["recommended_action"] = "demote_to_tentpole_event"
@@ -698,28 +870,36 @@ def compute_festival_audit_snapshot(*, today: Optional[date] = None) -> dict[str
     )
 
     scoped_festival_model_fit = [
-        row for row in festival_model_fit if row.get("festival_id") in in_scope_festival_ids
+        row
+        for row in festival_model_fit
+        if row.get("festival_id") in in_scope_festival_ids
     ]
     scoped_tentpole_fit_candidates = [
-        row for row in tentpole_fit_candidates if row.get("festival_id") in in_scope_festival_ids
+        row
+        for row in tentpole_fit_candidates
+        if row.get("festival_id") in in_scope_festival_ids
     ]
     scoped_model_fit_ambiguous = [
-        row for row in model_fit_ambiguous if row.get("festival_id") in in_scope_festival_ids
+        row
+        for row in model_fit_ambiguous
+        if row.get("festival_id") in in_scope_festival_ids
     ]
 
     counts = {
         "festivals": len(festivals),
         "festivals_in_scope": len(scoped_festivals),
         "festivals_out_of_scope": len(festivals) - len(scoped_festivals),
-        "festival_linked_series": len(series),
+        "festival_linked_series": len(active_series),
         "festival_linked_series_in_scope": len(scoped_series),
         "festival_program_series": len(festival_program_series),
         "festival_program_series_in_scope": len(scoped_festival_program_series),
         "festival_linked_events": len(all_festival_events),
         "festival_linked_events_in_scope": len(festival_events),
     }
-    model_fit_denominator = len(scoped_festival_model_fit) + len(scoped_tentpole_fit_candidates) + len(
-        scoped_model_fit_ambiguous
+    model_fit_denominator = (
+        len(scoped_festival_model_fit)
+        + len(scoped_tentpole_fit_candidates)
+        + len(scoped_model_fit_ambiguous)
     )
 
     derived = {
@@ -731,12 +911,14 @@ def compute_festival_audit_snapshot(*, today: Optional[date] = None) -> dict[str
             counts["festivals_in_scope"] - len(festival_missing_all_dates),
             counts["festivals_in_scope"],
         ),
-        "window_integrity_pct": _pct(
-            total_window_scoped_events - total_window_outside_events,
-            total_window_scoped_events,
-        )
-        if total_window_scoped_events
-        else 100.0,
+        "window_integrity_pct": (
+            _pct(
+                total_window_scoped_events - total_window_outside_events,
+                total_window_scoped_events,
+            )
+            if total_window_scoped_events
+            else 100.0
+        ),
         "festival_description_quality_pct": _pct(
             festival_quality_descriptions,
             counts["festivals_in_scope"],
@@ -766,9 +948,11 @@ def compute_festival_audit_snapshot(*, today: Optional[date] = None) -> dict[str
             len(non_program_series),
             counts["festival_linked_series_in_scope"],
         ),
-        "festival_model_fit_pct": _pct(len(scoped_festival_model_fit), model_fit_denominator)
-        if model_fit_denominator
-        else 100.0,
+        "festival_model_fit_pct": (
+            _pct(len(scoped_festival_model_fit), model_fit_denominator)
+            if model_fit_denominator
+            else 100.0
+        ),
         "tentpole_fit_candidate_pct": _pct(
             len(scoped_tentpole_fit_candidates),
             counts["festivals_in_scope"],
@@ -797,6 +981,7 @@ def compute_festival_audit_snapshot(*, today: Optional[date] = None) -> dict[str
             "scope": "in_scope_festivals",
             "festival_missing_all_dates": len(festival_missing_all_dates),
             "festival_missing_announced_start": len(festival_missing_announced_start),
+            "festival_past_cycle_pending_only": len(festival_past_cycle_pending_only),
             "festival_missing_all_dates_all": festival_missing_all_dates_all_count,
             "festival_missing_announced_start_all": festival_missing_announced_start_all_count,
             "festival_inverted_announced_range": len(festival_inverted_announced_range),
@@ -813,6 +998,9 @@ def compute_festival_audit_snapshot(*, today: Optional[date] = None) -> dict[str
             "festival_short_description_lt80": len(festival_short_description),
             "series_missing_description": len(series_missing_description),
             "series_short_description_lt80": len(series_short_description),
+            "top_series_description_gap_festivals": top_series_description_gap_festivals[
+                :15
+            ],
             "festival_events_missing_description": len(event_missing_description),
             "festival_events_short_description_lt120": len(event_short_description),
             "top_missing_description_sources": missing_by_source.most_common(12),
@@ -824,6 +1012,8 @@ def compute_festival_audit_snapshot(*, today: Optional[date] = None) -> dict[str
             "festival_program_single_event_series": len(single_program_series),
             "festival_program_large_spread_gt14d": len(large_spread_program_series),
             "festival_program_multi_source_series": len(program_multi_source_series),
+            "top_ghost_program_festivals": top_ghost_program_festivals[:15],
+            "top_orphan_program_festivals": top_orphan_program_festivals[:15],
             "sources_with_5plus_festival_program_series": len(fragmented_sources),
             "non_program_festival_linked_series": len(non_program_series),
         },
@@ -833,7 +1023,9 @@ def compute_festival_audit_snapshot(*, today: Optional[date] = None) -> dict[str
             "ambiguous_count": len(model_fit_ambiguous),
             "insufficient_data_count": len(model_fit_insufficient),
             "festival_fit_count_in_scope": len(scoped_festival_model_fit),
-            "tentpole_fit_candidate_count_in_scope": len(scoped_tentpole_fit_candidates),
+            "tentpole_fit_candidate_count_in_scope": len(
+                scoped_tentpole_fit_candidates
+            ),
             "ambiguous_count_in_scope": len(scoped_model_fit_ambiguous),
             "by_festival": {
                 row["festival_id"]: {
@@ -842,7 +1034,9 @@ def compute_festival_audit_snapshot(*, today: Optional[date] = None) -> dict[str
                     "recommended_action": row.get("recommended_action"),
                     "event_count": row.get("event_count"),
                     "program_series_count": row.get("program_series_count"),
-                    "active_program_series_count": row.get("active_program_series_count"),
+                    "active_program_series_count": row.get(
+                        "active_program_series_count"
+                    ),
                     "unique_venue_count": row.get("unique_venue_count"),
                     "event_span_days": row.get("event_span_days"),
                     "declared_span_days": row.get("declared_span_days"),
@@ -859,7 +1053,10 @@ def compute_festival_audit_snapshot(*, today: Optional[date] = None) -> dict[str
         },
         "samples": {
             "festival_missing_announced_start": festival_missing_announced_start[:15],
-            "festivals_with_events_outside_announced_window": festivals_with_events_outside_announced_window[:15],
+            "festival_past_cycle_pending_only": festival_past_cycle_pending_only[:15],
+            "festivals_with_events_outside_announced_window": festivals_with_events_outside_announced_window[
+                :15
+            ],
             "festival_missing_description": festival_missing_description[:15],
             "festival_short_description": festival_short_description[:15],
             "series_missing_description": series_missing_description[:15],

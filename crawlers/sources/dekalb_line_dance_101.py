@@ -22,6 +22,7 @@ from db import (
     smart_update_existing_event,
 )
 from dedupe import generate_content_hash
+from pipeline.program_descriptions import build_program_description
 from sources.dekalb_parks_rec import _extract_prices, _fetch_page, _init_session
 
 logger = logging.getLogger(__name__)
@@ -33,7 +34,15 @@ TARGET_NAME = "East Central - Line Dance 101 - Winter 2026 Session"
 MAX_PAGES = 8
 WEEKS_AHEAD = 8
 DAY_CODES = ["MO", "TU", "WE", "TH", "FR", "SA", "SU"]
-DAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+DAY_NAMES = [
+    "Monday",
+    "Tuesday",
+    "Wednesday",
+    "Thursday",
+    "Friday",
+    "Saturday",
+    "Sunday",
+]
 
 DAY_INDEX = {
     "tuesday": 1,
@@ -147,9 +156,10 @@ def parse_item(item: dict, today: date) -> dict | None:
         is_free = True
 
     title = f"Line Dance 101 at {place_data['name']}"
-    description = (
-        f"Public line dance class at {place_data['name']} through DeKalb County Recreation. "
-        "Reserve through the official county catalog for current availability."
+    description = build_program_description(
+        title,
+        summary="Public line dance class through DeKalb County Recreation.",
+        facts=["Reserve through the official county catalog for current availability."],
     )
 
     return {
@@ -165,11 +175,17 @@ def parse_item(item: dict, today: date) -> dict | None:
         "price_note": (
             "DeKalb County currently lists this class as free."
             if is_free
-            else f"DeKalb County currently lists this class from ${price_min:.2f} to ${price_max:.2f}."
-            if price_min is not None and price_max is not None and price_min != price_max
-            else f"DeKalb County currently lists this class at ${price_min:.2f}."
-            if price_min is not None
-            else "Check DeKalb County for current class pricing."
+            else (
+                f"DeKalb County currently lists this class from ${price_min:.2f} to ${price_max:.2f}."
+                if price_min is not None
+                and price_max is not None
+                and price_min != price_max
+                else (
+                    f"DeKalb County currently lists this class at ${price_min:.2f}."
+                    if price_min is not None
+                    else "Check DeKalb County for current class pricing."
+                )
+            )
         ),
         "ticket_url": (item.get("action_link") or {}).get("href")
         or item.get("detail_url")

@@ -44,7 +44,6 @@ from db import (
     find_event_by_hash,
     get_or_create_place,
     insert_event,
-    smart_update_existing_event,
 )
 from dedupe import generate_content_hash
 
@@ -1145,18 +1144,17 @@ def crawl(source: dict) -> tuple[int, int, int]:
         events_found += 1
 
         existing = find_event_by_hash(content_hash)
-        if existing:
-            smart_update_existing_event(existing, record)
-            events_updated += 1
-        else:
-            try:
-                insert_event(record, series_hint=series_hint)
+        try:
+            insert_event(record, series_hint=series_hint)
+            if existing:
+                events_updated += 1
+            else:
                 events_new += 1
                 logger.debug(
                     "[asf] Added: %s on %s @ %s", title, start_date, hash_venue
                 )
-            except Exception as exc:
-                logger.error("[asf] Failed to insert %r: %s", title, exc)
+        except Exception as exc:
+            logger.error("[asf] Failed to insert %r: %s", title, exc)
 
     logger.info(
         "[asf] Crawl complete: %d found, %d new, %d updated",

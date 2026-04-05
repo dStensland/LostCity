@@ -9,10 +9,62 @@ Runs after every crawl to:
 """
 
 import logging
+from datetime import date
 from typing import Optional
 from db import get_client
 
 logger = logging.getLogger(__name__)
+
+
+def _parse_date(value: Optional[str]) -> Optional[date]:
+    if not value:
+        return None
+    try:
+        return date.fromisoformat(str(value)[:10])
+    except Exception:
+        return None
+
+
+def _festival_date_backfill_updates(
+    festival: dict, event_dates: list[str], event_count: int
+) -> dict:
+    """Conservatively backfill festival dates from linked active events.
+
+    Only backfill when the linked-event coverage is strong enough to represent
+    the parent festival itself:
+    - two or more distinct event dates, or
+    - a one-day festival with multiple linked events on the same date.
+    """
+    if not event_dates:
+        return {}
+
+    unique_dates = sorted({d for d in event_dates if _parse_date(d)})
+    if not unique_dates:
+        return {}
+
+    typical_duration_days = int(festival.get("typical_duration_days") or 0)
+    distinct_date_count = len(unique_dates)
+
+    if distinct_date_count >= 2:
+        start = _parse_date(unique_dates[0])
+        end = _parse_date(unique_dates[-1])
+        if not start or not end:
+            return {}
+        span_days = (end - start).days + 1
+        if typical_duration_days and span_days > max(typical_duration_days + 2, 7):
+            return {}
+    else:
+        if typical_duration_days not in (0, 1) or event_count < 2:
+            return {}
+
+    updates = {}
+    if not festival.get("announced_start"):
+        updates["announced_start"] = unique_dates[0]
+    if not festival.get("announced_end"):
+        updates["announced_end"] = unique_dates[-1]
+    if updates and not festival.get("date_source"):
+        updates["date_source"] = "linked-event-backfill"
+    return updates
 
 
 def run_festival_health_check() -> dict:
@@ -55,12 +107,13 @@ def run_festival_health_check() -> dict:
         batch = series_ids[batch_start : batch_start + 50]
         events_result = (
             client.table("events")
-            .select("series_id, start_date, title")
+            .select("series_id, start_date, title, is_active")
             .in_("series_id", batch)
-            .eq("is_live", True)
             .execute()
         )
         for ev in events_result.data or []:
+            if ev.get("is_active") is False:
+                continue
             sid = ev["series_id"]
             if sid not in event_data:
                 event_data[sid] = {"count": 0, "dates": [], "titles": []}
@@ -72,6 +125,7 @@ def run_festival_health_check() -> dict:
 
     # Track festivals that need date backfill
     festivals_to_backfill = {}
+    festival_event_counts = {}
 
     for series in series_list:
         sid = series["id"]
@@ -91,6 +145,9 @@ def run_festival_health_check() -> dict:
             if fid not in festivals_to_backfill:
                 festivals_to_backfill[fid] = []
             festivals_to_backfill[fid].extend(ev_info["dates"])
+            festival_event_counts[fid] = (
+                festival_event_counts.get(fid, 0) + ev_info["count"]
+            )
 
         # Backfill title if NULL or "UNNAMED"
         title = series.get("title") or ""
@@ -98,9 +155,9 @@ def run_festival_health_check() -> dict:
             new_title = _derive_title(ev_info["titles"], fid, client)
             if new_title:
                 try:
-                    client.table("series").update(
-                        {"title": new_title}
-                    ).eq("id", sid).execute()
+                    client.table("series").update({"title": new_title}).eq(
+                        "id", sid
+                    ).execute()
                     stats["titles_backfilled"] += 1
                 except Exception as e:
                     logger.warning(f"Failed to backfill title for series {sid}: {e}")
@@ -110,18 +167,17 @@ def run_festival_health_check() -> dict:
         try:
             fest = (
                 client.table("festivals")
-                .select("id, announced_start, announced_end")
+                .select(
+                    "id, announced_start, announced_end, typical_duration_days, date_source"
+                )
                 .eq("id", fid)
                 .maybeSingle()
                 .execute()
             )
             if not fest.data:
                 continue
-            updates = {}
-            if not fest.data.get("announced_start"):
-                updates["announced_start"] = min(dates)
-            if not fest.data.get("announced_end"):
-                updates["announced_end"] = max(dates)
+            event_count = festival_event_counts.get(fid, 0)
+            updates = _festival_date_backfill_updates(fest.data, dates, event_count)
             if updates:
                 client.table("festivals").update(updates).eq("id", fid).execute()
                 stats["festival_dates_backfilled"] += 1
@@ -130,13 +186,9 @@ def run_festival_health_check() -> dict:
 
     # Log warnings
     if stats["ghosts"] > 0:
-        logger.warning(
-            f"Festival health: {stats['ghosts']} ghost series (0 events)"
-        )
+        logger.warning(f"Festival health: {stats['ghosts']} ghost series (0 events)")
     if stats["single_event"] > 0:
-        logger.warning(
-            f"Festival health: {stats['single_event']} single-event series"
-        )
+        logger.warning(f"Festival health: {stats['single_event']} single-event series")
 
     logger.info(
         f"Festival health: {stats['total']} series, "
@@ -148,7 +200,9 @@ def run_festival_health_check() -> dict:
     return stats
 
 
-def _derive_title(event_titles: list, festival_id: Optional[str], client) -> Optional[str]:
+def _derive_title(
+    event_titles: list, festival_id: Optional[str], client
+) -> Optional[str]:
     """Derive a series title from event titles or parent festival name."""
     # Try parent festival name first
     if festival_id:
@@ -168,6 +222,7 @@ def _derive_title(event_titles: list, festival_id: Optional[str], client) -> Opt
     # Most common event title
     if event_titles:
         from collections import Counter
+
         title_counts = Counter(event_titles)
         most_common, count = title_counts.most_common(1)[0]
         if count > 1 or len(event_titles) == 1:

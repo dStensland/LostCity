@@ -30,9 +30,10 @@ from zoneinfo import ZoneInfo
 
 from db import (
     find_event_by_hash,
+    get_client,
     get_or_create_place,
     insert_event,
-    smart_update_existing_event,
+    writes_enabled,
 )
 from dedupe import generate_content_hash
 
@@ -51,6 +52,7 @@ FRONTEND_ORIGIN = "https://atlff26.eventive.org"
 # Festival date range — used as fallback when no specific screening time is scheduled
 FESTIVAL_START = "2026-04-23"
 FESTIVAL_END = "2026-05-03"
+FESTIVAL_NAME = "Atlanta Film Festival"
 
 # Timezone for all Eventive UTC timestamps
 EASTERN = ZoneInfo("America/New_York")
@@ -70,11 +72,43 @@ FESTIVAL_VENUE_DATA = {
     "lng": -84.4110,
     "place_type": "festival",
     "website": "https://www.atlantafilmfestival.com",
+    "is_active": True,
 }
 
 # Known Eventive venue slugs → PLACE_DATA for get_or_create_place
 # Populated on first encounter and cached across the crawl run
 _VENUE_CACHE: dict[str, int] = {}
+_BLACKLISTED_EVENT_TITLES = {
+    "Championing discovery, artistic growth, and the arts locally and internationally.",
+}
+
+
+def _is_ancillary_outside_window(
+    *,
+    films_linked: list,
+    start_date: Optional[str],
+) -> bool:
+    """Treat non-film Eventive specials outside the announced festival window as ancillary.
+
+    These items can appear in the Eventive events feed, but they should not stay
+    linked under the core ATLFF festival window integrity gates.
+    """
+    if films_linked:
+        return False
+    if not start_date:
+        return False
+    return start_date < FESTIVAL_START or start_date > FESTIVAL_END
+
+
+def _deactivate_existing_event(existing: dict) -> None:
+    event_id = existing.get("id")
+    if not event_id or existing.get("is_active") is False:
+        return
+    client = get_client()
+    client.table("events").update({"is_active": False}).eq("id", event_id).execute()
+    logger.info(
+        "Deactivated ancillary ATLFF event %s: %s", event_id, existing.get("title")
+    )
 
 
 def _api_headers() -> dict:
@@ -149,11 +183,134 @@ def _get_or_cache_venue(eventive_venue: dict) -> int:
         "zip": zip_code,
         "place_type": "cinema",
         "website": "https://www.atlantafilmfestival.com",
+        "is_active": True,
     }
 
     venue_id = get_or_create_place(place_data)
     _VENUE_CACHE[cache_key] = venue_id
     return venue_id
+
+
+def _is_blacklisted_title(title: str) -> bool:
+    return (title or "").strip() in _BLACKLISTED_EVENT_TITLES
+
+
+def _build_film_series_hint(
+    *,
+    series_title: str,
+    description: str,
+    image_url: Optional[str],
+    director: Optional[str] = None,
+    runtime_minutes: Optional[int] = None,
+    year: Optional[int] = None,
+    imdb_id: Optional[str] = None,
+) -> dict:
+    hint = {
+        "series_type": "film",
+        "series_title": series_title,
+        "festival_name": FESTIVAL_NAME,
+        "festival_website": "https://www.atlantafilmfestival.com",
+    }
+    if description:
+        hint["description"] = description
+    if image_url:
+        hint["image_url"] = image_url
+    if director:
+        hint["director"] = director
+    if runtime_minutes:
+        hint["runtime_minutes"] = runtime_minutes
+    if year:
+        hint["year"] = year
+    if imdb_id:
+        hint["imdb_id"] = imdb_id
+    return hint
+
+
+def _build_nonfilm_session_description(name: str, description: str) -> str:
+    cleaned = (description or "").strip()
+    if len(cleaned) >= 80:
+        return cleaned
+    return (
+        f"{name} is a scheduled Atlanta Film Festival 2026 festival session in the published "
+        "Eventive lineup. The current listing does not yet include full program copy or panel details."
+    )
+
+
+def _build_series_hint_for_screening(
+    event: dict,
+    description: str,
+    image_url: Optional[str],
+) -> dict:
+    films_linked = event.get("films") or []
+    if films_linked:
+        primary_film = films_linked[0]
+        details = primary_film.get("details") or {}
+        credits = primary_film.get("credits") or {}
+        runtime_minutes = None
+        runtime_raw = details.get("runtime")
+        if runtime_raw:
+            try:
+                runtime_minutes = int(str(runtime_raw).strip())
+            except ValueError:
+                runtime_minutes = None
+        year = None
+        year_raw = details.get("year")
+        if year_raw:
+            try:
+                year = int(str(year_raw).strip())
+            except ValueError:
+                year = None
+        return _build_film_series_hint(
+            series_title=(primary_film.get("name") or event.get("name") or "").strip(),
+            description=_strip_html(primary_film.get("description") or "")
+            or description,
+            image_url=(
+                primary_film.get("poster_image")
+                or primary_film.get("cover_image")
+                or primary_film.get("still_image")
+                or image_url
+            ),
+            director=(credits.get("director") or "").strip() or None,
+            runtime_minutes=runtime_minutes,
+            year=year,
+            imdb_id=(primary_film.get("imdb_id") or "").strip() or None,
+        )
+
+    return _build_film_series_hint(
+        series_title=(event.get("name") or "").strip(),
+        description=_build_nonfilm_session_description(
+            (event.get("name") or "").strip(),
+            description,
+        ),
+        image_url=image_url,
+    )
+
+
+def _deactivate_blacklisted_events(source_id: int) -> int:
+    if not writes_enabled():
+        return 0
+    client = get_client()
+    if not _BLACKLISTED_EVENT_TITLES:
+        return 0
+    rows = (
+        client.table("events")
+        .select("id,title,is_active")
+        .eq("source_id", source_id)
+        .in_("title", list(_BLACKLISTED_EVENT_TITLES))
+        .execute()
+        .data
+        or []
+    )
+    deactivated = 0
+    for row in rows:
+        if row.get("is_active") is False:
+            continue
+        client.table("events").update({"is_active": False}).eq(
+            "id", row["id"]
+        ).execute()
+        logger.info("Deactivated junk ATLFF row %s: %s", row["id"], row["title"])
+        deactivated += 1
+    return deactivated
 
 
 def _film_to_tags(film: dict) -> list[str]:
@@ -196,7 +353,7 @@ def _crawl_films(source_id: int, festival_venue_id: int) -> tuple[int, int, int]
 
     for film in films:
         name = film.get("name", "").strip()
-        if not name:
+        if not name or _is_blacklisted_title(name):
             continue
 
         film_id = film.get("id", "")
@@ -221,11 +378,16 @@ def _crawl_films(source_id: int, festival_venue_id: int) -> tuple[int, int, int]
         year = details.get("year", "")
         country = details.get("country", "")
         if any([runtime, year, country]):
-            meta = " | ".join(filter(None, [
-                f"{year}" if year else "",
-                f"{runtime} min" if runtime else "",
-                country,
-            ]))
+            meta = " | ".join(
+                filter(
+                    None,
+                    [
+                        f"{year}" if year else "",
+                        f"{runtime} min" if runtime else "",
+                        country,
+                    ],
+                )
+            )
             if meta.strip():
                 desc_parts.append(meta)
 
@@ -233,14 +395,32 @@ def _crawl_films(source_id: int, festival_venue_id: int) -> tuple[int, int, int]
         if premiere:
             desc_parts.append(f"Premiere: {premiere}")
 
-        description = "\n".join(desc_parts) if desc_parts else f"Atlanta Film Festival 2026 — {name}"
+        description = (
+            "\n".join(desc_parts)
+            if desc_parts
+            else f"Atlanta Film Festival 2026 — {name}"
+        )
 
         image_url = film.get("cover_image") or film.get("still_image")
         tags = _film_to_tags(film)
         subcategory = _infer_subcategory(film)
+        runtime_minutes = None
+        if runtime:
+            try:
+                runtime_minutes = int(str(runtime).strip())
+            except ValueError:
+                runtime_minutes = None
+        year_int = None
+        if year:
+            try:
+                year_int = int(str(year).strip())
+            except ValueError:
+                year_int = None
 
         found += 1
-        content_hash = generate_content_hash(name, "Atlanta Film Festival 2026", FESTIVAL_START)
+        content_hash = generate_content_hash(
+            name, "Atlanta Film Festival 2026", FESTIVAL_START
+        )
 
         event_record = {
             "source_id": source_id,
@@ -268,23 +448,33 @@ def _crawl_films(source_id: int, festival_venue_id: int) -> tuple[int, int, int]
             "recurrence_rule": None,
             "content_hash": content_hash,
         }
+        series_hint = _build_film_series_hint(
+            series_title=name,
+            description=description,
+            image_url=image_url,
+            director=director or None,
+            runtime_minutes=runtime_minutes,
+            year=year_int,
+            imdb_id=(film.get("imdb_id") or "").strip() or None,
+        )
 
         existing = find_event_by_hash(content_hash)
-        if existing:
-            smart_update_existing_event(existing, event_record)
-            updated += 1
-        else:
-            try:
-                insert_event(event_record)
+        try:
+            insert_event(event_record, series_hint=series_hint)
+            if existing:
+                updated += 1
+            else:
                 new += 1
                 logger.debug("Added film: %s", name)
-            except Exception as exc:
-                logger.error("Failed to insert film %s: %s", name, exc)
+        except Exception as exc:
+            logger.error("Failed to insert film %s: %s", name, exc)
 
     return found, new, updated
 
 
-def _crawl_scheduled_events(source_id: int, festival_venue_id: int) -> tuple[int, int, int]:
+def _crawl_scheduled_events(
+    source_id: int, festival_venue_id: int
+) -> tuple[int, int, int]:
     """
     Phase 2: Crawl scheduled screening events with specific times and venues.
 
@@ -300,7 +490,7 @@ def _crawl_scheduled_events(source_id: int, festival_venue_id: int) -> tuple[int
 
     for event in events:
         name = event.get("name", "").strip()
-        if not name:
+        if not name or _is_blacklisted_title(name):
             continue
 
         event_id = event.get("id", "")
@@ -373,7 +563,27 @@ def _crawl_scheduled_events(source_id: int, festival_venue_id: int) -> tuple[int
 
         found += 1
         # Use event_id in hash so each scheduling instance is unique
-        content_hash = generate_content_hash(name, "Atlanta Film Festival 2026", f"{start_date}:{event_id}")
+        content_hash = generate_content_hash(
+            name, "Atlanta Film Festival 2026", f"{start_date}:{event_id}"
+        )
+
+        ancillary_outside_window = _is_ancillary_outside_window(
+            films_linked=films_linked,
+            start_date=start_date,
+        )
+
+        existing = find_event_by_hash(content_hash)
+        if ancillary_outside_window:
+            if existing:
+                _deactivate_existing_event(existing)
+                updated += 1
+            else:
+                logger.info(
+                    "Skipping ancillary ATLFF event outside festival window: %s on %s",
+                    name,
+                    start_date,
+                )
+            continue
 
         event_record = {
             "source_id": source_id,
@@ -401,18 +611,21 @@ def _crawl_scheduled_events(source_id: int, festival_venue_id: int) -> tuple[int
             "recurrence_rule": None,
             "content_hash": content_hash,
         }
+        series_hint = _build_series_hint_for_screening(event, description, image_url)
 
-        existing = find_event_by_hash(content_hash)
         if existing:
-            smart_update_existing_event(existing, event_record)
-            updated += 1
-        else:
-            try:
-                insert_event(event_record)
+            pass
+        try:
+            insert_event(event_record, series_hint=series_hint)
+            if existing:
+                updated += 1
+            else:
                 new += 1
-                logger.info("Added screening: %s on %s at %s", name, start_date, start_time)
-            except Exception as exc:
-                logger.error("Failed to insert screening %s: %s", name, exc)
+                logger.info(
+                    "Added screening: %s on %s at %s", name, start_date, start_time
+                )
+        except Exception as exc:
+            logger.error("Failed to insert screening %s: %s", name, exc)
 
     return found, new, updated
 
@@ -440,6 +653,10 @@ def crawl(source: dict) -> tuple[int, int, int]:
         total_new += n
         total_updated += u
         logger.info("Screenings phase: %d found, %d new, %d updated", f, n, u)
+        cleaned = _deactivate_blacklisted_events(source_id)
+        if cleaned:
+            total_updated += cleaned
+            logger.info("Junk-row cleanup: %d deactivated", cleaned)
 
     except Exception as exc:
         logger.error("Atlanta Film Festival crawl failed: %s", exc)

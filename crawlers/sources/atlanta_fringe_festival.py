@@ -33,10 +33,13 @@ import requests
 from bs4 import BeautifulSoup
 
 from db import (
+    events_support_is_active_column,
     find_event_by_hash,
+    get_client,
     get_or_create_place,
     insert_event,
     smart_update_existing_event,
+    writes_enabled,
 )
 from dedupe import generate_content_hash
 
@@ -404,6 +407,216 @@ def _infer_genre_from_text(genre_text: str) -> tuple[str, str]:
     if "music" in text_lower:
         return "music", "festival"
     return "theater", "festival"
+
+
+def _build_show_description(
+    *,
+    title: str,
+    festival_year: int,
+    existing_description: Optional[str] = None,
+    performer: Optional[str] = None,
+    genre_text: Optional[str] = None,
+    origin: Optional[str] = None,
+    venue_name: Optional[str] = None,
+) -> Optional[str]:
+    normalized_existing = re.sub(r"\s+", " ", (existing_description or "").strip())
+    if normalized_existing and len(normalized_existing) >= 120:
+        return normalized_existing[:500]
+
+    inferred_performer = None
+    inferred_genre = None
+    inferred_origin = None
+    use_existing_as_sparse_stub = False
+    if normalized_existing:
+        inferred_performer, inferred_genre, inferred_origin = _parse_sparse_lineup_copy(
+            normalized_existing
+        )
+        use_existing_as_sparse_stub = any(
+            value for value in (inferred_performer, inferred_genre, inferred_origin)
+        )
+
+    performer = performer or inferred_performer
+    genre_text = genre_text or inferred_genre
+    origin = origin or inferred_origin
+
+    parts = [f"{title} is part of Atlanta Fringe Festival {festival_year}."]
+    if performer:
+        parts.append(f"Presented by {performer}.")
+    if genre_text:
+        parts.append(f"Genre: {genre_text}.")
+    if origin:
+        parts.append(f"Artist origin: {origin}.")
+    if venue_name:
+        parts.append(f"Venue: {venue_name}.")
+    if performer or genre_text or origin:
+        parts.append(
+            "Atlanta Fringe Festival's lineup highlights independent theater, comedy, "
+            "storytelling, dance, and other fringe performance work from local and touring artists."
+        )
+    if normalized_existing and not use_existing_as_sparse_stub:
+        parts.append(normalized_existing)
+
+    description = " ".join(part for part in parts if part)
+    description = re.sub(r"\s+", " ", description).strip()
+    return description[:500] if description else None
+
+
+def _parse_sparse_lineup_copy(
+    text: Optional[str],
+) -> tuple[Optional[str], Optional[str], Optional[str]]:
+    normalized = re.sub(r"\s+", " ", (text or "").strip())
+    if not normalized or "," not in normalized:
+        return None, None, None
+
+    parts = [part.strip(" -–—") for part in normalized.split(",") if part.strip(" -–—")]
+    if len(parts) < 3:
+        return None, None, None
+
+    def _looks_like_region(value: str) -> bool:
+        cleaned = value.strip()
+        return bool(re.fullmatch(r"[A-Z]{2,3}", cleaned))
+
+    performer_parts = parts[:-2]
+    genre_candidate = parts[-2]
+    origin_parts = parts[-1:]
+
+    if len(parts) >= 4 and _looks_like_region(parts[-1]):
+        performer_parts = parts[:-3]
+        genre_candidate = parts[-3]
+        origin_parts = parts[-2:]
+
+    performer = ", ".join(part for part in performer_parts if part).strip(" ,")
+    performer = re.sub(r"^[a-z]\s*,\s*", "", performer)
+    genre_text = genre_candidate.strip(" ,") if genre_candidate else None
+    origin = ", ".join(part for part in origin_parts if part).strip(" ,")
+
+    if not performer or not genre_text:
+        return None, None, None
+
+    return performer or None, genre_text or None, origin or None
+
+
+def _is_legacy_fallback_event(
+    row: dict,
+    *,
+    title: str,
+    festival_start: str,
+    fallback_source_url: str,
+) -> bool:
+    return (
+        (row.get("title") or "").strip() == title.strip()
+        and str(row.get("start_date") or "") == festival_start
+        and row.get("start_time") in (None, "")
+        and row.get("source_url") == fallback_source_url
+        and row.get("is_active") is True
+    )
+
+
+def _retire_legacy_fallback_events(
+    *,
+    source_id: int,
+    titles_with_performances: set[str],
+    festival_start: str,
+    fallback_source_url: str,
+) -> int:
+    if (
+        not titles_with_performances
+        or not festival_start
+        or not events_support_is_active_column()
+    ):
+        return 0
+
+    client = get_client()
+    rows = (
+        client.table("events")
+        .select("id,title,start_date,start_time,source_url,is_active")
+        .eq("source_id", source_id)
+        .eq("is_active", True)
+        .eq("start_date", festival_start)
+        .is_("start_time", "null")
+        .in_("title", sorted(titles_with_performances))
+        .execute()
+        .data
+        or []
+    )
+
+    stale_rows = [
+        row
+        for row in rows
+        if _is_legacy_fallback_event(
+            row,
+            title=row.get("title") or "",
+            festival_start=festival_start,
+            fallback_source_url=fallback_source_url,
+        )
+    ]
+    stale_ids = [row["id"] for row in stale_rows if row.get("id")]
+    if not stale_ids:
+        return 0
+
+    if not writes_enabled():
+        logger.info(
+            "Dry-run: would retire %s legacy Atlanta Fringe fallback rows",
+            len(stale_ids),
+        )
+        return len(stale_ids)
+
+    client.table("events").update({"is_active": False}).in_("id", stale_ids).execute()
+    logger.info("Retired %s legacy Atlanta Fringe fallback rows", len(stale_ids))
+    return len(stale_ids)
+
+
+def _upgrade_legacy_fallback_descriptions(
+    *,
+    source_id: int,
+    festival_year: int,
+    festival_start: str,
+    fallback_source_url: str,
+) -> int:
+    client = get_client()
+    rows = (
+        client.table("events")
+        .select(
+            "id,title,start_date,start_time,source_url,is_active,description,source_id"
+        )
+        .eq("source_id", source_id)
+        .eq("is_active", True)
+        .eq("start_date", festival_start)
+        .is_("start_time", "null")
+        .eq("source_url", fallback_source_url)
+        .execute()
+        .data
+        or []
+    )
+
+    updated = 0
+    for row in rows:
+        existing_description = (row.get("description") or "").strip()
+        if not existing_description or len(existing_description) >= 120:
+            continue
+
+        upgraded_description = _build_show_description(
+            title=row.get("title") or "",
+            festival_year=festival_year,
+            existing_description=existing_description,
+        )
+        if not upgraded_description or upgraded_description == existing_description:
+            continue
+
+        if not writes_enabled():
+            logger.info(
+                "Dry-run: would expand legacy Atlanta Fringe description for '%s'",
+                row.get("title"),
+            )
+            updated += 1
+            continue
+
+        if smart_update_existing_event(row, {"description": upgraded_description}):
+            updated += 1
+
+    if updated:
+        logger.info("Expanded %s legacy Atlanta Fringe fallback descriptions", updated)
+    return updated
 
 
 # ---------------------------------------------------------------------------
@@ -901,6 +1114,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
     # -- BRANCH A: WP show pages exist — scrape per-performance data
     if wp_events:
+        titles_with_performances: set[str] = set()
         for show in wp_events:
             show_title = _html_decode(show.get("title", {}).get("rendered", "")).strip()
             if not show_title:
@@ -921,11 +1135,13 @@ def crawl(source: dict) -> tuple[int, int, int]:
             genre_ids = show.get("genres", [])
             category = "theater"
             subcategory = "festival"
+            genre_label = None
             if genre_ids:
                 slug, name = genres_tax_map.get(genre_ids[0], ("", ""))
                 if slug or name:
                     category = _genre_to_category(slug, name)
                     subcategory = _genre_to_subcategory(name)
+                    genre_label = name or slug.replace("-", " ")
 
             # Resolve venue term slugs
             venue_term_ids = show.get("venues", [])
@@ -946,7 +1162,18 @@ def crawl(source: dict) -> tuple[int, int, int]:
             description_raw = BeautifulSoup(content_html, "lxml").get_text(
                 separator=" ", strip=True
             )
-            description = description_raw[:500] if description_raw else None
+            venue_name_for_description = (
+                _VENUE_SLUG_TO_DATA.get(venue_slug, {}).get("name")
+                if venue_slug
+                else None
+            )
+            description = _build_show_description(
+                title=show_title,
+                festival_year=festival_year,
+                existing_description=description_raw,
+                genre_text=genre_label,
+                venue_name=venue_name_for_description,
+            )
 
             # Scrape the individual show page for performance times
             performances = _scrape_performances_from_page(show_url)
@@ -1036,6 +1263,20 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     events_new,
                     events_updated,
                 )
+                titles_with_performances.add(show_title)
+
+        _retire_legacy_fallback_events(
+            source_id=source_id,
+            titles_with_performances=titles_with_performances,
+            festival_start=festival_start or f"{festival_year}-05-27",
+            fallback_source_url=f"{BASE_URL}/events/",
+        )
+        _upgrade_legacy_fallback_descriptions(
+            source_id=source_id,
+            festival_year=festival_year,
+            festival_start=festival_start or f"{festival_year}-05-27",
+            fallback_source_url=f"{BASE_URL}/events/",
+        )
 
     # -- BRANCH B: No WP show pages yet — parse homepage lineup
     else:
@@ -1065,8 +1306,13 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             performer = show.get("performer", "")
             origin = show.get("origin", "")
-            description_parts = [p for p in [performer, genre_text, origin] if p]
-            description = ", ".join(description_parts) if description_parts else None
+            description = _build_show_description(
+                title=title,
+                festival_year=festival_year,
+                performer=performer,
+                genre_text=genre_text,
+                origin=origin,
+            )
 
             content_hash = generate_content_hash(
                 title, "Atlanta Fringe Festival", start_date

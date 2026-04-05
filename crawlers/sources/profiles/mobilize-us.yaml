@@ -1,0 +1,18 @@
+version: 1
+slug: mobilize-us
+name: Mobilize.us Atlanta
+integration_method: api
+defaults:
+  category: civic
+discovery:
+  enabled: false
+  type: api
+  urls:
+  - https://api.mobilize.us/v1/events
+  api:
+    adapter: custom
+detail:
+  enabled: false
+data_goals:
+- events
+- tickets

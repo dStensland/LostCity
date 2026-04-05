@@ -24,6 +24,12 @@ def test_parse_session_builds_adult_line_dance_occurrences():
 
     assert parsed is not None
     assert parsed["title"] == "Line Dancing - Beginner at George Pierce Park Community Recreation Center"
+    assert (
+        parsed["description"]
+        == "Line Dancing - Beginner at George Pierce Park Community Recreation Center. "
+        "Public adult line dancing class through Gwinnett County Parks & Recreation. "
+        "Reserve through the official county catalog for current availability."
+    )
     assert parsed["occurrences"] == [
         (date(2026, 4, 14), 1),
         (date(2026, 4, 21), 1),

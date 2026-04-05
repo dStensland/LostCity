@@ -29,6 +29,12 @@ def test_parse_session_builds_recurring_aquatic_fitness_occurrences():
 
     assert parsed is not None
     assert parsed["title"] == "Get Wet and Sweat - Deep at Collins Hill Park Aquatic Center"
+    assert (
+        parsed["description"]
+        == "Get Wet and Sweat - Deep at Collins Hill Park Aquatic Center. "
+        "Public aquatic fitness class through Gwinnett County Parks & Recreation. "
+        "Reserve through the official county catalog for current availability."
+    )
     assert parsed["start_time"] == "19:10"
     assert parsed["end_time"] == "20:00"
     assert parsed["price_min"] == 89.0

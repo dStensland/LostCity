@@ -19,6 +19,7 @@ from db import (
     smart_update_existing_event,
 )
 from dedupe import generate_content_hash
+from pipeline.program_descriptions import build_program_description
 from sources._rec1_base import (
     _get_checkout_key,
     _get_groups_for_tab,
@@ -175,9 +176,10 @@ def parse_session(session: dict, today: date) -> dict | None:
     price = session.get("price")
     price_value = float(price) if price is not None else None
     title = f"Beginner Swimming Lessons at {PLACE_DATA['name']}"
-    description = (
-        f"Beginner swim lessons at {PLACE_DATA['name']} through Cobb County Parks. "
-        "Reserve through the official county catalog for current availability."
+    description = build_program_description(
+        title,
+        summary="Beginner swim lessons through Cobb County Parks.",
+        facts=["Reserve through the official county catalog for current availability."],
     )
 
     return {
@@ -192,9 +194,11 @@ def parse_session(session: dict, today: date) -> dict | None:
         "price_note": (
             "Cobb County currently lists this class as free."
             if price_value == 0
-            else f"Cobb County currently lists this class at ${price_value:.2f}."
-            if price_value is not None
-            else "Check Cobb County for current class pricing."
+            else (
+                f"Cobb County currently lists this class at ${price_value:.2f}."
+                if price_value is not None
+                else "Check Cobb County for current class pricing."
+            )
         ),
         "ticket_url": CATALOG_URL,
         "source_url": CATALOG_URL,
@@ -216,7 +220,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
     checkout_key = _get_checkout_key(TENANT_SLUG)
     if not checkout_key:
-        logger.error("Cobb beginner swimming lessons crawl aborted: missing checkout key")
+        logger.error(
+            "Cobb beginner swimming lessons crawl aborted: missing checkout key"
+        )
         return 0, 0, 0
 
     tabs = _get_tabs(TENANT_SLUG, checkout_key)
@@ -226,11 +232,17 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
     groups = _get_groups_for_tab(TENANT_SLUG, checkout_key, TARGET_TAB_ID)
     target_group = next(
-        (group for _, group in groups if (group.get("name") or "").strip() == TARGET_GROUP),
+        (
+            group
+            for _, group in groups
+            if (group.get("name") or "").strip() == TARGET_GROUP
+        ),
         None,
     )
     if not target_group:
-        logger.error("Cobb beginner swimming lessons crawl aborted: target group missing")
+        logger.error(
+            "Cobb beginner swimming lessons crawl aborted: target group missing"
+        )
         return 0, 0, 0
 
     sessions = _get_sessions_for_group(

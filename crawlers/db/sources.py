@@ -66,8 +66,12 @@ _FESTIVAL_SOURCE_OVERRIDES = {
     "piedmont-heart-conferences": {"festival_type": "conference"},
     "shaky-knees": {"festival_name": "Shaky Knees"},
     "juneteenth-atlanta": {"festival_name": "Juneteenth Atlanta"},
-    "a3c-festival": {"festival_name": "A3C Festival & Conference", "festival_type": "conference"},
+    "a3c-festival": {
+        "festival_name": "A3C Festival & Conference",
+        "festival_type": "conference",
+    },
     "ajff": {"festival_name": "Atlanta Jewish Film Festival"},
+    "out-on-film": {"force_event_model": True},
     "atlanta-dogwood": {"festival_name": "Atlanta Dogwood Festival"},
     "atlanta-food-wine": {"festival_name": "Atlanta Food & Wine Festival"},
     "buried-alive": {"festival_name": "Buried Alive Film Festival"},
@@ -76,6 +80,22 @@ _FESTIVAL_SOURCE_OVERRIDES = {
     "music-midtown": {"festival_name": "Music Midtown"},
     "bronzelens": {"festival_name": "BronzeLens Film Festival"},
     "elevate-atl-art": {"festival_name": "Elevate Atlanta"},
+    "atlanta-ice-cream-festival": {
+        "force_event_model": True,
+        "default_tentpole_event": True,
+    },
+    "east-atlanta-strut": {
+        "force_event_model": True,
+        "default_tentpole_event": True,
+    },
+    "panda-fest-atlanta": {
+        "force_event_model": True,
+        "default_tentpole_event": True,
+    },
+    "pigs-and-peaches-bbq": {
+        "force_event_model": True,
+        "default_tentpole_event": True,
+    },
     "piedmont-park-arts-festival": {"force_event_model": True},
     "national-black-arts-festival": {"force_event_model": True},
     "native-american-festival-and-pow-wow": {"force_event_model": True},
@@ -94,19 +114,45 @@ _FESTIVAL_SOURCE_OVERRIDES = {
 }
 
 _FESTIVAL_SOURCE_SLUGS = {
-    "atlanta-film-festival", "atlanta-jazz-festival", "decatur-arts-festival",
-    "decatur-book-festival", "grant-park-festival", "inman-park-festival",
-    "shaky-knees", "atlanta-dogwood", "atlanta-food-wine", "sweet-auburn-springfest",
-    "candler-park-fest", "east-atlanta-strut", "peachtree-road-race", "atlanta-pride",
-    "out-on-film", "ajff", "buried-alive",
-    "dragon-con", "momocon", "music-midtown", "one-musicfest",
-    "southern-fried-queer-pride", "dreamhack-atlanta",
-    "ga-renaissance-festival", "imagine-music-festival", "a3c-festival",
-    "afropunk-atlanta", "japanfest-atlanta", "atlanta-greek-festival",
-    "juneteenth-atlanta", "stone-mountain-highland-games",
-    "atlanta-tattoo-arts-festival", "blade-show", "furry-weekend-atlanta",
-    "southern-fried-gaming-expo", "anime-weekend-atlanta",
-    "atlanta-salsa-bachata-festival", "bronzelens", "elevate-atl-art",
+    "atlanta-film-festival",
+    "atlanta-jazz-festival",
+    "decatur-arts-festival",
+    "decatur-book-festival",
+    "grant-park-festival",
+    "inman-park-festival",
+    "shaky-knees",
+    "atlanta-dogwood",
+    "atlanta-food-wine",
+    "sweet-auburn-springfest",
+    "candler-park-fest",
+    "east-atlanta-strut",
+    "peachtree-road-race",
+    "atlanta-pride",
+    "out-on-film",
+    "ajff",
+    "buried-alive",
+    "dragon-con",
+    "momocon",
+    "music-midtown",
+    "one-musicfest",
+    "southern-fried-queer-pride",
+    "dreamhack-atlanta",
+    "ga-renaissance-festival",
+    "imagine-music-festival",
+    "a3c-festival",
+    "afropunk-atlanta",
+    "japanfest-atlanta",
+    "atlanta-greek-festival",
+    "juneteenth-atlanta",
+    "stone-mountain-highland-games",
+    "atlanta-tattoo-arts-festival",
+    "blade-show",
+    "furry-weekend-atlanta",
+    "southern-fried-gaming-expo",
+    "anime-weekend-atlanta",
+    "atlanta-salsa-bachata-festival",
+    "bronzelens",
+    "elevate-atl-art",
 }
 
 _FESTIVAL_NAME_PATTERN = re.compile(
@@ -122,8 +168,22 @@ _FESTIVAL_CONVENTION_PATTERN = re.compile(
     re.IGNORECASE,
 )
 _PROGRAM_TITLE_KEYWORDS = {
-    "track", "program", "stage", "room", "hall", "session", "panel", "workshop",
-    "keynote", "talk", "lecture", "summit", "forum", "expo", "screening", "showcase",
+    "track",
+    "program",
+    "stage",
+    "room",
+    "hall",
+    "session",
+    "panel",
+    "workshop",
+    "keynote",
+    "talk",
+    "lecture",
+    "summit",
+    "forum",
+    "expo",
+    "screening",
+    "showcase",
 }
 
 
@@ -152,7 +212,8 @@ def get_festival_source_hint(
         name = override.get("festival_name") or source_name
         return {
             "festival_name": name,
-            "festival_type": override.get("festival_type") or infer_festival_type_from_name(name),
+            "festival_type": override.get("festival_type")
+            or infer_festival_type_from_name(name),
         }
 
     if source_name and _FESTIVAL_NAME_PATTERN.search(source_name):
@@ -162,6 +223,17 @@ def get_festival_source_hint(
         }
 
     return None
+
+
+def source_should_default_tentpole_event(
+    source_slug: Optional[str], source_name: Optional[str]
+) -> bool:
+    """Return True when a festival-like source should emit direct tentpole events."""
+    slug = source_slug or ""
+    override = _FESTIVAL_SOURCE_OVERRIDES.get(slug, {})
+    if override.get("default_tentpole_event"):
+        return True
+    return False
 
 
 def infer_program_title(title: Optional[str]) -> Optional[str]:
@@ -185,6 +257,7 @@ def infer_program_title(title: Optional[str]) -> Optional[str]:
 
 
 # ===== SOURCE QUERIES =====
+
 
 def get_source_info(source_id: int) -> Optional[dict]:
     """Fetch source info with caching."""
@@ -290,6 +363,7 @@ def get_producer_id_for_source(source_id: int) -> Optional[str]:
 
 
 # ===== CRAWL LOG CRUD =====
+
 
 def create_crawl_log(source_id: int) -> int:
     """Create a new crawl log entry. Returns log ID."""

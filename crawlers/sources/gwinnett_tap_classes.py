@@ -18,6 +18,7 @@ from db import (
     smart_update_existing_event,
 )
 from dedupe import generate_content_hash
+from pipeline.program_descriptions import build_program_description
 from sources._rec1_base import (
     _get_checkout_key,
     _get_groups_for_tab,
@@ -35,7 +36,15 @@ TARGET_TAB = "Active Adults 50+"
 TARGET_GROUP = "Tap"
 WEEKS_AHEAD = 16
 DAY_CODES = ["MO", "TU", "WE", "TH", "FR", "SA", "SU"]
-DAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+DAY_NAMES = [
+    "Monday",
+    "Tuesday",
+    "Wednesday",
+    "Thursday",
+    "Friday",
+    "Saturday",
+    "Sunday",
+]
 
 DAY_INDEX = {
     "tu": 1,
@@ -79,7 +88,9 @@ VENUE_DATA_BY_LOCATION = {
 
 def parse_days_value(raw_value: str) -> list[int]:
     weekdays: list[int] = []
-    for token in [part.strip().lower() for part in (raw_value or "").split(",") if part.strip()]:
+    for token in [
+        part.strip().lower() for part in (raw_value or "").split(",") if part.strip()
+    ]:
         weekday = DAY_INDEX.get(token)
         if weekday is not None and weekday not in weekdays:
             weekdays.append(weekday)
@@ -129,12 +140,17 @@ def parse_session(session: dict, today: date) -> dict | None:
     if not raw_title.lower().startswith("tap"):
         return None
 
-    features = {feature.get("name"): feature.get("value") for feature in session.get("features") or []}
+    features = {
+        feature.get("name"): feature.get("value")
+        for feature in session.get("features") or []
+    }
     age_value = (features.get("ageGender") or "").strip().lower()
     if "50/up" not in age_value and "50+" not in age_value:
         return None
 
-    place_data = VENUE_DATA_BY_LOCATION.get((features.get("location") or "").strip().lower())
+    place_data = VENUE_DATA_BY_LOCATION.get(
+        (features.get("location") or "").strip().lower()
+    )
     if not place_data:
         return None
 
@@ -157,9 +173,10 @@ def parse_session(session: dict, today: date) -> dict | None:
     price = session.get("price")
     price_value = float(price) if price is not None else None
     title = f"{raw_title} at {place_data['name']}"
-    description = (
-        f"Public active-adult tap class at {place_data['name']} through Gwinnett County Parks & Recreation. "
-        "Reserve through the official county catalog for current availability."
+    description = build_program_description(
+        title,
+        summary="Public active-adult tap class through Gwinnett County Parks & Recreation",
+        facts=["Reserve through the official county catalog for current availability"],
     )
 
     return {
@@ -175,9 +192,11 @@ def parse_session(session: dict, today: date) -> dict | None:
         "price_note": (
             "Gwinnett Parks currently lists this class as free."
             if price_value == 0
-            else f"Gwinnett Parks currently lists this class at ${price_value:.2f}."
-            if price_value is not None
-            else "Check Gwinnett Parks for current class pricing."
+            else (
+                f"Gwinnett Parks currently lists this class at ${price_value:.2f}."
+                if price_value is not None
+                else "Check Gwinnett Parks for current class pricing."
+            )
         ),
         "ticket_url": CATALOG_URL,
         "source_url": CATALOG_URL,
@@ -195,7 +214,10 @@ def crawl(source: dict) -> tuple[int, int, int]:
     events_updated = 0
     current_hashes: set[str] = set()
     seen_session_ids: set[int] = set()
-    venue_ids = {data["slug"]: get_or_create_place(data) for data in VENUE_DATA_BY_LOCATION.values()}
+    venue_ids = {
+        data["slug"]: get_or_create_place(data)
+        for data in VENUE_DATA_BY_LOCATION.values()
+    }
     today = datetime.now().date()
 
     checkout_key = _get_checkout_key(TENANT_SLUG)
@@ -204,13 +226,17 @@ def crawl(source: dict) -> tuple[int, int, int]:
         return 0, 0, 0
 
     tabs = _get_tabs(TENANT_SLUG, checkout_key)
-    tab_id = next((str(tab["id"]) for tab in tabs if tab.get("label") == TARGET_TAB), None)
+    tab_id = next(
+        (str(tab["id"]) for tab in tabs if tab.get("label") == TARGET_TAB), None
+    )
     if not tab_id:
         logger.error("Gwinnett tap crawl aborted: Active Adults 50+ tab missing")
         return 0, 0, 0
 
     groups = _get_groups_for_tab(TENANT_SLUG, checkout_key, tab_id)
-    target_group = next((group for _, group in groups if group.get("name") == TARGET_GROUP), None)
+    target_group = next(
+        (group for _, group in groups if group.get("name") == TARGET_GROUP), None
+    )
     if not target_group:
         logger.error("Gwinnett tap crawl aborted: Tap group missing")
         return 0, 0, 0

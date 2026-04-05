@@ -33,6 +33,12 @@ def test_parse_session_builds_recurring_advanced_beginner_swim_class():
         parsed["title"]
         == "Advanced Beginner Swimming Lessons at West Cobb Aquatic Center"
     )
+    assert (
+        parsed["description"]
+        == "Advanced Beginner Swimming Lessons at West Cobb Aquatic Center. "
+        "Advanced beginner swim lessons through Cobb County Parks. "
+        "Reserve through the official county catalog for current availability."
+    )
     assert parsed["start_time"] == "13:00"
     assert parsed["end_time"] == "13:50"
     assert parsed["price_min"] == 80.0

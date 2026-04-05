@@ -85,6 +85,32 @@ def test_consolidate_daily_sessions_merges_per_day_camp_sessions() -> None:
     assert merged["_merged_session_count"] == 5
 
 
+def test_consolidate_daily_sessions_merges_same_activity_id_even_when_dates_differ() -> None:
+    items = [
+        {
+            **_make_session_item("2025/2026 Developmental Swim Team-CTM", "2026-03-23", "2026-03-23"),
+            "id": 11874,
+        },
+        {
+            **_make_session_item("2025/2026 Developmental Swim Team-CTM", "2026-03-24", "2026-03-24"),
+            "id": 11874,
+        },
+        {
+            **_make_session_item("2025/2026 Developmental Swim Team-CTM", "2026-03-27", "2026-03-27"),
+            "id": 11874,
+        },
+    ]
+
+    result = _consolidate_daily_sessions(items)
+
+    assert len(result) == 1
+    merged = result[0]
+    assert merged["name"] == "2025/2026 Developmental Swim Team-CTM"
+    assert merged["date_range_start"] == "2026-03-23"
+    assert merged["date_range_end"] == "2026-03-27"
+    assert merged["_merged_session_count"] == 3
+
+
 def test_consolidate_daily_sessions_does_not_merge_different_programs() -> None:
     """Different program names at the same venue must stay as separate records."""
     items = [

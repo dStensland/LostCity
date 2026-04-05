@@ -89,6 +89,29 @@ def test_step_extracts_source_id_from_source_info():
     assert result.get("classification_prompt_version") is not None
 
 
+def test_step_skips_llm_for_festival_film_rows():
+    event_data = {
+        "title": "Power Ballad",
+        "description": "Feature film screening.",
+        "category": "film",
+        "source_id": 30,
+    }
+    ctx = InsertContext(client=MagicMock(), venue_type="festival")
+    ctx.source_info = {"id": 30, "slug": "atlanta-film-festival"}
+    ctx.source_slug = "atlanta-film-festival"
+    ctx.source_name = "Atlanta Film Festival"
+
+    with patch.dict(os.environ, {"CLASSIFY_V2_ENABLED": "1"}):
+        with patch("db.events.events_support_taxonomy_v2_columns", return_value=True):
+            with patch("classify.classify_event") as mock_classify:
+                result = _step_classify_v2(event_data, ctx)
+
+    mock_classify.assert_not_called()
+    assert result["category"] == "film"
+    assert result["_classification_confidence"] == 1.0
+    assert result["classification_prompt_version"] == "source-grounded-film"
+
+
 def test_classification_duration_normalizes_to_db_values():
     assert _normalize_classification_duration("quick") == "short"
     assert _normalize_classification_duration("medium") == "medium"

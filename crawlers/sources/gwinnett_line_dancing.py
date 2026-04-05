@@ -21,6 +21,7 @@ from db import (
 from dedupe import generate_content_hash
 from entity_lanes import SourceEntityCapabilities, TypedEntityEnvelope
 from entity_persistence import persist_typed_entity_envelope
+from pipeline.program_descriptions import build_program_description
 from sources._rec1_base import (
     _get_checkout_key,
     _get_groups_for_tab,
@@ -45,7 +46,15 @@ TARGET_TABS = {"Active Adults 50+", "Classes & Activities"}
 TARGET_GROUP = "Line Dancing"
 WEEKS_AHEAD = 14
 DAY_CODES = ["MO", "TU", "WE", "TH", "FR", "SA", "SU"]
-DAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+DAY_NAMES = [
+    "Monday",
+    "Tuesday",
+    "Wednesday",
+    "Thursday",
+    "Friday",
+    "Saturday",
+    "Sunday",
+]
 
 DAY_INDEX = {
     "tu": 1,
@@ -122,7 +131,13 @@ def _build_destination_envelope(venue_id: int, place_data: dict) -> TypedEntityE
             "commitment_tier": "halfday",
             "primary_activity": "community center class or recreation visit",
             "best_seasons": ["spring", "summer", "fall", "winter"],
-            "weather_fit_tags": ["indoor", "indoor-option", "rainy-day", "heat-day", "family-daytrip"],
+            "weather_fit_tags": [
+                "indoor",
+                "indoor-option",
+                "rainy-day",
+                "heat-day",
+                "family-daytrip",
+            ],
             "parking_type": "free_lot",
             "best_time_of_day": "afternoon",
             "practical_notes": (
@@ -138,7 +153,8 @@ def _build_destination_envelope(venue_id: int, place_data: dict) -> TypedEntityE
             "source_url": CATALOG_URL,
             "metadata": {
                 "source_type": "family_destination_enrichment",
-                "place_type": place_data.get("place_type") or place_data.get("place_type"),
+                "place_type": place_data.get("place_type")
+                or place_data.get("place_type"),
                 "county": "gwinnett",
             },
         },
@@ -180,7 +196,9 @@ def _is_adult_age_value(value: str) -> bool:
 
 def parse_days_value(raw_value: str) -> list[int]:
     weekdays: list[int] = []
-    for token in [part.strip().lower() for part in (raw_value or "").split(",") if part.strip()]:
+    for token in [
+        part.strip().lower() for part in (raw_value or "").split(",") if part.strip()
+    ]:
         weekday = DAY_INDEX.get(token)
         if weekday is not None and weekday not in weekdays:
             weekdays.append(weekday)
@@ -230,12 +248,17 @@ def parse_session(session: dict, today: date) -> dict | None:
     if "line danc" not in raw_title.lower():
         return None
 
-    features = {feature.get("name"): feature.get("value") for feature in session.get("features") or []}
+    features = {
+        feature.get("name"): feature.get("value")
+        for feature in session.get("features") or []
+    }
     age_value = (features.get("ageGender") or "").strip()
     if not _is_adult_age_value(age_value):
         return None
 
-    place_data = VENUE_DATA_BY_LOCATION.get((features.get("location") or "").strip().lower())
+    place_data = VENUE_DATA_BY_LOCATION.get(
+        (features.get("location") or "").strip().lower()
+    )
     if not place_data:
         return None
 
@@ -258,9 +281,10 @@ def parse_session(session: dict, today: date) -> dict | None:
     price = session.get("price")
     price_value = float(price) if price is not None else None
     title = f"{raw_title} at {place_data['name']}"
-    description = (
-        f"Public adult line dancing class at {place_data['name']} through Gwinnett County Parks & Recreation. "
-        "Reserve through the official county catalog for current availability."
+    description = build_program_description(
+        title,
+        summary="Public adult line dancing class through Gwinnett County Parks & Recreation.",
+        facts=["Reserve through the official county catalog for current availability."],
     )
 
     return {
@@ -276,9 +300,11 @@ def parse_session(session: dict, today: date) -> dict | None:
         "price_note": (
             "Gwinnett Parks currently lists this class as free."
             if price_value == 0
-            else f"Gwinnett Parks currently lists this class at ${price_value:.2f}."
-            if price_value is not None
-            else "Check Gwinnett Parks for current class pricing."
+            else (
+                f"Gwinnett Parks currently lists this class at ${price_value:.2f}."
+                if price_value is not None
+                else "Check Gwinnett Parks for current class pricing."
+            )
         ),
         "ticket_url": CATALOG_URL,
         "source_url": CATALOG_URL,
@@ -311,12 +337,16 @@ def crawl(source: dict) -> tuple[int, int, int]:
     tabs = _get_tabs(TENANT_SLUG, checkout_key)
 
     for tab_label in TARGET_TABS:
-        tab_id = next((str(tab["id"]) for tab in tabs if tab.get("label") == tab_label), None)
+        tab_id = next(
+            (str(tab["id"]) for tab in tabs if tab.get("label") == tab_label), None
+        )
         if not tab_id:
             continue
 
         groups = _get_groups_for_tab(TENANT_SLUG, checkout_key, tab_id)
-        target_group = next((group for _, group in groups if group.get("name") == TARGET_GROUP), None)
+        target_group = next(
+            (group for _, group in groups if group.get("name") == TARGET_GROUP), None
+        )
         if not target_group:
             continue
 
@@ -383,7 +413,11 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     "class_category": "fitness",
                     "content_hash": content_hash,
                     "is_recurring": len(parsed["occurrences"]) > 1,
-                    "recurrence_rule": f"FREQ=WEEKLY;BYDAY={DAY_CODES[weekday]}" if len(parsed["occurrences"]) > 1 else None,
+                    "recurrence_rule": (
+                        f"FREQ=WEEKLY;BYDAY={DAY_CODES[weekday]}"
+                        if len(parsed["occurrences"]) > 1
+                        else None
+                    ),
                 }
 
                 existing = find_existing_event_for_insert(event_record)

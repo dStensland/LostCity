@@ -24,6 +24,7 @@ from db import (
 from dedupe import generate_content_hash
 from entity_lanes import SourceEntityCapabilities, TypedEntityEnvelope
 from entity_persistence import persist_typed_entity_envelope
+from pipeline.program_descriptions import build_program_description
 from sources.atlanta_dpr import (
     _extract_prices,
     _fetch_page,
@@ -37,7 +38,15 @@ logger = logging.getLogger(__name__)
 SOURCE_URL = "https://anc.apm.activecommunities.com/atlantadprca/Activity_Search"
 WEEKS_AHEAD = 12
 DAY_CODES = ["MO", "TU", "WE", "TH", "FR", "SA", "SU"]
-DAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+DAY_NAMES = [
+    "Monday",
+    "Tuesday",
+    "Wednesday",
+    "Thursday",
+    "Friday",
+    "Saturday",
+    "Sunday",
+]
 
 SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
     events=True,
@@ -86,11 +95,16 @@ def _clean_time_token(raw_value: str) -> str:
 
 def _parse_day_tokens(raw_value: str) -> list[int]:
     weekdays: list[int] = []
-    tokens = [match.group(1).lower() for match in DAY_TOKEN_RE.finditer(raw_value or "")]
+    tokens = [
+        match.group(1).lower() for match in DAY_TOKEN_RE.finditer(raw_value or "")
+    ]
     for index, token in enumerate(tokens):
         weekday = DAY_INDEX[token]
         if index + 1 < len(tokens):
-            current_pos = raw_value.lower().find(token, 0 if index == 0 else raw_value.lower().find(tokens[index - 1]) + 1)
+            current_pos = raw_value.lower().find(
+                token,
+                0 if index == 0 else raw_value.lower().find(tokens[index - 1]) + 1,
+            )
             next_pos = raw_value.lower().find(tokens[index + 1], current_pos + 1)
             separator = raw_value[current_pos + len(token) : next_pos]
             if "-" in separator:
@@ -136,7 +150,9 @@ def _build_series_title(title: str, weekday: int) -> str:
 
 
 def _parse_schedule(description_html: str) -> Optional[tuple[list[int], str, str]]:
-    text = " ".join(BeautifulSoup(description_html or "", "html.parser").get_text(" ").split())
+    text = " ".join(
+        BeautifulSoup(description_html or "", "html.parser").get_text(" ").split()
+    )
     match = TIME_SEGMENT_RE.search(text)
     if not match:
         return None
@@ -159,7 +175,11 @@ def _normalize_title(raw_title: str, venue_name: str) -> str:
     if "water aerobics" in lower and "with ms. hayes" in lower:
         return f"Water Aerobics with Ms. Hayes at {venue_name}"
 
-    if "water aerobics" in lower and "rosel fann" in lower and "with ms. hayes" not in lower:
+    if (
+        "water aerobics" in lower
+        and "rosel fann" in lower
+        and "with ms. hayes" not in lower
+    ):
         return f"Water Aerobics at {venue_name}"
 
     if "water awareness" in lower:
@@ -195,7 +215,8 @@ def _build_destination_envelope(place_data: dict, venue_id: int) -> TypedEntityE
             "source_url": SOURCE_URL,
             "metadata": {
                 "source_type": "family_destination_enrichment",
-                "place_type": place_data.get("place_type") or place_data.get("place_type"),
+                "place_type": place_data.get("place_type")
+                or place_data.get("place_type"),
                 "city": "atlanta",
             },
         },
@@ -251,13 +272,22 @@ def parse_item(item: dict, today: date) -> Optional[dict]:
 
     price_min, price_max, is_free = _extract_prices(description_html)
     normalized_title = _normalize_title(raw_title, place_data["name"])
-    description = (
-        f"Public aquatic fitness class at {place_data['name']} through Atlanta DPR. "
-        "Reserve through the official city registration catalog for current availability."
+    description = build_program_description(
+        normalized_title,
+        summary="Public aquatic fitness class through Atlanta DPR.",
+        facts=[
+            "Reserve through the official city registration catalog for current availability."
+        ],
     )
 
     age_min = item.get("age_min_year")
-    tags = ["aquatics", "water-fitness", "fitness-class", "public-fitness", "atlanta-dpr"]
+    tags = [
+        "aquatics",
+        "water-fitness",
+        "fitness-class",
+        "public-fitness",
+        "atlanta-dpr",
+    ]
     if isinstance(age_min, int) and age_min >= 55:
         tags.append("seniors")
     if is_free:
@@ -285,13 +315,21 @@ def parse_item(item: dict, today: date) -> Optional[dict]:
         "price_note": (
             "Atlanta DPR currently lists this class as free."
             if is_free
-            else f"Atlanta DPR currently lists this class from ${price_min:.2f} to ${price_max:.2f}."
-            if price_min is not None and price_max is not None and price_min != price_max
-            else f"Atlanta DPR currently lists this class at ${price_min:.2f}."
-            if price_min is not None
-            else "Check Atlanta DPR for current class pricing."
+            else (
+                f"Atlanta DPR currently lists this class from ${price_min:.2f} to ${price_max:.2f}."
+                if price_min is not None
+                and price_max is not None
+                and price_min != price_max
+                else (
+                    f"Atlanta DPR currently lists this class at ${price_min:.2f}."
+                    if price_min is not None
+                    else "Check Atlanta DPR for current class pricing."
+                )
+            )
         ),
-        "raw_text": " ".join(BeautifulSoup(description_html, "html.parser").get_text(" ").split()),
+        "raw_text": " ".join(
+            BeautifulSoup(description_html, "html.parser").get_text(" ").split()
+        ),
         "tags": tags,
     }
 

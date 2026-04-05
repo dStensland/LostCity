@@ -26,6 +26,12 @@ def test_parse_session_builds_recurring_belly_dance_class():
 
     assert parsed is not None
     assert parsed["title"] == "Belly Dance at Ron Anderson Recreation Center"
+    assert (
+        parsed["description"]
+        == "Belly Dance at Ron Anderson Recreation Center. "
+        "Public belly dance class through Cobb County Parks. "
+        "Reserve through the official county catalog for current availability."
+    )
     assert parsed["start_time"] == "19:00"
     assert parsed["end_time"] == "20:00"
     assert parsed["price_min"] == 75.0

@@ -20,6 +20,12 @@ def test_parse_item_builds_tuesday_open_play_occurrences():
 
     assert parsed is not None
     assert parsed["title"] == "Tobie Grant Pickleball Open Play at Tobie Grant Gymnasium"
+    assert (
+        parsed["description"]
+        == "Tobie Grant Pickleball Open Play at Tobie Grant Gymnasium. "
+        "Public pickleball open play through DeKalb County Recreation. "
+        "Reserve through the official county catalog for current availability."
+    )
     assert parsed["start_time"] == "10:00"
     assert parsed["end_time"] == "12:00"
     assert parsed["occurrences"] == [

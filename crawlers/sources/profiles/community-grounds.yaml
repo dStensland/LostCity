@@ -1,0 +1,15 @@
+version: 1
+slug: community-grounds
+name: Community Grounds
+integration_method: python
+discovery:
+  enabled: true
+  type: html
+  urls:
+  - https://communitygrounds.com/
+detail:
+  enabled: false
+data_goals:
+- images
+- destination_details
+- venue_features

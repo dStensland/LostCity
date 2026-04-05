@@ -12,7 +12,12 @@ from typing import Optional
 
 from playwright.sync_api import sync_playwright, Page
 
-from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
+from db import (
+    get_or_create_place,
+    insert_event,
+    find_event_by_hash,
+    smart_update_existing_event,
+)
 from dedupe import generate_content_hash
 from utils import extract_images_from_page
 
@@ -107,6 +112,18 @@ def parse_time(time_text: str) -> Optional[str]:
         return None
 
 
+def _build_showtime_description(title: str, rating_duration: str, director: str) -> str:
+    parts = [
+        f"Film screening of {title} at Landmark Midtown Art Cinema in Midtown Atlanta."
+    ]
+    if rating_duration:
+        parts.append(f"Rating and runtime: {rating_duration}.")
+    if director:
+        parts.append(f"Directed by {director}.")
+    parts.append("Showtimes are scheduled through Landmark's current cinema listings.")
+    return " ".join(part for part in parts if part)
+
+
 def extract_movies_for_date(
     page: Page,
     target_date: datetime,
@@ -158,23 +175,28 @@ def extract_movies_for_date(
         # "Trailer PG-13 • 2 hr, 10 minH Is For HawkDirected by..."
         # Key: Rating • Duration followed by Title then "Directed by"
         movie_pattern = re.compile(
-            r'(?:Trailer\s*)?'  # Optional Trailer marker
-            r'((?:G|PG|PG-13|R|NC-17|NR|Not Rated)\s*•\s*'  # Rating
-            r'\d+\s*hr,?\s*\d*\s*min)'  # Duration
-            r'\s*'
-            r'([A-Z][A-Za-z0-9\s\'\"\-\:\,\.\!\?\&\(\)]+?)'  # Title (starts with capital)
-            r'Directed by\s+([A-Za-z\s\-\.]+)',  # Director (confirms this is a movie)
-            re.IGNORECASE
+            r"(?:Trailer\s*)?"  # Optional Trailer marker
+            r"((?:G|PG|PG-13|R|NC-17|NR|Not Rated)\s*•\s*"  # Rating
+            r"\d+\s*hr,?\s*\d*\s*min)"  # Duration
+            r"\s*"
+            r"([A-Z][A-Za-z0-9\s\'\"\-\:\,\.\!\?\&\(\)]+?)"  # Title (starts with capital)
+            r"Directed by\s+([A-Za-z\s\-\.]+)",  # Director (confirms this is a movie)
+            re.IGNORECASE,
         )
 
         # Normalize text - add space after date numbers to prevent "January 261:10PM"
         # Pattern matches: "January 26" or "Today, January 26" followed directly by time
-        text = re.sub(r'(\w+,?\s+\w+\s+\d{1,2})(\d{1,2}:\d{2}(?:AM|PM))', r'\1 \2', text, flags=re.IGNORECASE)
+        text = re.sub(
+            r"(\w+,?\s+\w+\s+\d{1,2})(\d{1,2}:\d{2}(?:AM|PM))",
+            r"\1 \2",
+            text,
+            flags=re.IGNORECASE,
+        )
 
         # Showtime pattern: times like "4:00PM", "3:10PM" (no space before AM/PM)
         # Can be concatenated: "1:10PM4:00PM7:00PM"
         # Updated to avoid matching date numbers like "261:10PM" from "January 261:10PM"
-        showtime_pattern = re.compile(r'(?<!\d)(\d{1,2}:\d{2}(?:AM|PM))', re.IGNORECASE)
+        showtime_pattern = re.compile(r"(?<!\d)(\d{1,2}:\d{2}(?:AM|PM))", re.IGNORECASE)
 
         # Find all movies
         movies = []
@@ -184,31 +206,52 @@ def extract_movies_for_date(
             director = match.group(3).strip()
 
             # Clean up title - remove trailing whitespace and any leftover metadata
-            title = re.sub(r'\s+$', '', title).strip()
+            title = re.sub(r"\s+$", "", title).strip()
 
             # Skip if title looks like UI text or crawler artifacts
             skip_titles = [
-                "Showtimes", "Now Playing", "Coming Soon", "Landmark",
-                "Another Date", "See Details", "Film Series", "Special",
-                "At:", "Fri", "Sat", "Sun", "Mon", "Tue", "Wed", "Thu",
-                "See Trailer", "Late Shows", "Two Shows Only",
-                "A Film By", "Trailer",
+                "Showtimes",
+                "Now Playing",
+                "Coming Soon",
+                "Landmark",
+                "Another Date",
+                "See Details",
+                "Film Series",
+                "Special",
+                "At:",
+                "Fri",
+                "Sat",
+                "Sun",
+                "Mon",
+                "Tue",
+                "Wed",
+                "Thu",
+                "See Trailer",
+                "Late Shows",
+                "Two Shows Only",
+                "A Film By",
+                "Trailer",
             ]
             if any(skip.lower() == title.lower() for skip in skip_titles):
                 continue
-            if any(skip.lower() in title.lower() and len(title) < 20 for skip in skip_titles):
+            if any(
+                skip.lower() in title.lower() and len(title) < 20
+                for skip in skip_titles
+            ):
                 continue
 
             if len(title) < 3 or len(title) > 100:
                 continue
 
-            movies.append({
-                "title": title,
-                "rating_duration": rating_duration,
-                "director": director,
-                "start": match.start(),
-                "end": match.end()
-            })
+            movies.append(
+                {
+                    "title": title,
+                    "rating_duration": rating_duration,
+                    "director": director,
+                    "start": match.start(),
+                    "end": match.end(),
+                }
+            )
 
         logger.info(f"Found {len(movies)} movies on Landmark page")
 
@@ -216,9 +259,9 @@ def extract_movies_for_date(
         for i, movie in enumerate(movies):
             # Get text section for this movie (until next movie or Trailer marker)
             if i + 1 < len(movies):
-                section = text[movie["end"]:movies[i + 1]["start"]]
+                section = text[movie["end"] : movies[i + 1]["start"]]
             else:
-                section = text[movie["end"]:movie["end"] + 500]  # Limit search area
+                section = text[movie["end"] : movie["end"] + 500]  # Limit search area
 
             # Stop at Trailer marker (indicates start of next movie)
             if "Trailer" in section:
@@ -234,10 +277,14 @@ def extract_movies_for_date(
                     hour_val = int(match_parts.group(1))
                     min_val = int(match_parts.group(2))
                     if hour_val < 1 or hour_val > 12 or min_val > 59:
-                        logger.debug(f"Skipping invalid time: {time_str} (hour={hour_val}, min={min_val})")
+                        logger.debug(
+                            f"Skipping invalid time: {time_str} (hour={hour_val}, min={min_val})"
+                        )
                         continue
                 # Skip if this looks like part of duration (preceded by "hr" or "min")
-                prefix = section[max(0, st_match.start()-15):st_match.start()].lower()
+                prefix = section[
+                    max(0, st_match.start() - 15) : st_match.start()
+                ].lower()
                 if "hr" in prefix or "min" in prefix:
                     continue
                 parsed = parse_time(time_str)
@@ -253,9 +300,12 @@ def extract_movies_for_date(
 
             # Image lookup (case-insensitive, same for all showtimes of this film)
             poster_url = next(
-                (url for title, url in (image_map or {}).items()
-                    if title.lower() == movie["title"].lower()),
-                None
+                (
+                    url
+                    for title, url in (image_map or {}).items()
+                    if title.lower() == movie["title"].lower()
+                ),
+                None,
             )
 
             # Create one event per showtime (matches chain cinema model)
@@ -275,14 +325,20 @@ def extract_movies_for_date(
 
                 # Content hash includes time — each showtime is a distinct event
                 content_hash = generate_content_hash(
-                    movie["title"], "Landmark Midtown Art Cinema", f"{date_str}|{start_time}"
+                    movie["title"],
+                    "Landmark Midtown Art Cinema",
+                    f"{date_str}|{start_time}",
                 )
 
                 event_record = {
                     "source_id": source_id,
                     "place_id": venue_id,
                     "title": movie["title"],
-                    "description": movie["rating_duration"],
+                    "description": _build_showtime_description(
+                        movie["title"],
+                        movie["rating_duration"],
+                        movie["director"],
+                    ),
                     "start_date": date_str,
                     "start_time": start_time,
                     "end_date": None,
@@ -319,9 +375,13 @@ def extract_movies_for_date(
                 try:
                     insert_event(event_record, series_hint=series_hint)
                     events_new += 1
-                    logger.info(f"Added: {movie['title']} at {start_time} on {date_str}")
+                    logger.info(
+                        f"Added: {movie['title']} at {start_time} on {date_str}"
+                    )
                 except Exception as e:
-                    logger.error(f"Failed to insert: {movie['title']} at {start_time}: {e}")
+                    logger.error(
+                        f"Failed to insert: {movie['title']} at {start_time}: {e}"
+                    )
 
     except Exception as e:
         logger.error(f"Error extracting movies: {e}")

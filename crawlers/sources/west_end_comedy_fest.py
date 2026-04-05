@@ -19,14 +19,17 @@ import logging
 import re
 from datetime import datetime
 from typing import Optional
+
 import requests
 from bs4 import BeautifulSoup
 
 from db import (
     find_event_by_hash,
+    get_client,
     get_or_create_place,
     insert_event,
     smart_update_existing_event,
+    writes_enabled,
 )
 from dedupe import generate_content_hash
 
@@ -35,6 +38,7 @@ logger = logging.getLogger(__name__)
 BASE_URL = "https://www.westendcomedyfest.com"
 SCHEDULE_URL = f"{BASE_URL}/schedule"
 TICKET_BASE_URL = f"{BASE_URL}/buytickets/p"
+FESTIVAL_ID = "west-end-comedy-fest"
 
 REQUEST_HEADERS = {
     "User-Agent": (
@@ -197,6 +201,8 @@ _DATE_RE = re.compile(
     re.IGNORECASE,
 )
 
+_WHITESPACE_RE = re.compile(r"\s+")
+
 
 def _parse_time(text: str) -> Optional[str]:
     """Convert '7PM', '7:30PM', '9:30 pm' to 24-hour 'HH:MM' string."""
@@ -244,6 +250,134 @@ def _build_ticket_url(slug: str) -> Optional[str]:
     if not slug:
         return None
     return f"{TICKET_BASE_URL}/{slug}"
+
+
+def _clean_title(title: str) -> str:
+    text = re.sub(r"\(\s*\)", "", title or "")
+    text = re.sub(r"\s+Ticketed only no passes\.?\s*$", "", text, flags=re.IGNORECASE)
+    text = re.sub(r"\s{2,}", " ", text)
+    return text.strip(" -|,")
+
+
+def _find_existing_event_by_slot(
+    *,
+    client,
+    source_id: int,
+    place_id: str,
+    start_date: str,
+    start_time: Optional[str],
+) -> Optional[dict]:
+    query = (
+        client.table("events")
+        .select("id,title,festival_id,series_id")
+        .eq("source_id", source_id)
+        .eq("place_id", place_id)
+        .eq("start_date", start_date)
+    )
+    if start_time:
+        query = query.eq("start_time", start_time)
+    else:
+        query = query.is_("start_time", "null")
+    rows = query.limit(1).execute().data or []
+    return rows[0] if rows else None
+
+
+def _find_canonical_series_id(client, series_title: str) -> Optional[str]:
+    rows = (
+        client.table("series")
+        .select("id,title,festival_id,series_type")
+        .eq("title", series_title)
+        .eq("series_type", "festival_program")
+        .execute()
+        .data
+        or []
+    )
+    if not rows:
+        return None
+    series_ids = [row["id"] for row in rows if row.get("id")]
+    counts = {}
+    if series_ids:
+        linked = (
+            client.table("events")
+            .select("series_id")
+            .in_("series_id", series_ids)
+            .execute()
+            .data
+            or []
+        )
+        for row in linked:
+            sid = row.get("series_id")
+            if sid:
+                counts[sid] = counts.get(sid, 0) + 1
+    ranked = sorted(
+        rows,
+        key=lambda row: (
+            counts.get(row.get("id"), 0),
+            1 if row.get("festival_id") == FESTIVAL_ID else 0,
+        ),
+        reverse=True,
+    )
+    return ranked[0].get("id")
+
+
+def _repair_existing_festival_links(
+    client,
+    existing: dict,
+    *,
+    canonical_series_id: Optional[str],
+) -> None:
+    if not writes_enabled():
+        return
+    update_payload = {}
+    if not existing.get("festival_id"):
+        update_payload["festival_id"] = FESTIVAL_ID
+    if (
+        canonical_series_id
+        and existing.get("series_id")
+        and existing.get("series_id") != canonical_series_id
+    ):
+        update_payload["series_id"] = canonical_series_id
+    if update_payload:
+        client.table("events").update(update_payload).eq("id", existing["id"]).execute()
+
+    target_series_id = canonical_series_id or existing.get("series_id")
+    if target_series_id:
+        client.table("series").update({"festival_id": FESTIVAL_ID}).eq(
+            "id", target_series_id
+        ).execute()
+
+
+def _delete_empty_duplicate_series(
+    client, series_title: str, canonical_series_id: Optional[str]
+) -> None:
+    if not writes_enabled():
+        return
+    if not canonical_series_id:
+        return
+    rows = (
+        client.table("series")
+        .select("id")
+        .eq("title", series_title)
+        .eq("series_type", "festival_program")
+        .execute()
+        .data
+        or []
+    )
+    for row in rows:
+        series_id = row.get("id")
+        if not series_id or series_id == canonical_series_id:
+            continue
+        linked = (
+            client.table("events")
+            .select("id")
+            .eq("series_id", series_id)
+            .limit(1)
+            .execute()
+            .data
+            or []
+        )
+        if not linked:
+            client.table("series").delete().eq("id", series_id).execute()
 
 
 def _build_description(
@@ -362,7 +496,8 @@ def _parse_schedule_html(html: str, year: int) -> list[dict]:
         return shows
     elif shows:
         logger.info(
-            "West End Comedy Fest: structured blocks found only %d shows — trying text scan", len(shows)
+            "West End Comedy Fest: structured blocks found only %d shows — trying text scan",
+            len(shows),
         )
 
     # --- Approach 2: raw text scan ---
@@ -407,6 +542,74 @@ def _guess_title_from_block(block) -> Optional[str]:
             continue
         return line
     return None
+
+
+def _normalize_page_text(html: str) -> str:
+    soup = BeautifulSoup(html, "html.parser")
+    return _WHITESPACE_RE.sub(" ", soup.get_text(" ", strip=True)).strip()
+
+
+def _extract_festival_description(html: str) -> Optional[str]:
+    text = _normalize_page_text(html)
+    if not text:
+        return None
+
+    has_west_end = (
+        "west end comedy fest" in text.lower()
+        or "west end comedy festival" in text.lower()
+    )
+    has_venues = all(
+        venue in text
+        for venue in ("Wild Heaven Garden Club", "Wild Heaven Lounge", "Plywood Place")
+    )
+    if has_west_end and "historic West End" in text and has_venues:
+        return (
+            "West End Comedy Fest is an Atlanta comedy festival in the historic West End "
+            "featuring comics from around the country at Wild Heaven Garden Club, "
+            "Wild Heaven Lounge, and Plywood Place."
+        )
+
+    return None
+
+
+def _hydrate_festival_parent_copy(
+    client, *, festival_description: Optional[str], canonical_series_id: Optional[str]
+) -> None:
+    description = (festival_description or "").strip()
+    if not writes_enabled() or not description:
+        return
+
+    festival_rows = (
+        client.table("festivals")
+        .select("id,description")
+        .eq("id", FESTIVAL_ID)
+        .limit(1)
+        .execute()
+        .data
+        or []
+    )
+    festival_row = festival_rows[0] if festival_rows else None
+    if festival_row and not (festival_row.get("description") or "").strip():
+        client.table("festivals").update({"description": description}).eq(
+            "id", FESTIVAL_ID
+        ).execute()
+
+    if not canonical_series_id:
+        return
+    series_rows = (
+        client.table("series")
+        .select("id,description")
+        .eq("id", canonical_series_id)
+        .limit(1)
+        .execute()
+        .data
+        or []
+    )
+    series_row = series_rows[0] if series_rows else None
+    if series_row and not (series_row.get("description") or "").strip():
+        client.table("series").update({"description": description}).eq(
+            "id", canonical_series_id
+        ).execute()
 
 
 def _extract_ticket_slug(block) -> Optional[str]:
@@ -504,6 +707,7 @@ def _get_hardcoded_2026_shows() -> list[dict]:
 def crawl(source: dict) -> tuple[int, int, int]:
     """Crawl West End Comedy Fest shows."""
     source_id = source["id"]
+    client = get_client()
     events_found = 0
     events_new = 0
     events_updated = 0
@@ -525,8 +729,10 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
     # Try live scrape
     current_year = datetime.now().year
+    homepage_html = _fetch_html(BASE_URL)
     html = _fetch_html(SCHEDULE_URL)
     shows: list[dict] = []
+    festival_description = _extract_festival_description(homepage_html or html or "")
 
     if html:
         shows = _parse_schedule_html(html, current_year)
@@ -544,10 +750,18 @@ def crawl(source: dict) -> tuple[int, int, int]:
         "series_type": "festival_program",
         "series_title": "West End Comedy Fest 2026",
         "frequency": "irregular",
+        "festival_id": FESTIVAL_ID,
+        "description": festival_description,
     }
+    canonical_series_id = _find_canonical_series_id(client, series_hint["series_title"])
+    _hydrate_festival_parent_copy(
+        client,
+        festival_description=festival_description,
+        canonical_series_id=canonical_series_id,
+    )
 
     for show in shows:
-        title = show["title"]
+        title = _clean_title(show["title"])
         start_date = show["start_date"]
         start_time = show.get("start_time")
         venue_key = show.get("venue_key", "wild_heaven")
@@ -612,21 +826,40 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
         events_found += 1
 
-        existing = find_event_by_hash(content_hash)
+        existing = _find_existing_event_by_slot(
+            client=client,
+            source_id=source_id,
+            place_id=venue_id,
+            start_date=start_date,
+            start_time=start_time,
+        ) or find_event_by_hash(content_hash)
         if existing:
             smart_update_existing_event(existing, event_record)
+            _repair_existing_festival_links(
+                client,
+                existing,
+                canonical_series_id=canonical_series_id,
+            )
             events_updated += 1
             logger.debug("Updated: %s on %s", title, start_date)
             continue
 
         try:
             insert_event(event_record, series_hint=series_hint)
+            if not canonical_series_id:
+                canonical_series_id = _find_canonical_series_id(
+                    client, series_hint["series_title"]
+                )
             events_new += 1
             logger.info(
                 "Added: %s on %s at %s (%s)", title, start_date, start_time, venue_label
             )
         except Exception as exc:
             logger.error("Failed to insert %s on %s: %s", title, start_date, exc)
+
+    _delete_empty_duplicate_series(
+        client, series_hint["series_title"], canonical_series_id
+    )
 
     logger.info(
         "West End Comedy Fest crawl complete: %d found, %d new, %d updated",
