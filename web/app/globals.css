@@ -7151,3 +7151,18 @@ body:has([data-vertical="hospital"]) .rain-overlay {
     transparent 100%
   );
 }
+
+/* ============================================
+   NEW THEME ROW HIGHLIGHT
+   One-shot pulse animation when new theme row is added to tracking matrix.
+   Usage: className="animate-pulse-once"
+   ============================================ */
+@keyframes pulse-once {
+  0% { background-color: transparent; }
+  30% { background-color: rgba(127, 29, 29, 0.4); }
+  100% { background-color: transparent; }
+}
+
+.animate-pulse-once {
+  animation: pulse-once 1s ease-out 1;
+}
