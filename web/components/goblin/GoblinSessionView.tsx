@@ -220,15 +220,15 @@ export default function GoblinSessionView({
         const theme = entry.theme_id ? themeMap.get(entry.theme_id) : null;
         const movie = entry.movie_id ? movieMap.get(entry.movie_id) : null;
         return (
-          <span className="text-zinc-600">
-            <span className="text-zinc-700 mr-2">✓</span>
+          <span>
+            <span className="mr-2">{"\u{1F480}"}</span>
             {actor}
             SPOTTED{" "}
-            <span className="text-zinc-500 font-bold">
+            <span className="text-red-400 font-bold">
               &quot;{theme?.label ?? `#${entry.theme_id}`}&quot;
             </span>
             {" "}IN{" "}
-            <span className="text-zinc-500 font-bold">
+            <span className="text-white font-bold">
               {movie?.title ?? `#${entry.movie_id}`}
             </span>
           </span>
@@ -239,7 +239,7 @@ export default function GoblinSessionView({
         const movie = entry.movie_id ? movieMap.get(entry.movie_id) : null;
         return (
           <span className="text-zinc-600">
-            <span className="text-zinc-700 mr-2">−</span>
+            <span className="text-zinc-700 mr-2">&minus;</span>
             {actor}
             REMOVED{" "}
             <span className="text-zinc-600">

@@ -4,6 +4,31 @@ import { useState, useCallback, useMemo, useRef, useEffect } from "react";
 import SmartImage from "@/components/SmartImage";
 
 const TMDB_IMAGE_BASE = "https://image.tmdb.org/t/p/w200";
+const SKULL = "\u{1F480}";
+const FIRE = "\u{1F525}";
+const MAX_THEME_LENGTH = 24;
+
+/* Quick-add theme suggestions — punchy horror bingo staples */
+const THEME_SUGGESTIONS = [
+  "FINAL GIRL",
+  "BODY HORROR",
+  "JUMP SCARE",
+  "DUMB DEATH",
+  "THE PHONE IS DEAD",
+  "CREEPY KID",
+  "DON'T GO IN THERE",
+  "FALSE ENDING",
+  "BLOOD SPLATTER",
+  "SLOW BURN",
+  "POSSESSION",
+  "FOUND FOOTAGE",
+  "DARK BASEMENT",
+  "TWIST VILLAIN",
+];
+
+/* ------------------------------------------------------------------ */
+/*  Types                                                              */
+/* ------------------------------------------------------------------ */
 
 interface MatrixMovie {
   id: number;
@@ -32,6 +57,10 @@ interface Props {
   onRefresh: () => void;
 }
 
+/* ------------------------------------------------------------------ */
+/*  Component                                                          */
+/* ------------------------------------------------------------------ */
+
 export default function GoblinThemeMatrix({
   sessionId,
   movies,
@@ -43,15 +72,13 @@ export default function GoblinThemeMatrix({
   const [showThemeForm, setShowThemeForm] = useState(false);
   const [themeError, setThemeError] = useState<string | null>(null);
   const [newThemeId, setNewThemeId] = useState<number | null>(null);
-  // Optimistic toggle state: Map<"themeId-movieId", boolean>
   const [optimisticToggles, setOptimisticToggles] = useState<Map<string, boolean>>(new Map());
-  // Track keys with in-flight API calls + pending refresh — polling must not clear these
   const inFlightKeys = useRef<Set<string>>(new Set());
-  // Revision counter: only reconcile when this changes (not on every themes reference change)
   const [serverRevision, setServerRevision] = useState(0);
   const prevThemesRef = useRef<string>("");
-  const [cancelingThemeId, setCancelingThemeId] = useState<number | null>(null);
-  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Inline confirm state for theme cancellation (replaces window.confirm)
+  const [confirmingCancelId, setConfirmingCancelId] = useState<number | null>(null);
+  const confirmTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const newRowRef = useRef<HTMLTableRowElement | null>(null);
 
   const sortedMovies = useMemo(
@@ -63,6 +90,8 @@ export default function GoblinThemeMatrix({
     () => themes.filter((t) => t.status === "active"),
     [themes]
   );
+
+  const movieIds = useMemo(() => new Set(sortedMovies.map((m) => m.id)), [sortedMovies]);
 
   // Build checked set from theme data
   const checkedSet = useMemo(() => {
@@ -85,7 +114,29 @@ export default function GoblinThemeMatrix({
     [checkedSet, optimisticToggles]
   );
 
-  // Only bump revision when themes content actually changes (Bug 4 fix)
+  // Bingo detection: theme row is complete when all movies are checked
+  const isRowComplete = useCallback(
+    (themeId: number) => {
+      if (sortedMovies.length === 0) return false;
+      return sortedMovies.every((m) => isChecked(themeId, m.id));
+    },
+    [sortedMovies, isChecked]
+  );
+
+  // Per-movie trophy count
+  const movieTrophyCounts = useMemo(() => {
+    const counts = new Map<number, number>();
+    for (const movie of sortedMovies) {
+      let count = 0;
+      for (const theme of activeThemes) {
+        if (isChecked(theme.id, movie.id)) count++;
+      }
+      counts.set(movie.id, count);
+    }
+    return counts;
+  }, [sortedMovies, activeThemes, isChecked]);
+
+  // Only bump revision when themes content actually changes
   useEffect(() => {
     const sig = JSON.stringify(
       themes.map((t) => [t.id, t.status, t.goblin_theme_movies.map((m) => m.movie_id).sort()])
@@ -96,7 +147,7 @@ export default function GoblinThemeMatrix({
     }
   }, [themes]);
 
-  // Reconcile optimistic state when server data actually changes — keep in-flight keys
+  // Reconcile optimistic state when server data changes — keep in-flight keys
   useEffect(() => {
     setOptimisticToggles((prev) => {
       if (prev.size === 0) return prev;
@@ -109,7 +160,7 @@ export default function GoblinThemeMatrix({
     });
   }, [serverRevision]);
 
-  // Scroll new row into view (requestAnimationFrame ensures DOM has rendered)
+  // Scroll new row into view
   useEffect(() => {
     if (!newThemeId) return;
     requestAnimationFrame(() => {
@@ -124,12 +175,8 @@ export default function GoblinThemeMatrix({
   const handleToggle = useCallback(
     async (themeId: number, movieId: number) => {
       const key = `${themeId}-${movieId}`;
-
-      // Mark in-flight so polling doesn't wipe optimistic state.
-      // Key stays in-flight until AFTER the refresh response renders.
       inFlightKeys.current.add(key);
 
-      // Bug 3 fix: read current state inside the updater to avoid stale closure on double-tap
       setOptimisticToggles((prev) => {
         const next = new Map(prev);
         const currentlyChecked = prev.has(key) ? prev.get(key)! : checkedSet.has(key);
@@ -147,30 +194,15 @@ export default function GoblinThemeMatrix({
           }
         );
         if (res.ok) {
-          // Bug 1 fix: DON'T delete from inFlightKeys yet — keep protected
-          // until the refresh data arrives. The refresh triggers a themes
-          // change which bumps serverRevision, and THEN reconciliation runs.
-          // We schedule the key removal after a short delay to let the
-          // refresh response render first.
           onRefresh();
-          setTimeout(() => {
-            inFlightKeys.current.delete(key);
-          }, 2000);
+          setTimeout(() => { inFlightKeys.current.delete(key); }, 2000);
         } else {
           inFlightKeys.current.delete(key);
-          setOptimisticToggles((prev) => {
-            const next = new Map(prev);
-            next.delete(key);
-            return next;
-          });
+          setOptimisticToggles((prev) => { const next = new Map(prev); next.delete(key); return next; });
         }
       } catch {
         inFlightKeys.current.delete(key);
-        setOptimisticToggles((prev) => {
-          const next = new Map(prev);
-          next.delete(key);
-          return next;
-        });
+        setOptimisticToggles((prev) => { const next = new Map(prev); next.delete(key); return next; });
       }
     },
     [sessionId, checkedSet, onRefresh]
@@ -178,9 +210,9 @@ export default function GoblinThemeMatrix({
 
   /* ---- Add theme ---- */
   const handleAddTheme = useCallback(
-    async (e: React.FormEvent) => {
-      e.preventDefault();
-      if (!themeLabel.trim()) return;
+    async (label?: string) => {
+      const finalLabel = (label ?? themeLabel).trim();
+      if (!finalLabel) return;
       setSubmittingTheme(true);
       setThemeError(null);
       try {
@@ -189,7 +221,7 @@ export default function GoblinThemeMatrix({
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ label: themeLabel.trim() }),
+            body: JSON.stringify({ label: finalLabel }),
           }
         );
         if (res.ok) {
@@ -209,10 +241,14 @@ export default function GoblinThemeMatrix({
     [sessionId, themeLabel, onRefresh]
   );
 
-  /* ---- Cancel theme (long-press on mobile, click X on desktop) ---- */
+  const handleFormSubmit = useCallback(
+    (e: React.FormEvent) => { e.preventDefault(); handleAddTheme(); },
+    [handleAddTheme]
+  );
+
+  /* ---- Cancel theme — inline confirm (no window.confirm) ---- */
   const handleCancelTheme = useCallback(
     async (themeId: number) => {
-      setCancelingThemeId(themeId);
       try {
         const res = await fetch(
           `/api/goblinday/sessions/${sessionId}/themes/${themeId}`,
@@ -224,81 +260,70 @@ export default function GoblinThemeMatrix({
         );
         if (res.ok) onRefresh();
       } finally {
-        setCancelingThemeId(null);
+        setConfirmingCancelId(null);
       }
     },
     [sessionId, onRefresh]
   );
 
-  const startLongPress = useCallback(
-    (themeId: number) => {
-      longPressTimer.current = setTimeout(() => {
-        if (confirm("Cancel this theme?")) {
-          handleCancelTheme(themeId);
-        }
-      }, 600);
-    },
-    [handleCancelTheme]
-  );
-
-  const cancelLongPress = useCallback(() => {
-    if (longPressTimer.current) {
-      clearTimeout(longPressTimer.current);
-      longPressTimer.current = null;
-    }
+  const initiateCancel = useCallback((themeId: number) => {
+    setConfirmingCancelId(themeId);
+    if (confirmTimer.current) clearTimeout(confirmTimer.current);
+    confirmTimer.current = setTimeout(() => setConfirmingCancelId(null), 3000);
   }, []);
 
-  /* ---- Skull for checked state ---- */
-  const SKULL = "\u{1F480}";
+  const confirmCancel = useCallback((themeId: number) => {
+    if (confirmTimer.current) clearTimeout(confirmTimer.current);
+    handleCancelTheme(themeId);
+  }, [handleCancelTheme]);
+
+  /* ---- Already-used theme labels for filtering suggestions ---- */
+  const usedLabels = useMemo(
+    () => new Set(themes.map((t) => t.label.toUpperCase())),
+    [themes]
+  );
+  const availableSuggestions = useMemo(
+    () => THEME_SUGGESTIONS.filter((s) => !usedLabels.has(s)),
+    [usedLabels]
+  );
 
   /* ---- Render ---- */
+
+  const sectionHeader = (
+    <div className="flex items-center justify-between mb-3 border-b border-zinc-800 pb-2">
+      <h2 className="text-red-600 text-xs font-bold tracking-[0.2em] uppercase">
+        THEME TRACKER
+      </h2>
+      {!showThemeForm && (
+        <button
+          onClick={() => setShowThemeForm(true)}
+          className="text-zinc-600 hover:text-red-400 text-xs font-bold tracking-[0.15em] uppercase transition-colors"
+        >
+          + ADD
+        </button>
+      )}
+    </div>
+  );
 
   // Empty state: movies exist but no themes
   if (activeThemes.length === 0 && sortedMovies.length > 0) {
     return (
       <section>
-        <h2 className="text-red-600 text-xs font-bold tracking-[0.2em] uppercase mb-3 border-b border-zinc-800 pb-2">
-          THEME TRACKER
-        </h2>
-        {/* Show movie column headers as preview */}
-        <div className="flex gap-3 mb-4 overflow-x-auto pb-1">
-          {sortedMovies.map((movie) => (
-            <div key={movie.id} className="flex-shrink-0 w-20 text-center">
-              <div className="w-14 h-20 mx-auto bg-zinc-900 border border-zinc-800 overflow-hidden relative mb-1.5 shadow-[0_0_8px_rgba(0,0,0,0.5)]">
-                {movie.poster_path ? (
-                  <SmartImage
-                    src={`${TMDB_IMAGE_BASE}${movie.poster_path}`}
-                    alt={movie.title}
-                    fill
-                    className="object-cover"
-                    sizes="56px"
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-zinc-700 text-xs font-bold">?</div>
-                )}
-              </div>
-              <span className="text-zinc-500 text-2xs font-bold tracking-wider uppercase block leading-tight">
-                {movie.title}
-              </span>
-            </div>
-          ))}
-        </div>
-        <p className="text-zinc-700 text-xs tracking-[0.2em] uppercase py-3 text-center mb-3">
+        {sectionHeader}
+        <p className="text-zinc-600 text-xs tracking-[0.15em] uppercase py-4 text-center mb-2">
           // ADD A THEME TO START TRACKING
         </p>
         <ThemeForm
-          showForm={showThemeForm}
+          showForm={showThemeForm || true}
           setShowForm={setShowThemeForm}
           themeLabel={themeLabel}
           setThemeLabel={setThemeLabel}
           submitting={submittingTheme}
           error={themeError}
-          onSubmit={handleAddTheme}
-          onCancel={() => {
-            setShowThemeForm(false);
-            setThemeLabel("");
-            setThemeError(null);
-          }}
+          onSubmit={handleFormSubmit}
+          onCancel={() => { setShowThemeForm(false); setThemeLabel(""); setThemeError(null); }}
+          suggestions={availableSuggestions}
+          onSuggestionTap={handleAddTheme}
         />
       </section>
     );
@@ -308,9 +333,7 @@ export default function GoblinThemeMatrix({
   if (sortedMovies.length === 0) {
     return (
       <section>
-        <h2 className="text-red-600 text-xs font-bold tracking-[0.2em] uppercase mb-3 border-b border-zinc-800 pb-2">
-          THEME TRACKER
-        </h2>
+        {sectionHeader}
         {activeThemes.length > 0 && (
           <div className="space-y-1 mb-3">
             {activeThemes.map((theme) => (
@@ -320,7 +343,7 @@ export default function GoblinThemeMatrix({
             ))}
           </div>
         )}
-        <p className="text-zinc-700 text-xs tracking-[0.2em] uppercase py-3 text-center mb-3">
+        <p className="text-zinc-600 text-xs tracking-[0.15em] uppercase py-3 text-center mb-3">
           // MOVIE COLUMNS APPEAR WHEN MOVIES ARE ADDED
         </p>
         <ThemeForm
@@ -330,12 +353,10 @@ export default function GoblinThemeMatrix({
           setThemeLabel={setThemeLabel}
           submitting={submittingTheme}
           error={themeError}
-          onSubmit={handleAddTheme}
-          onCancel={() => {
-            setShowThemeForm(false);
-            setThemeLabel("");
-            setThemeError(null);
-          }}
+          onSubmit={handleFormSubmit}
+          onCancel={() => { setShowThemeForm(false); setThemeLabel(""); setThemeError(null); }}
+          suggestions={availableSuggestions}
+          onSuggestionTap={handleAddTheme}
         />
       </section>
     );
@@ -344,112 +365,135 @@ export default function GoblinThemeMatrix({
   // Full matrix
   return (
     <section>
-      <h2 className="text-red-600 text-xs font-bold tracking-[0.2em] uppercase mb-3 border-b border-zinc-800 pb-2">
-        THEME TRACKER
-      </h2>
+      {sectionHeader}
 
-      <div className="overflow-x-auto -mx-3 px-3">
-        <table className="border-collapse w-max min-w-full">
-          <thead>
-            <tr>
-              {/* Empty corner cell */}
-              <th
-                className="sticky left-0 z-10 bg-zinc-950 min-w-[90px] sm:min-w-[120px] max-w-[120px]"
-                aria-label="Themes"
-              />
-              {sortedMovies.map((movie) => (
+      {/* Matrix with scroll fade hint */}
+      <div className="relative">
+        <div className="overflow-x-auto -mx-3 px-3 pb-1">
+          <table className="border-collapse w-max min-w-full">
+            <thead>
+              <tr>
+                {/* Corner cell */}
                 <th
-                  key={movie.id}
-                  className="px-1.5 pb-2 text-center align-bottom"
-                  style={{ minWidth: 90, maxWidth: 110 }}
-                >
-                  <div className="w-14 h-20 sm:w-16 sm:h-24 mx-auto bg-zinc-900 border border-zinc-800 overflow-hidden relative mb-1.5 shadow-[0_0_8px_rgba(0,0,0,0.5)]">
-                    {movie.poster_path ? (
-                      <SmartImage
-                        src={`${TMDB_IMAGE_BASE}${movie.poster_path}`}
-                        alt={movie.title}
-                        fill
-                        className="object-cover"
-                        sizes="64px"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-zinc-700 text-xs font-bold">
-                        ?
-                      </div>
-                    )}
-                  </div>
-                  <span className="text-zinc-400 text-2xs font-bold tracking-wider uppercase block leading-tight max-w-[100px] mx-auto">
-                    {movie.title}
-                  </span>
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {activeThemes.map((theme) => (
-              <tr
-                key={theme.id}
-                ref={theme.id === newThemeId ? newRowRef : undefined}
-                className={
-                  theme.id === newThemeId
-                    ? "animate-pulse-once"
-                    : ""
-                }
-              >
-                {/* Theme label — sticky left */}
-                <td
-                  className="sticky left-0 z-10 bg-zinc-950 min-w-[90px] sm:min-w-[120px] max-w-[120px] pr-2 py-0.5 align-middle"
-                  onTouchStart={() => startLongPress(theme.id)}
-                  onTouchEnd={cancelLongPress}
-                  onTouchCancel={cancelLongPress}
-                >
-                  <div className="group flex items-center gap-1 min-h-[48px]">
-                    <span
-                      className="text-red-400 text-xs sm:text-xs font-bold tracking-[0.1em] uppercase leading-tight flex-1 select-none break-words"
-                      title={theme.label}
-                    >
-                      {theme.label}
-                    </span>
-                    {/* Desktop-only cancel X (hidden on touch) */}
-                    <button
-                      onClick={() => {
-                        if (confirm("Cancel this theme?")) handleCancelTheme(theme.id);
-                      }}
-                      disabled={cancelingThemeId === theme.id}
-                      className="hidden sm:block opacity-0 group-hover:opacity-100 text-zinc-600 hover:text-red-500 text-xs font-bold transition-opacity disabled:opacity-40 flex-shrink-0"
-                      title="Cancel theme"
-                    >
-                      ✕
-                    </button>
-                  </div>
-                </td>
-                {/* Matrix cells */}
+                  className="sticky left-0 z-10 bg-zinc-950 min-w-[110px] sm:min-w-[140px] max-w-[140px]"
+                  aria-label="Themes"
+                />
                 {sortedMovies.map((movie) => {
-                  const checked = isChecked(theme.id, movie.id);
+                  const trophyCount = movieTrophyCounts.get(movie.id) ?? 0;
                   return (
-                    <td key={movie.id} className="px-1 py-0.5 text-center">
-                      <button
-                        onClick={() => handleToggle(theme.id, movie.id)}
-                        className={`w-full min-h-[48px] border-2 transition-all active:scale-95 ${
-                          checked
-                            ? "bg-red-950 border-red-700 shadow-[0_0_12px_rgba(185,28,28,0.3)]"
-                            : "bg-zinc-900/50 border-zinc-800 hover:border-zinc-600 hover:bg-zinc-900"
-                        }`}
-                        aria-label={`${theme.label} in ${movie.title}: ${checked ? "checked" : "unchecked"}`}
-                      >
-                        {checked ? (
-                          <span className="text-xl leading-none" role="img" aria-label="skull">{SKULL}</span>
+                    <th
+                      key={movie.id}
+                      className="px-1.5 pb-2 text-center align-bottom"
+                      style={{ minWidth: 90, maxWidth: 110 }}
+                    >
+                      <div className="w-14 h-20 sm:w-16 sm:h-24 mx-auto bg-zinc-900 border border-zinc-800 overflow-hidden relative mb-1.5 shadow-[0_0_10px_rgba(0,0,0,0.6)]">
+                        {movie.poster_path ? (
+                          <SmartImage
+                            src={`${TMDB_IMAGE_BASE}${movie.poster_path}`}
+                            alt={movie.title}
+                            fill
+                            className="object-cover"
+                            sizes="64px"
+                          />
                         ) : (
-                          <span className="text-zinc-800 text-xs">&#x2022;</span>
+                          <div className="w-full h-full flex items-center justify-center text-zinc-700 text-xs font-bold">?</div>
                         )}
-                      </button>
-                    </td>
+                      </div>
+                      <span className="text-zinc-400 text-2xs font-bold tracking-wider uppercase block leading-tight max-w-[100px] mx-auto line-clamp-2">
+                        {movie.title}
+                      </span>
+                      {/* Trophy count */}
+                      {trophyCount > 0 && (
+                        <span className="text-2xs mt-1 block">
+                          <span className="text-red-500 font-bold">{trophyCount}</span>
+                          <span className="ml-0.5">{SKULL}</span>
+                        </span>
+                      )}
+                    </th>
                   );
                 })}
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {activeThemes.map((theme) => {
+                const complete = isRowComplete(theme.id);
+                const confirming = confirmingCancelId === theme.id;
+                return (
+                  <tr
+                    key={theme.id}
+                    ref={theme.id === newThemeId ? newRowRef : undefined}
+                    className={[
+                      theme.id === newThemeId ? "animate-pulse-once" : "",
+                      complete ? "animate-bingo-glow" : "",
+                    ].filter(Boolean).join(" ")}
+                  >
+                    {/* Theme label — sticky left */}
+                    <td
+                      className={`sticky left-0 z-10 min-w-[110px] sm:min-w-[140px] max-w-[140px] pr-2 py-0.5 align-middle transition-colors ${
+                        complete ? "bg-zinc-900" : "bg-zinc-950"
+                      }`}
+                    >
+                      <div className="group flex items-center gap-1 min-h-[48px]">
+                        <span
+                          className={`text-xs font-bold tracking-[0.1em] uppercase leading-tight flex-1 select-none line-clamp-2 transition-colors ${
+                            complete
+                              ? "text-amber-400"
+                              : "text-red-400"
+                          }`}
+                          title={theme.label}
+                        >
+                          {complete && <span className="mr-0.5">{FIRE}</span>}
+                          {theme.label}
+                        </span>
+                        {/* Cancel button — always visible on mobile, hover on desktop */}
+                        <button
+                          onClick={() => confirming ? confirmCancel(theme.id) : initiateCancel(theme.id)}
+                          className={`flex-shrink-0 text-xs font-bold transition-all ${
+                            confirming
+                              ? "text-red-500 opacity-100"
+                              : "text-zinc-700 opacity-60 sm:opacity-0 sm:group-hover:opacity-100 hover:text-red-500"
+                          }`}
+                          title={confirming ? "Tap again to remove" : "Remove theme"}
+                        >
+                          {confirming ? "RM?" : "✕"}
+                        </button>
+                      </div>
+                    </td>
+                    {/* Matrix cells */}
+                    {sortedMovies.map((movie) => {
+                      const checked = isChecked(theme.id, movie.id);
+                      return (
+                        <td key={movie.id} className="px-1 py-0.5 text-center">
+                          <button
+                            onClick={() => handleToggle(theme.id, movie.id)}
+                            className={`w-full min-h-[48px] border-2 transition-all active:scale-95 ${
+                              checked
+                                ? complete
+                                  ? "bg-amber-950/60 border-amber-700 shadow-[0_0_14px_rgba(250,204,21,0.2)]"
+                                  : "bg-red-950 border-red-700 shadow-[0_0_12px_rgba(185,28,28,0.3)]"
+                                : "bg-zinc-900/40 border-zinc-800 hover:border-zinc-600 hover:bg-zinc-800/60"
+                            }`}
+                            aria-label={`${theme.label} in ${movie.title}: ${checked ? "checked" : "unchecked"}`}
+                          >
+                            {checked ? (
+                              <span className="text-xl leading-none">{complete ? FIRE : SKULL}</span>
+                            ) : (
+                              <span className="text-zinc-600 text-sm">&#x25CB;</span>
+                            )}
+                          </button>
+                        </td>
+                      );
+                    })}
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+        {/* Right scroll fade hint */}
+        {sortedMovies.length > 3 && (
+          <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-zinc-950 to-transparent pointer-events-none z-20" />
+        )}
       </div>
 
       {/* Add theme */}
@@ -461,19 +505,19 @@ export default function GoblinThemeMatrix({
           setThemeLabel={setThemeLabel}
           submitting={submittingTheme}
           error={themeError}
-          onSubmit={handleAddTheme}
-          onCancel={() => {
-            setShowThemeForm(false);
-            setThemeLabel("");
-            setThemeError(null);
-          }}
+          onSubmit={handleFormSubmit}
+          onCancel={() => { setShowThemeForm(false); setThemeLabel(""); setThemeError(null); }}
+          suggestions={availableSuggestions}
+          onSuggestionTap={handleAddTheme}
         />
       </div>
     </section>
   );
 }
 
-/* ---- Theme creation form (shared between empty states and matrix) ---- */
+/* ------------------------------------------------------------------ */
+/*  Theme creation form                                                */
+/* ------------------------------------------------------------------ */
 
 function ThemeForm({
   showForm,
@@ -484,6 +528,8 @@ function ThemeForm({
   error,
   onSubmit,
   onCancel,
+  suggestions,
+  onSuggestionTap,
 }: {
   showForm: boolean;
   setShowForm: (v: boolean) => void;
@@ -493,6 +539,8 @@ function ThemeForm({
   error: string | null;
   onSubmit: (e: React.FormEvent) => void;
   onCancel: () => void;
+  suggestions: string[];
+  onSuggestionTap: (label: string) => void;
 }) {
   if (!showForm) {
     return (
@@ -506,45 +554,73 @@ function ThemeForm({
   }
 
   return (
-    <form
-      onSubmit={onSubmit}
-      className="border-2 border-zinc-800 bg-black p-4 space-y-3"
-    >
-      <div>
-        <label className="text-zinc-600 text-2xs tracking-[0.2em] uppercase block mb-1">
-          THEME LABEL
-        </label>
-        <input
-          type="text"
-          value={themeLabel}
-          onChange={(e) => setThemeLabel(e.target.value)}
-          placeholder="E.G. FINAL GIRL, BODY HORROR..."
-          className="w-full px-3 py-2 bg-zinc-900 border-2 border-zinc-700 text-white text-xs font-mono tracking-wider uppercase placeholder:text-zinc-700 focus:outline-none focus:border-red-700 transition-colors"
-        />
-      </div>
-
-      {error && (
-        <p className="text-red-400 text-xs tracking-wider uppercase">
-          {error}
-        </p>
+    <div className="border-2 border-zinc-800 bg-black p-4 space-y-3">
+      {/* Quick-add suggestions */}
+      {suggestions.length > 0 && (
+        <div>
+          <label className="text-zinc-600 text-2xs tracking-[0.2em] uppercase block mb-2">
+            QUICK ADD
+          </label>
+          <div className="flex flex-wrap gap-1.5">
+            {suggestions.slice(0, 8).map((s) => (
+              <button
+                key={s}
+                type="button"
+                onClick={() => onSuggestionTap(s)}
+                disabled={submitting}
+                className="px-2.5 py-1.5 bg-zinc-900 border border-zinc-700 hover:border-red-800 hover:bg-red-950/30 text-zinc-400 hover:text-red-300 text-2xs font-bold tracking-[0.1em] uppercase transition-colors disabled:opacity-40 min-h-[32px]"
+              >
+                {s}
+              </button>
+            ))}
+          </div>
+        </div>
       )}
 
-      <div className="flex gap-2">
-        <button
-          type="submit"
-          disabled={!themeLabel.trim() || submitting}
-          className="flex-1 px-4 py-2 bg-red-900 hover:bg-red-800 text-red-100 font-black text-xs tracking-[0.15em] uppercase border-2 border-red-700 transition-colors disabled:opacity-40"
-        >
-          {submitting ? "ADDING..." : "ADD THEME"}
-        </button>
-        <button
-          type="button"
-          onClick={onCancel}
-          className="px-4 py-2 bg-zinc-900 text-zinc-500 text-xs tracking-[0.15em] uppercase border-2 border-zinc-700 hover:border-zinc-600 transition-colors"
-        >
-          CANCEL
-        </button>
-      </div>
-    </form>
+      {/* Custom input */}
+      <form onSubmit={onSubmit} className="space-y-3">
+        <div>
+          <div className="flex items-center justify-between mb-1">
+            <label className="text-zinc-600 text-2xs tracking-[0.2em] uppercase">
+              CUSTOM THEME
+            </label>
+            <span className={`text-2xs tracking-wider ${
+              themeLabel.length > MAX_THEME_LENGTH ? "text-red-500" : "text-zinc-700"
+            }`}>
+              {themeLabel.length}/{MAX_THEME_LENGTH}
+            </span>
+          </div>
+          <input
+            type="text"
+            value={themeLabel}
+            onChange={(e) => setThemeLabel(e.target.value.slice(0, MAX_THEME_LENGTH))}
+            placeholder="E.G. DUMB DEATH, THE CAR WON'T START..."
+            className="w-full px-3 py-2 bg-zinc-900 border-2 border-zinc-700 text-white text-xs font-mono tracking-wider uppercase placeholder:text-zinc-700 focus:outline-none focus:border-red-700 transition-colors"
+            maxLength={MAX_THEME_LENGTH}
+          />
+        </div>
+
+        {error && (
+          <p className="text-red-400 text-xs tracking-wider uppercase">{error}</p>
+        )}
+
+        <div className="flex gap-2">
+          <button
+            type="submit"
+            disabled={!themeLabel.trim() || submitting}
+            className="flex-1 px-4 py-2 bg-red-900 hover:bg-red-800 text-red-100 font-black text-xs tracking-[0.15em] uppercase border-2 border-red-700 transition-colors disabled:opacity-40"
+          >
+            {submitting ? "ADDING..." : "ADD THEME"}
+          </button>
+          <button
+            type="button"
+            onClick={onCancel}
+            className="px-4 py-2 bg-zinc-900 text-zinc-500 text-xs tracking-[0.15em] uppercase border-2 border-zinc-700 hover:border-zinc-600 transition-colors"
+          >
+            CANCEL
+          </button>
+        </div>
+      </form>
+    </div>
   );
 }
