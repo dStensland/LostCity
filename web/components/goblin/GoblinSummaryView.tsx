@@ -63,7 +63,7 @@ function formatTimestamp(isoStr: string): string {
 }
 
 /* ------------------------------------------------------------------ */
-/*  Trunk Rings — noise-distorted concentric rings background         */
+/*  Domain Warping — smoke-like flowing noise background               */
 /* ------------------------------------------------------------------ */
 
 function createNoise2D() {
@@ -101,65 +101,66 @@ function createNoise2D() {
   };
 }
 
-function initTrunkRings(canvas: HTMLCanvasElement): () => void {
+function initDomainWarp(canvas: HTMLCanvasElement): () => void {
   const ctx = canvas.getContext("2d");
   if (!ctx) return () => {};
   const noise = createNoise2D();
   let animId = 0;
   let t = 0;
-  const ox = Math.random() * 100;
-  const oyBase = Math.random() * 100;
-  let oyOff = 0;
+
+  // Render at 1/4 resolution for performance
+  const SCALE = 4;
+
+  // 2-octave FBM
+  const fbm = (x: number, y: number) =>
+    noise(x, y) * 0.65 + noise(x * 2.1, y * 2.1) * 0.35;
 
   const draw = () => {
     const W = canvas.width;
     const H = canvas.height;
-    ctx.clearRect(0, 0, W, H);
-    const cx = W * 0.38;
-    const cy = H * 0.3;
-    oyOff -= 0.015;
-    const ringScale = Math.max(W, H) * 0.008;
+    const w = Math.ceil(W / SCALE);
+    const h = Math.ceil(H / SCALE);
+    const img = ctx.createImageData(w, h);
+    const data = img.data;
+    const time = t * 0.004;
 
-    for (let ring = 0; ring < 65; ring++) {
-      const baseR = ring * ringScale + 10;
-      ctx.beginPath();
-      for (let a = 0; a <= 360; a += 2) {
-        const rad = (a * Math.PI) / 180;
-        const n = noise(
-          Math.cos(rad) * 0.02 * ring + ox,
-          Math.sin(rad) * 0.02 * ring + oyBase + oyOff,
-        );
-        const r = baseR + 1.5 * n * 25;
-        const x = cx + Math.cos(rad) * r;
-        const y = cy + Math.sin(rad) * r;
-        if (a === 0) ctx.moveTo(x, y);
-        else ctx.lineTo(x, y);
+    for (let py = 0; py < h; py++) {
+      for (let px = 0; px < w; px++) {
+        const x = (px / w) * 4;
+        const y = (py / h) * 4;
+
+        // First warp layer
+        const q0 = fbm(x + time * 0.7, y + time * 0.3);
+        const q1 = fbm(x + 5.2, y + 1.3 + time * 0.2);
+
+        // Second warp layer (feeds q into the input)
+        const r0 = fbm(x + 4.0 * q0 + 1.7 + time * 0.15, y + 4.0 * q1 + 9.2);
+        const r1 = fbm(x + 4.0 * q0 + 8.3, y + 4.0 * q1 + 2.8 + time * 0.12);
+
+        // Final warped value
+        const v = fbm(x + 4.0 * r0, y + 4.0 * r1);
+
+        // Map to dark red/crimson/black palette
+        // v ranges roughly -1 to 1, normalize to 0-1
+        const n = v * 0.5 + 0.5;
+
+        // Color ramp: black → deep crimson → dark red → faint ember
+        const i = (py * w + px) * 4;
+        data[i]     = Math.floor(n * n * 120);              // R: quadratic for darker feel
+        data[i + 1] = Math.floor(n * n * n * 15);           // G: very subtle
+        data[i + 2] = Math.floor(n * n * 8 + n * n * n * 20); // B: slight purple in highlights
+        data[i + 3] = 255;
       }
-      ctx.closePath();
-      const rt = ring / 65;
-      // Dark red → deep crimson gradient for horror vibe
-      const cr = Math.floor(140 - 80 * rt);
-      const cg = Math.floor(10 + 10 * rt);
-      const cb = Math.floor(20 + 30 * rt);
-      ctx.strokeStyle = `rgba(${cr},${cg},${cb},${Math.max(0.35 - rt * 0.2, 0.04)})`;
-      ctx.lineWidth = 1.2;
-      ctx.stroke();
     }
 
-    const maxR = Math.max(W, H) * 0.8;
-    for (let i = 0; i < 5; i++) {
-      const r = (t * 0.8 + (i * maxR) / 5) % maxR;
-      const alpha = 0.05 * (1 - r / maxR);
-      if (alpha <= 0.005) continue;
-      const c = i % 2 === 0 ? "120,0,0" : "80,0,20";
-      const g = ctx.createRadialGradient(cx, cy, Math.max(r - 30, 0), cx, cy, r + 30);
-      g.addColorStop(0, `rgba(${c},0)`);
-      g.addColorStop(0.4, `rgba(${c},${alpha})`);
-      g.addColorStop(0.6, `rgba(${c},${alpha})`);
-      g.addColorStop(1, `rgba(${c},0)`);
-      ctx.fillStyle = g;
-      ctx.fillRect(0, 0, W, H);
-    }
+    // Draw at reduced size then scale up
+    const offscreen = new OffscreenCanvas(w, h);
+    const offCtx = offscreen.getContext("2d")!;
+    offCtx.putImageData(img, 0, 0);
+
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = "medium";
+    ctx.drawImage(offscreen, 0, 0, W, H);
 
     t++;
     animId = requestAnimationFrame(draw);
@@ -192,7 +193,7 @@ export default function GoblinSummaryView({
     };
     resize();
     window.addEventListener("resize", resize);
-    const cleanup = initTrunkRings(canvas);
+    const cleanup = initDomainWarp(canvas);
     return () => {
       cleanup();
       window.removeEventListener("resize", resize);
