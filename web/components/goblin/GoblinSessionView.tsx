@@ -15,6 +15,7 @@ interface SessionMovie {
   watch_order: number;
   rt_critics_score: number | null;
   rt_audience_score: number | null;
+  dnf?: boolean;
 }
 
 interface SessionTheme {
@@ -100,6 +101,7 @@ export default function GoblinSessionView({
   onCancelSession,
 }: Props) {
   const [addingMovieId, setAddingMovieId] = useState<number | null>(null);
+  const [togglingDnfId, setTogglingDnfId] = useState<number | null>(null);
 
   /* Lookup maps for timeline display */
   const movieMap = useMemo(() => {
@@ -118,6 +120,12 @@ export default function GoblinSessionView({
   const sortedMovies = useMemo(
     () => [...session.movies].sort((a, b) => a.watch_order - b.watch_order),
     [session.movies]
+  );
+
+  /* Movies that are active (not DNF) — these appear in the theme matrix */
+  const activeMovies = useMemo(
+    () => sortedMovies.filter((m) => !m.dnf),
+    [sortedMovies]
   );
 
   /* Chronological timeline (newest first) */
@@ -153,6 +161,26 @@ export default function GoblinSessionView({
         if (res.ok) onRefresh();
       } finally {
         setAddingMovieId(null);
+      }
+    },
+    [session.id, onRefresh]
+  );
+
+  const handleToggleDnf = useCallback(
+    async (movieId: number, currentDnf: boolean) => {
+      setTogglingDnfId(movieId);
+      try {
+        const res = await fetch(
+          `/api/goblinday/sessions/${session.id}/movies`,
+          {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ movie_id: movieId, dnf: !currentDnf }),
+          }
+        );
+        if (res.ok) onRefresh();
+      } finally {
+        setTogglingDnfId(null);
       }
     },
     [session.id, onRefresh]
@@ -345,51 +373,71 @@ export default function GoblinSessionView({
           </h2>
           {sortedMovies.length === 0 ? (
             <p className="text-zinc-700 text-xs tracking-[0.2em] uppercase py-6 text-center">
-              // NO MOVIES YET — ADD ONE ABOVE
+              // NO MOVIES YET — ADD ONE BELOW
             </p>
           ) : (
             <div className="space-y-1">
-              {sortedMovies.map((movie) => (
-                <div
-                  key={movie.id}
-                  className="flex items-center gap-3 py-2 px-3 border border-zinc-800 bg-black"
-                >
-                  <span className="text-red-700 font-black text-sm w-6 text-center flex-shrink-0">
-                    {movie.watch_order}
-                  </span>
-                  <div className="w-8 h-12 flex-shrink-0 bg-zinc-900 overflow-hidden relative">
-                    {movie.poster_path ? (
-                      <SmartImage
-                        src={`${TMDB_IMAGE_BASE}${movie.poster_path}`}
-                        alt={movie.title}
-                        fill
-                        className="object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-zinc-700 text-2xs">
-                        ?
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <span className="text-white text-xs font-bold tracking-wider uppercase block truncate">
-                      {movie.title}
+              {sortedMovies.map((movie) => {
+                const isDnf = movie.dnf ?? false;
+                return (
+                  <div
+                    key={movie.id}
+                    className={`flex items-center gap-3 py-2 px-3 border bg-black transition-colors ${
+                      isDnf ? "border-zinc-800/50 opacity-50" : "border-zinc-800"
+                    }`}
+                  >
+                    <span className={`font-black text-sm w-6 text-center flex-shrink-0 ${isDnf ? "text-zinc-700 line-through" : "text-red-700"}`}>
+                      {movie.watch_order}
                     </span>
-                    <div className="flex gap-2 mt-0.5">
-                      {movie.rt_critics_score != null && (
-                        <span className="text-2xs text-red-500/70">
-                          RT {movie.rt_critics_score}%
-                        </span>
-                      )}
-                      {movie.rt_audience_score != null && (
-                        <span className="text-2xs text-amber-500/70">
-                          AUD {movie.rt_audience_score}%
-                        </span>
+                    <div className={`w-8 h-12 flex-shrink-0 bg-zinc-900 overflow-hidden relative ${isDnf ? "grayscale" : ""}`}>
+                      {movie.poster_path ? (
+                        <SmartImage
+                          src={`${TMDB_IMAGE_BASE}${movie.poster_path}`}
+                          alt={movie.title}
+                          fill
+                          className="object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-zinc-700 text-2xs">
+                          ?
+                        </div>
                       )}
                     </div>
+                    <div className="flex-1 min-w-0">
+                      <span className={`text-xs font-bold tracking-wider uppercase block truncate ${isDnf ? "text-zinc-500 line-through" : "text-white"}`}>
+                        {movie.title}
+                      </span>
+                      <div className="flex gap-2 mt-0.5">
+                        {isDnf && (
+                          <span className="text-2xs text-zinc-600 font-bold tracking-wider">DNF</span>
+                        )}
+                        {!isDnf && movie.rt_critics_score != null && (
+                          <span className="text-2xs text-red-500/70">
+                            RT {movie.rt_critics_score}%
+                          </span>
+                        )}
+                        {!isDnf && movie.rt_audience_score != null && (
+                          <span className="text-2xs text-amber-500/70">
+                            AUD {movie.rt_audience_score}%
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => handleToggleDnf(movie.id, isDnf)}
+                      disabled={togglingDnfId === movie.id}
+                      className={`flex-shrink-0 px-2 py-1.5 text-2xs font-bold tracking-[0.15em] uppercase border transition-colors disabled:opacity-40 min-h-[32px] ${
+                        isDnf
+                          ? "bg-zinc-900 text-zinc-500 border-zinc-700 hover:text-white hover:border-zinc-500"
+                          : "bg-zinc-900 text-zinc-600 border-zinc-800 hover:text-red-400 hover:border-red-800"
+                      }`}
+                      title={isDnf ? "Restore to watchlist" : "Did not finish"}
+                    >
+                      {togglingDnfId === movie.id ? "..." : isDnf ? "UNDO" : "DNF"}
+                    </button>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </section>
@@ -397,7 +445,7 @@ export default function GoblinSessionView({
         {/* ---- THEME TRACKER ---- */}
         <GoblinThemeMatrix
           sessionId={session.id}
-          movies={sortedMovies}
+          movies={activeMovies}
           themes={session.themes}
           onRefresh={onRefresh}
         />

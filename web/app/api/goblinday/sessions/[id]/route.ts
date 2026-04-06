@@ -37,7 +37,7 @@ export const GET = withAuthAndParams<{ id: string }>(
     // Fetch movies
     const { data: sessionMovies } = await serviceClient
       .from("goblin_session_movies")
-      .select("id, movie_id, watch_order, added_at, proposed_by, goblin_movies(*)")
+      .select("id, movie_id, watch_order, added_at, proposed_by, dnf, goblin_movies(*)")
       .eq("session_id", s.id)
       .order("watch_order");
 
@@ -92,6 +92,7 @@ export const GET = withAuthAndParams<{ id: string }>(
         added_at: sm.added_at,
         proposed_by: sm.proposed_by,
         proposed_by_name: sm.proposed_by ? profileMap[sm.proposed_by]?.display_name ?? null : null,
+        dnf: sm.dnf ?? false,
       })),
       themes: themes ?? [],
       timeline: (timeline ?? []).map((t: any) => ({

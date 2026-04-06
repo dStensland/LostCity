@@ -79,3 +79,33 @@ export const POST = withAuthAndParams<{ id: string }>(
     return NextResponse.json({ watch_order: nextOrder }, { status: 201 });
   }
 );
+
+// PATCH /api/goblinday/sessions/[id]/movies
+// Member-only: toggle DNF (did not finish) on a session movie
+export const PATCH = withAuthAndParams<{ id: string }>(
+  async (request, { user, serviceClient, params }) => {
+    const sessionId = parseInt(params.id);
+
+    const isMember = await isSessionMember(serviceClient, sessionId, user.id);
+    if (!isMember) {
+      return NextResponse.json({ error: "Not a member of this session" }, { status: 403 });
+    }
+
+    const body = await request.json();
+    const movieId = body.movie_id;
+    const dnf = body.dnf;
+    if (typeof movieId !== "number" || typeof dnf !== "boolean") {
+      return NextResponse.json({ error: "movie_id (number) and dnf (boolean) required" }, { status: 400 });
+    }
+
+    const { error } = await serviceClient
+      .from("goblin_session_movies")
+      .update({ dnf } as never)
+      .eq("session_id", sessionId)
+      .eq("movie_id", movieId);
+
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+    return NextResponse.json({ dnf });
+  }
+);
