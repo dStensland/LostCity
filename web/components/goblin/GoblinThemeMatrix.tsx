@@ -334,7 +334,7 @@ export default function GoblinThemeMatrix({
           className={`w-full min-h-[48px] border-2 transition-all active:scale-95 ${
             checked
               ? complete
-                ? "bg-amber-950/40 border-amber-600/60 shadow-[0_0_14px_rgba(250,204,21,0.15)]"
+                ? "bg-orange-950/30 border-orange-600/50 shadow-[0_0_16px_rgba(255,120,0,0.25)]"
                 : "bg-red-950/80 border-red-700/80 shadow-[0_0_10px_rgba(185,28,28,0.25)]"
               : "bg-zinc-900/40 border-zinc-800 hover:border-zinc-600 hover:bg-zinc-800/60"
           }`}
@@ -474,7 +474,7 @@ export default function GoblinThemeMatrix({
                     {/* Theme label — sticky left */}
                     <td
                       className={`sticky left-0 z-10 min-w-[110px] sm:min-w-[140px] max-w-[140px] pr-2 py-0.5 align-middle transition-colors ${
-                        complete ? "bg-zinc-900" : "bg-zinc-950"
+                        complete ? "bg-zinc-950/90" : "bg-zinc-950"
                       }`}
                     >
                       <div className="group flex items-center gap-1 min-h-[48px]">

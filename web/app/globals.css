@@ -7168,16 +7168,52 @@ body:has([data-vertical="hospital"]) .rain-overlay {
 }
 
 /* ============================================
-   BINGO ROW GLOW
-   Persistent glow when all movies in a theme row are checked.
+   BINGO ROW — FIRE BACKGROUND
+   Animated fire effect behind completed theme rows.
+   Uses layered gradients with shifting positions and
+   flickering opacity to simulate flames.
    ============================================ */
-@keyframes bingo-glow {
-  0%, 100% { box-shadow: inset 0 0 20px rgba(250, 204, 21, 0.08); }
-  50% { box-shadow: inset 0 0 30px rgba(250, 204, 21, 0.15); }
+@keyframes fire-bg-shift {
+  0%   { background-position: 0% 80%, 20% 90%, 50% 85%, 80% 90%; }
+  25%  { background-position: 5% 75%, 25% 85%, 45% 80%, 75% 85%; }
+  50%  { background-position: 0% 70%, 20% 80%, 55% 75%, 85% 80%; }
+  75%  { background-position: 5% 75%, 15% 85%, 50% 80%, 80% 85%; }
+  100% { background-position: 0% 80%, 20% 90%, 50% 85%, 80% 90%; }
+}
+
+@keyframes fire-flicker {
+  0%, 100% { opacity: 0.7; }
+  20%  { opacity: 0.85; }
+  40%  { opacity: 0.6; }
+  60%  { opacity: 0.9; }
+  80%  { opacity: 0.65; }
 }
 
 .animate-bingo-glow {
-  animation: bingo-glow 3s ease-in-out infinite;
+  position: relative;
+  overflow: visible;
+}
+
+.animate-bingo-glow > td {
+  position: relative;
+}
+
+.animate-bingo-glow::before {
+  content: '';
+  position: absolute;
+  inset: -2px -1px;
+  z-index: 0;
+  pointer-events: none;
+  border-radius: 2px;
+  background:
+    radial-gradient(ellipse 30px 20px, rgba(255, 120, 0, 0.5) 0%, transparent 70%),
+    radial-gradient(ellipse 25px 25px, rgba(255, 60, 0, 0.4) 0%, transparent 70%),
+    radial-gradient(ellipse 35px 18px, rgba(255, 180, 0, 0.35) 0%, transparent 70%),
+    radial-gradient(ellipse 20px 22px, rgba(255, 80, 0, 0.45) 0%, transparent 70%);
+  background-size: 80px 40px, 60px 45px, 90px 35px, 70px 40px;
+  animation:
+    fire-bg-shift 1.5s ease-in-out infinite,
+    fire-flicker 0.8s ease-in-out infinite;
 }
 
 /* ============================================
