@@ -28,23 +28,24 @@ const THEME_SUGGESTIONS = [
 ];
 
 /* ------------------------------------------------------------------ */
-/*  Skull image component — uses the animated red skull GIF            */
+/*  Skull image component — realistic skull with CSS effects           */
+/*  Checked: red-tinted skull with glow                                */
+/*  Bingo: skull engulfed in flickering fire (CSS animation)           */
 /* ------------------------------------------------------------------ */
 
 function SkullIcon({ variant, size = 24 }: { variant: "checked" | "bingo"; size?: number }) {
   return (
     <span
-      className={`inline-block ${variant === "bingo" ? "animate-fire-glow" : ""}`}
+      className={`inline-block ${variant === "bingo" ? "skull-on-fire" : "skull-checked"}`}
       style={{ width: size, height: size }}
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
-        src="/goblin-day/icons/red-skull.gif"
+        src="/goblin-day/icons/skull-checked.png"
         alt="skull"
         width={size}
         height={size}
-        className={`object-contain ${variant === "bingo" ? "brightness-150 hue-rotate-[30deg]" : ""}`}
-        style={{ imageRendering: "auto" }}
+        className="object-contain w-full h-full"
       />
     </span>
   );

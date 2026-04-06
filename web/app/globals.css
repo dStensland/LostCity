@@ -7181,15 +7181,40 @@ body:has([data-vertical="hospital"]) .rain-overlay {
 }
 
 /* ============================================
-   FIRE GLOW — flickering amber glow on bingo skulls
+   SKULL CHECKED — red-tinted with subtle glow
    ============================================ */
-@keyframes fire-glow {
-  0%, 100% { filter: drop-shadow(0 0 4px rgba(250, 204, 21, 0.4)) brightness(1.5) hue-rotate(30deg); }
-  25% { filter: drop-shadow(0 0 8px rgba(251, 146, 60, 0.6)) brightness(1.7) hue-rotate(20deg); }
-  50% { filter: drop-shadow(0 0 6px rgba(250, 204, 21, 0.5)) brightness(1.6) hue-rotate(35deg); }
-  75% { filter: drop-shadow(0 0 10px rgba(251, 146, 60, 0.7)) brightness(1.8) hue-rotate(25deg); }
+.skull-checked img {
+  filter: sepia(1) saturate(5) hue-rotate(-10deg) brightness(0.7) contrast(1.2);
+}
+.skull-checked {
+  filter: drop-shadow(0 0 4px rgba(185, 28, 28, 0.5));
 }
 
-.animate-fire-glow {
-  animation: fire-glow 1.5s ease-in-out infinite;
+/* ============================================
+   SKULL ON FIRE — engulfed in flickering flames
+   Combines brightness, hue shift, and animated
+   drop-shadow to simulate fire surrounding the skull
+   ============================================ */
+@keyframes skull-fire {
+  0%   { filter: drop-shadow(0 0 6px rgba(255, 100, 0, 0.7)) drop-shadow(0 -3px 8px rgba(255, 200, 0, 0.4)); }
+  15%  { filter: drop-shadow(0 0 10px rgba(255, 60, 0, 0.8)) drop-shadow(0 -5px 12px rgba(255, 180, 0, 0.5)); }
+  30%  { filter: drop-shadow(0 0 7px rgba(255, 120, 0, 0.7)) drop-shadow(0 -4px 10px rgba(255, 220, 0, 0.5)); }
+  50%  { filter: drop-shadow(0 0 12px rgba(255, 50, 0, 0.9)) drop-shadow(0 -6px 14px rgba(255, 160, 0, 0.6)); }
+  65%  { filter: drop-shadow(0 0 8px rgba(255, 90, 0, 0.7)) drop-shadow(0 -3px 9px rgba(255, 200, 0, 0.5)); }
+  80%  { filter: drop-shadow(0 0 11px rgba(255, 40, 0, 0.85)) drop-shadow(0 -5px 13px rgba(255, 170, 0, 0.55)); }
+  100% { filter: drop-shadow(0 0 6px rgba(255, 100, 0, 0.7)) drop-shadow(0 -3px 8px rgba(255, 200, 0, 0.4)); }
+}
+
+@keyframes skull-fire-img {
+  0%, 100% { filter: sepia(1) saturate(6) hue-rotate(-5deg) brightness(0.9) contrast(1.3); }
+  25%  { filter: sepia(1) saturate(7) hue-rotate(5deg) brightness(1.1) contrast(1.2); }
+  50%  { filter: sepia(1) saturate(8) hue-rotate(-10deg) brightness(1.0) contrast(1.4); }
+  75%  { filter: sepia(1) saturate(6) hue-rotate(0deg) brightness(1.2) contrast(1.1); }
+}
+
+.skull-on-fire {
+  animation: skull-fire 0.8s ease-in-out infinite;
+}
+.skull-on-fire img {
+  animation: skull-fire-img 1.2s ease-in-out infinite;
 }
