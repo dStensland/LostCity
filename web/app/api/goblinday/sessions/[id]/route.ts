@@ -116,11 +116,29 @@ export const GET = withAuthAndParams<{ id: string }>(
 );
 
 // PATCH /api/goblinday/sessions/[id]
-// Host-only: update status (planning→live, live→ended)
+// Name-only update (any member), or status transition (host only)
 export const PATCH = withAuthAndParams<{ id: string }>(
   async (request, { user, serviceClient, params }) => {
     const sessionId = parseInt(params.id);
+    const body = await request.json();
 
+    // Name-only update — any member can do this on any session
+    if (body.name !== undefined && !body.status) {
+      const isMember = await isSessionMember(serviceClient, sessionId, user.id);
+      if (!isMember) {
+        return NextResponse.json({ error: "Not a member of this session" }, { status: 403 });
+      }
+      const { data, error } = await serviceClient
+        .from("goblin_sessions")
+        .update({ name: body.name || null } as never)
+        .eq("id", sessionId)
+        .select()
+        .single();
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json(data);
+    }
+
+    // Status transition — host only
     const isHost = await isSessionHost(serviceClient, sessionId, user.id);
     if (!isHost) {
       return NextResponse.json({ error: "Only the host can update this session" }, { status: 403 });
@@ -135,7 +153,6 @@ export const PATCH = withAuthAndParams<{ id: string }>(
     if (fetchError) return NextResponse.json({ error: fetchError.message }, { status: 404 });
 
     const currentStatus = (current as { status: string }).status;
-    const body = await request.json();
     const newStatus = body.status;
 
     const validTransitions: Record<string, string[]> = {

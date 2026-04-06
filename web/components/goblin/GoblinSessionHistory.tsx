@@ -103,6 +103,8 @@ interface SessionDetail {
     title: string;
     watch_order: number;
     added_at: string;
+    poster_path: string | null;
+    dnf: boolean;
   }[];
   themes: {
     id: number;
@@ -110,6 +112,7 @@ interface SessionDetail {
     status: string;
     created_at: string;
     canceled_at: string | null;
+    goblin_theme_movies: Array<{ movie_id: number }>;
   }[];
   timeline: {
     id: number;
@@ -174,15 +177,102 @@ function StatusBadge({ status }: { status: SessionStatus }) {
   );
 }
 
-function SessionDetailView({ detail }: { detail: SessionDetail }) {
+function SessionDetailView({
+  detail,
+  onRefresh,
+}: {
+  detail: SessionDetail;
+  onRefresh: () => void;
+}) {
+  const [editingName, setEditingName] = useState(false);
+  const [nameValue, setNameValue] = useState(detail.name ?? "");
+  const [savingName, setSavingName] = useState(false);
+
   const sortedMovies = [...detail.movies].sort(
     (a, b) => (a.watch_order ?? 0) - (b.watch_order ?? 0)
   );
+  const watchedMovies = sortedMovies.filter((m) => !m.dnf);
+  const dnfMovies = sortedMovies.filter((m) => m.dnf);
   const activeThemes = detail.themes.filter((t) => t.status === "active");
   const canceledThemes = detail.themes.filter((t) => t.status === "canceled");
 
+  // Compute which themes were "completed" (checked in every watched movie)
+  const watchedMovieIds = new Set(watchedMovies.map((m) => m.id));
+  const completedThemes = activeThemes.filter(
+    (t) =>
+      watchedMovieIds.size > 0 &&
+      watchedMovies.every((m) =>
+        t.goblin_theme_movies.some((tm) => tm.movie_id === m.id)
+      )
+  );
+  const completedThemeIds = new Set(completedThemes.map((t) => t.id));
+  const incompleteThemes = activeThemes.filter(
+    (t) => !completedThemeIds.has(t.id)
+  );
+
+  const handleSaveName = async () => {
+    setSavingName(true);
+    try {
+      const res = await fetch(`/api/goblinday/sessions/${detail.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: nameValue.trim() }),
+      });
+      if (res.ok) {
+        setEditingName(false);
+        onRefresh();
+      }
+    } finally {
+      setSavingName(false);
+    }
+  };
+
   return (
-    <div className="border-t-2 border-zinc-800 bg-black/60 px-3 sm:px-4 py-4 space-y-4">
+    <div className="border-t-2 border-zinc-800 bg-black/60 px-3 sm:px-4 py-4 space-y-5">
+      {/* Editable name */}
+      <div>
+        <h4 className="text-red-600 text-2xs font-bold tracking-[0.2em] uppercase mb-2">
+          SESSION NAME
+        </h4>
+        {editingName ? (
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={nameValue}
+              onChange={(e) => setNameValue(e.target.value)}
+              maxLength={40}
+              className="flex-1 px-2 py-1.5 bg-zinc-900 border border-zinc-700 text-white text-xs font-mono tracking-wider uppercase placeholder:text-zinc-700 focus:outline-none focus:border-red-700"
+              placeholder="NAME THIS GOBLIN DAY..."
+              autoFocus
+            />
+            <button
+              onClick={handleSaveName}
+              disabled={savingName}
+              className="px-3 py-1.5 bg-red-900 text-red-100 text-2xs font-bold tracking-wider uppercase border border-red-700 disabled:opacity-40"
+            >
+              {savingName ? "..." : "SAVE"}
+            </button>
+            <button
+              onClick={() => {
+                setEditingName(false);
+                setNameValue(detail.name ?? "");
+              }}
+              className="px-2 py-1.5 text-zinc-600 text-2xs font-bold tracking-wider uppercase border border-zinc-800 hover:border-zinc-600"
+            >
+              ✕
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={() => setEditingName(true)}
+            className="text-zinc-300 text-xs font-bold tracking-wider uppercase hover:text-red-400 transition-colors"
+          >
+            {detail.name || "UNNAMED SESSION"}{" "}
+            <span className="text-zinc-700 text-2xs ml-1">EDIT</span>
+          </button>
+        )}
+      </div>
+
       {/* Members */}
       {detail.members && detail.members.length > 0 && (
         <div>
@@ -205,32 +295,85 @@ function SessionDetailView({ detail }: { detail: SessionDetail }) {
         </div>
       )}
 
-      {/* Invite code for active sessions */}
-      {(detail.status === "planning" || detail.status === "live") &&
-        detail.invite_code && (
-          <div>
-            <h4 className="text-red-600 text-2xs font-bold tracking-[0.2em] uppercase mb-1">
-              INVITE CODE
-            </h4>
-            <code className="text-zinc-400 text-xs font-mono tracking-widest">
-              {detail.invite_code}
-            </code>
+      {/* Completed themes */}
+      {completedThemes.length > 0 && (
+        <div>
+          <h4 className="text-amber-500 text-2xs font-bold tracking-[0.2em] uppercase mb-2">
+            {"\u{1F525}"} COMPLETED THEMES [{completedThemes.length}]
+          </h4>
+          <div className="flex flex-wrap gap-1.5">
+            {completedThemes.map((t) => (
+              <span
+                key={t.id}
+                className="text-2xs px-2.5 py-1 border-2 border-amber-700/60 bg-amber-950/30 text-amber-400 font-bold tracking-wider uppercase"
+              >
+                {t.label}
+              </span>
+            ))}
           </div>
-        )}
+        </div>
+      )}
 
-      {/* Movies */}
-      {sortedMovies.length > 0 && (
+      {/* Incomplete active themes */}
+      {incompleteThemes.length > 0 && (
+        <div>
+          <h4 className="text-red-600 text-2xs font-bold tracking-[0.2em] uppercase mb-2">
+            ACTIVE THEMES [{incompleteThemes.length}]
+          </h4>
+          <div className="flex flex-wrap gap-1.5">
+            {incompleteThemes.map((t) => (
+              <span
+                key={t.id}
+                className="text-2xs px-2 py-0.5 border border-red-700 text-red-400 font-bold tracking-wider uppercase"
+              >
+                {t.label}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Canceled themes */}
+      {canceledThemes.length > 0 && (
+        <div>
+          <h4 className="text-zinc-600 text-2xs font-bold tracking-[0.2em] uppercase mb-2">
+            CANCELED THEMES [{canceledThemes.length}]
+          </h4>
+          <div className="flex flex-wrap gap-1.5">
+            {canceledThemes.map((t) => (
+              <span
+                key={t.id}
+                className="text-2xs px-2 py-0.5 border border-zinc-800 text-zinc-600 font-bold tracking-wider uppercase line-through"
+              >
+                {t.label}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Watch order with posters */}
+      {watchedMovies.length > 0 && (
         <div>
           <h4 className="text-red-600 text-2xs font-bold tracking-[0.2em] uppercase mb-2">
             WATCH ORDER
           </h4>
-          <div className="space-y-1">
-            {sortedMovies.map((movie, i) => (
-              <div key={movie.id} className="flex items-baseline gap-2">
-                <span className="text-red-700 font-bold text-xs tabular-nums w-5 text-right shrink-0">
+          <div className="space-y-1.5">
+            {watchedMovies.map((movie, i) => (
+              <div key={movie.id} className="flex items-center gap-2.5">
+                <span className="text-red-700 font-black text-xs tabular-nums w-5 text-right shrink-0">
                   {i + 1}.
                 </span>
-                <span className="text-zinc-300 text-xs uppercase tracking-wide">
+                {movie.poster_path && (
+                  <div className="w-6 h-9 flex-shrink-0 bg-zinc-900 overflow-hidden relative">
+                    <img
+                      src={`https://image.tmdb.org/t/p/w200${movie.poster_path}`}
+                      alt={movie.title}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                )}
+                <span className="text-zinc-300 text-xs uppercase tracking-wide font-bold">
                   {movie.title}
                 </span>
               </div>
@@ -239,28 +382,34 @@ function SessionDetailView({ detail }: { detail: SessionDetail }) {
         </div>
       )}
 
-      {/* Themes */}
-      {(activeThemes.length > 0 || canceledThemes.length > 0) && (
+      {/* DNF movies */}
+      {dnfMovies.length > 0 && (
         <div>
-          <h4 className="text-red-600 text-2xs font-bold tracking-[0.2em] uppercase mb-2">
-            THEMES
+          <h4 className="text-zinc-600 text-2xs font-bold tracking-[0.2em] uppercase mb-2">
+            DID NOT FINISH [{dnfMovies.length}]
           </h4>
-          <div className="flex flex-wrap gap-1.5">
-            {activeThemes.map((t) => (
-              <span
-                key={t.id}
-                className="text-2xs px-2 py-0.5 border border-red-700 text-red-400 font-bold tracking-wider uppercase"
-              >
-                {t.label}
-              </span>
-            ))}
-            {canceledThemes.map((t) => (
-              <span
-                key={t.id}
-                className="text-2xs px-2 py-0.5 border border-zinc-800 text-zinc-600 font-bold tracking-wider uppercase line-through"
-              >
-                {t.label}
-              </span>
+          <div className="space-y-1.5">
+            {dnfMovies.map((movie) => (
+              <div key={movie.id} className="flex items-center gap-2.5 opacity-50">
+                <span className="text-zinc-700 font-black text-xs tabular-nums w-5 text-right shrink-0 line-through">
+                  {movie.watch_order}.
+                </span>
+                {movie.poster_path && (
+                  <div className="w-6 h-9 flex-shrink-0 bg-zinc-900 overflow-hidden relative grayscale">
+                    <img
+                      src={`https://image.tmdb.org/t/p/w200${movie.poster_path}`}
+                      alt={movie.title}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                )}
+                <span className="text-zinc-500 text-xs uppercase tracking-wide line-through">
+                  {movie.title}
+                </span>
+                <span className="text-zinc-700 text-2xs font-bold tracking-wider">
+                  DNF
+                </span>
+              </div>
             ))}
           </div>
         </div>
@@ -448,11 +597,6 @@ export default function GoblinSessionHistory({
                       <StatusBadge status={session.status} />
                     </div>
 
-                    {/* Status badge */}
-                    <div className="shrink-0">
-                      <StatusBadge status={session.status} />
-                    </div>
-
                     {/* Movie count */}
                     <span className="text-zinc-600 text-2xs tracking-wider shrink-0">
                       {session.movie_count}{" "}
@@ -493,7 +637,19 @@ export default function GoblinSessionHistory({
                           </span>
                         </div>
                       )}
-                      {detail && <SessionDetailView detail={detail} />}
+                      {detail && (
+                        <SessionDetailView
+                          detail={detail}
+                          onRefresh={() => {
+                            setDetailCache((prev) => {
+                              const next = { ...prev };
+                              delete next[session.id];
+                              return next;
+                            });
+                            handleExpand(session.id);
+                          }}
+                        />
+                      )}
                       <div className="border-t border-zinc-800 px-3 sm:px-4 py-3 flex justify-end">
                         <button
                           onClick={(e) => {
