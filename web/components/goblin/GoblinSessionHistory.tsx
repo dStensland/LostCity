@@ -98,6 +98,7 @@ interface SessionDetail {
   status: SessionStatus;
   invite_code?: string | null;
   members?: SessionMember[];
+  guest_names?: string[];
   movies: {
     id: number;
     title: string;
@@ -187,6 +188,44 @@ function SessionDetailView({
   const [editingName, setEditingName] = useState(false);
   const [nameValue, setNameValue] = useState(detail.name ?? "");
   const [savingName, setSavingName] = useState(false);
+  const [guestInput, setGuestInput] = useState("");
+  const [savingGuests, setSavingGuests] = useState(false);
+  const guests = detail.guest_names ?? [];
+
+  const handleAddGuest = async () => {
+    const name = guestInput.trim();
+    if (!name) return;
+    setSavingGuests(true);
+    try {
+      const updated = [...guests, name];
+      const res = await fetch(`/api/goblinday/sessions/${detail.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ guest_names: updated }),
+      });
+      if (res.ok) {
+        setGuestInput("");
+        onRefresh();
+      }
+    } finally {
+      setSavingGuests(false);
+    }
+  };
+
+  const handleRemoveGuest = async (index: number) => {
+    setSavingGuests(true);
+    try {
+      const updated = guests.filter((_, i) => i !== index);
+      const res = await fetch(`/api/goblinday/sessions/${detail.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ guest_names: updated }),
+      });
+      if (res.ok) onRefresh();
+    } finally {
+      setSavingGuests(false);
+    }
+  };
 
   const sortedMovies = [...detail.movies].sort(
     (a, b) => (a.watch_order ?? 0) - (b.watch_order ?? 0)
@@ -291,9 +330,68 @@ function SessionDetailView({
                 )}
               </span>
             ))}
+            {(detail.guest_names ?? []).map((guestName, i) => (
+              <span
+                key={`guest-${i}`}
+                className="text-2xs px-2 py-0.5 border border-zinc-800 text-zinc-400 tracking-wider uppercase"
+              >
+                {guestName}
+                <span className="text-zinc-700 ml-1">[GUEST]</span>
+              </span>
+            ))}
           </div>
         </div>
       )}
+
+      {/* Guest attendees */}
+      <div>
+        <h4 className="text-red-600 text-2xs font-bold tracking-[0.2em] uppercase mb-2">
+          GUESTS
+        </h4>
+        {guests.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 mb-2">
+            {guests.map((name, i) => (
+              <span
+                key={i}
+                className="inline-flex items-center gap-1.5 text-2xs px-2 py-0.5 border border-zinc-800 text-zinc-400 tracking-wider uppercase"
+              >
+                {name}
+                <button
+                  onClick={() => handleRemoveGuest(i)}
+                  disabled={savingGuests}
+                  className="text-zinc-600 hover:text-red-500 transition-colors disabled:opacity-40 font-black"
+                >
+                  ✕
+                </button>
+              </span>
+            ))}
+          </div>
+        )}
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={guestInput}
+            onChange={(e) => setGuestInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                handleAddGuest();
+              }
+            }}
+            maxLength={30}
+            className="flex-1 px-2 py-1.5 bg-zinc-900 border border-zinc-700 text-white text-xs font-mono tracking-wider uppercase placeholder:text-zinc-700 focus:outline-none focus:border-red-700"
+            placeholder="ADD GUEST NAME..."
+            disabled={savingGuests}
+          />
+          <button
+            onClick={handleAddGuest}
+            disabled={savingGuests || !guestInput.trim()}
+            className="px-3 py-1.5 bg-red-900 text-red-100 text-2xs font-bold tracking-wider uppercase border border-red-700 disabled:opacity-40"
+          >
+            {savingGuests ? "..." : "ADD"}
+          </button>
+        </div>
+      </div>
 
       {/* Completed themes */}
       {completedThemes.length > 0 && (
