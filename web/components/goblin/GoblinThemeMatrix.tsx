@@ -6,9 +6,6 @@ import SmartImage from "@/components/SmartImage";
 const TMDB_IMAGE_BASE = "https://image.tmdb.org/t/p/w200";
 const MAX_THEME_LENGTH = 24;
 
-/* Wildcard "movie" ID — not a real movie, represents ad-hoc checks */
-const WILDCARD_ID = -1;
-
 /* Quick-add theme suggestions */
 const THEME_SUGGESTIONS = [
   "FINAL GIRL",
@@ -104,8 +101,6 @@ export default function GoblinThemeMatrix({
   const [confirmingCancelId, setConfirmingCancelId] = useState<number | null>(null);
   const confirmTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const newRowRef = useRef<HTMLTableRowElement | null>(null);
-  // Wildcard checks are client-only (no API persistence)
-  const [wildcardChecks, setWildcardChecks] = useState<Set<number>>(new Set());
 
   const sortedMovies = useMemo(
     () => [...movies].sort((a, b) => a.watch_order - b.watch_order),
@@ -131,13 +126,11 @@ export default function GoblinThemeMatrix({
   // Resolve checked state with optimistic overrides
   const isChecked = useCallback(
     (themeId: number, movieId: number) => {
-      // Wildcard is client-only
-      if (movieId === WILDCARD_ID) return wildcardChecks.has(themeId);
       const key = `${themeId}-${movieId}`;
       if (optimisticToggles.has(key)) return optimisticToggles.get(key)!;
       return checkedSet.has(key);
     },
-    [checkedSet, optimisticToggles, wildcardChecks]
+    [checkedSet, optimisticToggles]
   );
 
   // Bingo detection: all real movies + wildcard checked for a theme
@@ -149,7 +142,7 @@ export default function GoblinThemeMatrix({
     [sortedMovies, isChecked]
   );
 
-  // Per-movie trophy count (including wildcard)
+  // Per-movie trophy count
   const movieTrophyCounts = useMemo(() => {
     const counts = new Map<number, number>();
     for (const movie of sortedMovies) {
@@ -159,14 +152,8 @@ export default function GoblinThemeMatrix({
       }
       counts.set(movie.id, count);
     }
-    // Wildcard count
-    let wcCount = 0;
-    for (const theme of activeThemes) {
-      if (wildcardChecks.has(theme.id)) wcCount++;
-    }
-    counts.set(WILDCARD_ID, wcCount);
     return counts;
-  }, [sortedMovies, activeThemes, isChecked, wildcardChecks]);
+  }, [sortedMovies, activeThemes, isChecked]);
 
   // Only bump revision when themes content actually changes
   useEffect(() => {
@@ -206,17 +193,6 @@ export default function GoblinThemeMatrix({
   /* ---- Toggle a cell ---- */
   const handleToggle = useCallback(
     async (themeId: number, movieId: number) => {
-      // Wildcard is client-only — no API call
-      if (movieId === WILDCARD_ID) {
-        setWildcardChecks((prev) => {
-          const next = new Set(prev);
-          if (next.has(themeId)) next.delete(themeId);
-          else next.add(themeId);
-          return next;
-        });
-        return;
-      }
-
       const key = `${themeId}-${movieId}`;
       inFlightKeys.current.add(key);
 
@@ -351,7 +327,6 @@ export default function GoblinThemeMatrix({
   /* ---- Render a single matrix cell ---- */
   const renderCell = (themeId: number, movieId: number, complete: boolean) => {
     const checked = isChecked(themeId, movieId);
-    const isWild = movieId === WILDCARD_ID;
     return (
       <td key={movieId} className="px-1 py-0.5 text-center">
         <button
@@ -361,18 +336,16 @@ export default function GoblinThemeMatrix({
               ? complete
                 ? "bg-amber-950/40 border-amber-600/60 shadow-[0_0_14px_rgba(250,204,21,0.15)]"
                 : "bg-red-950/80 border-red-700/80 shadow-[0_0_10px_rgba(185,28,28,0.25)]"
-              : isWild
-                ? "bg-zinc-900/30 border-dashed border-zinc-700 hover:border-zinc-500"
-                : "bg-zinc-900/40 border-zinc-800 hover:border-zinc-600 hover:bg-zinc-800/60"
+              : "bg-zinc-900/40 border-zinc-800 hover:border-zinc-600 hover:bg-zinc-800/60"
           }`}
-          aria-label={`${isWild ? "Wildcard" : ""}: ${checked ? "checked" : "unchecked"}`}
+          aria-label={`${checked ? "checked" : "unchecked"}`}
         >
           {checked ? (
             <span className="flex items-center justify-center">
               <SkullIcon variant={complete ? "bingo" : "checked"} size={22} />
             </span>
           ) : (
-            <span className={`text-sm ${isWild ? "text-zinc-700" : "text-zinc-600"}`}>&#x25CB;</span>
+            <span className="text-sm text-zinc-600">&#x25CB;</span>
           )}
         </button>
       </td>
@@ -485,18 +458,6 @@ export default function GoblinThemeMatrix({
                     </th>
                   );
                 })}
-                {/* Wildcard column header */}
-                <th
-                  className="px-1.5 pb-2 text-center align-bottom"
-                  style={{ minWidth: 70, maxWidth: 80 }}
-                >
-                  <div className="w-10 h-14 sm:w-12 sm:h-18 mx-auto border-2 border-dashed border-zinc-700 flex items-center justify-center mb-1.5">
-                    <span className="text-zinc-600 text-lg">?</span>
-                  </div>
-                  <span className="text-zinc-600 text-2xs font-bold tracking-wider uppercase block leading-tight">
-                    WILD
-                  </span>
-                </th>
               </tr>
             </thead>
             <tbody>
@@ -541,10 +502,8 @@ export default function GoblinThemeMatrix({
                         </button>
                       </div>
                     </td>
-                    {/* Matrix cells for real movies */}
+                    {/* Matrix cells */}
                     {sortedMovies.map((movie) => renderCell(theme.id, movie.id, complete))}
-                    {/* Wildcard cell */}
-                    {renderCell(theme.id, WILDCARD_ID, complete)}
                   </tr>
                 );
               })}
