@@ -190,6 +190,23 @@ function SessionDetailView({
   const [savingName, setSavingName] = useState(false);
   const [guestInput, setGuestInput] = useState("");
   const [savingGuests, setSavingGuests] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const shareUrl = typeof window !== "undefined" && detail.invite_code
+    ? `${window.location.origin}${window.location.pathname.replace(/\/$/, "")}/s/${detail.invite_code}`
+    : null;
+
+  const handleCopyShare = async () => {
+    if (!shareUrl) return;
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Clipboard API may fail
+    }
+  };
+
   const guests = detail.guest_names ?? [];
 
   const handleAddGuest = async () => {
@@ -268,6 +285,30 @@ function SessionDetailView({
 
   return (
     <div className="border-t-2 border-zinc-800 bg-black/60 px-3 sm:px-4 py-4 space-y-5">
+      {/* Share link */}
+      {detail.status === "ended" && shareUrl && (
+        <div>
+          <h4 className="text-red-600 text-2xs font-bold tracking-[0.2em] uppercase mb-2">
+            SHARE RECAP
+          </h4>
+          <div className="flex items-center gap-2 border border-zinc-800 bg-zinc-950 p-2">
+            <code className="text-zinc-400 text-2xs tracking-wider flex-1 min-w-0 truncate font-mono overflow-hidden">
+              {shareUrl}
+            </code>
+            <button
+              onClick={handleCopyShare}
+              className={`flex-shrink-0 px-3 py-1.5 text-2xs font-black tracking-[0.2em] uppercase border transition-colors ${
+                copied
+                  ? "bg-emerald-900/40 text-emerald-400 border-emerald-700"
+                  : "bg-zinc-900 text-zinc-400 border-zinc-700 hover:text-white hover:border-zinc-500"
+              }`}
+            >
+              {copied ? "COPIED!" : "COPY"}
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Editable name */}
       <div>
         <h4 className="text-red-600 text-2xs font-bold tracking-[0.2em] uppercase mb-2">
