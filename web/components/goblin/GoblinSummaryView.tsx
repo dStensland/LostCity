@@ -101,16 +101,16 @@ function fbm6(px: number, py: number): number {
 function warpFunc(
   px: number, py: number, time: number
 ): { f: number; ox: number; oy: number; nx: number; ny: number } {
-  // Slight time-driven sway on input
-  const qx = px + 0.03 * Math.sin(0.27 * time + Math.hypot(px, py) * 4.1);
-  const qy = py + 0.03 * Math.sin(0.23 * time + Math.hypot(px, py) * 4.3);
+  // More dramatic time-driven sway
+  const qx = px + 0.06 * Math.sin(0.27 * time + Math.hypot(px, py) * 4.1);
+  const qy = py + 0.06 * Math.sin(0.23 * time + Math.hypot(px, py) * 4.3);
 
-  // First warp: fbm4 x2
+  // First warp: fbm4 x2 — stronger displacement
   let ox = fbm4(0.9 * qx, 0.9 * qy);
   let oy = fbm4(0.9 * qx + 7.8, 0.9 * qy + 7.8);
   const len1 = Math.hypot(ox, oy);
-  ox += 0.04 * Math.sin(0.12 * time + len1);
-  oy += 0.04 * Math.sin(0.14 * time + len1);
+  ox += 0.08 * Math.sin(0.18 * time + len1);
+  oy += 0.08 * Math.sin(0.22 * time + len1);
 
   // Second warp: fbm6 x2
   const nx = fbm6(3.0 * ox + 16.8, 3.0 * oy + 16.8);
@@ -124,141 +124,7 @@ function warpFunc(
 }
 
 /* ------------------------------------------------------------------ */
-/*  Ghostly skull overlay — drawn via canvas paths                     */
-/* ------------------------------------------------------------------ */
-
-function drawSkull(ctx: CanvasRenderingContext2D, cx: number, cy: number, size: number, alpha: number) {
-  ctx.save();
-  ctx.translate(cx, cy);
-  ctx.scale(size / 100, size / 100);
-  ctx.globalAlpha = alpha;
-
-  // Cranium outline — soft edge
-  const cranOuter = ctx.createRadialGradient(0, -10, 30, 0, -10, 50);
-  cranOuter.addColorStop(0, "rgba(80,8,8,0.5)");
-  cranOuter.addColorStop(0.7, "rgba(50,5,5,0.3)");
-  cranOuter.addColorStop(1, "rgba(0,0,0,0)");
-  ctx.beginPath();
-  ctx.ellipse(0, -10, 50, 55, 0, 0, Math.PI * 2);
-  ctx.fillStyle = cranOuter;
-  ctx.fill();
-
-  // Cranium solid
-  ctx.beginPath();
-  ctx.ellipse(0, -10, 42, 48, 0, 0, Math.PI * 2);
-  ctx.fillStyle = "rgba(70,8,8,0.55)";
-  ctx.fill();
-
-  // Cranium inner glow
-  const cranGlow = ctx.createRadialGradient(0, -18, 0, 0, -10, 40);
-  cranGlow.addColorStop(0, "rgba(110,15,10,0.3)");
-  cranGlow.addColorStop(0.5, "rgba(50,5,5,0.15)");
-  cranGlow.addColorStop(1, "rgba(0,0,0,0)");
-  ctx.fillStyle = cranGlow;
-  ctx.beginPath();
-  ctx.ellipse(0, -10, 42, 48, 0, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Brow ridge
-  ctx.beginPath();
-  ctx.ellipse(0, -26, 36, 6, 0, Math.PI * 0.85, Math.PI * 0.15, true);
-  ctx.fillStyle = "rgba(90,10,8,0.3)";
-  ctx.fill();
-
-  // Left eye socket
-  ctx.beginPath();
-  ctx.ellipse(-16, -14, 11, 13, -0.1, 0, Math.PI * 2);
-  ctx.fillStyle = "rgba(0,0,0,0.7)";
-  ctx.fill();
-  // Eye glow — brighter
-  const eyeL = ctx.createRadialGradient(-16, -14, 0, -16, -14, 12);
-  eyeL.addColorStop(0, "rgba(160,20,0,0.4)");
-  eyeL.addColorStop(0.5, "rgba(100,8,0,0.15)");
-  eyeL.addColorStop(1, "rgba(0,0,0,0)");
-  ctx.fillStyle = eyeL;
-  ctx.fill();
-
-  // Right eye socket
-  ctx.beginPath();
-  ctx.ellipse(16, -14, 11, 13, 0.1, 0, Math.PI * 2);
-  ctx.fillStyle = "rgba(0,0,0,0.7)";
-  ctx.fill();
-  const eyeR = ctx.createRadialGradient(16, -14, 0, 16, -14, 12);
-  eyeR.addColorStop(0, "rgba(160,20,0,0.4)");
-  eyeR.addColorStop(0.5, "rgba(100,8,0,0.15)");
-  eyeR.addColorStop(1, "rgba(0,0,0,0)");
-  ctx.fillStyle = eyeR;
-  ctx.fill();
-
-  // Nasal cavity
-  ctx.beginPath();
-  ctx.moveTo(0, -4);
-  ctx.lineTo(-8, 12);
-  ctx.quadraticCurveTo(0, 9, 8, 12);
-  ctx.closePath();
-  ctx.fillStyle = "rgba(0,0,0,0.6)";
-  ctx.fill();
-
-  // Cheekbones — more prominent
-  ctx.beginPath();
-  ctx.ellipse(-30, 2, 10, 16, -0.3, 0, Math.PI * 2);
-  ctx.fillStyle = "rgba(65,6,6,0.3)";
-  ctx.fill();
-  ctx.beginPath();
-  ctx.ellipse(30, 2, 10, 16, 0.3, 0, Math.PI * 2);
-  ctx.fillStyle = "rgba(65,6,6,0.3)";
-  ctx.fill();
-
-  // Upper jaw
-  ctx.beginPath();
-  ctx.moveTo(-32, 20);
-  ctx.quadraticCurveTo(-22, 38, 0, 42);
-  ctx.quadraticCurveTo(22, 38, 32, 20);
-  ctx.quadraticCurveTo(22, 30, 0, 32);
-  ctx.quadraticCurveTo(-22, 30, -32, 20);
-  ctx.fillStyle = "rgba(55,6,6,0.35)";
-  ctx.fill();
-
-  // Teeth — clearer vertical lines
-  ctx.strokeStyle = "rgba(0,0,0,0.35)";
-  ctx.lineWidth = 1.5;
-  for (let tx = -22; tx <= 22; tx += 5.5) {
-    const jawY = 22 + 5 * (1 - (tx * tx) / 550);
-    ctx.beginPath();
-    ctx.moveTo(tx, jawY);
-    ctx.lineTo(tx, jawY + 12);
-    ctx.stroke();
-  }
-
-  // Tooth highlights
-  ctx.strokeStyle = "rgba(80,8,8,0.15)";
-  ctx.lineWidth = 0.8;
-  for (let tx = -19.5; tx <= 19.5; tx += 5.5) {
-    const jawY = 22 + 5 * (1 - (tx * tx) / 550);
-    ctx.beginPath();
-    ctx.moveTo(tx, jawY + 1);
-    ctx.lineTo(tx, jawY + 11);
-    ctx.stroke();
-  }
-
-  // Temple shadows — deeper
-  const tempL = ctx.createRadialGradient(-38, -20, 0, -38, -20, 25);
-  tempL.addColorStop(0, "rgba(0,0,0,0.3)");
-  tempL.addColorStop(1, "rgba(0,0,0,0)");
-  ctx.fillStyle = tempL;
-  ctx.fillRect(-63, -45, 50, 50);
-
-  const tempR = ctx.createRadialGradient(38, -20, 0, 38, -20, 25);
-  tempR.addColorStop(0, "rgba(0,0,0,0.3)");
-  tempR.addColorStop(1, "rgba(0,0,0,0)");
-  ctx.fillStyle = tempR;
-  ctx.fillRect(13, -45, 50, 50);
-
-  ctx.restore();
-}
-
-/* ------------------------------------------------------------------ */
-/*  Init: domain warp + skull composite                                */
+/*  Init: domain warp background                                       */
 /* ------------------------------------------------------------------ */
 
 function initDomainWarp(canvas: HTMLCanvasElement): () => void {
@@ -282,7 +148,7 @@ function initDomainWarp(canvas: HTMLCanvasElement): () => void {
     const h = Math.ceil(H / SCALE);
     const img = ctx.createImageData(w, h);
     const data = img.data;
-    const time = t * 0.035;
+    const time = t * 0.05;
 
     for (let py = 0; py < h; py++) {
       for (let px = 0; px < w; px++) {
@@ -341,11 +207,6 @@ function initDomainWarp(canvas: HTMLCanvasElement): () => void {
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = "medium";
     ctx.drawImage(offscreen, 0, 0, W, H);
-
-    // Composite skull — large, centered, visible
-    const skullSize = Math.min(W, H) * 0.8;
-    const skullAlpha = 0.35 + 0.05 * Math.sin(time * 0.4);
-    drawSkull(ctx, W * 0.5, H * 0.38, skullSize, skullAlpha);
 
     t++;
     animId = requestAnimationFrame(draw);
@@ -423,6 +284,29 @@ export default function GoblinSummaryView({
         className="fixed inset-0 pointer-events-none"
         style={{ zIndex: 0 }}
       />
+
+      {/* Ink-wash skull — fixed behind content */}
+      <div
+        className="fixed pointer-events-none flex items-start justify-center"
+        style={{
+          zIndex: 0,
+          top: "5%",
+          left: "50%",
+          transform: "translateX(-50%)",
+          width: "min(90vw, 600px)",
+          height: "min(90vh, 800px)",
+        }}
+      >
+        <img
+          src="/goblin-day/skull.png"
+          alt=""
+          className="w-full h-full object-contain"
+          style={{
+            filter: "invert(1) brightness(0.25) sepia(1) saturate(3) hue-rotate(330deg)",
+            opacity: 0.6,
+          }}
+        />
+      </div>
 
       <div className="max-w-lg mx-auto px-4 py-8 space-y-6 relative" style={{ zIndex: 1 }}>
         {/* Header */}
