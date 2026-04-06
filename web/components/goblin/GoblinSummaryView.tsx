@@ -133,39 +133,59 @@ function drawSkull(ctx: CanvasRenderingContext2D, cx: number, cy: number, size: 
   ctx.scale(size / 100, size / 100);
   ctx.globalAlpha = alpha;
 
-  // Cranium
+  // Cranium outline — soft edge
+  const cranOuter = ctx.createRadialGradient(0, -10, 30, 0, -10, 50);
+  cranOuter.addColorStop(0, "rgba(80,8,8,0.5)");
+  cranOuter.addColorStop(0.7, "rgba(50,5,5,0.3)");
+  cranOuter.addColorStop(1, "rgba(0,0,0,0)");
+  ctx.beginPath();
+  ctx.ellipse(0, -10, 50, 55, 0, 0, Math.PI * 2);
+  ctx.fillStyle = cranOuter;
+  ctx.fill();
+
+  // Cranium solid
   ctx.beginPath();
   ctx.ellipse(0, -10, 42, 48, 0, 0, Math.PI * 2);
-  ctx.fillStyle = "rgba(60,5,5,0.3)";
+  ctx.fillStyle = "rgba(70,8,8,0.55)";
   ctx.fill();
 
   // Cranium inner glow
-  const cranGlow = ctx.createRadialGradient(0, -10, 0, 0, -10, 44);
-  cranGlow.addColorStop(0, "rgba(100,10,10,0.15)");
-  cranGlow.addColorStop(0.6, "rgba(40,2,2,0.08)");
+  const cranGlow = ctx.createRadialGradient(0, -18, 0, 0, -10, 40);
+  cranGlow.addColorStop(0, "rgba(110,15,10,0.3)");
+  cranGlow.addColorStop(0.5, "rgba(50,5,5,0.15)");
   cranGlow.addColorStop(1, "rgba(0,0,0,0)");
   ctx.fillStyle = cranGlow;
+  ctx.beginPath();
+  ctx.ellipse(0, -10, 42, 48, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Brow ridge
+  ctx.beginPath();
+  ctx.ellipse(0, -26, 36, 6, 0, Math.PI * 0.85, Math.PI * 0.15, true);
+  ctx.fillStyle = "rgba(90,10,8,0.3)";
   ctx.fill();
 
   // Left eye socket
   ctx.beginPath();
-  ctx.ellipse(-16, -14, 10, 12, -0.1, 0, Math.PI * 2);
-  ctx.fillStyle = "rgba(0,0,0,0.5)";
+  ctx.ellipse(-16, -14, 11, 13, -0.1, 0, Math.PI * 2);
+  ctx.fillStyle = "rgba(0,0,0,0.7)";
   ctx.fill();
-  // Eye glow
-  const eyeL = ctx.createRadialGradient(-16, -14, 0, -16, -14, 10);
-  eyeL.addColorStop(0, "rgba(120,10,0,0.2)");
+  // Eye glow — brighter
+  const eyeL = ctx.createRadialGradient(-16, -14, 0, -16, -14, 12);
+  eyeL.addColorStop(0, "rgba(160,20,0,0.4)");
+  eyeL.addColorStop(0.5, "rgba(100,8,0,0.15)");
   eyeL.addColorStop(1, "rgba(0,0,0,0)");
   ctx.fillStyle = eyeL;
   ctx.fill();
 
   // Right eye socket
   ctx.beginPath();
-  ctx.ellipse(16, -14, 10, 12, 0.1, 0, Math.PI * 2);
-  ctx.fillStyle = "rgba(0,0,0,0.5)";
+  ctx.ellipse(16, -14, 11, 13, 0.1, 0, Math.PI * 2);
+  ctx.fillStyle = "rgba(0,0,0,0.7)";
   ctx.fill();
-  const eyeR = ctx.createRadialGradient(16, -14, 0, 16, -14, 10);
-  eyeR.addColorStop(0, "rgba(120,10,0,0.2)");
+  const eyeR = ctx.createRadialGradient(16, -14, 0, 16, -14, 12);
+  eyeR.addColorStop(0, "rgba(160,20,0,0.4)");
+  eyeR.addColorStop(0.5, "rgba(100,8,0,0.15)");
   eyeR.addColorStop(1, "rgba(0,0,0,0)");
   ctx.fillStyle = eyeR;
   ctx.fill();
@@ -173,55 +193,66 @@ function drawSkull(ctx: CanvasRenderingContext2D, cx: number, cy: number, size: 
   // Nasal cavity
   ctx.beginPath();
   ctx.moveTo(0, -4);
-  ctx.lineTo(-7, 10);
-  ctx.quadraticCurveTo(0, 8, 7, 10);
+  ctx.lineTo(-8, 12);
+  ctx.quadraticCurveTo(0, 9, 8, 12);
   ctx.closePath();
-  ctx.fillStyle = "rgba(0,0,0,0.4)";
+  ctx.fillStyle = "rgba(0,0,0,0.6)";
   ctx.fill();
 
-  // Cheekbones — subtle ridges
+  // Cheekbones — more prominent
   ctx.beginPath();
-  ctx.ellipse(-28, 2, 8, 14, -0.3, 0, Math.PI * 2);
-  ctx.fillStyle = "rgba(50,4,4,0.15)";
+  ctx.ellipse(-30, 2, 10, 16, -0.3, 0, Math.PI * 2);
+  ctx.fillStyle = "rgba(65,6,6,0.3)";
   ctx.fill();
   ctx.beginPath();
-  ctx.ellipse(28, 2, 8, 14, 0.3, 0, Math.PI * 2);
-  ctx.fillStyle = "rgba(50,4,4,0.15)";
+  ctx.ellipse(30, 2, 10, 16, 0.3, 0, Math.PI * 2);
+  ctx.fillStyle = "rgba(65,6,6,0.3)";
   ctx.fill();
 
   // Upper jaw
   ctx.beginPath();
-  ctx.moveTo(-30, 20);
-  ctx.quadraticCurveTo(-20, 35, 0, 38);
-  ctx.quadraticCurveTo(20, 35, 30, 20);
-  ctx.quadraticCurveTo(20, 28, 0, 30);
-  ctx.quadraticCurveTo(-20, 28, -30, 20);
-  ctx.fillStyle = "rgba(45,4,4,0.2)";
+  ctx.moveTo(-32, 20);
+  ctx.quadraticCurveTo(-22, 38, 0, 42);
+  ctx.quadraticCurveTo(22, 38, 32, 20);
+  ctx.quadraticCurveTo(22, 30, 0, 32);
+  ctx.quadraticCurveTo(-22, 30, -32, 20);
+  ctx.fillStyle = "rgba(55,6,6,0.35)";
   ctx.fill();
 
-  // Teeth — vertical lines across jaw
-  ctx.strokeStyle = "rgba(0,0,0,0.2)";
-  ctx.lineWidth = 1.2;
-  for (let tx = -20; tx <= 20; tx += 6) {
-    const jawY = 22 + 4 * (1 - (tx * tx) / 500);
+  // Teeth — clearer vertical lines
+  ctx.strokeStyle = "rgba(0,0,0,0.35)";
+  ctx.lineWidth = 1.5;
+  for (let tx = -22; tx <= 22; tx += 5.5) {
+    const jawY = 22 + 5 * (1 - (tx * tx) / 550);
     ctx.beginPath();
     ctx.moveTo(tx, jawY);
-    ctx.lineTo(tx, jawY + 10);
+    ctx.lineTo(tx, jawY + 12);
     ctx.stroke();
   }
 
-  // Temple shadows
-  const tempL = ctx.createRadialGradient(-38, -20, 0, -38, -20, 20);
-  tempL.addColorStop(0, "rgba(0,0,0,0.15)");
+  // Tooth highlights
+  ctx.strokeStyle = "rgba(80,8,8,0.15)";
+  ctx.lineWidth = 0.8;
+  for (let tx = -19.5; tx <= 19.5; tx += 5.5) {
+    const jawY = 22 + 5 * (1 - (tx * tx) / 550);
+    ctx.beginPath();
+    ctx.moveTo(tx, jawY + 1);
+    ctx.lineTo(tx, jawY + 11);
+    ctx.stroke();
+  }
+
+  // Temple shadows — deeper
+  const tempL = ctx.createRadialGradient(-38, -20, 0, -38, -20, 25);
+  tempL.addColorStop(0, "rgba(0,0,0,0.3)");
   tempL.addColorStop(1, "rgba(0,0,0,0)");
   ctx.fillStyle = tempL;
-  ctx.fillRect(-58, -40, 40, 40);
+  ctx.fillRect(-63, -45, 50, 50);
 
-  const tempR = ctx.createRadialGradient(38, -20, 0, 38, -20, 20);
-  tempR.addColorStop(0, "rgba(0,0,0,0.15)");
+  const tempR = ctx.createRadialGradient(38, -20, 0, 38, -20, 25);
+  tempR.addColorStop(0, "rgba(0,0,0,0.3)");
   tempR.addColorStop(1, "rgba(0,0,0,0)");
   ctx.fillStyle = tempR;
-  ctx.fillRect(18, -40, 40, 40);
+  ctx.fillRect(13, -45, 50, 50);
 
   ctx.restore();
 }
@@ -251,7 +282,7 @@ function initDomainWarp(canvas: HTMLCanvasElement): () => void {
     const h = Math.ceil(H / SCALE);
     const img = ctx.createImageData(w, h);
     const data = img.data;
-    const time = t * 0.016;
+    const time = t * 0.035;
 
     for (let py = 0; py < h; py++) {
       for (let px = 0; px < w; px++) {
@@ -260,40 +291,40 @@ function initDomainWarp(canvas: HTMLCanvasElement): () => void {
 
         const { f, oy, nx, ny } = warpFunc(sx, sy, time);
 
-        // Direct color mixing — no inversion
+        // Direct color mixing — very dark palette for text readability
         const nzw = nx * nx + ny * ny;
         const warmth = 0.2 + 0.5 * oy * oy;
         const edge = smooth(1.2, 1.3, Math.abs(nx) + Math.abs(ny));
 
-        // Base: black → deep crimson
-        let cr = mix(0.02, 0.18, f * f);
-        let cg = mix(0.0, 0.01, f * f);
-        let cb = mix(0.01, 0.03, f * f);
+        // Base: near-black → very dark crimson
+        let cr = mix(0.01, 0.10, f * f);
+        let cg = mix(0.0, 0.005, f * f);
+        let cb = mix(0.005, 0.015, f * f);
 
-        // Warp intensity → ember highlights
-        cr = mix(cr, 0.35, nzw * 0.6);
-        cg = mix(cg, 0.03, nzw * 0.3);
-        cb = mix(cb, 0.02, nzw * 0.2);
+        // Warp intensity → subdued ember highlights
+        cr = mix(cr, 0.20, nzw * 0.5);
+        cg = mix(cg, 0.015, nzw * 0.2);
+        cb = mix(cb, 0.01, nzw * 0.15);
 
-        // Midtone warmth
-        cr = mix(cr, 0.15, warmth * 0.4);
-        cg = mix(cg, 0.02, warmth * 0.2);
-        cb = mix(cb, 0.04, warmth * 0.3);
+        // Midtone warmth — very subtle
+        cr = mix(cr, 0.08, warmth * 0.3);
+        cg = mix(cg, 0.01, warmth * 0.15);
+        cb = mix(cb, 0.02, warmth * 0.2);
 
         // Edge darkening
-        cr = mix(cr, 0.0, edge * 0.6);
-        cg = mix(cg, 0.0, edge * 0.6);
-        cb = mix(cb, 0.01, edge * 0.4);
+        cr = mix(cr, 0.0, edge * 0.7);
+        cg = mix(cg, 0.0, edge * 0.7);
+        cb = mix(cb, 0.005, edge * 0.5);
 
-        // Boost contrast
-        cr = clamp(cr * f * 2.5);
-        cg = clamp(cg * f * 2.5);
-        cb = clamp(cb * f * 2.5);
+        // Boost contrast but keep dark
+        cr = clamp(cr * f * 2.0);
+        cg = clamp(cg * f * 2.0);
+        cb = clamp(cb * f * 2.0);
 
-        // Gamma for richer darks
-        cr = Math.pow(cr, 0.85);
-        cg = Math.pow(cg, 0.85);
-        cb = Math.pow(cb, 0.85);
+        // Steeper gamma to crush into darkness
+        cr = Math.pow(cr, 0.9);
+        cg = Math.pow(cg, 0.9);
+        cb = Math.pow(cb, 0.9);
 
         const i = (py * w + px) * 4;
         data[i]     = Math.floor(clamp(cr) * 255);
@@ -311,10 +342,10 @@ function initDomainWarp(canvas: HTMLCanvasElement): () => void {
     ctx.imageSmoothingQuality = "medium";
     ctx.drawImage(offscreen, 0, 0, W, H);
 
-    // Composite skull — large, centered, faint
-    const skullSize = Math.min(W, H) * 0.7;
-    const skullAlpha = 0.12 + 0.02 * Math.sin(time * 0.3);
-    drawSkull(ctx, W * 0.5, H * 0.35, skullSize, skullAlpha);
+    // Composite skull — large, centered, visible
+    const skullSize = Math.min(W, H) * 0.8;
+    const skullAlpha = 0.35 + 0.05 * Math.sin(time * 0.4);
+    drawSkull(ctx, W * 0.5, H * 0.38, skullSize, skullAlpha);
 
     t++;
     animId = requestAnimationFrame(draw);
