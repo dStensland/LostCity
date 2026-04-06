@@ -27,6 +27,7 @@ interface SessionInfo {
     title: string;
     poster_path: string | null;
     watch_order: number;
+    dnf?: boolean;
   }>;
   themes?: Array<{
     id: number;

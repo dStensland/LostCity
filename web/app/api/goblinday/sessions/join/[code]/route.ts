@@ -82,7 +82,7 @@ export async function GET(
   if (s.status === "ended" || s.status === "canceled") {
     const { data: sessionMovies } = await serviceClient
       .from("goblin_session_movies")
-      .select("id, movie_id, watch_order, added_at, proposed_by, goblin_movies(*)")
+      .select("id, movie_id, watch_order, added_at, proposed_by, dnf, goblin_movies(*)")
       .eq("session_id", s.id)
       .order("watch_order");
 
@@ -120,6 +120,7 @@ export async function GET(
         title: sm.goblin_movies?.title ?? "Unknown",
         poster_path: sm.goblin_movies?.poster_path ?? null,
         watch_order: sm.watch_order,
+        dnf: sm.dnf ?? false,
       })),
       themes: (themes ?? []).map((t: any) => ({
         id: t.id,
