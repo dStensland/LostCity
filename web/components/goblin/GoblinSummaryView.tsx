@@ -123,6 +123,113 @@ function warpFunc(
   return { f, ox, oy, nx, ny };
 }
 
+/* ------------------------------------------------------------------ */
+/*  Ghostly skull overlay — drawn via canvas paths                     */
+/* ------------------------------------------------------------------ */
+
+function drawSkull(ctx: CanvasRenderingContext2D, cx: number, cy: number, size: number, alpha: number) {
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.scale(size / 100, size / 100);
+  ctx.globalAlpha = alpha;
+
+  // Cranium
+  ctx.beginPath();
+  ctx.ellipse(0, -10, 42, 48, 0, 0, Math.PI * 2);
+  ctx.fillStyle = "rgba(60,5,5,0.3)";
+  ctx.fill();
+
+  // Cranium inner glow
+  const cranGlow = ctx.createRadialGradient(0, -10, 0, 0, -10, 44);
+  cranGlow.addColorStop(0, "rgba(100,10,10,0.15)");
+  cranGlow.addColorStop(0.6, "rgba(40,2,2,0.08)");
+  cranGlow.addColorStop(1, "rgba(0,0,0,0)");
+  ctx.fillStyle = cranGlow;
+  ctx.fill();
+
+  // Left eye socket
+  ctx.beginPath();
+  ctx.ellipse(-16, -14, 10, 12, -0.1, 0, Math.PI * 2);
+  ctx.fillStyle = "rgba(0,0,0,0.5)";
+  ctx.fill();
+  // Eye glow
+  const eyeL = ctx.createRadialGradient(-16, -14, 0, -16, -14, 10);
+  eyeL.addColorStop(0, "rgba(120,10,0,0.2)");
+  eyeL.addColorStop(1, "rgba(0,0,0,0)");
+  ctx.fillStyle = eyeL;
+  ctx.fill();
+
+  // Right eye socket
+  ctx.beginPath();
+  ctx.ellipse(16, -14, 10, 12, 0.1, 0, Math.PI * 2);
+  ctx.fillStyle = "rgba(0,0,0,0.5)";
+  ctx.fill();
+  const eyeR = ctx.createRadialGradient(16, -14, 0, 16, -14, 10);
+  eyeR.addColorStop(0, "rgba(120,10,0,0.2)");
+  eyeR.addColorStop(1, "rgba(0,0,0,0)");
+  ctx.fillStyle = eyeR;
+  ctx.fill();
+
+  // Nasal cavity
+  ctx.beginPath();
+  ctx.moveTo(0, -4);
+  ctx.lineTo(-7, 10);
+  ctx.quadraticCurveTo(0, 8, 7, 10);
+  ctx.closePath();
+  ctx.fillStyle = "rgba(0,0,0,0.4)";
+  ctx.fill();
+
+  // Cheekbones — subtle ridges
+  ctx.beginPath();
+  ctx.ellipse(-28, 2, 8, 14, -0.3, 0, Math.PI * 2);
+  ctx.fillStyle = "rgba(50,4,4,0.15)";
+  ctx.fill();
+  ctx.beginPath();
+  ctx.ellipse(28, 2, 8, 14, 0.3, 0, Math.PI * 2);
+  ctx.fillStyle = "rgba(50,4,4,0.15)";
+  ctx.fill();
+
+  // Upper jaw
+  ctx.beginPath();
+  ctx.moveTo(-30, 20);
+  ctx.quadraticCurveTo(-20, 35, 0, 38);
+  ctx.quadraticCurveTo(20, 35, 30, 20);
+  ctx.quadraticCurveTo(20, 28, 0, 30);
+  ctx.quadraticCurveTo(-20, 28, -30, 20);
+  ctx.fillStyle = "rgba(45,4,4,0.2)";
+  ctx.fill();
+
+  // Teeth — vertical lines across jaw
+  ctx.strokeStyle = "rgba(0,0,0,0.2)";
+  ctx.lineWidth = 1.2;
+  for (let tx = -20; tx <= 20; tx += 6) {
+    const jawY = 22 + 4 * (1 - (tx * tx) / 500);
+    ctx.beginPath();
+    ctx.moveTo(tx, jawY);
+    ctx.lineTo(tx, jawY + 10);
+    ctx.stroke();
+  }
+
+  // Temple shadows
+  const tempL = ctx.createRadialGradient(-38, -20, 0, -38, -20, 20);
+  tempL.addColorStop(0, "rgba(0,0,0,0.15)");
+  tempL.addColorStop(1, "rgba(0,0,0,0)");
+  ctx.fillStyle = tempL;
+  ctx.fillRect(-58, -40, 40, 40);
+
+  const tempR = ctx.createRadialGradient(38, -20, 0, 38, -20, 20);
+  tempR.addColorStop(0, "rgba(0,0,0,0.15)");
+  tempR.addColorStop(1, "rgba(0,0,0,0)");
+  ctx.fillStyle = tempR;
+  ctx.fillRect(18, -40, 40, 40);
+
+  ctx.restore();
+}
+
+/* ------------------------------------------------------------------ */
+/*  Init: domain warp + skull composite                                */
+/* ------------------------------------------------------------------ */
+
 function initDomainWarp(canvas: HTMLCanvasElement): () => void {
   const ctx = canvas.getContext("2d");
   if (!ctx) return () => {};
@@ -148,42 +255,45 @@ function initDomainWarp(canvas: HTMLCanvasElement): () => void {
 
     for (let py = 0; py < h; py++) {
       for (let px = 0; px < w; px++) {
-        // Map to shader coords: (2*fragCoord - iResolution) / iResolution.y
         const sx = (2 * (px * SCALE) - W) / H;
         const sy = (2 * (py * SCALE) - H) / H;
 
-        const { f, ox, oy, nx, ny } = warpFunc(sx, sy, time);
+        const { f, oy, nx, ny } = warpFunc(sx, sy, time);
 
-        // Color mixing — dark red/crimson palette
+        // Direct color mixing — no inversion
         const nzw = nx * nx + ny * ny;
-        let cr = mix(0.15, 0.30, f);   // dark blood → crimson
-        let cg = mix(0.02, 0.04, f);   // near-black greens
-        let cb = mix(0.04, 0.06, f);   // hint of warmth
-
-        // Highlights from warp intensity — ember glow
-        cr = mix(cr, 0.55, nzw * 0.7);
-        cg = mix(cg, 0.08, nzw * 0.5);
-        cb = mix(cb, 0.04, nzw * 0.3);
-
-        // Warm midtones from first warp layer
-        cr = mix(cr, 0.25, 0.2 + 0.5 * oy * oy);
-        cg = mix(cg, 0.05, 0.2 + 0.5 * oy * oy);
-        cb = mix(cb, 0.08, 0.2 + 0.5 * oy * oy);
-
-        // Deep shadow in high-warp regions
+        const warmth = 0.2 + 0.5 * oy * oy;
         const edge = smooth(1.2, 1.3, Math.abs(nx) + Math.abs(ny));
-        cr = mix(cr, 0.02, 0.5 * edge);
-        cg = mix(cg, 0.0, 0.5 * edge);
-        cb = mix(cb, 0.04, 0.5 * edge);
 
-        // Apply intensity
-        cr = clamp(cr * f * 2.0);
-        cg = clamp(cg * f * 2.0);
-        cb = clamp(cb * f * 2.0);
+        // Base: black → deep crimson
+        let cr = mix(0.02, 0.18, f * f);
+        let cg = mix(0.0, 0.01, f * f);
+        let cb = mix(0.01, 0.03, f * f);
 
-        // Invert + square (from original shader — creates the organic depth)
-        cr = 1 - cr; cg = 1 - cg; cb = 1 - cb;
-        cr = 1.1 * cr * cr; cg = 1.1 * cg * cg; cb = 1.1 * cb * cb;
+        // Warp intensity → ember highlights
+        cr = mix(cr, 0.35, nzw * 0.6);
+        cg = mix(cg, 0.03, nzw * 0.3);
+        cb = mix(cb, 0.02, nzw * 0.2);
+
+        // Midtone warmth
+        cr = mix(cr, 0.15, warmth * 0.4);
+        cg = mix(cg, 0.02, warmth * 0.2);
+        cb = mix(cb, 0.04, warmth * 0.3);
+
+        // Edge darkening
+        cr = mix(cr, 0.0, edge * 0.6);
+        cg = mix(cg, 0.0, edge * 0.6);
+        cb = mix(cb, 0.01, edge * 0.4);
+
+        // Boost contrast
+        cr = clamp(cr * f * 2.5);
+        cg = clamp(cg * f * 2.5);
+        cb = clamp(cb * f * 2.5);
+
+        // Gamma for richer darks
+        cr = Math.pow(cr, 0.85);
+        cg = Math.pow(cg, 0.85);
+        cb = Math.pow(cb, 0.85);
 
         const i = (py * w + px) * 4;
         data[i]     = Math.floor(clamp(cr) * 255);
@@ -193,12 +303,18 @@ function initDomainWarp(canvas: HTMLCanvasElement): () => void {
       }
     }
 
+    // Render warp at reduced resolution, scale up
     const offscreen = new OffscreenCanvas(w, h);
     const offCtx = offscreen.getContext("2d")!;
     offCtx.putImageData(img, 0, 0);
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = "medium";
     ctx.drawImage(offscreen, 0, 0, W, H);
+
+    // Composite skull — large, centered, faint
+    const skullSize = Math.min(W, H) * 0.7;
+    const skullAlpha = 0.12 + 0.02 * Math.sin(time * 0.3);
+    drawSkull(ctx, W * 0.5, H * 0.35, skullSize, skullAlpha);
 
     t++;
     animId = requestAnimationFrame(draw);
