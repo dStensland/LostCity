@@ -285,25 +285,18 @@ export default function GoblinSummaryView({
         style={{ zIndex: 0 }}
       />
 
-      {/* Ink-wash skull — fixed behind content */}
+      {/* Dark skull — static, behind content, semi-transparent over animation */}
       <div
-        className="fixed pointer-events-none flex items-start justify-center"
-        style={{
-          zIndex: 0,
-          top: "5%",
-          left: "50%",
-          transform: "translateX(-50%)",
-          width: "min(90vw, 600px)",
-          height: "min(90vh, 800px)",
-        }}
+        className="fixed inset-0 pointer-events-none flex items-center justify-center"
+        style={{ zIndex: 0 }}
       >
         <img
-          src="/goblin-day/skull.png"
+          src="/goblin-day/skull-bg.svg"
           alt=""
-          className="w-full h-full object-contain"
           style={{
-            filter: "invert(1) brightness(0.25) sepia(1) saturate(3) hue-rotate(330deg)",
-            opacity: 0.6,
+            width: "min(85vw, 700px)",
+            height: "auto",
+            opacity: 0.7,
           }}
         />
       </div>
