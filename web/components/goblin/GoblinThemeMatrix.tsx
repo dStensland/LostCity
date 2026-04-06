@@ -334,7 +334,7 @@ export default function GoblinThemeMatrix({
           className={`w-full min-h-[48px] border-2 transition-all active:scale-95 ${
             checked
               ? complete
-                ? "bg-orange-950/30 border-orange-600/50 shadow-[0_0_16px_rgba(255,120,0,0.25)]"
+                ? "bg-orange-950/40 border-orange-600/50 cell-ember"
                 : "bg-red-950/80 border-red-700/80 shadow-[0_0_10px_rgba(185,28,28,0.25)]"
               : "bg-zinc-900/40 border-zinc-800 hover:border-zinc-600 hover:bg-zinc-800/60"
           }`}
@@ -466,10 +466,9 @@ export default function GoblinThemeMatrix({
                   <tr
                     key={theme.id}
                     ref={theme.id === newThemeId ? newRowRef : undefined}
-                    className={[
-                      theme.id === newThemeId ? "animate-pulse-once" : "",
-                      complete ? "animate-bingo-glow" : "",
-                    ].filter(Boolean).join(" ")}
+                    className={
+                      theme.id === newThemeId ? "animate-pulse-once" : ""
+                    }
                   >
                     {/* Theme label — sticky left */}
                     <td
