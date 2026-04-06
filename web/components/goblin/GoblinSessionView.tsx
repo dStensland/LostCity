@@ -338,48 +338,6 @@ export default function GoblinSessionView({
       </div>
 
       <div className="max-w-4xl mx-auto px-3 sm:px-4 py-4 sm:py-6 space-y-6 sm:space-y-8">
-        {/* ---- ADD MOVIE SECTION ---- */}
-        {availableProposed.length > 0 && (
-          <section>
-            <h2 className="text-red-600 text-xs font-bold tracking-[0.2em] uppercase mb-3 border-b border-zinc-800 pb-2">
-              + ADD MOVIE
-            </h2>
-            <div className="space-y-1">
-              {availableProposed.map((movie) => (
-                <div
-                  key={movie.id}
-                  className="flex items-center gap-3 py-2 px-3 border border-zinc-800 bg-black hover:border-zinc-700 transition-colors"
-                >
-                  <div className="w-8 h-12 flex-shrink-0 bg-zinc-900 overflow-hidden relative">
-                    {movie.poster_path ? (
-                      <SmartImage
-                        src={`${TMDB_IMAGE_BASE}${movie.poster_path}`}
-                        alt={movie.title}
-                        fill
-                        className="object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-zinc-700 text-2xs">
-                        ?
-                      </div>
-                    )}
-                  </div>
-                  <span className="text-white text-xs font-bold tracking-wider uppercase flex-1 min-w-0 truncate">
-                    {movie.title}
-                  </span>
-                  <button
-                    onClick={() => handleAddMovie(movie.id)}
-                    disabled={addingMovieId === movie.id}
-                    className="flex-shrink-0 px-3 py-2 sm:py-1.5 bg-red-900/60 hover:bg-red-800 text-red-300 hover:text-white text-xs font-black tracking-[0.15em] uppercase border border-red-800 hover:border-red-600 transition-colors disabled:opacity-40 min-h-[40px]"
-                  >
-                    {addingMovieId === movie.id ? "..." : "ADD"}
-                  </button>
-                </div>
-              ))}
-            </div>
-          </section>
-        )}
-
         {/* ---- MOVIES WATCHED ---- */}
         <section>
           <h2 className="text-red-600 text-xs font-bold tracking-[0.2em] uppercase mb-3 border-b border-zinc-800 pb-2">
@@ -443,6 +401,48 @@ export default function GoblinSessionView({
           themes={session.themes}
           onRefresh={onRefresh}
         />
+
+        {/* ---- ADD MOVIE SECTION ---- */}
+        {availableProposed.length > 0 && (
+          <section>
+            <h2 className="text-red-600 text-xs font-bold tracking-[0.2em] uppercase mb-3 border-b border-zinc-800 pb-2">
+              + ADD MOVIE
+            </h2>
+            <div className="space-y-1">
+              {availableProposed.map((movie) => (
+                <div
+                  key={movie.id}
+                  className="flex items-center gap-3 py-2 px-3 border border-zinc-800 bg-black hover:border-zinc-700 transition-colors"
+                >
+                  <div className="w-8 h-12 flex-shrink-0 bg-zinc-900 overflow-hidden relative">
+                    {movie.poster_path ? (
+                      <SmartImage
+                        src={`${TMDB_IMAGE_BASE}${movie.poster_path}`}
+                        alt={movie.title}
+                        fill
+                        className="object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-zinc-700 text-2xs">
+                        ?
+                      </div>
+                    )}
+                  </div>
+                  <span className="text-white text-xs font-bold tracking-wider uppercase flex-1 min-w-0 truncate">
+                    {movie.title}
+                  </span>
+                  <button
+                    onClick={() => handleAddMovie(movie.id)}
+                    disabled={addingMovieId === movie.id}
+                    className="flex-shrink-0 px-3 py-2 sm:py-1.5 bg-red-900/60 hover:bg-red-800 text-red-300 hover:text-white text-xs font-black tracking-[0.15em] uppercase border border-red-800 hover:border-red-600 transition-colors disabled:opacity-40 min-h-[40px]"
+                  >
+                    {addingMovieId === movie.id ? "..." : "ADD"}
+                  </button>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
 
         {/* ---- TIMELINE ---- */}
         <section>

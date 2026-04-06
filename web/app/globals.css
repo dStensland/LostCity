@@ -7179,3 +7179,17 @@ body:has([data-vertical="hospital"]) .rain-overlay {
 .animate-bingo-glow {
   animation: bingo-glow 3s ease-in-out infinite;
 }
+
+/* ============================================
+   FIRE GLOW — flickering amber glow on bingo skulls
+   ============================================ */
+@keyframes fire-glow {
+  0%, 100% { filter: drop-shadow(0 0 4px rgba(250, 204, 21, 0.4)) brightness(1.5) hue-rotate(30deg); }
+  25% { filter: drop-shadow(0 0 8px rgba(251, 146, 60, 0.6)) brightness(1.7) hue-rotate(20deg); }
+  50% { filter: drop-shadow(0 0 6px rgba(250, 204, 21, 0.5)) brightness(1.6) hue-rotate(35deg); }
+  75% { filter: drop-shadow(0 0 10px rgba(251, 146, 60, 0.7)) brightness(1.8) hue-rotate(25deg); }
+}
+
+.animate-fire-glow {
+  animation: fire-glow 1.5s ease-in-out infinite;
+}

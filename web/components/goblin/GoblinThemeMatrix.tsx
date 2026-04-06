@@ -4,11 +4,12 @@ import { useState, useCallback, useMemo, useRef, useEffect } from "react";
 import SmartImage from "@/components/SmartImage";
 
 const TMDB_IMAGE_BASE = "https://image.tmdb.org/t/p/w200";
-const SKULL = "\u{1F480}";
-const FIRE = "\u{1F525}";
 const MAX_THEME_LENGTH = 24;
 
-/* Quick-add theme suggestions — punchy horror bingo staples */
+/* Wildcard "movie" ID — not a real movie, represents ad-hoc checks */
+const WILDCARD_ID = -1;
+
+/* Quick-add theme suggestions */
 const THEME_SUGGESTIONS = [
   "FINAL GIRL",
   "BODY HORROR",
@@ -25,6 +26,29 @@ const THEME_SUGGESTIONS = [
   "DARK BASEMENT",
   "TWIST VILLAIN",
 ];
+
+/* ------------------------------------------------------------------ */
+/*  Skull image component — uses the animated red skull GIF            */
+/* ------------------------------------------------------------------ */
+
+function SkullIcon({ variant, size = 24 }: { variant: "checked" | "bingo"; size?: number }) {
+  return (
+    <span
+      className={`inline-block ${variant === "bingo" ? "animate-fire-glow" : ""}`}
+      style={{ width: size, height: size }}
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src="/goblin-day/icons/red-skull.gif"
+        alt="skull"
+        width={size}
+        height={size}
+        className={`object-contain ${variant === "bingo" ? "brightness-150 hue-rotate-[30deg]" : ""}`}
+        style={{ imageRendering: "auto" }}
+      />
+    </span>
+  );
+}
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -76,10 +100,11 @@ export default function GoblinThemeMatrix({
   const inFlightKeys = useRef<Set<string>>(new Set());
   const [serverRevision, setServerRevision] = useState(0);
   const prevThemesRef = useRef<string>("");
-  // Inline confirm state for theme cancellation (replaces window.confirm)
   const [confirmingCancelId, setConfirmingCancelId] = useState<number | null>(null);
   const confirmTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const newRowRef = useRef<HTMLTableRowElement | null>(null);
+  // Wildcard checks are client-only (no API persistence)
+  const [wildcardChecks, setWildcardChecks] = useState<Set<number>>(new Set());
 
   const sortedMovies = useMemo(
     () => [...movies].sort((a, b) => a.watch_order - b.watch_order),
@@ -90,8 +115,6 @@ export default function GoblinThemeMatrix({
     () => themes.filter((t) => t.status === "active"),
     [themes]
   );
-
-  const movieIds = useMemo(() => new Set(sortedMovies.map((m) => m.id)), [sortedMovies]);
 
   // Build checked set from theme data
   const checkedSet = useMemo(() => {
@@ -107,14 +130,16 @@ export default function GoblinThemeMatrix({
   // Resolve checked state with optimistic overrides
   const isChecked = useCallback(
     (themeId: number, movieId: number) => {
+      // Wildcard is client-only
+      if (movieId === WILDCARD_ID) return wildcardChecks.has(themeId);
       const key = `${themeId}-${movieId}`;
       if (optimisticToggles.has(key)) return optimisticToggles.get(key)!;
       return checkedSet.has(key);
     },
-    [checkedSet, optimisticToggles]
+    [checkedSet, optimisticToggles, wildcardChecks]
   );
 
-  // Bingo detection: theme row is complete when all movies are checked
+  // Bingo detection: all real movies + wildcard checked for a theme
   const isRowComplete = useCallback(
     (themeId: number) => {
       if (sortedMovies.length === 0) return false;
@@ -123,7 +148,7 @@ export default function GoblinThemeMatrix({
     [sortedMovies, isChecked]
   );
 
-  // Per-movie trophy count
+  // Per-movie trophy count (including wildcard)
   const movieTrophyCounts = useMemo(() => {
     const counts = new Map<number, number>();
     for (const movie of sortedMovies) {
@@ -133,8 +158,14 @@ export default function GoblinThemeMatrix({
       }
       counts.set(movie.id, count);
     }
+    // Wildcard count
+    let wcCount = 0;
+    for (const theme of activeThemes) {
+      if (wildcardChecks.has(theme.id)) wcCount++;
+    }
+    counts.set(WILDCARD_ID, wcCount);
     return counts;
-  }, [sortedMovies, activeThemes, isChecked]);
+  }, [sortedMovies, activeThemes, isChecked, wildcardChecks]);
 
   // Only bump revision when themes content actually changes
   useEffect(() => {
@@ -147,7 +178,7 @@ export default function GoblinThemeMatrix({
     }
   }, [themes]);
 
-  // Reconcile optimistic state when server data changes — keep in-flight keys
+  // Reconcile optimistic state when server data changes
   useEffect(() => {
     setOptimisticToggles((prev) => {
       if (prev.size === 0) return prev;
@@ -174,6 +205,17 @@ export default function GoblinThemeMatrix({
   /* ---- Toggle a cell ---- */
   const handleToggle = useCallback(
     async (themeId: number, movieId: number) => {
+      // Wildcard is client-only — no API call
+      if (movieId === WILDCARD_ID) {
+        setWildcardChecks((prev) => {
+          const next = new Set(prev);
+          if (next.has(themeId)) next.delete(themeId);
+          else next.add(themeId);
+          return next;
+        });
+        return;
+      }
+
       const key = `${themeId}-${movieId}`;
       inFlightKeys.current.add(key);
 
@@ -246,7 +288,7 @@ export default function GoblinThemeMatrix({
     [handleAddTheme]
   );
 
-  /* ---- Cancel theme — inline confirm (no window.confirm) ---- */
+  /* ---- Cancel theme — inline confirm ---- */
   const handleCancelTheme = useCallback(
     async (themeId: number) => {
       try {
@@ -277,7 +319,7 @@ export default function GoblinThemeMatrix({
     handleCancelTheme(themeId);
   }, [handleCancelTheme]);
 
-  /* ---- Already-used theme labels for filtering suggestions ---- */
+  /* ---- Already-used labels for filtering suggestions ---- */
   const usedLabels = useMemo(
     () => new Set(themes.map((t) => t.label.toUpperCase())),
     [themes]
@@ -287,7 +329,7 @@ export default function GoblinThemeMatrix({
     [usedLabels]
   );
 
-  /* ---- Render ---- */
+  /* ---- Render helpers ---- */
 
   const sectionHeader = (
     <div className="flex items-center justify-between mb-3 border-b border-zinc-800 pb-2">
@@ -305,6 +347,37 @@ export default function GoblinThemeMatrix({
     </div>
   );
 
+  /* ---- Render a single matrix cell ---- */
+  const renderCell = (themeId: number, movieId: number, complete: boolean) => {
+    const checked = isChecked(themeId, movieId);
+    const isWild = movieId === WILDCARD_ID;
+    return (
+      <td key={movieId} className="px-1 py-0.5 text-center">
+        <button
+          onClick={() => handleToggle(themeId, movieId)}
+          className={`w-full min-h-[48px] border-2 transition-all active:scale-95 ${
+            checked
+              ? complete
+                ? "bg-amber-950/40 border-amber-600/60 shadow-[0_0_14px_rgba(250,204,21,0.15)]"
+                : "bg-red-950/80 border-red-700/80 shadow-[0_0_10px_rgba(185,28,28,0.25)]"
+              : isWild
+                ? "bg-zinc-900/30 border-dashed border-zinc-700 hover:border-zinc-500"
+                : "bg-zinc-900/40 border-zinc-800 hover:border-zinc-600 hover:bg-zinc-800/60"
+          }`}
+          aria-label={`${isWild ? "Wildcard" : ""}: ${checked ? "checked" : "unchecked"}`}
+        >
+          {checked ? (
+            <span className="flex items-center justify-center">
+              <SkullIcon variant={complete ? "bingo" : "checked"} size={22} />
+            </span>
+          ) : (
+            <span className={`text-sm ${isWild ? "text-zinc-700" : "text-zinc-600"}`}>&#x25CB;</span>
+          )}
+        </button>
+      </td>
+    );
+  };
+
   // Empty state: movies exist but no themes
   if (activeThemes.length === 0 && sortedMovies.length > 0) {
     return (
@@ -314,7 +387,7 @@ export default function GoblinThemeMatrix({
           // ADD A THEME TO START TRACKING
         </p>
         <ThemeForm
-          showForm={showThemeForm || true}
+          showForm={true}
           setShowForm={setShowThemeForm}
           themeLabel={themeLabel}
           setThemeLabel={setThemeLabel}
@@ -402,16 +475,27 @@ export default function GoblinThemeMatrix({
                       <span className="text-zinc-400 text-2xs font-bold tracking-wider uppercase block leading-tight max-w-[100px] mx-auto line-clamp-2">
                         {movie.title}
                       </span>
-                      {/* Trophy count */}
                       {trophyCount > 0 && (
                         <span className="text-2xs mt-1 block">
                           <span className="text-red-500 font-bold">{trophyCount}</span>
-                          <span className="ml-0.5">{SKULL}</span>
+                          <span className="ml-0.5 inline-block w-3"><SkullIcon variant="checked" size={12} /></span>
                         </span>
                       )}
                     </th>
                   );
                 })}
+                {/* Wildcard column header */}
+                <th
+                  className="px-1.5 pb-2 text-center align-bottom"
+                  style={{ minWidth: 70, maxWidth: 80 }}
+                >
+                  <div className="w-10 h-14 sm:w-12 sm:h-18 mx-auto border-2 border-dashed border-zinc-700 flex items-center justify-center mb-1.5">
+                    <span className="text-zinc-600 text-lg">?</span>
+                  </div>
+                  <span className="text-zinc-600 text-2xs font-bold tracking-wider uppercase block leading-tight">
+                    WILD
+                  </span>
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -436,16 +520,13 @@ export default function GoblinThemeMatrix({
                       <div className="group flex items-center gap-1 min-h-[48px]">
                         <span
                           className={`text-xs font-bold tracking-[0.1em] uppercase leading-tight flex-1 select-none line-clamp-2 transition-colors ${
-                            complete
-                              ? "text-amber-400"
-                              : "text-red-400"
+                            complete ? "text-amber-400" : "text-red-400"
                           }`}
                           title={theme.label}
                         >
-                          {complete && <span className="mr-0.5">{FIRE}</span>}
-                          {theme.label}
+                          {complete && <SkullIcon variant="bingo" size={14} />}
+                          {" "}{theme.label}
                         </span>
-                        {/* Cancel button — always visible on mobile, hover on desktop */}
                         <button
                           onClick={() => confirming ? confirmCancel(theme.id) : initiateCancel(theme.id)}
                           className={`flex-shrink-0 text-xs font-bold transition-all ${
@@ -459,31 +540,10 @@ export default function GoblinThemeMatrix({
                         </button>
                       </div>
                     </td>
-                    {/* Matrix cells */}
-                    {sortedMovies.map((movie) => {
-                      const checked = isChecked(theme.id, movie.id);
-                      return (
-                        <td key={movie.id} className="px-1 py-0.5 text-center">
-                          <button
-                            onClick={() => handleToggle(theme.id, movie.id)}
-                            className={`w-full min-h-[48px] border-2 transition-all active:scale-95 ${
-                              checked
-                                ? complete
-                                  ? "bg-amber-950/60 border-amber-700 shadow-[0_0_14px_rgba(250,204,21,0.2)]"
-                                  : "bg-red-950 border-red-700 shadow-[0_0_12px_rgba(185,28,28,0.3)]"
-                                : "bg-zinc-900/40 border-zinc-800 hover:border-zinc-600 hover:bg-zinc-800/60"
-                            }`}
-                            aria-label={`${theme.label} in ${movie.title}: ${checked ? "checked" : "unchecked"}`}
-                          >
-                            {checked ? (
-                              <span className="text-xl leading-none">{complete ? FIRE : SKULL}</span>
-                            ) : (
-                              <span className="text-zinc-600 text-sm">&#x25CB;</span>
-                            )}
-                          </button>
-                        </td>
-                      );
-                    })}
+                    {/* Matrix cells for real movies */}
+                    {sortedMovies.map((movie) => renderCell(theme.id, movie.id, complete))}
+                    {/* Wildcard cell */}
+                    {renderCell(theme.id, WILDCARD_ID, complete)}
                   </tr>
                 );
               })}
@@ -491,7 +551,7 @@ export default function GoblinThemeMatrix({
           </table>
         </div>
         {/* Right scroll fade hint */}
-        {sortedMovies.length > 3 && (
+        {sortedMovies.length > 2 && (
           <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-zinc-950 to-transparent pointer-events-none z-20" />
         )}
       </div>
