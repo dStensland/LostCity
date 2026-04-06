@@ -414,10 +414,8 @@ export default function GoblinThemeMatrix({
     <section>
       {sectionHeader}
 
-      {/* Matrix with scroll fade hint */}
-      <div className="relative">
-        <div className="overflow-x-auto -mx-3 px-3 pb-1">
-          <table className="border-collapse w-max min-w-full">
+      <div className="overflow-x-auto -mx-3 px-3 pb-1">
+        <table className="border-collapse w-max min-w-full">
             <thead>
               <tr>
                 {/* Corner cell */}
@@ -508,12 +506,7 @@ export default function GoblinThemeMatrix({
                 );
               })}
             </tbody>
-          </table>
-        </div>
-        {/* Right scroll fade hint */}
-        {sortedMovies.length > 2 && (
-          <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-zinc-950 to-transparent pointer-events-none z-20" />
-        )}
+        </table>
       </div>
 
       {/* Add theme */}
