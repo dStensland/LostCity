@@ -285,18 +285,19 @@ export default function GoblinSummaryView({
         style={{ zIndex: 0 }}
       />
 
-      {/* Dark skull — static, behind content, semi-transparent over animation */}
+      {/* Skull — darkened realistic photo, static behind content */}
       <div
         className="fixed inset-0 pointer-events-none flex items-center justify-center"
         style={{ zIndex: 0 }}
       >
         <img
-          src="/goblin-day/skull-bg.svg"
+          src="/goblin-day/skull-bg.png"
           alt=""
           style={{
-            width: "min(85vw, 700px)",
+            width: "min(90vw, 550px)",
             height: "auto",
-            opacity: 0.7,
+            filter: "brightness(0.12)",
+            opacity: 0.55,
           }}
         />
       </div>
