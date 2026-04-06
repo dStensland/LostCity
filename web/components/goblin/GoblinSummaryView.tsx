@@ -63,57 +63,79 @@ function formatTimestamp(isoStr: string): string {
 }
 
 /* ------------------------------------------------------------------ */
-/*  Domain Warping — smoke-like flowing noise background               */
+/*  Domain Warping — IQ's "Warping procedural 2" ported to Canvas      */
+/*  Original: Inigo Quilez (CC BY-NC-SA 3.0)                           */
 /* ------------------------------------------------------------------ */
 
-function createNoise2D() {
-  const perm = new Uint8Array(512);
-  for (let i = 0; i < 256; i++) perm[i] = i;
-  for (let i = 255; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [perm[i], perm[j]] = [perm[j], perm[i]];
-  }
-  for (let i = 0; i < 256; i++) perm[i + 256] = perm[i];
+// Rotation matrix between FBM octaves (same as shader: mat2(0.8, 0.6, -0.6, 0.8))
+function rot(x: number, y: number): [number, number] {
+  return [0.8 * x + 0.6 * y, -0.6 * x + 0.8 * y];
+}
 
-  const fade = (t: number) => t * t * t * (t * (t * 6 - 15) + 10);
-  const lerp = (a: number, b: number, t: number) => a + t * (b - a);
-  const grad = (hash: number, x: number, y: number) => {
-    const h = hash & 3;
-    return h === 0 ? x + y : h === 1 ? -x + y : h === 2 ? x - y : -x - y;
-  };
+function noise(x: number, y: number): number {
+  return Math.sin(x) * Math.sin(y);
+}
 
-  return (x: number, y: number) => {
-    const xi = Math.floor(x) & 255;
-    const yi = Math.floor(y) & 255;
-    const xf = x - Math.floor(x);
-    const yf = y - Math.floor(y);
-    const u = fade(xf);
-    const v = fade(yf);
-    const aa = perm[perm[xi] + yi];
-    const ab = perm[perm[xi] + yi + 1];
-    const ba = perm[perm[xi + 1] + yi];
-    const bb = perm[perm[xi + 1] + yi + 1];
-    return lerp(
-      lerp(grad(aa, xf, yf), grad(ba, xf - 1, yf), u),
-      lerp(grad(ab, xf, yf - 1), grad(bb, xf - 1, yf - 1), u),
-      v,
-    );
-  };
+function fbm4(px: number, py: number): number {
+  let f = 0;
+  let x = px, y = py;
+  f += 0.5000 * noise(x, y); [x, y] = rot(x * 2.02, y * 2.02);
+  f += 0.2500 * noise(x, y); [x, y] = rot(x * 2.03, y * 2.03);
+  f += 0.1250 * noise(x, y); [x, y] = rot(x * 2.01, y * 2.01);
+  f += 0.0625 * noise(x, y);
+  return f / 0.9375;
+}
+
+function fbm6(px: number, py: number): number {
+  let f = 0;
+  let x = px, y = py;
+  f += 0.500000 * (0.5 + 0.5 * noise(x, y)); [x, y] = rot(x * 2.02, y * 2.02);
+  f += 0.250000 * (0.5 + 0.5 * noise(x, y)); [x, y] = rot(x * 2.03, y * 2.03);
+  f += 0.125000 * (0.5 + 0.5 * noise(x, y)); [x, y] = rot(x * 2.01, y * 2.01);
+  f += 0.062500 * (0.5 + 0.5 * noise(x, y)); [x, y] = rot(x * 2.04, y * 2.04);
+  f += 0.031250 * (0.5 + 0.5 * noise(x, y)); [x, y] = rot(x * 2.01, y * 2.01);
+  f += 0.015625 * (0.5 + 0.5 * noise(x, y));
+  return f / 0.96875;
+}
+
+function warpFunc(
+  px: number, py: number, time: number
+): { f: number; ox: number; oy: number; nx: number; ny: number } {
+  // Slight time-driven sway on input
+  const qx = px + 0.03 * Math.sin(0.27 * time + Math.hypot(px, py) * 4.1);
+  const qy = py + 0.03 * Math.sin(0.23 * time + Math.hypot(px, py) * 4.3);
+
+  // First warp: fbm4 x2
+  let ox = fbm4(0.9 * qx, 0.9 * qy);
+  let oy = fbm4(0.9 * qx + 7.8, 0.9 * qy + 7.8);
+  const len1 = Math.hypot(ox, oy);
+  ox += 0.04 * Math.sin(0.12 * time + len1);
+  oy += 0.04 * Math.sin(0.14 * time + len1);
+
+  // Second warp: fbm6 x2
+  const nx = fbm6(3.0 * ox + 16.8, 3.0 * oy + 16.8);
+  const ny = fbm6(3.0 * ox + 11.5, 3.0 * oy + 11.5);
+
+  // Final value
+  let f = 0.5 + 0.5 * fbm4(1.8 * qx + 6.0 * nx, 1.8 * qy + 6.0 * ny);
+  f = f * (1 - f * Math.abs(nx)) + f * f * f * 3.5 * (f * Math.abs(nx));
+
+  return { f, ox, oy, nx, ny };
 }
 
 function initDomainWarp(canvas: HTMLCanvasElement): () => void {
   const ctx = canvas.getContext("2d");
   if (!ctx) return () => {};
-  const noise = createNoise2D();
   let animId = 0;
   let t = 0;
-
-  // Render at 1/4 resolution for performance
   const SCALE = 4;
 
-  // 2-octave FBM
-  const fbm = (x: number, y: number) =>
-    noise(x, y) * 0.65 + noise(x * 2.1, y * 2.1) * 0.35;
+  const mix = (a: number, b: number, t: number) => a + (b - a) * t;
+  const clamp = (v: number) => Math.max(0, Math.min(1, v));
+  const smooth = (lo: number, hi: number, v: number) => {
+    const x = Math.max(0, Math.min(1, (v - lo) / (hi - lo)));
+    return x * x * (3 - 2 * x);
+  };
 
   const draw = () => {
     const W = canvas.width;
@@ -122,42 +144,58 @@ function initDomainWarp(canvas: HTMLCanvasElement): () => void {
     const h = Math.ceil(H / SCALE);
     const img = ctx.createImageData(w, h);
     const data = img.data;
-    const time = t * 0.004;
+    const time = t * 0.016;
 
     for (let py = 0; py < h; py++) {
       for (let px = 0; px < w; px++) {
-        const x = (px / w) * 4;
-        const y = (py / h) * 4;
+        // Map to shader coords: (2*fragCoord - iResolution) / iResolution.y
+        const sx = (2 * (px * SCALE) - W) / H;
+        const sy = (2 * (py * SCALE) - H) / H;
 
-        // First warp layer
-        const q0 = fbm(x + time * 0.7, y + time * 0.3);
-        const q1 = fbm(x + 5.2, y + 1.3 + time * 0.2);
+        const { f, ox, oy, nx, ny } = warpFunc(sx, sy, time);
 
-        // Second warp layer (feeds q into the input)
-        const r0 = fbm(x + 4.0 * q0 + 1.7 + time * 0.15, y + 4.0 * q1 + 9.2);
-        const r1 = fbm(x + 4.0 * q0 + 8.3, y + 4.0 * q1 + 2.8 + time * 0.12);
+        // Color mixing — dark red/crimson palette
+        const nzw = nx * nx + ny * ny;
+        let cr = mix(0.15, 0.30, f);   // dark blood → crimson
+        let cg = mix(0.02, 0.04, f);   // near-black greens
+        let cb = mix(0.04, 0.06, f);   // hint of warmth
 
-        // Final warped value
-        const v = fbm(x + 4.0 * r0, y + 4.0 * r1);
+        // Highlights from warp intensity — ember glow
+        cr = mix(cr, 0.55, nzw * 0.7);
+        cg = mix(cg, 0.08, nzw * 0.5);
+        cb = mix(cb, 0.04, nzw * 0.3);
 
-        // Map to dark red/crimson/black palette
-        // v ranges roughly -1 to 1, normalize to 0-1
-        const n = v * 0.5 + 0.5;
+        // Warm midtones from first warp layer
+        cr = mix(cr, 0.25, 0.2 + 0.5 * oy * oy);
+        cg = mix(cg, 0.05, 0.2 + 0.5 * oy * oy);
+        cb = mix(cb, 0.08, 0.2 + 0.5 * oy * oy);
 
-        // Color ramp: black → deep crimson → dark red → faint ember
+        // Deep shadow in high-warp regions
+        const edge = smooth(1.2, 1.3, Math.abs(nx) + Math.abs(ny));
+        cr = mix(cr, 0.02, 0.5 * edge);
+        cg = mix(cg, 0.0, 0.5 * edge);
+        cb = mix(cb, 0.04, 0.5 * edge);
+
+        // Apply intensity
+        cr = clamp(cr * f * 2.0);
+        cg = clamp(cg * f * 2.0);
+        cb = clamp(cb * f * 2.0);
+
+        // Invert + square (from original shader — creates the organic depth)
+        cr = 1 - cr; cg = 1 - cg; cb = 1 - cb;
+        cr = 1.1 * cr * cr; cg = 1.1 * cg * cg; cb = 1.1 * cb * cb;
+
         const i = (py * w + px) * 4;
-        data[i]     = Math.floor(n * n * 120);              // R: quadratic for darker feel
-        data[i + 1] = Math.floor(n * n * n * 15);           // G: very subtle
-        data[i + 2] = Math.floor(n * n * 8 + n * n * n * 20); // B: slight purple in highlights
+        data[i]     = Math.floor(clamp(cr) * 255);
+        data[i + 1] = Math.floor(clamp(cg) * 255);
+        data[i + 2] = Math.floor(clamp(cb) * 255);
         data[i + 3] = 255;
       }
     }
 
-    // Draw at reduced size then scale up
     const offscreen = new OffscreenCanvas(w, h);
     const offCtx = offscreen.getContext("2d")!;
     offCtx.putImageData(img, 0, 0);
-
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = "medium";
     ctx.drawImage(offscreen, 0, 0, W, H);
