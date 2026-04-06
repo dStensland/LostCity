@@ -103,6 +103,7 @@ export default function GoblinSessionView({
   const [addingMovieId, setAddingMovieId] = useState<number | null>(null);
   const [togglingDnfId, setTogglingDnfId] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState<"tracker" | "movies" | "feed">("tracker");
+  const [inviteCopied, setInviteCopied] = useState(false);
 
   /* Lookup maps for timeline display */
   const movieMap = useMemo(() => {
@@ -315,22 +316,47 @@ export default function GoblinSessionView({
               <p className="text-zinc-600 text-xs tracking-[0.2em] uppercase mt-0.5">
                 {displayDate}
               </p>
-              {/* Members strip */}
-              {session.members && session.members.length > 0 && (
-                <div className="flex flex-wrap gap-1.5 mt-2">
-                  {session.members.map((m) => (
-                    <span
-                      key={m.user_id}
-                      className="text-2xs px-1.5 py-0.5 border border-zinc-800 text-zinc-500 tracking-wider uppercase"
-                    >
-                      {m.display_name}
-                      {m.role === "host" && (
-                        <span className="text-red-700 ml-1">[H]</span>
-                      )}
-                    </span>
-                  ))}
-                </div>
-              )}
+              {/* Members strip + invite */}
+              <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                {session.members && session.members.length > 0 && session.members.map((m) => (
+                  <span
+                    key={m.user_id}
+                    className="text-2xs px-1.5 py-0.5 border border-zinc-800 text-zinc-500 tracking-wider uppercase"
+                  >
+                    {m.display_name}
+                    {m.role === "host" && (
+                      <span className="text-red-700 ml-1">[H]</span>
+                    )}
+                  </span>
+                ))}
+                {session.invite_code && (
+                  <button
+                    onClick={async () => {
+                      const url = `${window.location.origin}/goblinday/s/${session.invite_code}`;
+                      try {
+                        if (navigator.share) {
+                          await navigator.share({ title: session.name ?? "GOBLIN DAY", url });
+                        } else {
+                          await navigator.clipboard.writeText(url);
+                          setInviteCopied(true);
+                          setTimeout(() => setInviteCopied(false), 2000);
+                        }
+                      } catch {
+                        await navigator.clipboard.writeText(url);
+                        setInviteCopied(true);
+                        setTimeout(() => setInviteCopied(false), 2000);
+                      }
+                    }}
+                    className={`text-2xs px-1.5 py-0.5 border tracking-wider uppercase font-bold transition-colors ${
+                      inviteCopied
+                        ? "border-emerald-700 bg-emerald-950/40 text-emerald-400"
+                        : "border-red-800/60 bg-red-950/30 text-red-400 hover:bg-red-950/50"
+                    }`}
+                  >
+                    {inviteCopied ? "COPIED!" : "+ INVITE"}
+                  </button>
+                )}
+              </div>
             </div>
             {/* Desktop: side buttons */}
             <div className="hidden sm:flex flex-col gap-2 flex-shrink-0">
