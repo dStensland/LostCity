@@ -20,7 +20,7 @@ export async function GET(
   const { data: session, error } = await serviceClient
     .from("goblin_sessions")
     .select(`
-      id, name, date, status, invite_code, created_at,
+      id, name, date, status, invite_code, created_at, guest_names,
       goblin_session_members(user_id, role)
     `)
     .eq("invite_code", code)
@@ -65,7 +65,7 @@ export async function GET(
     // Not authenticated — is_member stays false
   }
 
-  return NextResponse.json({
+  const baseResponse = {
     id: s.id,
     name: s.name,
     date: s.date,
@@ -74,8 +74,71 @@ export async function GET(
     created_at: s.created_at,
     member_count: members.length,
     members,
+    guest_names: s.guest_names ?? [],
     is_member,
-  });
+  };
+
+  // For ended/canceled sessions, include full summary data
+  if (s.status === "ended" || s.status === "canceled") {
+    const { data: sessionMovies } = await serviceClient
+      .from("goblin_session_movies")
+      .select("id, movie_id, watch_order, added_at, proposed_by, goblin_movies(*)")
+      .eq("session_id", s.id)
+      .order("watch_order");
+
+    const { data: themes } = await serviceClient
+      .from("goblin_themes")
+      .select("id, label, status, created_at, canceled_at, goblin_theme_movies(movie_id)")
+      .eq("session_id", s.id)
+      .order("created_at");
+
+    const { data: timeline } = await serviceClient
+      .from("goblin_timeline")
+      .select("id, event_type, movie_id, theme_id, created_at, user_id")
+      .eq("session_id", s.id)
+      .order("created_at");
+
+    // Resolve user names for timeline
+    const timelineUserIds = [...new Set((timeline ?? []).map((t: any) => t.user_id).filter(Boolean))];
+    if (timelineUserIds.length > 0) {
+      const { data: tlProfiles } = await serviceClient
+        .from("profiles")
+        .select("id, display_name")
+        .in("id", timelineUserIds);
+      const tlMap = Object.fromEntries(
+        (tlProfiles ?? []).map((p: any) => [p.id, p.display_name])
+      );
+      for (const t of (timeline ?? []) as any[]) {
+        t.user_name = t.user_id ? tlMap[t.user_id] ?? null : null;
+      }
+    }
+
+    return NextResponse.json({
+      ...baseResponse,
+      movies: (sessionMovies ?? []).map((sm: any) => ({
+        id: sm.goblin_movies?.id ?? sm.movie_id,
+        title: sm.goblin_movies?.title ?? "Unknown",
+        poster_path: sm.goblin_movies?.poster_path ?? null,
+        watch_order: sm.watch_order,
+      })),
+      themes: (themes ?? []).map((t: any) => ({
+        id: t.id,
+        label: t.label,
+        status: t.status,
+        goblin_theme_movies: t.goblin_theme_movies ?? [],
+      })),
+      timeline: (timeline ?? []).map((t: any) => ({
+        id: t.id,
+        event_type: t.event_type,
+        movie_id: t.movie_id,
+        theme_id: t.theme_id,
+        created_at: t.created_at,
+        user_name: t.user_name ?? null,
+      })),
+    });
+  }
+
+  return NextResponse.json(baseResponse);
 }
 
 // POST /api/goblinday/sessions/join/[code]

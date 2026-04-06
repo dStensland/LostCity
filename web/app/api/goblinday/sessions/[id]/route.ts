@@ -18,7 +18,7 @@ export const GET = withAuthAndParams<{ id: string }>(
 
     const { data: session, error } = await serviceClient
       .from("goblin_sessions")
-      .select("id, name, date, status, invite_code, created_by, created_at")
+      .select("id, name, date, status, invite_code, created_by, created_at, guest_names")
       .eq("id", sessionId)
       .single();
 
@@ -131,6 +131,25 @@ export const PATCH = withAuthAndParams<{ id: string }>(
       const { data, error } = await serviceClient
         .from("goblin_sessions")
         .update({ name: body.name || null } as never)
+        .eq("id", sessionId)
+        .select()
+        .single();
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json(data);
+    }
+
+    // Guest names update — host only
+    if (body.guest_names !== undefined && !body.status) {
+      const isHost = await isSessionHost(serviceClient, sessionId, user.id);
+      if (!isHost) {
+        return NextResponse.json({ error: "Only the host can edit guest names" }, { status: 403 });
+      }
+      if (!Array.isArray(body.guest_names) || !body.guest_names.every((n: unknown) => typeof n === "string")) {
+        return NextResponse.json({ error: "guest_names must be an array of strings" }, { status: 400 });
+      }
+      const { data, error } = await serviceClient
+        .from("goblin_sessions")
+        .update({ guest_names: body.guest_names } as never)
         .eq("id", sessionId)
         .select()
         .single();
