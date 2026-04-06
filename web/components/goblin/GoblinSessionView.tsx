@@ -102,6 +102,7 @@ export default function GoblinSessionView({
 }: Props) {
   const [addingMovieId, setAddingMovieId] = useState<number | null>(null);
   const [togglingDnfId, setTogglingDnfId] = useState<number | null>(null);
+  const [activeTab, setActiveTab] = useState<"tracker" | "movies" | "feed">("tracker");
 
   /* Lookup maps for timeline display */
   const movieMap = useMemo(() => {
@@ -365,160 +366,196 @@ export default function GoblinSessionView({
         </div>
       </div>
 
+      {/* ---- TAB BAR ---- */}
+      <div className="border-b border-zinc-800 bg-black/50 sticky top-0 z-30">
+        <div className="max-w-4xl mx-auto flex">
+          {([
+            { key: "tracker" as const, label: "TRACKER", badge: session.themes.filter((t) => t.status === "active").length || null },
+            { key: "movies" as const, label: "MOVIES", badge: sortedMovies.length > 0 ? sortedMovies.length : null },
+            { key: "feed" as const, label: "FEED", badge: sortedTimeline.length > 0 ? sortedTimeline.length : null },
+          ]).map((tab) => (
+            <button
+              key={tab.key}
+              onClick={() => setActiveTab(tab.key)}
+              className={`flex-1 py-3 text-center text-xs font-bold tracking-[0.2em] uppercase transition-colors relative ${
+                activeTab === tab.key
+                  ? "text-red-400"
+                  : "text-zinc-600 hover:text-zinc-400"
+              }`}
+            >
+              {tab.label}
+              {tab.badge != null && (
+                <span className={`ml-1.5 text-2xs ${activeTab === tab.key ? "text-red-600" : "text-zinc-700"}`}>
+                  [{tab.badge}]
+                </span>
+              )}
+              {activeTab === tab.key && (
+                <span className="absolute bottom-0 left-1/4 right-1/4 h-0.5 bg-red-600" />
+              )}
+            </button>
+          ))}
+        </div>
+      </div>
+
       <div className="max-w-4xl mx-auto px-3 sm:px-4 py-4 sm:py-6 space-y-6 sm:space-y-8">
-        {/* ---- MOVIES WATCHED ---- */}
-        <section>
-          <h2 className="text-red-600 text-xs font-bold tracking-[0.2em] uppercase mb-3 border-b border-zinc-800 pb-2">
-            MOVIES WATCHED [{sortedMovies.length}]
-          </h2>
-          {sortedMovies.length === 0 ? (
-            <p className="text-zinc-700 text-xs tracking-[0.2em] uppercase py-6 text-center">
-              // NO MOVIES YET — ADD ONE BELOW
-            </p>
-          ) : (
-            <div className="space-y-1">
-              {sortedMovies.map((movie) => {
-                const isDnf = movie.dnf ?? false;
-                return (
-                  <div
-                    key={movie.id}
-                    className={`flex items-center gap-3 py-2 px-3 border bg-black transition-colors ${
-                      isDnf ? "border-zinc-800/50 opacity-50" : "border-zinc-800"
-                    }`}
-                  >
-                    <span className={`font-black text-sm w-6 text-center flex-shrink-0 ${isDnf ? "text-zinc-700 line-through" : "text-red-700"}`}>
-                      {movie.watch_order}
-                    </span>
-                    <div className={`w-8 h-12 flex-shrink-0 bg-zinc-900 overflow-hidden relative ${isDnf ? "grayscale" : ""}`}>
-                      {movie.poster_path ? (
-                        <SmartImage
-                          src={`${TMDB_IMAGE_BASE}${movie.poster_path}`}
-                          alt={movie.title}
-                          fill
-                          className="object-cover"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-zinc-700 text-2xs">
-                          ?
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <span className={`text-xs font-bold tracking-wider uppercase block truncate ${isDnf ? "text-zinc-500 line-through" : "text-white"}`}>
-                        {movie.title}
-                      </span>
-                      <div className="flex gap-2 mt-0.5">
-                        {isDnf && (
-                          <span className="text-2xs text-zinc-600 font-bold tracking-wider">DNF</span>
-                        )}
-                        {!isDnf && movie.rt_critics_score != null && (
-                          <span className="text-2xs text-red-500/70">
-                            RT {movie.rt_critics_score}%
-                          </span>
-                        )}
-                        {!isDnf && movie.rt_audience_score != null && (
-                          <span className="text-2xs text-amber-500/70">
-                            AUD {movie.rt_audience_score}%
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => handleToggleDnf(movie.id, isDnf)}
-                      disabled={togglingDnfId === movie.id}
-                      className={`flex-shrink-0 px-2 py-1.5 text-2xs font-bold tracking-[0.15em] uppercase border transition-colors disabled:opacity-40 min-h-[32px] ${
-                        isDnf
-                          ? "bg-zinc-900 text-zinc-500 border-zinc-700 hover:text-white hover:border-zinc-500"
-                          : "bg-zinc-900 text-zinc-600 border-zinc-800 hover:text-red-400 hover:border-red-800"
-                      }`}
-                      title={isDnf ? "Restore to watchlist" : "Did not finish"}
-                    >
-                      {togglingDnfId === movie.id ? "..." : isDnf ? "UNDO" : "DNF"}
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </section>
-
-        {/* ---- THEME TRACKER ---- */}
-        <GoblinThemeMatrix
-          sessionId={session.id}
-          movies={activeMovies}
-          themes={session.themes}
-          onRefresh={onRefresh}
-        />
-
-        {/* ---- ADD MOVIE SECTION ---- */}
-        {availableProposed.length > 0 && (
-          <section>
-            <h2 className="text-red-600 text-xs font-bold tracking-[0.2em] uppercase mb-3 border-b border-zinc-800 pb-2">
-              + ADD MOVIE
-            </h2>
-            <div className="space-y-1">
-              {availableProposed.map((movie) => (
-                <div
-                  key={movie.id}
-                  className="flex items-center gap-3 py-2 px-3 border border-zinc-800 bg-black hover:border-zinc-700 transition-colors"
-                >
-                  <div className="w-8 h-12 flex-shrink-0 bg-zinc-900 overflow-hidden relative">
-                    {movie.poster_path ? (
-                      <SmartImage
-                        src={`${TMDB_IMAGE_BASE}${movie.poster_path}`}
-                        alt={movie.title}
-                        fill
-                        className="object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-zinc-700 text-2xs">
-                        ?
-                      </div>
-                    )}
-                  </div>
-                  <span className="text-white text-xs font-bold tracking-wider uppercase flex-1 min-w-0 truncate">
-                    {movie.title}
-                  </span>
-                  <button
-                    onClick={() => handleAddMovie(movie.id)}
-                    disabled={addingMovieId === movie.id}
-                    className="flex-shrink-0 px-3 py-2 sm:py-1.5 bg-red-900/60 hover:bg-red-800 text-red-300 hover:text-white text-xs font-black tracking-[0.15em] uppercase border border-red-800 hover:border-red-600 transition-colors disabled:opacity-40 min-h-[40px]"
-                  >
-                    {addingMovieId === movie.id ? "..." : "ADD"}
-                  </button>
-                </div>
-              ))}
-            </div>
-          </section>
+        {/* ---- TRACKER TAB ---- */}
+        {activeTab === "tracker" && (
+          <GoblinThemeMatrix
+            sessionId={session.id}
+            movies={activeMovies}
+            themes={session.themes}
+            onRefresh={onRefresh}
+          />
         )}
 
-        {/* ---- TIMELINE ---- */}
-        <section>
-          <h2 className="text-red-600 text-xs font-bold tracking-[0.2em] uppercase mb-3 border-b border-zinc-800 pb-2">
-            TIMELINE
-          </h2>
-          {sortedTimeline.length === 0 ? (
-            <p className="text-zinc-700 text-xs tracking-[0.2em] uppercase py-6 text-center">
-              // NO ACTIVITY YET
-            </p>
-          ) : (
-            <div className="space-y-0">
-              {sortedTimeline.map((entry) => (
-                <div
-                  key={entry.id}
-                  className="flex items-start gap-3 py-2 px-3 border-l-2 border-zinc-800"
-                >
-                  <span className="text-zinc-700 text-2xs tracking-[0.15em] uppercase flex-shrink-0 w-16 pt-0.5 text-right">
-                    {relativeTime(entry.created_at)}
-                  </span>
-                  <span className="text-zinc-400 text-xs tracking-wider uppercase leading-relaxed">
-                    {renderTimelineEntry(entry)}
-                  </span>
+        {/* ---- MOVIES TAB ---- */}
+        {activeTab === "movies" && (
+          <>
+            <section>
+              <h2 className="text-red-600 text-xs font-bold tracking-[0.2em] uppercase mb-3 border-b border-zinc-800 pb-2">
+                MOVIES WATCHED [{sortedMovies.length}]
+              </h2>
+              {sortedMovies.length === 0 ? (
+                <p className="text-zinc-700 text-xs tracking-[0.2em] uppercase py-6 text-center">
+                  // NO MOVIES YET — ADD ONE BELOW
+                </p>
+              ) : (
+                <div className="space-y-1">
+                  {sortedMovies.map((movie) => {
+                    const isDnf = movie.dnf ?? false;
+                    return (
+                      <div
+                        key={movie.id}
+                        className={`flex items-center gap-3 py-2 px-3 border bg-black transition-colors ${
+                          isDnf ? "border-zinc-800/50 opacity-50" : "border-zinc-800"
+                        }`}
+                      >
+                        <span className={`font-black text-sm w-6 text-center flex-shrink-0 ${isDnf ? "text-zinc-700 line-through" : "text-red-700"}`}>
+                          {movie.watch_order}
+                        </span>
+                        <div className={`w-8 h-12 flex-shrink-0 bg-zinc-900 overflow-hidden relative ${isDnf ? "grayscale" : ""}`}>
+                          {movie.poster_path ? (
+                            <SmartImage
+                              src={`${TMDB_IMAGE_BASE}${movie.poster_path}`}
+                              alt={movie.title}
+                              fill
+                              className="object-cover"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-zinc-700 text-2xs">
+                              ?
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <span className={`text-xs font-bold tracking-wider uppercase block truncate ${isDnf ? "text-zinc-500 line-through" : "text-white"}`}>
+                            {movie.title}
+                          </span>
+                          <div className="flex gap-2 mt-0.5">
+                            {isDnf && (
+                              <span className="text-2xs text-zinc-600 font-bold tracking-wider">DNF</span>
+                            )}
+                            {!isDnf && movie.rt_critics_score != null && (
+                              <span className="text-2xs text-red-500/70">
+                                RT {movie.rt_critics_score}%
+                              </span>
+                            )}
+                            {!isDnf && movie.rt_audience_score != null && (
+                              <span className="text-2xs text-amber-500/70">
+                                AUD {movie.rt_audience_score}%
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => handleToggleDnf(movie.id, isDnf)}
+                          disabled={togglingDnfId === movie.id}
+                          className={`flex-shrink-0 px-2 py-1.5 text-2xs font-bold tracking-[0.15em] uppercase border transition-colors disabled:opacity-40 min-h-[32px] ${
+                            isDnf
+                              ? "bg-zinc-900 text-zinc-500 border-zinc-700 hover:text-white hover:border-zinc-500"
+                              : "bg-zinc-900 text-zinc-600 border-zinc-800 hover:text-red-400 hover:border-red-800"
+                          }`}
+                          title={isDnf ? "Restore to watchlist" : "Did not finish"}
+                        >
+                          {togglingDnfId === movie.id ? "..." : isDnf ? "UNDO" : "DNF"}
+                        </button>
+                      </div>
+                    );
+                  })}
                 </div>
-              ))}
-            </div>
-          )}
-        </section>
+              )}
+            </section>
+
+            {/* ---- ADD MOVIE ---- */}
+            {availableProposed.length > 0 && (
+              <section>
+                <h2 className="text-red-600 text-xs font-bold tracking-[0.2em] uppercase mb-3 border-b border-zinc-800 pb-2">
+                  + ADD MOVIE
+                </h2>
+                <div className="space-y-1">
+                  {availableProposed.map((movie) => (
+                    <div
+                      key={movie.id}
+                      className="flex items-center gap-3 py-2 px-3 border border-zinc-800 bg-black hover:border-zinc-700 transition-colors"
+                    >
+                      <div className="w-8 h-12 flex-shrink-0 bg-zinc-900 overflow-hidden relative">
+                        {movie.poster_path ? (
+                          <SmartImage
+                            src={`${TMDB_IMAGE_BASE}${movie.poster_path}`}
+                            alt={movie.title}
+                            fill
+                            className="object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-zinc-700 text-2xs">
+                            ?
+                          </div>
+                        )}
+                      </div>
+                      <span className="text-white text-xs font-bold tracking-wider uppercase flex-1 min-w-0 truncate">
+                        {movie.title}
+                      </span>
+                      <button
+                        onClick={() => handleAddMovie(movie.id)}
+                        disabled={addingMovieId === movie.id}
+                        className="flex-shrink-0 px-3 py-2 sm:py-1.5 bg-red-900/60 hover:bg-red-800 text-red-300 hover:text-white text-xs font-black tracking-[0.15em] uppercase border border-red-800 hover:border-red-600 transition-colors disabled:opacity-40 min-h-[40px]"
+                      >
+                        {addingMovieId === movie.id ? "..." : "ADD"}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+          </>
+        )}
+
+        {/* ---- FEED TAB ---- */}
+        {activeTab === "feed" && (
+          <section>
+            {sortedTimeline.length === 0 ? (
+              <p className="text-zinc-700 text-xs tracking-[0.2em] uppercase py-6 text-center">
+                // NO ACTIVITY YET
+              </p>
+            ) : (
+              <div className="space-y-0">
+                {sortedTimeline.map((entry) => (
+                  <div
+                    key={entry.id}
+                    className="flex items-start gap-3 py-2 px-3 border-l-2 border-zinc-800"
+                  >
+                    <span className="text-zinc-700 text-2xs tracking-[0.15em] uppercase flex-shrink-0 w-16 pt-0.5 text-right">
+                      {relativeTime(entry.created_at)}
+                    </span>
+                    <span className="text-zinc-400 text-xs tracking-wider uppercase leading-relaxed">
+                      {renderTimelineEntry(entry)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+        )}
       </div>
     </div>
   );
