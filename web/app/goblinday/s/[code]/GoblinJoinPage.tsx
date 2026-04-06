@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useGoblinUser } from "@/lib/hooks/useGoblinUser";
+import GoblinSummaryView from "@/components/goblin/GoblinSummaryView";
 
 interface SessionMember {
   role: string;
@@ -18,7 +19,29 @@ interface SessionInfo {
   status: string;
   member_count: number;
   members: SessionMember[];
+  guest_names?: string[];
   is_member: boolean;
+  // Summary fields (only present for ended/canceled sessions)
+  movies?: Array<{
+    id: number;
+    title: string;
+    poster_path: string | null;
+    watch_order: number;
+  }>;
+  themes?: Array<{
+    id: number;
+    label: string;
+    status: string;
+    goblin_theme_movies: Array<{ movie_id: number }>;
+  }>;
+  timeline?: Array<{
+    id: number;
+    event_type: string;
+    movie_id: number | null;
+    theme_id: number | null;
+    user_name: string | null;
+    created_at: string;
+  }>;
 }
 
 interface GoblinJoinPageProps {
@@ -128,25 +151,18 @@ export default function GoblinJoinPage({ code }: GoblinJoinPageProps) {
     );
   }
 
-  // Session ended
-  if (session.status === "ended") {
+  // Session ended or canceled — show public summary
+  if (session.status === "ended" || session.status === "canceled") {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center px-4">
-        <div className="border border-red-900/50 bg-black/80 rounded-lg p-8 max-w-sm w-full text-center space-y-4">
-          <h1 className="font-mono text-2xl font-bold text-red-500 uppercase tracking-widest">
-            GOBLIN DAY
-          </h1>
-          <p className="font-mono text-sm text-zinc-400 uppercase tracking-wide">
-            This session has ended.
-          </p>
-          <Link
-            href="/"
-            className="block mt-4 font-mono text-xs text-red-700 hover:text-red-500 uppercase tracking-widest transition-colors"
-          >
-            ← Back to Goblin Day
-          </Link>
-        </div>
-      </div>
+      <GoblinSummaryView
+        name={session.name}
+        date={session.date}
+        members={session.members}
+        guestNames={session.guest_names ?? []}
+        movies={session.movies ?? []}
+        themes={session.themes ?? []}
+        timeline={session.timeline ?? []}
+      />
     );
   }
 
