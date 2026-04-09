@@ -89,6 +89,7 @@ export default function GoblinRankingCompare({ items, myEntries, participants, c
                   key={entry.item_id}
                   name={item.name}
                   subtitle={item.subtitle}
+                  imageUrl={item.image_url}
                   rank={entry.sort_order}
                   tierColor={entry.tier_color}
                   readOnly

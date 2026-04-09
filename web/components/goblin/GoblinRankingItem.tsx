@@ -1,10 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import SmartImage from "@/components/SmartImage";
 
 interface Props {
   name: string;
   subtitle: string | null;
+  imageUrl?: string | null;
   rank: number;
   tierColor?: string | null;
   readOnly?: boolean;
@@ -27,7 +29,7 @@ const RANK_NEON = {
 };
 
 export default function GoblinRankingItem({
-  name, subtitle, rank, tierColor, readOnly,
+  name, subtitle, imageUrl, rank, tierColor, readOnly,
   onMoveToRank, onRemove, onEdit, onDelete,
   onDragStart, onDragOver, onDrop, isDragging, isDragTarget,
   compareRank,
@@ -108,6 +110,13 @@ export default function GoblinRankingItem({
           </button>
         )}
       </div>
+
+      {/* Thumbnail */}
+      {imageUrl && (
+        <div className="flex-shrink-0 w-14 h-14 relative overflow-hidden bg-zinc-900">
+          <SmartImage src={imageUrl} alt="" fill className="object-cover" />
+        </div>
+      )}
 
       {/* Content */}
       <div className="flex-1 min-w-0 py-2.5 pr-2">

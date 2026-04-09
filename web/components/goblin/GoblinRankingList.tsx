@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useMemo, useRef, useEffect } from "react";
 import GoblinRankingItem from "./GoblinRankingItem";
+import SmartImage from "@/components/SmartImage";
 import type { RankingItem, RankingEntry } from "@/lib/ranking-types";
 
 interface Props {
@@ -372,6 +373,7 @@ export default function GoblinRankingList({
                         <GoblinRankingItem
                           name={item.name}
                           subtitle={item.subtitle}
+                          imageUrl={item.image_url}
                           rank={globalIdx + 1}
                           tierColor={group.tierColor}
                           readOnly={!isOpen}
@@ -434,6 +436,11 @@ export default function GoblinRankingList({
                     <div className="flex-shrink-0 w-12 flex items-center justify-center">
                       <span className="font-mono text-lg text-zinc-800">–</span>
                     </div>
+                    {item.image_url && (
+                      <div className="flex-shrink-0 w-14 h-14 relative overflow-hidden bg-zinc-900 opacity-50">
+                        <SmartImage src={item.image_url} alt="" fill className="object-cover" />
+                      </div>
+                    )}
                     <div className="flex-1 min-w-0 py-2.5 pr-2">
                       <p className="text-sm text-zinc-500 truncate">{item.name}</p>
                       {item.subtitle && (
