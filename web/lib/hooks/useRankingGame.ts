@@ -118,11 +118,13 @@ export function useRankingGame(gameId: number, isAuthenticated: boolean) {
     return data.item;
   }, [gameId, fetchGame]);
 
-  const editItem = useCallback(async (itemId: number, name: string, subtitle: string | null) => {
+  const editItem = useCallback(async (itemId: number, name: string, subtitle: string | null, imageUrl?: string | null) => {
+    const body: Record<string, unknown> = { item_id: itemId, name, subtitle };
+    if (imageUrl !== undefined) body.image_url = imageUrl;
     const res = await fetch(`/api/goblinday/rankings/${gameId}/items`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ item_id: itemId, name, subtitle }),
+      body: JSON.stringify(body),
     });
     if (!res.ok) return false;
     await fetchGame();

@@ -12,7 +12,7 @@ interface Props {
   isOpen: boolean;
   onSave: (categoryId: number, entries: RankingEntry[]) => void;
   onAddItem?: (categoryId: number, name: string, subtitle: string | null) => Promise<unknown>;
-  onEditItem?: (itemId: number, name: string, subtitle: string | null) => Promise<boolean>;
+  onEditItem?: (itemId: number, name: string, subtitle: string | null, imageUrl?: string | null) => Promise<boolean>;
   onDeleteItem?: (itemId: number) => Promise<boolean>;
 }
 
@@ -94,16 +94,19 @@ function AddItemForm({
 function EditItemForm({
   initialName,
   initialSubtitle,
+  initialImageUrl,
   onSave,
   onCancel,
 }: {
   initialName: string;
   initialSubtitle: string | null;
-  onSave: (name: string, subtitle: string | null) => Promise<void>;
+  initialImageUrl: string | null;
+  onSave: (name: string, subtitle: string | null, imageUrl?: string | null) => Promise<void>;
   onCancel: () => void;
 }) {
   const [name, setName] = useState(initialName);
   const [subtitle, setSubtitle] = useState(initialSubtitle ?? "");
+  const [imageUrl, setImageUrl] = useState(initialImageUrl ?? "");
   const [saving, setSaving] = useState(false);
   const nameRef = useRef<HTMLInputElement>(null);
 
@@ -116,7 +119,7 @@ function EditItemForm({
     const trimmed = name.trim();
     if (!trimmed) return;
     setSaving(true);
-    await onSave(trimmed, subtitle.trim() || null);
+    await onSave(trimmed, subtitle.trim() || null, imageUrl.trim() || null);
     setSaving(false);
   };
 
@@ -141,6 +144,15 @@ function EditItemForm({
         placeholder="Subtitle (optional)"
         value={subtitle}
         onChange={(e) => setSubtitle(e.target.value)}
+        onKeyDown={handleKeyDown}
+        className="w-full bg-transparent border-b border-zinc-700/50 text-zinc-400 font-mono text-xs
+          outline-none pb-0.5 placeholder:text-zinc-700"
+      />
+      <input
+        type="url"
+        placeholder="Image URL (optional)"
+        value={imageUrl}
+        onChange={(e) => setImageUrl(e.target.value)}
         onKeyDown={handleKeyDown}
         className="w-full bg-transparent border-b border-zinc-700/50 text-zinc-400 font-mono text-xs
           outline-none pb-0.5 placeholder:text-zinc-700"
@@ -290,9 +302,9 @@ export default function GoblinRankingList({
   );
 
   const handleEditItem = useCallback(
-    async (itemId: number, name: string, subtitle: string | null) => {
+    async (itemId: number, name: string, subtitle: string | null, imageUrl?: string | null) => {
       if (!onEditItem) return;
-      await onEditItem(itemId, name, subtitle);
+      await onEditItem(itemId, name, subtitle, imageUrl);
       setEditingItemId(null);
     },
     [onEditItem]
@@ -360,7 +372,8 @@ export default function GoblinRankingList({
                         <EditItemForm
                           initialName={item.name}
                           initialSubtitle={item.subtitle}
-                          onSave={(name, subtitle) => handleEditItem(item.id, name, subtitle)}
+                          initialImageUrl={item.image_url}
+                          onSave={(name, subtitle, imageUrl) => handleEditItem(item.id, name, subtitle, imageUrl)}
                           onCancel={() => setEditingItemId(null)}
                         />
                       </div>
@@ -419,7 +432,8 @@ export default function GoblinRankingList({
                     <EditItemForm
                       initialName={item.name}
                       initialSubtitle={item.subtitle}
-                      onSave={(name, subtitle) => handleEditItem(item.id, name, subtitle)}
+                      initialImageUrl={item.image_url}
+                      onSave={(name, subtitle, imageUrl) => handleEditItem(item.id, name, subtitle, imageUrl)}
                       onCancel={() => setEditingItemId(null)}
                     />
                   </div>

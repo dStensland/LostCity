@@ -82,10 +82,11 @@ export const PATCH = withAuthAndParams<{ gameId: string }>(async (
   }
 
   const body = await request.json();
-  const { item_id, name, subtitle } = body as {
+  const { item_id, name, subtitle, image_url } = body as {
     item_id: number;
     name?: string;
     subtitle?: string;
+    image_url?: string | null;
   };
 
   if (typeof item_id !== "number") {
@@ -124,6 +125,9 @@ export const PATCH = withAuthAndParams<{ gameId: string }>(async (
   }
   if (subtitle !== undefined) {
     updates.subtitle = typeof subtitle === "string" ? subtitle.trim() : null;
+  }
+  if (image_url !== undefined) {
+    updates.image_url = typeof image_url === "string" ? image_url.trim() : null;
   }
 
   if (Object.keys(updates).length === 0) {
