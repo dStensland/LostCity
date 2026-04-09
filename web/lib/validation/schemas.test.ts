@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { paginationSchema, uuidSchema, portalSlugSchema, sortSchema, positiveIntSchema } from "./schemas";
+import { paginationSchema, uuidSchema, portalSlugSchema, sortSchema, positiveIntSchema, rsvpBodySchema } from "./schemas";
 
 describe("paginationSchema", () => {
   it("applies defaults when no values provided", () => {
@@ -48,6 +48,19 @@ describe("portalSlugSchema", () => {
   it("rejects empty strings", () => {
     expect(() => portalSlugSchema.parse("")).toThrow();
   });
+
+  it("accepts hyphens", () => {
+    expect(portalSlugSchema.parse("lost-arts")).toBe("lost-arts");
+  });
+
+  it("rejects path traversal characters", () => {
+    expect(() => portalSlugSchema.parse("../../admin")).toThrow();
+    expect(() => portalSlugSchema.parse("portal/slug")).toThrow();
+  });
+
+  it("rejects slugs over 50 characters", () => {
+    expect(() => portalSlugSchema.parse("a".repeat(51))).toThrow();
+  });
 });
 
 describe("sortSchema", () => {
@@ -92,5 +105,70 @@ describe("positiveIntSchema", () => {
   it("rejects non-numeric strings", () => {
     expect(() => positiveIntSchema.parse("abc")).toThrow();
     expect(() => positiveIntSchema.parse("")).toThrow();
+  });
+});
+
+describe("rsvpBodySchema", () => {
+  it("accepts valid RSVP body", () => {
+    const result = rsvpBodySchema.parse({
+      event_id: 42,
+      status: "going",
+    });
+    expect(result).toEqual({
+      event_id: 42,
+      status: "going",
+      visibility: "friends", // default
+    });
+  });
+
+  it("accepts all valid status values", () => {
+    for (const status of ["going", "interested", "went"]) {
+      const result = rsvpBodySchema.parse({ event_id: 1, status });
+      expect(result.status).toBe(status);
+    }
+  });
+
+  it("defaults visibility to friends", () => {
+    const result = rsvpBodySchema.parse({ event_id: 1, status: "going" });
+    expect(result.visibility).toBe("friends");
+  });
+
+  it("accepts explicit visibility", () => {
+    const result = rsvpBodySchema.parse({
+      event_id: 1,
+      status: "going",
+      visibility: "public",
+    });
+    expect(result.visibility).toBe("public");
+  });
+
+  it("rejects invalid status", () => {
+    expect(() =>
+      rsvpBodySchema.parse({ event_id: 1, status: "maybe" })
+    ).toThrow();
+  });
+
+  it("rejects non-positive event_id", () => {
+    expect(() =>
+      rsvpBodySchema.parse({ event_id: 0, status: "going" })
+    ).toThrow();
+    expect(() =>
+      rsvpBodySchema.parse({ event_id: -1, status: "going" })
+    ).toThrow();
+  });
+
+  it("rejects non-integer event_id", () => {
+    expect(() =>
+      rsvpBodySchema.parse({ event_id: 1.5, status: "going" })
+    ).toThrow();
+  });
+
+  it("accepts optional notify_friends", () => {
+    const result = rsvpBodySchema.parse({
+      event_id: 1,
+      status: "going",
+      notify_friends: true,
+    });
+    expect(result.notify_friends).toBe(true);
   });
 });

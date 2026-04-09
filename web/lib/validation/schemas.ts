@@ -21,11 +21,14 @@ export const uuidSchema = z
     "Invalid UUID"
   );
 
+/** Portal slug — lowercased, trimmed, alphanumeric + hyphens, max 50 chars. */
 export const portalSlugSchema = z
   .string()
   .trim()
   .toLowerCase()
-  .min(1, "Portal slug is required");
+  .min(1, "Portal slug is required")
+  .max(50, "Portal slug too long")
+  .regex(/^[a-z0-9-]+$/, "Portal slug must contain only lowercase letters, numbers, and hyphens");
 
 export function sortSchema<T extends string>(allowedFields: readonly [T, ...T[]]) {
   return z.object({
