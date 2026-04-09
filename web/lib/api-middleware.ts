@@ -4,7 +4,7 @@ import { createServiceClient } from "@/lib/supabase/service";
 import type { User } from "@supabase/supabase-js";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { ZodType, ZodError } from "zod";
-import { validationError } from "@/lib/api-utils";
+import { validationError, checkBodySize } from "@/lib/api-utils";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnySupabaseClient = SupabaseClient<any, any, any>;
@@ -71,6 +71,10 @@ async function parseAndValidate<S extends ValidationSchemas>(
 
   // Validate request body
   if (schemas.body) {
+    // Check body size before parsing — avoids consuming the stream on oversized requests
+    const sizeCheck = checkBodySize(request);
+    if (sizeCheck) return { validated: null, error: sizeCheck };
+
     let rawBody: unknown;
     try {
       rawBody = await request.json();
@@ -190,7 +194,7 @@ export function withAuth<S extends ValidationSchemas>(
 }
 
 // ============================================================================
-// withAuthAndParams — unchanged
+// withAuthAndParams — with optional Zod validation overload
 // ============================================================================
 
 type AuthenticatedHandlerWithParams<T> = (
@@ -203,11 +207,17 @@ type AuthenticatedHandlerWithParams<T> = (
   }
 ) => Promise<NextResponse | Response>;
 
+type AuthenticatedHandlerWithParamsAndValidation<T, S extends ValidationSchemas> = (
+  request: NextRequest,
+  context: AuthContext & { params: T; validated: InferValidated<S> }
+) => Promise<NextResponse | Response>;
+
 /**
  * Wrap an API route handler with authentication and dynamic params.
  * Automatically verifies the user, resolves params, and provides both
  * the user object and a service client for database operations.
  *
+ * Overload 1 — no schemas (backward compat):
  * @example
  * export const GET = withAuthAndParams<{ id: string }>(
  *   async (request, { user, serviceClient, params }) => {
@@ -215,8 +225,28 @@ type AuthenticatedHandlerWithParams<T> = (
  *     return NextResponse.json({ success: true });
  *   }
  * );
+ *
+ * Overload 2 — with Zod validation:
+ * @example
+ * const QuerySchema = z.object({ include_drafts: z.coerce.boolean().default(false) });
+ * export const GET = withAuthAndParams<{ id: string }, typeof QuerySchema>(
+ *   { query: QuerySchema },
+ *   async (request, { user, params, validated }) => {
+ *     return NextResponse.json({ id: params.id, ...validated.query });
+ *   }
+ * );
  */
-export function withAuthAndParams<T>(handler: AuthenticatedHandlerWithParams<T>) {
+export function withAuthAndParams<T>(
+  handler: AuthenticatedHandlerWithParams<T>
+): (request: NextRequest, ctx: { params: Promise<T> }) => Promise<NextResponse | Response>;
+export function withAuthAndParams<T, S extends ValidationSchemas>(
+  schemas: S,
+  handler: AuthenticatedHandlerWithParamsAndValidation<T, S>
+): (request: NextRequest, ctx: { params: Promise<T> }) => Promise<NextResponse | Response>;
+export function withAuthAndParams<T, S extends ValidationSchemas>(
+  schemasOrHandler: S | AuthenticatedHandlerWithParams<T>,
+  maybeHandler?: AuthenticatedHandlerWithParamsAndValidation<T, S>
+) {
   return async (request: NextRequest, { params }: { params: Promise<T> }): Promise<NextResponse | Response> => {
     const supabase = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -227,8 +257,25 @@ export function withAuthAndParams<T>(handler: AuthenticatedHandlerWithParams<T>)
 
     const serviceClient = createServiceClient();
     const resolvedParams = await params;
+    const authContext: AuthContext = { user, serviceClient, supabase };
 
-    return handler(request, { user, serviceClient, supabase, params: resolvedParams });
+    // No-schema overload — backward compat
+    if (typeof schemasOrHandler === "function") {
+      return schemasOrHandler(request, { ...authContext, params: resolvedParams });
+    }
+
+    // Schema overload — validate after auth
+    const schemas = schemasOrHandler;
+    const handler = maybeHandler!;
+
+    const result = await parseAndValidate(request, schemas);
+    if (result.error) return result.error;
+
+    return handler(request, {
+      ...authContext,
+      params: resolvedParams,
+      validated: result.validated as InferValidated<S>,
+    });
   };
 }
 
@@ -303,7 +350,8 @@ export function withValidation<S extends ValidationSchemas>(
   return async (request: NextRequest): Promise<NextResponse | Response> => {
     const parseResult = await parseAndValidate(request, schemas);
     if (parseResult.error) {
-      return parseResult.error;
+      // Return generic error for public routes — don't leak schema structure to unauthenticated callers
+      return validationError("Invalid request");
     }
 
     return handler(request, { validated: parseResult.validated });

@@ -188,4 +188,22 @@ describe("withValidation (public routes)", () => {
     expect(response.status).toBe(400);
     expect(handler).not.toHaveBeenCalled();
   });
+
+  it("returns generic error message for public routes (no schema leakage)", async () => {
+    const schema = z.object({
+      q: z.string().min(1),
+      limit: z.number().int().positive(),
+    });
+
+    const handler = vi.fn();
+    const route = withValidation({ query: schema }, handler);
+    const req = makeRequest("http://localhost/api/search?q=&limit=abc");
+
+    const response = await route(req);
+    expect(response.status).toBe(400);
+    const body = await response.json();
+    // Should NOT contain detailed schema paths
+    expect(body.error).toBe("Invalid request");
+    expect(handler).not.toHaveBeenCalled();
+  });
 });
