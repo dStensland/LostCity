@@ -142,6 +142,7 @@ export default async function PortalLayout({ children, params }: Props) {
         >
           <NavigationProgress />
           <Suspense fallback={null}>{children}</Suspense>
+          <div className="grain-overlay" aria-hidden="true" />
       </div>
     </PortalProvider>
   );

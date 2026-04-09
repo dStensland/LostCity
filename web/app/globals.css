@@ -2950,6 +2950,28 @@ body:has([data-vertical="hospital"])::after {
   }
 }
 
+/* ── Film grain overlay ─────────────────────────────────────────── */
+.grain-overlay {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9999;
+  opacity: 0.035;
+  background-image: url('/textures/noise-256.png');
+  background-repeat: repeat;
+  mix-blend-mode: overlay;
+  animation: grain-shift 400ms steps(6) infinite;
+}
+
+@keyframes grain-shift {
+  0% { transform: translate(0, 0); }
+  20% { transform: translate(-2%, -2%); }
+  40% { transform: translate(2%, 1%); }
+  60% { transform: translate(-1%, 2%); }
+  80% { transform: translate(1%, -1%); }
+  100% { transform: translate(0, 0); }
+}
+
 /* Reduced motion support */
 @media (prefers-reduced-motion: reduce) {
   :root {
@@ -2968,6 +2990,10 @@ body:has([data-vertical="hospital"])::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+  }
+
+  .grain-overlay {
+    animation: none;
   }
 
   .animate-fade-in,
