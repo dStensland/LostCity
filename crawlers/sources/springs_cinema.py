@@ -18,8 +18,14 @@ from datetime import datetime, timedelta, timezone
 
 from playwright.sync_api import sync_playwright
 
-from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event, remove_stale_source_events
-from dedupe import generate_content_hash
+from db import (
+    get_or_create_place,
+    persist_screening_bundle,
+    sync_run_events_from_screenings,
+    remove_stale_showtime_events,
+    build_screening_bundle_from_event_rows,
+    entries_to_event_like_rows,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -83,10 +89,10 @@ def merge_graphql_auth_headers(
 def crawl(source: dict) -> tuple[int, int, int]:
     """Crawl The Springs Cinema & Taphouse showtimes via GraphQL API."""
     source_id = source["id"]
-    total_found = 0
-    total_new = 0
-    total_updated = 0
-    seen_hashes: set[str] = set()
+    all_entries: list[dict] = []
+
+    # In-process dedup guard: (title, date, time) tuples seen this run
+    seen_showtimes: set = set()
 
     try:
         with sync_playwright() as p:
@@ -296,11 +302,10 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     except Exception:
                         continue
 
-                    total_found += 1
-                    content_hash = generate_content_hash(
-                        title, "The Springs Cinema & Taphouse", f"{event_date}|{start_time}"
-                    )
-                    seen_hashes.add(content_hash)
+                    showtime_key = (title, event_date, start_time)
+                    if showtime_key in seen_showtimes:
+                        continue
+                    seen_showtimes.add(showtime_key)
 
                     poster_key = movie.get("posterImage")
                     image_url = (
@@ -321,57 +326,61 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         parts.append(f"{movie['duration']} min")
                     description = " | ".join(parts) if parts else None
 
-                    event_record = {
-                        "source_id": source_id,
-                        "place_id": venue_id,
+                    all_entries.append({
                         "title": title,
-                        "description": description,
                         "start_date": event_date,
                         "start_time": start_time,
-                        "end_date": None,
-                        "end_time": None,
-                        "is_all_day": False,
-                        "category": "film",
-                        "subcategory": "cinema",
-                        "tags": ["film", "cinema", "independent", "showtime", "dine-in", "springs-cinema"],
-                        "price_min": None,
-                        "price_max": None,
-                        "price_note": None,
-                        "is_free": False,
+                        "image_url": image_url,
                         "source_url": f"{BASE_URL}/showtimes",
                         "ticket_url": ticket_url,
-                        "image_url": image_url,
-                        "raw_text": None,
-                        "extraction_confidence": 0.95,
-                        "is_recurring": False,
-                        "recurrence_rule": None,
-                        "content_hash": content_hash,
-                    }
-
-                    existing = find_event_by_hash(content_hash)
-                    if existing:
-                        smart_update_existing_event(existing, event_record)
-                        total_updated += 1
-                        continue
-
-                    series_hint = {"series_type": "film", "series_title": title}
-
-                    try:
-                        insert_event(event_record, series_hint=series_hint)
-                        total_new += 1
-                        logger.info(f"    Added: {title} on {event_date} at {start_time}")
-                    except Exception as e:
-                        logger.error(f"    Failed to insert: {e}")
+                        "description": description,
+                        "tags": ["film", "cinema", "independent", "showtime", "dine-in", "springs-cinema"],
+                        "source_id": source_id,
+                        "place_id": venue_id,
+                    })
 
             browser.close()
 
-        if seen_hashes:
-            stale_removed = remove_stale_source_events(source_id, seen_hashes)
-            if stale_removed:
-                logger.info(f"Removed {stale_removed} stale showtimes")
+        # --- Screening-primary persistence ---
+        total_found = len(all_entries)
+        source_slug = source.get("slug", "springs-cinema")
+
+        event_like_rows = entries_to_event_like_rows(all_entries)
+        bundle = build_screening_bundle_from_event_rows(
+            source_id=source_id,
+            source_slug=source_slug,
+            events=event_like_rows,
+        )
+        screening_summary = persist_screening_bundle(bundle)
+        logger.info(
+            "Springs Cinema screening sync: %s titles, %s runs, %s times",
+            screening_summary.get("titles", 0),
+            screening_summary.get("runs", 0),
+            screening_summary.get("times", 0),
+        )
+
+        run_summary = sync_run_events_from_screenings(
+            source_id=source_id,
+            source_slug=source_slug,
+        )
+        total_new = run_summary.get("events_created", 0)
+        total_updated = run_summary.get("events_updated", 0)
+        logger.info(
+            "Springs Cinema run events: %s created, %s updated, %s times linked",
+            total_new, total_updated, run_summary.get("times_linked", 0),
+        )
+
+        run_event_hashes = run_summary.get("run_event_hashes", set())
+        if run_event_hashes:
+            cleanup = remove_stale_showtime_events(
+                source_id=source_id,
+                run_event_hashes=run_event_hashes,
+            )
+            if cleanup.get("deactivated") or cleanup.get("deleted"):
+                logger.info("Stale showtime cleanup: %s", cleanup)
 
         logger.info(
-            f"Springs Cinema crawl complete: {total_found} found, {total_new} new, {total_updated} updated"
+            f"Springs Cinema crawl complete: {total_found} showtimes, {total_new} new run events, {total_updated} updated"
         )
 
     except Exception as e:

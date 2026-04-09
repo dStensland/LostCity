@@ -15,8 +15,14 @@ from zoneinfo import ZoneInfo
 
 from playwright.sync_api import sync_playwright, Page
 
-from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event, remove_stale_source_events
-from dedupe import generate_content_hash
+from db import (
+    get_or_create_place,
+    persist_screening_bundle,
+    sync_run_events_from_screenings,
+    remove_stale_showtime_events,
+    build_screening_bundle_from_event_rows,
+    entries_to_event_like_rows,
+)
 
 logger = logging.getLogger(__name__)
 SHOWTIME_LINE_RE = re.compile(r"^\d{1,2}:\d{2}\s*(AM|PM)$", re.IGNORECASE)
@@ -53,6 +59,14 @@ def find_image_for_movie(title: str, image_map: dict[str, str]) -> Optional[str]
         if title_lower in img_title.lower() or img_title.lower() in title_lower:
             return url
     return None
+
+
+def _build_movie_detail_url(movie: dict) -> Optional[str]:
+    """Return Tara's canonical per-movie page when GraphQL exposes a slug."""
+    slug = str((movie or {}).get("urlSlug") or "").strip().strip("/")
+    if not slug:
+        return None
+    return f"{BASE_URL}/movie/{slug}/"
 
 BASE_URL = "https://www.taraatlanta.com"
 HOME_URL = f"{BASE_URL}/home"
@@ -138,7 +152,7 @@ def extract_movies_for_date(
     venue_id: int,
     image_map: Optional[dict[str, str]] = None,
     seen_hashes: Optional[set] = None,
-) -> tuple[int, int, int]:
+) -> list[dict]:
     """Extract movies and showtimes for a specific date.
 
     New Tara Theatre format (2026):
@@ -151,11 +165,13 @@ def extract_movies_for_date(
       "THEATRE 3 (THE KENNY)"
       "7:00 PM"
       "THEATRE 2 (THE JACK)"
+
+    Returns a list of screening entry dicts for later bulk persistence.
     """
-    events_found = 0
-    events_new = 0
-    events_updated = 0
+    entries: list[dict] = []
     image_map = image_map or {}
+    if seen_hashes is None:
+        seen_hashes = set()
 
     date_str = target_date.strftime("%Y-%m-%d")
 
@@ -222,13 +238,11 @@ def extract_movies_for_date(
                     pass
 
                 for showtime in times_list:
-                    events_found += 1
-
-                    content_hash = generate_content_hash(
-                        title_part, "Tara Theatre", f"{date_str}|{showtime}"
-                    )
-                    if seen_hashes is not None:
-                        seen_hashes.add(content_hash)
+                    # In-process dedup guard
+                    showtime_key = (title_part, date_str, showtime)
+                    if showtime_key in seen_hashes:
+                        continue
+                    seen_hashes.add(showtime_key)
 
                     clean_title = re.sub(r'\s*\(\d{4}\)\s*$', '', title_part)
                     movie_image = (
@@ -237,59 +251,31 @@ def extract_movies_for_date(
                         or find_image_for_movie(clean_title, image_map)
                     )
 
-                    event_record = {
-                        "source_id": source_id,
-                        "place_id": venue_id,
+                    entries.append({
                         "title": title_part,
-                        "description": movie_desc,
                         "start_date": date_str,
                         "start_time": showtime,
-                        "end_date": None,
-                        "end_time": None,
-                        "is_all_day": False,
-                        "category": "film",
-                        "subcategory": "cinema",
-                        "tags": ["film", "cinema", "arthouse", "showtime", "tara-theatre"],
-                        "price_min": None,
-                        "price_max": None,
-                        "price_note": None,
-                        "is_free": False,
+                        "image_url": movie_image,
                         "source_url": HOME_URL,
                         "ticket_url": None,
-                        "image_url": movie_image,
-                        "raw_text": None,
-                        "extraction_confidence": 0.92,
-                        "is_recurring": False,
-                        "recurrence_rule": None,
-                        "content_hash": content_hash,
-                    }
-
-                    existing = find_event_by_hash(content_hash)
-                    if existing:
-                        smart_update_existing_event(existing, event_record)
-                        events_updated += 1
-                        continue
-
-                    try:
-                        insert_event(event_record)
-                        events_new += 1
-                        logger.info(
-                            f"Added: {title_part} on {date_str} at {showtime}"
-                        )
-                    except Exception as e:
-                        logger.error(f"Failed to insert: {title_part}: {e}")
+                        "description": movie_desc,
+                        "tags": ["film", "cinema", "arthouse", "showtime", "tara-theatre"],
+                        "source_id": source_id,
+                        "place_id": venue_id,
+                    })
+                    logger.info(f"Queued: {title_part} on {date_str} at {showtime}")
             except Exception as e:
                 logger.debug(f"Skipping invalid movie card: {e}")
                 continue
 
-        if events_found > 0:
+        if entries:
             logger.info(f"Found {len(containers)} movies with showtimes for {date_str}")
-            return events_found, events_new, events_updated
+            return entries
 
     body_text = page.inner_text("body")
     lines = [l.strip() for l in body_text.split("\n") if l.strip()]
 
-    seen_movies = set()
+    seen_movies: set[str] = set()
     matches = []  # List of (title, [times], description)
 
     # Find movie titles by looking for duration pattern on next line
@@ -299,8 +285,8 @@ def extract_movies_for_date(
     time_pattern = re.compile(r'^(\d{1,2}:\d{2})\s*(AM|PM)$', re.IGNORECASE)
 
     current_movie = None
-    current_times = []
-    current_desc_lines = []
+    current_times: list[str] = []
+    current_desc_lines: list[str] = []
     seen_first_time = False
 
     skip_titles = [
@@ -417,20 +403,18 @@ def extract_movies_for_date(
             logger.debug(f"Skipping '{title_part}' - no valid showtimes")
             continue
 
-        # Create events for each valid showtime
+        # Create entries for each valid showtime
         for showtime in times_list:
             movie_key = f"{title_part}|{date_str}|{showtime}"
             if movie_key in seen_movies:
                 continue
             seen_movies.add(movie_key)
 
-            events_found += 1
-
-            content_hash = generate_content_hash(
-                title_part, "Tara Theatre", f"{date_str}|{showtime}"
-            )
-            if seen_hashes is not None:
-                seen_hashes.add(content_hash)
+            # In-process dedup guard
+            showtime_key = (title_part, date_str, showtime)
+            if showtime_key in seen_hashes:
+                continue
+            seen_hashes.add(showtime_key)
 
             # Try to find image with title normalization
             clean_title = re.sub(r'\s*\(\d{4}\)\s*$', '', title_part)  # Remove year
@@ -439,48 +423,21 @@ def extract_movies_for_date(
             if not movie_image:
                 movie_image = find_image_for_movie(clean_title, image_map)
 
-            event_record = {
-                "source_id": source_id,
-                "place_id": venue_id,
+            entries.append({
                 "title": title_part,
-                "description": movie_desc,
                 "start_date": date_str,
                 "start_time": showtime,
-                "end_date": None,
-                "end_time": None,
-                "is_all_day": False,
-                "category": "film",
-                "subcategory": "cinema",
-                "tags": ["film", "cinema", "arthouse", "showtime", "tara-theatre"],
-                "price_min": None,
-                "price_max": None,
-                "price_note": None,
-                "is_free": False,
+                "image_url": movie_image,
                 "source_url": HOME_URL,
                 "ticket_url": None,
-                "image_url": movie_image,
-                "raw_text": None,
-                "extraction_confidence": 0.90,
-                "is_recurring": False,
-                "recurrence_rule": None,
-                "content_hash": content_hash,
-            }
+                "description": movie_desc,
+                "tags": ["film", "cinema", "arthouse", "showtime", "tara-theatre"],
+                "source_id": source_id,
+                "place_id": venue_id,
+            })
+            logger.info(f"Queued: {title_part} on {date_str} at {showtime}")
 
-            existing = find_event_by_hash(content_hash)
-            if existing:
-                smart_update_existing_event(existing, event_record)
-                events_updated += 1
-                continue
-
-            try:
-                insert_event(event_record)
-                events_new += 1
-                logger.info(
-                    f"Added: {title_part} on {date_str} at {showtime}"
-                )
-            except Exception as e:
-                logger.error(f"Failed to insert: {title_part}: {e}")
-    return events_found, events_new, events_updated
+    return entries
 
 
 def extract_upcoming_movies(
@@ -489,11 +446,12 @@ def extract_upcoming_movies(
     venue_id: int,
     source_url: str,
     image_map: Optional[dict[str, str]] = None,
-) -> tuple[int, int, int]:
-    """Extract movies from Coming Soon page."""
-    events_found = 0
-    events_new = 0
-    events_updated = 0
+) -> list[dict]:
+    """Extract movies from Coming Soon page.
+
+    Returns a list of screening entry dicts for later bulk persistence.
+    """
+    entries: list[dict] = []
 
     body_text = page.inner_text("body")
     lines = [l.strip() for l in body_text.split("\n") if l.strip()]
@@ -611,11 +569,6 @@ def extract_upcoming_movies(
 
         movie_title = line
         seen_movies.add(movie_title)
-        events_found += 1
-
-        content_hash = generate_content_hash(
-            movie_title, "Tara Theatre", "coming-soon"
-        )
 
         # Use date 30 days from now as placeholder
         placeholder_date = (datetime.now() + timedelta(days=30)).strftime(
@@ -624,47 +577,21 @@ def extract_upcoming_movies(
 
         movie_image = find_image_for_movie(movie_title, image_map or {})
 
-        event_record = {
-            "source_id": source_id,
-            "place_id": venue_id,
+        entries.append({
             "title": movie_title,
-            "description": "Coming Soon",
             "start_date": placeholder_date,
             "start_time": None,
-            "end_date": None,
-            "end_time": None,
-            "is_all_day": True,
-            "category": "film",
-            "subcategory": "cinema",
-            "tags": ["film", "cinema", "arthouse", "tara-theatre", "coming-soon"],
-            "price_min": None,
-            "price_max": None,
-            "price_note": None,
-            "is_free": False,
+            "image_url": movie_image,
             "source_url": source_url,
             "ticket_url": None,
-            "image_url": movie_image,
-            "raw_text": None,
-            "extraction_confidence": 0.75,
-            "is_recurring": False,
-            "recurrence_rule": None,
-            "content_hash": content_hash,
-        }
+            "description": "Coming Soon",
+            "tags": ["film", "cinema", "arthouse", "tara-theatre", "coming-soon"],
+            "source_id": source_id,
+            "place_id": venue_id,
+        })
+        logger.info(f"Queued coming soon: {movie_title}")
 
-        existing = find_event_by_hash(content_hash)
-        if existing:
-            smart_update_existing_event(existing, event_record)
-            events_updated += 1
-            continue
-
-        try:
-            insert_event(event_record)
-            events_new += 1
-            logger.info(f"Added coming soon: {movie_title}")
-        except Exception as e:
-            logger.error(f"Failed to insert coming soon: {movie_title}: {e}")
-
-    return events_found, events_new, events_updated
+    return entries
 
 
 def _click_tara_tab(page: Page) -> None:
@@ -901,16 +828,16 @@ def _extract_movies_from_graphql_showings(
     venue_id: int,
     image_map: dict[str, str],
     seen_hashes: set | None = None,
-) -> tuple[int, int, int]:
+) -> list[dict]:
     """
-    Extract events from Tara's authoritative showingsForDate GraphQL payload.
+    Extract entries from Tara's authoritative showingsForDate GraphQL payload.
 
     This captures all per-day showtimes, including cases where body-text parsing
     misses movies/times due partial or collapsed UI render states.
+
+    Returns a list of screening entry dicts for later bulk persistence.
     """
-    events_found = 0
-    events_new = 0
-    events_updated = 0
+    entries: list[dict] = []
     seen_slots: set[tuple[str, str, str]] = set()
 
     for showing in showings:
@@ -938,64 +865,41 @@ def _extract_movies_from_graphql_showings(
             continue
         seen_slots.add(slot_key)
 
-        events_found += 1
-        content_hash = generate_content_hash(title, "Tara Theatre", f"{start_date}|{start_time}")
+        # In-process dedup guard
+        showtime_key = (title, start_date, start_time)
         if seen_hashes is not None:
-            seen_hashes.add(content_hash)
+            if showtime_key in seen_hashes:
+                continue
+            seen_hashes.add(showtime_key)
 
         synopsis = str(movie.get("synopsis") or "").strip() or None
         movie_image = find_image_for_movie(title, image_map)
+        movie_detail_url = _build_movie_detail_url(movie)
 
-        event_record = {
-            "source_id": source_id,
-            "place_id": venue_id,
+        entries.append({
             "title": title,
-            "description": synopsis,
             "start_date": start_date,
             "start_time": start_time,
-            "end_date": None,
-            "end_time": None,
-            "is_all_day": False,
-            "category": "film",
-            "subcategory": "cinema",
-            "tags": ["film", "cinema", "arthouse", "showtime", "tara-theatre"],
-            "price_min": None,
-            "price_max": None,
-            "price_note": None,
-            "is_free": False,
-            "source_url": HOME_URL,
-            "ticket_url": None,
             "image_url": movie_image,
-            "raw_text": None,
-            "extraction_confidence": 0.95,
-            "is_recurring": False,
-            "recurrence_rule": None,
-            "content_hash": content_hash,
-        }
+            "source_url": movie_detail_url or HOME_URL,
+            "ticket_url": movie_detail_url,
+            "description": synopsis,
+            "tags": ["film", "cinema", "arthouse", "showtime", "tara-theatre"],
+            "source_id": source_id,
+            "place_id": venue_id,
+        })
+        logger.info(f"Queued: {title} on {start_date} at {start_time}")
 
-        existing = find_event_by_hash(content_hash)
-        if existing:
-            smart_update_existing_event(existing, event_record)
-            events_updated += 1
-            continue
-
-        try:
-            insert_event(event_record)
-            events_new += 1
-            logger.info(f"Added: {title} on {start_date} at {start_time}")
-        except Exception as e:
-            logger.error(f"Failed to insert: {title}: {e}")
-
-    return events_found, events_new, events_updated
+    return entries
 
 
 def crawl(source: dict) -> tuple[int, int, int]:
     """Crawl Tara Theatre showtimes for today and upcoming days."""
     source_id = source["id"]
-    total_found = 0
     total_new = 0
     total_updated = 0
-    seen_hashes = set()  # Track all hashes from this crawl for stale cleanup
+    all_entries: list[dict] = []
+    seen_hashes: set = set()
 
     try:
         with sync_playwright() as p:
@@ -1036,7 +940,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             today_date_str = today.strftime("%Y-%m-%d")
             today_showings = _wait_for_showings_cache(showings_cache, today_date_str, timeout_seconds=4.0)
             if today_showings:
-                found, new, updated = _extract_movies_from_graphql_showings(
+                day_entries = _extract_movies_from_graphql_showings(
                     today_showings, source_id, venue_id, image_map, seen_hashes
                 )
                 logger.info(
@@ -1045,10 +949,10 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     len(today_showings),
                 )
             else:
-                found, new, updated = extract_movies_for_date(
+                day_entries = extract_movies_for_date(
                     page, datetime.combine(today, datetime.min.time()), source_id, venue_id, image_map, seen_hashes
                 )
-            if found == 0:
+            if not day_entries:
                 logger.warning(
                     "No showtimes parsed for today on first pass; retrying once with readiness wait"
                 )
@@ -1060,7 +964,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     showings_cache=showings_cache,
                     cache_date=today.strftime("%Y-%m-%d"),
                 )
-                found, new, updated = extract_movies_for_date(
+                day_entries = extract_movies_for_date(
                     page,
                     datetime.combine(today, datetime.min.time()),
                     source_id,
@@ -1068,12 +972,10 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     image_map,
                     seen_hashes,
                 )
-            total_found += found
-            total_new += new
-            total_updated += updated
-            if found > 0:
+            all_entries.extend(day_entries)
+            if day_entries:
                 logger.info(
-                    f"  {today.strftime('%Y-%m-%d')}: {found} movies found, {new} new"
+                    f"  {today.strftime('%Y-%m-%d')}: {len(day_entries)} movies found"
                 )
 
             # Navigate upcoming days via the Quasar date picker (calendar).
@@ -1140,12 +1042,12 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 logger.info(f"Scraping {date_str}")
                 showings = _wait_for_showings_cache(showings_cache, date_str, timeout_seconds=4.0)
                 if showings:
-                    found, new, updated = _extract_movies_from_graphql_showings(
+                    day_entries = _extract_movies_from_graphql_showings(
                         showings, source_id, venue_id, image_map, seen_hashes
                     )
                     logger.info("  %s: Using GraphQL showings (%s rows)", date_str, len(showings))
                 else:
-                    found, new, updated = extract_movies_for_date(
+                    day_entries = extract_movies_for_date(
                         page,
                         datetime.combine(target_date, datetime.min.time()),
                         source_id,
@@ -1153,7 +1055,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         image_map,
                         seen_hashes,
                     )
-                if found == 0:
+                if not day_entries:
                     logger.info(f"  {date_str}: No showtimes found on first pass; retrying once")
                     _ensure_showtime_ready(
                         page,
@@ -1163,7 +1065,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         showings_cache=showings_cache,
                         cache_date=date_str,
                     )
-                    retry_found, retry_new, retry_updated = extract_movies_for_date(
+                    retry_entries = extract_movies_for_date(
                         page,
                         datetime.combine(target_date, datetime.min.time()),
                         source_id,
@@ -1171,17 +1073,13 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         image_map,
                         seen_hashes,
                     )
-                    found += retry_found
-                    new += retry_new
-                    updated += retry_updated
-                    if retry_found > 0:
-                        logger.info(f"  {date_str}: Recovered {retry_found} movies on retry")
+                    day_entries = retry_entries
+                    if retry_entries:
+                        logger.info(f"  {date_str}: Recovered {len(retry_entries)} movies on retry")
 
-                total_found += found
-                total_new += new
-                total_updated += updated
+                all_entries.extend(day_entries)
 
-                if found == 0:
+                if not day_entries:
                     logger.info(f"  {date_str}: No showtimes found")
                     break
 
@@ -1192,11 +1090,30 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             browser.close()
 
-        # Remove stale showtimes that are no longer on the theater's schedule
-        if seen_hashes:
-            stale_removed = remove_stale_source_events(source_id, seen_hashes)
-            if stale_removed:
-                logger.info(f"Removed {stale_removed} stale showtimes no longer on schedule")
+        # --- Screening-primary persistence ---
+        total_found = len(all_entries)
+        source_slug = source.get("slug", "tara-theatre")
+
+        event_like_rows = entries_to_event_like_rows(all_entries)
+
+        bundle = build_screening_bundle_from_event_rows(
+            source_id=source_id, source_slug=source_slug, events=event_like_rows,
+        )
+        screening_summary = persist_screening_bundle(bundle)
+        logger.info(
+            "Tara screening sync: %s titles, %s runs, %s times",
+            screening_summary.get("titles", 0),
+            screening_summary.get("runs", 0),
+            screening_summary.get("times", 0),
+        )
+
+        run_summary = sync_run_events_from_screenings(source_id=source_id, source_slug=source_slug)
+        total_new = run_summary.get("events_created", 0)
+        total_updated = run_summary.get("events_updated", 0)
+
+        run_event_hashes = run_summary.get("run_event_hashes", set())
+        if run_event_hashes:
+            remove_stale_showtime_events(source_id=source_id, run_event_hashes=run_event_hashes)
 
         logger.info(
             f"Tara Theatre crawl complete: {total_found} found, {total_new} new, {total_updated} updated"

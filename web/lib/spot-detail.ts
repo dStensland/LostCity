@@ -5,6 +5,10 @@ import { isOpenAt } from "@/lib/hours";
 import { fetchSocialProofCounts } from "@/lib/social-proof";
 import { applyVenueGate } from "@/lib/feed-gate";
 import { ATTACHED_CHILD_DESTINATION_VENUE_TYPES } from "@/lib/destination-graph";
+import {
+  fetchScreeningBundleFromTables,
+  type ScreeningBundle,
+} from "@/lib/screenings";
 import type { PlaceProfile, PlaceDiningDetails, PlaceOutdoorDetails, PlaceGoogleDetails } from "@/lib/types/places";
 import {
   getYonderDestinationIntelligence,
@@ -62,6 +66,7 @@ type UpcomingEventRow = {
   ticket_url: string | null;
   series_id: string | null;
   image_url: string | null;
+  tags: string[] | null;
   content_kind: string | null;
   series: {
     id: string;
@@ -193,6 +198,7 @@ export type LibraryPass = {
 export type SpotDetailPayload = {
   spot: Record<string, unknown>;
   upcomingEvents: Array<Record<string, unknown>>;
+  screenings: ScreeningBundle | null;
   nearbyDestinations: Record<string, NearbyDestination[]>;
   highlights: Array<Record<string, unknown>>;
   attachedChildDestinations: AttachedChildDestinationRow[];
@@ -446,6 +452,9 @@ export async function getSpotDetail(slug: string): Promise<SpotDetailPayload | n
     getYonderAccommodationInventorySource(spotSlug);
   const yonderRuntimeInventorySnapshotPromise =
     getYonderRuntimeInventorySnapshot(spotSlug);
+  const screeningsFromTablesPromise = fetchScreeningBundleFromTables(supabase as any, {
+    placeId: typeof spot.id === "number" ? spot.id : null,
+  });
   const today = getLocalDateString();
 
   const nearbyDestinationsPromise = fetchNearbyDestinations(supabase, spot);
@@ -534,7 +543,7 @@ export async function getSpotDetail(slug: string): Promise<SpotDetailPayload | n
       .from("events")
       .select(`
         id, title, start_date, end_date, start_time, end_time, is_free, price_min, category_id, source_url, ticket_url,
-        series_id, image_url, content_kind,
+        series_id, image_url, tags, content_kind,
         series:series!events_series_id_fkey(id, slug, title, series_type, image_url)
       `)
       .eq("place_id", spot.id)
@@ -578,6 +587,7 @@ export async function getSpotDetail(slug: string): Promise<SpotDetailPayload | n
     upcomingCounts,
     nearbyDestinations,
     yonderRuntimeInventorySnapshot,
+    screeningsFromTables,
     { data: highlights },
     { data: artifacts },
     { data: features },
@@ -592,6 +602,7 @@ export async function getSpotDetail(slug: string): Promise<SpotDetailPayload | n
     upcomingCountsPromise,
     nearbyDestinationsPromise,
     yonderRuntimeInventorySnapshotPromise,
+    screeningsFromTablesPromise,
     highlightsPromise,
     artifactsPromise,
     featuresPromise,
@@ -639,6 +650,10 @@ export async function getSpotDetail(slug: string): Promise<SpotDetailPayload | n
   return {
     spot: spotData as Record<string, unknown>,
     upcomingEvents: upcomingEventsWithCounts,
+    screenings:
+      screeningsFromTables && screeningsFromTables.titles.length > 0
+        ? screeningsFromTables
+        : null,
     nearbyDestinations,
     highlights: dedupeVenueHighlights(
       (highlights as VenueHighlightRow[] | null) || []

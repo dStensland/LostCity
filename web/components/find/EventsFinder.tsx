@@ -1,13 +1,10 @@
 "use client";
 
-import { Suspense, useState, useCallback, useDeferredValue } from "react";
+import { Suspense, useDeferredValue } from "react";
 import dynamic from "next/dynamic";
 import { TransitionContainer } from "@/components/ui/TransitionContainer";
 import FindFilterBar from "@/components/find/FindFilterBar";
 import FindSearchInput from "@/components/find/FindSearchInput";
-import { PreSearchState } from "@/components/search";
-import type { PreSearchPayload } from "@/lib/search-presearch";
-import { TRENDING_SEARCHES } from "@/lib/search-presearch";
 import {
   useReplaceStateParams,
   useReplaceStateSearch,
@@ -62,27 +59,6 @@ function EventsFinderFiltersInner({
   vertical,
 }: EventsFinderProps) {
   const searchParams = useReplaceStateParams();
-  const urlSearch = searchParams.get("search") || "";
-  const [preSearchEnabled, setPreSearchEnabled] = useState(false);
-
-  // Pre-search state — populated via callback from FindSearchInput
-  const [preSearchData, setPreSearchData] = useState<PreSearchPayload>({
-    trending: TRENDING_SEARCHES,
-    popularNow: [],
-  });
-  const [preSearchLoading, setPreSearchLoading] = useState(false);
-
-  const handlePreSearchChange = useCallback(
-    (data: PreSearchPayload | null, loading: boolean) => {
-      if (data) setPreSearchData(data);
-      setPreSearchLoading(loading);
-    },
-    []
-  );
-
-  // Show PreSearchState when no URL search is active (query empty) and we're
-  // not in map mode (where space is at a premium).
-  const showPreSearch = !urlSearch && displayMode !== "map";
 
   return (
     <div className="mt-2.5 pt-2.5 border-t border-[var(--twilight)]/65">
@@ -94,38 +70,8 @@ function EventsFinderFiltersInner({
           basePath={`/${portalSlug}/explore`}
           findType="events"
           placeholder="Search events..."
-          onPreSearchChange={handlePreSearchChange}
-          enablePreSearch={preSearchEnabled}
-          onInputFocus={() => setPreSearchEnabled(true)}
         />
       </div>
-
-      {/* Pre-search discovery state — trending pills + popular events.
-          Rendered as SIBLING of FindSearchInput (not inside the dropdown). */}
-      {showPreSearch && (
-        <div className="mb-3">
-          <PreSearchState
-            trending={preSearchData.trending}
-            popularNow={preSearchData.popularNow}
-            onTrendingClick={(term) => {
-              // Clicking a trending pill sets it as a URL search param via
-              // replaceState (no Suspense trigger). FindSearchInput's URL→query
-              // sync effect picks this up automatically.
-              const params = new URLSearchParams(searchParams?.toString() || "");
-              params.set("search", term);
-              params.delete("page");
-              window.history.replaceState(
-                window.history.state,
-                "",
-                `/${portalSlug}/explore?${params.toString()}`,
-              );
-            }}
-            portalSlug={portalSlug}
-            layout="wrap"
-            loading={preSearchLoading && preSearchData.popularNow.length === 0}
-          />
-        </div>
-      )}
 
       <FindFilterBar
         variant={displayMode === "map" ? "compact" : "full"}

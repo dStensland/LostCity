@@ -29,13 +29,15 @@ from typing import Optional
 from zoneinfo import ZoneInfo
 
 from db import (
-    find_event_by_hash,
     get_client,
     get_or_create_place,
-    insert_event,
     writes_enabled,
+    persist_screening_bundle,
+    sync_run_events_from_screenings,
+    remove_stale_showtime_events,
+    build_screening_bundle_from_event_rows,
+    entries_to_event_like_rows,
 )
-from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
 
@@ -338,14 +340,16 @@ def _infer_subcategory(film: dict) -> str:
     return "screening"
 
 
-def _crawl_films(source_id: int, festival_venue_id: int) -> tuple[int, int, int]:
+def _crawl_films(source_id: int, festival_venue_id: int) -> list[dict]:
     """
     Phase 1: Crawl all films from the Eventive films API.
 
-    Each film is created as an event anchored to the festival start date.
+    Each film is anchored to the festival start date as a screening entry.
     These are updated to specific screening times in Phase 2 once scheduled.
+
+    Returns a list of screening entry dicts for later bulk persistence.
     """
-    found = new = updated = 0
+    entries: list[dict] = []
 
     data = _api_get(f"/event_buckets/{BUCKET_ID}/films")
     films = data.get("films", [])
@@ -403,86 +407,37 @@ def _crawl_films(source_id: int, festival_venue_id: int) -> tuple[int, int, int]
 
         image_url = film.get("cover_image") or film.get("still_image")
         tags = _film_to_tags(film)
-        subcategory = _infer_subcategory(film)
-        runtime_minutes = None
-        if runtime:
-            try:
-                runtime_minutes = int(str(runtime).strip())
-            except ValueError:
-                runtime_minutes = None
-        year_int = None
-        if year:
-            try:
-                year_int = int(str(year).strip())
-            except ValueError:
-                year_int = None
 
-        found += 1
-        content_hash = generate_content_hash(
-            name, "Atlanta Film Festival 2026", FESTIVAL_START
-        )
-
-        event_record = {
-            "source_id": source_id,
-            "place_id": festival_venue_id,
+        entries.append({
             "title": name,
-            "description": description,
             "start_date": FESTIVAL_START,
             "start_time": None,
-            "end_date": FESTIVAL_END,
-            "end_time": None,
-            "is_all_day": True,
-            "category": "film",
-            "subcategory": subcategory,
-            "tags": tags,
-            "price_min": None,
-            "price_max": None,
-            "price_note": "Requires festival badge or individual screening ticket",
-            "is_free": False,
+            "image_url": image_url,
             "source_url": public_url,
             "ticket_url": f"{FRONTEND_ORIGIN}/schedule",
-            "image_url": image_url,
-            "raw_text": None,
-            "extraction_confidence": 0.95,
-            "is_recurring": False,
-            "recurrence_rule": None,
-            "content_hash": content_hash,
-        }
-        series_hint = _build_film_series_hint(
-            series_title=name,
-            description=description,
-            image_url=image_url,
-            director=director or None,
-            runtime_minutes=runtime_minutes,
-            year=year_int,
-            imdb_id=(film.get("imdb_id") or "").strip() or None,
-        )
+            "description": description,
+            "tags": tags,
+            "source_id": source_id,
+            "place_id": festival_venue_id,
+            "festival_id": None,
+        })
+        logger.debug("Queued film: %s", name)
 
-        existing = find_event_by_hash(content_hash)
-        try:
-            insert_event(event_record, series_hint=series_hint)
-            if existing:
-                updated += 1
-            else:
-                new += 1
-                logger.debug("Added film: %s", name)
-        except Exception as exc:
-            logger.error("Failed to insert film %s: %s", name, exc)
-
-    return found, new, updated
+    return entries
 
 
 def _crawl_scheduled_events(
     source_id: int, festival_venue_id: int
-) -> tuple[int, int, int]:
+) -> list[dict]:
     """
     Phase 2: Crawl scheduled screening events with specific times and venues.
 
     These are the individual ticketed screenings added as the festival approaches.
-    Once a film has scheduled screenings, its event record should be updated from
-    is_all_day=True to a specific start_time.
+    Ancillary events outside the festival window are deactivated directly.
+
+    Returns a list of screening entry dicts for later bulk persistence.
     """
-    found = new = updated = 0
+    entries: list[dict] = []
 
     data = _api_get(f"/event_buckets/{BUCKET_ID}/events")
     events = data.get("events", [])
@@ -504,12 +459,6 @@ def _crawl_scheduled_events(
         else:
             start_date = FESTIVAL_START
             start_time = None
-
-        if end_iso:
-            end_date, end_time = _parse_utc_to_eastern(end_iso)
-        else:
-            end_date = None
-            end_time = None
 
         # Resolve venue
         eventive_venue = event.get("venue")
@@ -536,104 +485,48 @@ def _crawl_scheduled_events(
 
         tags = list(dict.fromkeys(tags))
 
-        # Price from ticket_buckets
-        price_min = None
-        price_max = None
-        is_free = False
-        for tb in event.get("ticket_buckets", []):
-            if not tb.get("public", True):
-                continue
-            price = tb.get("price", 0)
-            if tb.get("variable_price"):
-                price = tb.get("variable_price_minimum", 0)
-            if price_min is None or price < price_min:
-                price_min = price
-            if price_max is None or price > price_max:
-                price_max = price
-
-        if price_min is not None and price_min == 0 and price_max == 0:
-            is_free = True
-        if price_min == 0 and price_max and price_max > 0:
-            price_min = None  # "Pay what you can" style
-
         image_url = None
         images = event.get("images", [])
         if images and isinstance(images, list):
             image_url = images[0].get("url") if isinstance(images[0], dict) else None
-
-        found += 1
-        # Use event_id in hash so each scheduling instance is unique
-        content_hash = generate_content_hash(
-            name, "Atlanta Film Festival 2026", f"{start_date}:{event_id}"
-        )
 
         ancillary_outside_window = _is_ancillary_outside_window(
             films_linked=films_linked,
             start_date=start_date,
         )
 
-        existing = find_event_by_hash(content_hash)
         if ancillary_outside_window:
-            if existing:
-                _deactivate_existing_event(existing)
-                updated += 1
-            else:
-                logger.info(
-                    "Skipping ancillary ATLFF event outside festival window: %s on %s",
-                    name,
-                    start_date,
-                )
+            logger.info(
+                "Skipping ancillary ATLFF event outside festival window: %s on %s",
+                name,
+                start_date,
+            )
             continue
 
-        event_record = {
-            "source_id": source_id,
-            "place_id": venue_id,
+        entries.append({
             "title": name,
-            "description": description,
             "start_date": start_date,
             "start_time": start_time,
-            "end_date": end_date,
-            "end_time": end_time,
-            "is_all_day": start_time is None,
-            "category": "film",
-            "subcategory": "screening",
-            "tags": tags,
-            "price_min": price_min,
-            "price_max": price_max,
-            "price_note": "Requires festival badge or individual screening ticket",
-            "is_free": is_free,
+            "image_url": image_url,
             "source_url": public_url,
             "ticket_url": public_url,
-            "image_url": image_url,
-            "raw_text": None,
-            "extraction_confidence": 0.97,
-            "is_recurring": False,
-            "recurrence_rule": None,
-            "content_hash": content_hash,
-        }
-        series_hint = _build_series_hint_for_screening(event, description, image_url)
+            "description": description,
+            "tags": tags,
+            "source_id": source_id,
+            "place_id": venue_id,
+            "festival_id": None,
+        })
+        logger.info("Queued screening: %s on %s at %s", name, start_date, start_time)
 
-        if existing:
-            pass
-        try:
-            insert_event(event_record, series_hint=series_hint)
-            if existing:
-                updated += 1
-            else:
-                new += 1
-                logger.info(
-                    "Added screening: %s on %s at %s", name, start_date, start_time
-                )
-        except Exception as exc:
-            logger.error("Failed to insert screening %s: %s", name, exc)
-
-    return found, new, updated
+    return entries
 
 
 def crawl(source: dict) -> tuple[int, int, int]:
     """Crawl Atlanta Film Festival via Eventive API."""
     source_id = source["id"]
-    total_found = total_new = total_updated = 0
+    total_new = 0
+    total_updated = 0
+    all_entries: list[dict] = []
 
     _VENUE_CACHE.clear()
 
@@ -641,22 +534,45 @@ def crawl(source: dict) -> tuple[int, int, int]:
         festival_venue_id = get_or_create_place(FESTIVAL_VENUE_DATA)
 
         # Phase 1: All films (151+ titles, available now)
-        f, n, u = _crawl_films(source_id, festival_venue_id)
-        total_found += f
-        total_new += n
-        total_updated += u
-        logger.info("Films phase: %d found, %d new, %d updated", f, n, u)
+        film_entries = _crawl_films(source_id, festival_venue_id)
+        all_entries.extend(film_entries)
+        logger.info("Films phase: %d queued", len(film_entries))
 
         # Phase 2: Scheduled screenings with specific times
-        f, n, u = _crawl_scheduled_events(source_id, festival_venue_id)
-        total_found += f
-        total_new += n
-        total_updated += u
-        logger.info("Screenings phase: %d found, %d new, %d updated", f, n, u)
+        screening_entries = _crawl_scheduled_events(source_id, festival_venue_id)
+        all_entries.extend(screening_entries)
+        logger.info("Screenings phase: %d queued", len(screening_entries))
+
+        # Deactivate junk rows (direct DB, not screening-primary path)
         cleaned = _deactivate_blacklisted_events(source_id)
         if cleaned:
             total_updated += cleaned
             logger.info("Junk-row cleanup: %d deactivated", cleaned)
+
+        # --- Screening-primary persistence ---
+        total_found = len(all_entries)
+        source_slug = source.get("slug", "atlanta-film-festival")
+
+        event_like_rows = entries_to_event_like_rows(all_entries)
+
+        bundle = build_screening_bundle_from_event_rows(
+            source_id=source_id, source_slug=source_slug, events=event_like_rows,
+        )
+        screening_summary = persist_screening_bundle(bundle)
+        logger.info(
+            "ATLFF screening sync: %s titles, %s runs, %s times",
+            screening_summary.get("titles", 0),
+            screening_summary.get("runs", 0),
+            screening_summary.get("times", 0),
+        )
+
+        run_summary = sync_run_events_from_screenings(source_id=source_id, source_slug=source_slug)
+        total_new = run_summary.get("events_created", 0)
+        total_updated += run_summary.get("events_updated", 0)
+
+        run_event_hashes = run_summary.get("run_event_hashes", set())
+        if run_event_hashes:
+            remove_stale_showtime_events(source_id=source_id, run_event_hashes=run_event_hashes)
 
     except Exception as exc:
         logger.error("Atlanta Film Festival crawl failed: %s", exc)

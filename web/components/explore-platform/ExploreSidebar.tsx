@@ -1,9 +1,7 @@
 "use client";
 
 import { MagnifyingGlass } from "@phosphor-icons/react/dist/ssr";
-import { useMemo } from "react";
 import type { ExploreHomePayload, ExploreLaneDefinition } from "@/lib/explore-platform/types";
-import { EXPLORE_EVENTS_UTILITY_VIEWS } from "@/lib/explore-platform/registry";
 import { useExploreUrlState } from "@/lib/explore-platform/url-state";
 
 interface ExploreSidebarProps {
@@ -20,11 +18,6 @@ export function ExploreSidebar({
   const state = useExploreUrlState();
   const laneCounts = homeData?.lanes ?? null;
   const activeLane = state.lane;
-
-  const activeUtility = useMemo(() => {
-    if (activeLane !== "events") return null;
-    return state.display;
-  }, [activeLane, state.display]);
 
   return (
     <aside
@@ -106,41 +99,6 @@ export function ExploreSidebar({
               );
             })}
           </ul>
-
-          <div className="mt-6">
-            <p className="font-mono text-2xs font-bold tracking-[0.14em] uppercase text-[var(--muted)] mb-2">
-              Event Views
-            </p>
-            <div className="space-y-1">
-              {EXPLORE_EVENTS_UTILITY_VIEWS.map((utility) => {
-                const Icon = utility.icon;
-                const isActive = activeUtility === utility.id;
-                return (
-                  <button
-                    key={utility.id}
-                    type="button"
-                    onClick={() => state.setDisplay(utility.id)}
-                    className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg transition-colors text-left"
-                    style={
-                      isActive
-                        ? {
-                            backgroundColor: `color-mix(in srgb, ${utility.accentToken} 10%, transparent)`,
-                            color: utility.accentToken,
-                          }
-                        : undefined
-                    }
-                  >
-                    <Icon
-                      size={15}
-                      weight="duotone"
-                      color={isActive ? utility.accentToken : "var(--soft)"}
-                    />
-                    <span className="text-sm text-[var(--soft)]">{utility.label}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
         </nav>
       </div>
     </aside>

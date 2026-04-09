@@ -17,13 +17,13 @@ import requests
 from bs4 import BeautifulSoup
 
 from db import (
-    find_event_by_hash,
     get_or_create_place,
-    insert_event,
-    remove_stale_source_events,
-    smart_update_existing_event,
+    persist_screening_bundle,
+    sync_run_events_from_screenings,
+    remove_stale_showtime_events,
+    build_screening_bundle_from_event_rows,
+    entries_to_event_like_rows,
 )
-from dedupe import generate_content_hash
 from utils import slugify
 
 logger = logging.getLogger(__name__)
@@ -312,7 +312,6 @@ def build_tentpole_event_record(
     description_parts.append("Screenings take place at venues across Atlanta with tickets and schedule managed through the official AFFATL Eventbrite collection.")
 
     venue_id = get_or_create_place(FESTIVAL_VENUE)
-    content_hash = generate_content_hash(title, FESTIVAL_VENUE["name"], start_date)
 
     return {
         "source_id": source_id,
@@ -343,7 +342,6 @@ def build_tentpole_event_record(
         "extraction_confidence": 0.95,
         "is_recurring": False,
         "recurrence_rule": None,
-        "content_hash": content_hash,
     }
 
 
@@ -375,11 +373,6 @@ def build_screening_event_record(source_id: int, event: dict) -> Optional[dict]:
     )
     is_free = bool(event.get("is_free"))
     price_note = "Free with RSVP on Eventbrite." if is_free else "Tickets available on Eventbrite."
-    content_hash = generate_content_hash(
-        title,
-        place_data["name"],
-        f"{start_date}|{start_time or ''}",
-    )
 
     return {
         "source_id": source_id,
@@ -405,17 +398,13 @@ def build_screening_event_record(source_id: int, event: dict) -> Optional[dict]:
         "extraction_confidence": 0.93,
         "is_recurring": False,
         "recurrence_rule": None,
-        "content_hash": content_hash,
     }
 
 
 def crawl(source: dict) -> tuple[int, int, int]:
     """Crawl official AFFATL pages and organizer-managed Eventbrite schedule."""
     source_id = source["id"]
-    events_found = 0
-    events_new = 0
-    events_updated = 0
-    seen_hashes: set[str] = set()
+    all_entries: list[dict] = []
 
     submissions_html = _fetch_html(SUBMISSIONS_URL)
     announcement_html = _fetch_html(ANNOUNCEMENT_URL)
@@ -428,41 +417,56 @@ def crawl(source: dict) -> tuple[int, int, int]:
         announcement_html,
         collection_events,
     )
-    seen_hashes.add(tentpole_record["content_hash"])
-    events_found += 1
-    existing = find_event_by_hash(tentpole_record["content_hash"])
-    if existing:
-        smart_update_existing_event(existing, tentpole_record)
-        events_updated += 1
-    else:
-        insert_event(tentpole_record)
-        events_new += 1
+    all_entries.append(tentpole_record)
 
     for event in collection_events:
         event_record = build_screening_event_record(source_id, event)
         if not event_record:
             continue
+        all_entries.append(event_record)
 
-        seen_hashes.add(event_record["content_hash"])
-        events_found += 1
-        existing = find_event_by_hash(event_record["content_hash"])
-        if existing:
-            smart_update_existing_event(existing, event_record)
-            events_updated += 1
-            continue
+    # --- Screening-primary persistence ---
+    total_found = len(all_entries)
+    source_slug = source.get("slug", "african-film-festival-atlanta")
 
-        insert_event(event_record)
-        events_new += 1
+    event_like_rows = entries_to_event_like_rows(all_entries)
+    bundle = build_screening_bundle_from_event_rows(
+        source_id=source_id,
+        source_slug=source_slug,
+        events=event_like_rows,
+    )
+    screening_summary = persist_screening_bundle(bundle)
+    logger.info(
+        "AFFATL screening sync: %s titles, %s runs, %s times",
+        screening_summary.get("titles", 0),
+        screening_summary.get("runs", 0),
+        screening_summary.get("times", 0),
+    )
 
-    if seen_hashes:
-        stale_removed = remove_stale_source_events(source_id, seen_hashes)
-        if stale_removed:
-            logger.info("Removed %s stale AFFATL events", stale_removed)
+    run_summary = sync_run_events_from_screenings(
+        source_id=source_id,
+        source_slug=source_slug,
+    )
+    total_new = run_summary.get("events_created", 0)
+    total_updated = run_summary.get("events_updated", 0)
+    logger.info(
+        "AFFATL run events: %s created, %s updated, %s times linked",
+        total_new, total_updated, run_summary.get("times_linked", 0),
+    )
+
+    run_event_hashes = run_summary.get("run_event_hashes", set())
+    if run_event_hashes:
+        cleanup = remove_stale_showtime_events(
+            source_id=source_id,
+            run_event_hashes=run_event_hashes,
+        )
+        if cleanup.get("deactivated") or cleanup.get("deleted"):
+            logger.info("AFFATL stale showtime cleanup: %s", cleanup)
 
     logger.info(
-        "AFFATL crawl complete: %s found, %s new, %s updated",
-        events_found,
-        events_new,
-        events_updated,
+        "AFFATL crawl complete: %s found, %s new run events, %s updated",
+        total_found,
+        total_new,
+        total_updated,
     )
-    return events_found, events_new, events_updated
+    return total_found, total_new, total_updated

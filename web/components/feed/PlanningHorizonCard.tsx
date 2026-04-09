@@ -2,7 +2,6 @@
 
 import { memo } from "react";
 import Link from "next/link";
-import { Star } from "@phosphor-icons/react";
 import SmartImage from "@/components/SmartImage";
 import Dot from "@/components/ui/Dot";
 import CategoryIcon from "@/components/CategoryIcon";
@@ -15,6 +14,7 @@ interface PlanningHorizonCardProps {
     urgency: PlanningUrgency;
     ticket_freshness: string | null;
     featured_blurb?: string | null;
+    description?: string | null;
   };
   portalSlug: string;
 }
@@ -179,7 +179,6 @@ export const PlanningHorizonCard = memo(function PlanningHorizonCard({
   const isCancelled = event.urgency?.type === "cancelled";
   const isSoldOut = event.urgency?.type === "sold_out";
   const isDisabled = isCancelled || isSoldOut;
-  const isFlagship = event.importance === "flagship";
   const price = formatPrice(event.is_free, event.price_min, event.price_max);
   const description = event.featured_blurb || null;
   const catColor = getCategoryColor(event.category);

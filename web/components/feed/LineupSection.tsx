@@ -451,7 +451,9 @@ export default function LineupSection({
     let evts = tabDateEvents;
 
     if (activeChipId === "all") {
-      // "All" means all events — no category restriction
+      // "All" = union of the user's selected interest categories.
+      // Without this filter, unrelated categories (workshop, sports) leak through.
+      evts = evts.filter((e) => unionMatcher(e));
     } else if (activeChipId === "free") {
       const freeChip = INTEREST_MAP.get("free");
       if (freeChip) {

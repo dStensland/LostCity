@@ -10,7 +10,8 @@
  * Fetch: /api/portals/[slug]/network-feed?limit=60
  */
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -92,36 +93,36 @@ function NewsRow({ post, isLast }: { post: NetworkPost; isLast: boolean }) {
 // ── Main component ───────────────────────────────────────────────────────────
 
 export function TodayInAtlantaSection({ portalSlug }: TodayInAtlantaSectionProps) {
-  const [posts, setPosts] = useState<NetworkPost[]>([]);
-  const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<string>("all");
 
-  // ── Fetch ──────────────────────────────────────────────────────────────────
-  useEffect(() => {
-    const controller = new AbortController();
-
-    fetch(`/api/portals/${portalSlug}/network-feed?limit=60`, {
-      signal: controller.signal,
-    })
-      .then((res) => (res.ok ? res.json() : Promise.reject(res)))
-      .then((data) => {
-        if (controller.signal.aborted) return;
+  // ── Fetch via React Query — shares cache with CityPulseShell prefetch ─────
+  const { data: rawPosts, isLoading: loading } = useQuery<NetworkPost[]>({
+    queryKey: ["network-feed", portalSlug],
+    queryFn: async () => {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10_000);
+      try {
+        const res = await fetch(
+          `/api/portals/${portalSlug}/network-feed?limit=60`,
+          { signal: controller.signal },
+        );
+        if (!res.ok) throw new Error(`Network feed: ${res.status}`);
+        const data = await res.json();
         const seenTitles = new Set<string>();
-        const deduped = ((data.posts || []) as NetworkPost[]).filter((p) => {
+        return ((data.posts || []) as NetworkPost[]).filter((p) => {
           const norm = p.title.toLowerCase().trim();
           if (seenTitles.has(norm)) return false;
           seenTitles.add(norm);
           return true;
         });
-        setPosts(deduped);
-      })
-      .catch(() => {})
-      .finally(() => {
-        if (!controller.signal.aborted) setLoading(false);
-      });
-
-    return () => controller.abort();
-  }, [portalSlug]);
+      } finally {
+        clearTimeout(timeoutId);
+      }
+    },
+    staleTime: 5 * 60 * 1000,
+    gcTime: 15 * 60 * 1000,
+  });
+  const posts = rawPosts ?? [];
 
   // ── Build category buckets ─────────────────────────────────────────────────
 

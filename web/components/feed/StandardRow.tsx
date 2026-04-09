@@ -54,15 +54,15 @@ export const StandardRow = memo(function StandardRow({
       className="group block w-full rounded-xl overflow-hidden bg-[var(--night)] border border-[var(--twilight)]/30 hover:bg-[var(--dusk)]/50 hover:border-[var(--twilight)]/50 transition-colors"
       aria-label={event.title}
     >
-      <div className="flex items-center gap-3 px-2 py-2.5">
-        {/* Thumbnail or category icon fallback */}
-        <div className="relative w-12 h-12 flex-shrink-0 rounded-lg overflow-hidden bg-[var(--twilight)]/40">
+      <div className="flex items-center gap-0">
+        {/* Thumbnail — full-bleed left edge */}
+        <div className="relative w-16 self-stretch flex-shrink-0 overflow-hidden bg-[var(--twilight)]/40">
           {imageUrl ? (
             <SmartImage
               src={imageUrl}
               alt=""
               fill
-              sizes="48px"
+              sizes="64px"
               className="object-cover"
               fallback={
                 <div
@@ -84,7 +84,7 @@ export const StandardRow = memo(function StandardRow({
         </div>
 
         {/* Content */}
-        <div className="flex-1 min-w-0">
+        <div className="flex-1 min-w-0 px-3 py-2.5">
           {/* Category + time */}
           <div className="flex items-center gap-1.5 mb-0.5">
             <span
@@ -119,7 +119,7 @@ export const StandardRow = memo(function StandardRow({
         </div>
 
         {/* Right: badges */}
-        <div className="flex flex-col items-end gap-1 flex-shrink-0">
+        <div className="flex flex-col items-end gap-1 flex-shrink-0 pr-2.5">
           {event.is_free ? (
             <FreeBadge />
           ) : event.price_min !== null && event.price_min !== undefined ? (

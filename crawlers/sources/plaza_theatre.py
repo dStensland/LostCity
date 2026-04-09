@@ -34,8 +34,14 @@ import fnmatch
 
 from playwright.sync_api import sync_playwright, Page
 
-from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event, remove_stale_source_events
-from dedupe import generate_content_hash
+from db import (
+    get_or_create_place,
+    persist_screening_bundle,
+    sync_run_events_from_screenings,
+    remove_stale_showtime_events,
+    build_screening_bundle_from_event_rows,
+    entries_to_event_like_rows,
+)
 from sources.plaza_letterboxd import get_letterboxd_movies, enrich_movie_data
 from entity_lanes import TypedEntityEnvelope, SourceEntityCapabilities
 from entity_persistence import persist_typed_entity_envelope
@@ -307,34 +313,55 @@ def extract_movies_for_date(
     letterboxd_movies: list[dict],
     image_map: dict[str, str],
     seen_hashes: set,
-) -> tuple[int, int, int]:
+) -> list[dict]:
     """Extract movies and showtimes for the currently displayed date.
 
-    The page should already be showing the correct date's schedule.
-    Movies appear as .movie-container elements with:
-    - .text-h5 for title
-    - button elements for showtimes (text like "6:30 PM\\nENDS AT 8:13 PM")
-    - img.q-img__image for poster
+    Plaza's Quasar SPA renders the correct title/time cards for the selected
+    day, but the showtime button click handlers can resolve to the wrong
+    checkout record. Read title/time directly from the visible cards and avoid
+    resolving ticket URLs from button clicks.
+
+    Returns a list of screening entry dicts for later bulk persistence.
     """
-    events_found = 0
-    events_new = 0
-    events_updated = 0
+    entries: list[dict] = []
 
     date_str = target_date.strftime("%Y-%m-%d")
+    card_locator = None
+    card_selector = None
+    container_count = 0
+    for selector in (
+        ".movie-container",
+        ".q-card.col.movie",
+        ".col-sm-6 .q-card.col.movie",
+    ):
+        try:
+            locator = page.locator(selector)
+            count = locator.count()
+        except Exception:
+            continue
+        if count:
+            card_locator = locator
+            card_selector = selector
+            container_count = count
+            break
 
-    # Try DOM-based extraction first using .movie-container elements
-    container_count = page.locator(".movie-container").count()
-    logger.debug(f"Found {container_count} .movie-container elements for {date_str}")
-
-    # Log a warning if no containers found (might indicate site change)
     if container_count == 0:
-        logger.warning(f"No .movie-container elements found for {date_str} - site structure may have changed, falling back to text extraction")
-
-    if container_count:
+        logger.warning(
+            f"No movie cards found for {date_str} - site structure may have changed, "
+            "falling back to text extraction"
+        )
+        entries = _extract_movies_from_text(
+            page, date_str, source_id, venue_id, letterboxd_movies, image_map, seen_hashes
+        )
+    else:
+        logger.debug(
+            f"Found {container_count} movie cards via {card_selector} for {date_str}; "
+            "extracting visible showtimes without clicking checkout buttons"
+        )
         for container_idx in range(container_count):
             try:
-                container = page.locator(".movie-container").nth(container_idx)
-                # Extract title
+                container = card_locator.nth(container_idx)
+
                 title_el = container.locator(".text-h5").first
                 if title_el.count() == 0:
                     continue
@@ -342,7 +369,6 @@ def extract_movies_for_date(
                 if not movie_title or len(movie_title) < 2:
                     continue
 
-                # Clean up title
                 movie_title = " ".join(movie_title.split())
                 movie_title = re.sub(r'\s*\((?:4K|2K|35mm|70mm)\)\s*$', '', movie_title, flags=re.IGNORECASE)
                 movie_title = re.sub(r'\s*(?:Not Rated|Rated\s*[RPGNC](?:-\d+)?)\s*$', '', movie_title, flags=re.IGNORECASE)
@@ -351,23 +377,15 @@ def extract_movies_for_date(
                 if not movie_title or len(movie_title) < 2:
                     continue
 
-                # Extract showtimes from buttons within this container
                 buttons = container.locator("button")
                 showtime_rows = []
                 for button_idx in range(buttons.count()):
                     try:
-                        btn = container.locator("button").nth(button_idx)
-                        btn_text = btn.inner_text().strip()
-                        # Button text is like "6:30 PM\nENDS AT 8:13 PM" or just "6:30 PM"
+                        btn_text = buttons.nth(button_idx).inner_text().strip()
                         first_line = btn_text.split("\n")[0].strip()
                         parsed_time = parse_time(first_line)
                         if parsed_time and parsed_time not in [row["start_time"] for row in showtime_rows]:
-                            showtime_rows.append(
-                                {
-                                    "start_time": parsed_time,
-                                    "ticket_url": resolve_showtime_ticket_url(page, btn),
-                                }
-                            )
+                            showtime_rows.append({"start_time": parsed_time, "ticket_url": None})
                     except Exception:
                         continue
 
@@ -380,93 +398,55 @@ def extract_movies_for_date(
                     f"{', '.join(row['start_time'] for row in showtime_rows)}"
                 )
 
-                # Extract image from this container
                 img_el = container.locator("img.q-img__image").first
                 container_image = None
                 if img_el.count() > 0:
                     container_image = img_el.get_attribute("src")
 
-                # Get Letterboxd enrichment
                 enrichment = enrich_movie_data(movie_title, letterboxd_movies) or {}
 
-                # Build tags
                 tags = ["film", "cinema", "independent", "showtime", "plaza-theatre"]
                 if enrichment.get("special_event"):
                     tags.append(enrichment["special_event"])
 
-                # Best image: Letterboxd > container image > image_map
                 image_url = (
                     enrichment.get("image_url")
                     or container_image
                     or find_image_for_movie(movie_title, image_map)
                 )
 
-                # Create event for each showtime
                 for showtime_row in showtime_rows:
                     start_time = showtime_row["start_time"]
-                    events_found += 1
-                    content_hash = generate_content_hash(
-                        movie_title, "Plaza Theatre", f"{date_str}|{start_time}"
-                    )
-                    seen_hashes.add(content_hash)
+                    # In-process dedup guard
+                    showtime_key = (movie_title, date_str, start_time)
+                    if showtime_key in seen_hashes:
+                        continue
+                    seen_hashes.add(showtime_key)
 
-                    event_record = {
-                        "source_id": source_id,
-                        "place_id": venue_id,
+                    entries.append({
                         "title": movie_title,
-                        "description": None,
                         "start_date": date_str,
                         "start_time": start_time,
-                        "end_date": None,
-                        "end_time": None,
-                        "is_all_day": False,
-                        "category": "film",
-                        "subcategory": "cinema",
-                        "tags": tags,
-                        "price_min": None,
-                        "price_max": None,
-                        "price_note": None,
-                        "is_free": False,
-                        "source_url": f"{BASE_URL}/now-showing",
-                        "ticket_url": showtime_row.get("ticket_url") or enrichment.get("ticket_url"),
                         "image_url": image_url,
-                        "raw_text": None,
-                        "extraction_confidence": 0.90,
-                        "is_recurring": False,
-                        "recurrence_rule": None,
-                        "content_hash": content_hash,
-                    }
-
-                    existing = find_event_by_hash(content_hash)
-                    if existing:
-                        if smart_update_existing_event(existing, event_record):
-                            events_updated += 1
-                    else:
-                        series_hint = {
-                            "series_type": "film",
-                            "series_title": movie_title,
-                        }
-                        if enrichment.get("tmdb_id"):
-                            series_hint["tmdb_id"] = enrichment["tmdb_id"]
-
-                        try:
-                            insert_event(event_record, series_hint=series_hint)
-                            events_new += 1
-                            logger.info(f"  Added: {movie_title} on {date_str} at {start_time}")
-                        except Exception as e:
-                            logger.error(f"  Failed to insert: {e}")
+                        "source_url": f"{BASE_URL}/now-showing",
+                        # Plaza's now-showing listings currently mis-route ticket
+                        # links across days/titles, so keep schedule rows but drop
+                        # per-show checkout URLs until the source exposes a stable
+                        # show-specific link.
+                        "ticket_url": None,
+                        "description": None,
+                        "tags": tags,
+                        "source_id": source_id,
+                        "place_id": venue_id,
+                    })
+                    logger.info(f"  Queued: {movie_title} on {date_str} at {start_time}")
 
             except Exception as e:
                 logger.debug(f"Error processing movie container: {e}")
                 continue
-    else:
-        # Fallback: text-based extraction (same approach as Tara crawler)
-        events_found, events_new, events_updated = _extract_movies_from_text(
-            page, date_str, source_id, venue_id, letterboxd_movies, image_map, seen_hashes
-        )
 
-    logger.info(f"  {date_str}: {events_found} showtimes found, {events_new} new")
-    return events_found, events_new, events_updated
+    logger.info(f"  {date_str}: {len(entries)} showtimes queued")
+    return entries
 
 
 def _extract_movies_from_text(
@@ -477,17 +457,20 @@ def _extract_movies_from_text(
     letterboxd_movies: list[dict],
     image_map: dict[str, str],
     seen_hashes: set,
-) -> tuple[int, int, int]:
-    """Fallback text-based extraction if DOM selectors don't work."""
-    events_found = 0
-    events_new = 0
-    events_updated = 0
+) -> list[dict]:
+    """Fallback text-based extraction if DOM selectors don't work.
+
+    Returns a list of screening entry dicts for later bulk persistence.
+    """
+    entries: list[dict] = []
 
     body_text = page.inner_text("body")
     lines = [l.strip() for l in body_text.split("\n") if l.strip()]
 
     duration_pattern = re.compile(r'^(\d+)\s*hr(?:\s*(\d+)\s*min)?', re.IGNORECASE)
     time_pattern = re.compile(r'^(\d{1,2}:\d{2})\s*(AM|PM)$', re.IGNORECASE)
+    rating_pattern = re.compile(r'^(Not Rated|Rated\s*[A-Z0-9\-]+)$', re.IGNORECASE)
+    ends_at_pattern = re.compile(r'^ENDS AT\b', re.IGNORECASE)
 
     current_movie = None
     current_times = []
@@ -500,7 +483,38 @@ def _extract_movies_from_text(
         "Showtimes, news and more", "Showtimes",
         "Wed", "Thu", "Fri", "Sat", "Sun", "Mon", "Tue",
         "Feb", "Jan", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+        "Discount Days", "DISCOUNT DAYS", "Captioned", "SUBTITLED", "Subtitled",
+        "accessible", "headphones", "closed_caption", "calendar_today", "Date",
+        "local_movies", "play_arrow", "search", "add_shopping_cart",
+        "The Lefont", "The Rej", "The Mike",
+        "Digital", "35MM", "70MM",
     ]
+    skip_titles_lower = {skip.lower() for skip in skip_titles}
+
+    def _has_nearby_duration(start_idx: int) -> bool:
+        for lookahead_idx in range(start_idx + 1, min(len(lines), start_idx + 7)):
+            candidate = lines[lookahead_idx]
+            if duration_pattern.match(candidate):
+                return True
+            if time_pattern.match(candidate) or ends_at_pattern.match(candidate):
+                return False
+        return False
+
+    def _looks_like_movie_title(line: str, idx: int) -> bool:
+        normalized = line.strip()
+        if len(normalized) < 3:
+            return False
+        if normalized.lower() in skip_titles_lower:
+            return False
+        if normalized.startswith("·"):
+            return False
+        if re.match(r'^\d+$', normalized):
+            return False
+        if duration_pattern.match(normalized) or time_pattern.match(normalized):
+            return False
+        if rating_pattern.match(normalized) or ends_at_pattern.match(normalized):
+            return False
+        return _has_nearby_duration(idx)
 
     i = 0
     while i < len(lines):
@@ -515,20 +529,12 @@ def _extract_movies_from_text(
             i += 1
             continue
 
-        # Check if next line is a duration (indicates current line is a movie title)
-        if i + 1 < len(lines) and duration_pattern.match(lines[i + 1]):
+        if _looks_like_movie_title(line, i):
             if current_movie and current_times:
                 matches.append((current_movie, current_times))
 
-            if (len(line) >= 3 and
-                not any(skip.lower() == line.lower() for skip in skip_titles) and
-                not line.startswith("·") and
-                not re.match(r'^\d+$', line)):
-                current_movie = line
-                current_times = []
-            else:
-                current_movie = None
-                current_times = []
+            current_movie = line
+            current_times = []
             i += 1
             continue
 
@@ -551,59 +557,29 @@ def _extract_movies_from_text(
         image_url = enrichment.get("image_url") or find_image_for_movie(title, image_map)
 
         for start_time in times_list:
-            events_found += 1
-            content_hash = generate_content_hash(
-                title, "Plaza Theatre", f"{date_str}|{start_time}"
-            )
-            seen_hashes.add(content_hash)
+            # In-process dedup guard
+            showtime_key = (title, date_str, start_time)
+            if showtime_key in seen_hashes:
+                continue
+            seen_hashes.add(showtime_key)
 
-            event_record = {
-                "source_id": source_id,
-                "place_id": venue_id,
+            entries.append({
                 "title": title,
-                "description": None,
                 "start_date": date_str,
                 "start_time": start_time,
-                "end_date": None,
-                "end_time": None,
-                "is_all_day": False,
-                "category": "film",
-                "subcategory": "cinema",
-                "tags": tags,
-                "price_min": None,
-                "price_max": None,
-                "price_note": None,
-                "is_free": False,
-                "source_url": f"{BASE_URL}/now-showing",
-                "ticket_url": enrichment.get("ticket_url"),
                 "image_url": image_url,
-                "raw_text": None,
-                "extraction_confidence": 0.85,
-                "is_recurring": False,
-                "recurrence_rule": None,
-                "content_hash": content_hash,
-            }
+                "source_url": f"{BASE_URL}/now-showing",
+                # Text fallback reads the same unstable now-showing listing, so
+                # do not persist enrichment-provided ticket URLs here either.
+                "ticket_url": None,
+                "description": None,
+                "tags": tags,
+                "source_id": source_id,
+                "place_id": venue_id,
+            })
+            logger.info(f"  Queued: {title} on {date_str} at {start_time}")
 
-            existing = find_event_by_hash(content_hash)
-            if existing:
-                if smart_update_existing_event(existing, event_record):
-                    events_updated += 1
-            else:
-                series_hint = {
-                    "series_type": "film",
-                    "series_title": title,
-                }
-                if enrichment.get("tmdb_id"):
-                    series_hint["tmdb_id"] = enrichment["tmdb_id"]
-
-                try:
-                    insert_event(event_record, series_hint=series_hint)
-                    events_new += 1
-                    logger.info(f"  Added: {title} on {date_str} at {start_time}")
-                except Exception as e:
-                    logger.error(f"  Failed to insert: {e}")
-
-    return events_found, events_new, events_updated
+    return entries
 
 
 def extract_special_events(
@@ -613,17 +589,17 @@ def extract_special_events(
     letterboxd_movies: list[dict],
     image_map: dict[str, str],
     seen_hashes: set,
-) -> tuple[int, int, int]:
+) -> list[dict]:
     """Extract special events from /special-events/ page.
 
     Special events are listed as text blocks with format:
     "Feb 4" (date line)
     "Event Title"
     "Description text..."
+
+    Returns a list of screening entry dicts for later bulk persistence.
     """
-    events_found = 0
-    events_new = 0
-    events_updated = 0
+    entries: list[dict] = []
 
     body_text = page.inner_text("body")
     lines = [l.strip() for l in body_text.split("\n") if l.strip()]
@@ -733,66 +709,41 @@ def extract_special_events(
                         or find_image_for_movie(title, image_map)
                     )
 
-                    event_record = {
-                        "source_id": source_id,
-                        "place_id": venue_id,
-                        "title": title,
-                        "description": description,
-                        "start_date": event_date,
-                        "start_time": time_str,
-                        "end_date": None,
-                        "end_time": None,
-                        "is_all_day": False,
-                        "category": "film",
-                        "subcategory": "special_screening",
-                        "tags": tags,
-                        "price_min": None,
-                        "price_max": None,
-                        "price_note": None,
-                        "is_free": False,
-                        "source_url": f"{BASE_URL}/special-events/",
-                        "ticket_url": enrichment.get("ticket_url"),
-                        "image_url": image_url,
-                        "raw_text": None,
-                        "extraction_confidence": 0.85,
-                        "is_recurring": False,
-                        "recurrence_rule": None,
-                        "content_hash": content_hash,
-                    }
-
-                    existing = find_event_by_hash(content_hash)
-                    if existing:
-                        if smart_update_existing_event(existing, event_record):
-                            events_updated += 1
-                    else:
-                        series_hint = {
-                            "series_type": "film",
-                            "series_title": title,
-                        }
-                        if enrichment.get("tmdb_id"):
-                            series_hint["tmdb_id"] = enrichment["tmdb_id"]
-
-                        try:
-                            insert_event(event_record, series_hint=series_hint)
-                            events_new += 1
-                            logger.info(f"  Added special event: {title} on {event_date}")
-                        except Exception as e:
-                            logger.error(f"  Failed to insert special event: {e}")
+                    # In-process dedup guard
+                    showtime_key = (title, event_date, time_str or "00:00")
+                    if showtime_key not in seen_hashes:
+                        seen_hashes.add(showtime_key)
+                        entries.append({
+                            "title": title,
+                            "start_date": event_date,
+                            "start_time": time_str,
+                            "image_url": image_url,
+                            "source_url": f"{BASE_URL}/special-events/",
+                            "ticket_url": enrichment.get("ticket_url"),
+                            "description": description,
+                            "tags": tags,
+                            "source_id": source_id,
+                            "place_id": venue_id,
+                        })
+                        logger.info(f"  Queued special event: {title} on {event_date}")
 
             i = j if j > i + 1 else i + 1
         else:
             i += 1
 
-    return events_found, events_new, events_updated
+    return entries
 
 
 def _wait_for_movies(page: Page, timeout: int = 12000) -> bool:
-    """Wait for .movie-container elements to appear after SPA renders.
+    """Wait for movie cards to appear after SPA renders.
 
     Returns True if at least one container was found, False on timeout.
     """
     try:
-        page.wait_for_selector(".movie-container", timeout=timeout)
+        page.wait_for_function(
+            "() => !!document.querySelector('.movie-container, .q-card.col.movie, .col-sm-6 .q-card.col.movie')",
+            timeout=timeout,
+        )
         return True
     except Exception:
         return False
@@ -815,7 +766,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
     total_found = 0
     total_new = 0
     total_updated = 0
-    seen_hashes = set()
+    all_entries: list[dict] = []
+    seen_hashes: set = set()
 
     try:
         with sync_playwright() as p:
@@ -856,13 +808,11 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             # Extract today's showtimes (default view)
             logger.info(f"Scraping Today ({today.strftime('%Y-%m-%d')})")
-            found, new, updated = extract_movies_for_date(
+            day_entries = extract_movies_for_date(
                 page, datetime.combine(today, datetime.min.time()),
                 source_id, venue_id, letterboxd_movies, image_map, seen_hashes
             )
-            total_found += found
-            total_new += new
-            total_updated += updated
+            all_entries.extend(day_entries)
 
             # Navigate upcoming days via the Quasar date picker (calendar).
             # The site's day-name buttons ("Fri", "Sat") are unreliable because
@@ -934,15 +884,13 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 _click_plaza_tab(page)
 
                 logger.info(f"Scraping {date_str}")
-                found, new, updated = extract_movies_for_date(
+                day_entries = extract_movies_for_date(
                     page, datetime.combine(target_date, datetime.min.time()),
                     source_id, venue_id, letterboxd_movies, image_map, seen_hashes
                 )
-                total_found += found
-                total_new += new
-                total_updated += updated
+                all_entries.extend(day_entries)
 
-                if found == 0:
+                if not day_entries:
                     logger.info(f"  {date_str}: No showtimes found")
                     break
 
@@ -953,22 +901,39 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 page.goto(special_url, wait_until="domcontentloaded", timeout=30000)
                 page.wait_for_timeout(3000)
 
-                found, new, updated = extract_special_events(
+                special_entries = extract_special_events(
                     page, source_id, venue_id, letterboxd_movies, image_map, seen_hashes
                 )
-                total_found += found
-                total_new += new
-                total_updated += updated
+                all_entries.extend(special_entries)
             except Exception as e:
                 logger.error(f"Error crawling special events: {e}")
 
             browser.close()
 
-        # Remove stale showtimes that are no longer on the theater's schedule
-        if seen_hashes:
-            stale_removed = remove_stale_source_events(source_id, seen_hashes)
-            if stale_removed:
-                logger.info(f"Removed {stale_removed} stale showtimes no longer on schedule")
+        # --- Screening-primary persistence ---
+        total_found = len(all_entries)
+        source_slug = source.get("slug", "plaza-theatre")
+
+        event_like_rows = entries_to_event_like_rows(all_entries)
+
+        bundle = build_screening_bundle_from_event_rows(
+            source_id=source_id, source_slug=source_slug, events=event_like_rows,
+        )
+        screening_summary = persist_screening_bundle(bundle)
+        logger.info(
+            "Plaza screening sync: %s titles, %s runs, %s times",
+            screening_summary.get("titles", 0),
+            screening_summary.get("runs", 0),
+            screening_summary.get("times", 0),
+        )
+
+        run_summary = sync_run_events_from_screenings(source_id=source_id, source_slug=source_slug)
+        total_new = run_summary.get("events_created", 0)
+        total_updated = run_summary.get("events_updated", 0)
+
+        run_event_hashes = run_summary.get("run_event_hashes", set())
+        if run_event_hashes:
+            remove_stale_showtime_events(source_id=source_id, run_event_hashes=run_event_hashes)
 
         logger.info(
             f"Plaza Theatre crawl complete: {total_found} found, {total_new} new, {total_updated} updated"

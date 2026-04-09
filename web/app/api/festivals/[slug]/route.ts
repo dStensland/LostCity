@@ -3,6 +3,9 @@ import { NextRequest } from "next/server";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 import { resolvePortalQueryContext } from "@/lib/portal-query-context";
 import { filterByPortalCity } from "@/lib/portal-scope";
+import {
+  fetchScreeningBundleFromTables,
+} from "@/lib/screenings";
 
 type SessionRow = {
   id: number;
@@ -11,6 +14,22 @@ type SessionRow = {
   start_time: string | null;
   end_time: string | null;
   series_id: string | null;
+  image_url: string | null;
+  tags: string[] | null;
+  source_url: string | null;
+  ticket_url: string | null;
+  category_id: string | null;
+  series: {
+    id: string;
+    slug: string;
+    title: string;
+    series_type: string;
+    image_url: string | null;
+    festival?: {
+      id?: string | null;
+      name?: string | null;
+    } | null;
+  } | null;
   venue: {
     id: number;
     name: string;
@@ -90,6 +109,12 @@ export async function GET(
     start_time,
     end_time,
     series_id,
+    image_url,
+    tags,
+    source_url,
+    ticket_url,
+    category_id,
+    series:series!events_series_id_fkey(id, slug, title, series_type, image_url, festival:festivals!series_festival_id_fkey(id, name)),
     venue:places(id, name, slug, neighborhood, city, nearest_marta_station, marta_walk_minutes, marta_lines, beltline_adjacent, beltline_segment, parking_type, parking_free, transit_score)
   `;
 
@@ -120,6 +145,9 @@ export async function GET(
   const directEvents = (directEventsData || []) as SessionRow[];
 
   const rawSessions: SessionRow[] = [...programEvents];
+  const screeningsFromTables = await fetchScreeningBundleFromTables(supabase as any, {
+    festivalId: festival.id,
+  });
 
   // Filter by portal city if applicable
   const sessions = filterByPortalCity(rawSessions, portalCity, {
@@ -160,6 +188,10 @@ export async function GET(
     {
       festival: festivalData,
       programs: programsWithSessions,
+      screenings:
+        screeningsFromTables && screeningsFromTables.titles.length > 0
+          ? screeningsFromTables
+          : null,
     },
     {
       headers: {

@@ -30,7 +30,6 @@ import type { StageShow } from "@/components/find/StageShowCard";
 const SHOWTIMES_PAYLOAD_CACHE_TTL_MS = 2 * 60 * 1000;
 const SHOWTIMES_PAYLOAD_CACHE_MAX_ENTRIES = 120;
 const SHOWTIMES_CACHE_NAMESPACE = "api:showtimes";
-const SHOWTIMES_EVENT_LIMIT = 1200;
 const SHOWTIMES_META_DATE_LIMIT = 2000;
 const SHOWTIMES_META_LOOKAHEAD_DAYS = 60;
 
@@ -84,6 +83,7 @@ type ShowtimeSeries = {
 
 type ShowtimeEvent = {
   id: number;
+  start_date: string;
   title: string;
   start_time: string | null;
   image_url: string | null;
@@ -91,6 +91,35 @@ type ShowtimeEvent = {
   series_id: string | null;
   venue: ShowtimeVenue | null;
   series: ShowtimeSeries | null;
+};
+
+type StoredScreeningTitle = {
+  id: string;
+  canonical_title: string;
+  slug: string;
+  poster_image_url: string | null;
+  genres: string[] | null;
+  director: string | null;
+  runtime_minutes: number | null;
+  year: number | null;
+  rating: string | null;
+};
+
+type StoredScreeningRun = {
+  id: string;
+  screening_title_id: string;
+  place_id: number | null;
+  source_id: number | null;
+  festival_id: string | null;
+  is_special_event: boolean;
+};
+
+type StoredScreeningTime = {
+  id: string;
+  screening_run_id: string;
+  event_id: number | null;
+  start_date: string;
+  start_time: string | null;
 };
 
 type MusicVenue = {
@@ -210,6 +239,28 @@ function resolveShowsTab(value: string | null): ShowsTab {
     : "film";
 }
 
+// TODO: Remove once screening tables are confirmed present in all environments.
+// All cinema sources are now screening-primary; this guard is defensive scaffolding.
+function isMissingScreeningSchemaError(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  const message =
+    "message" in error && typeof error.message === "string"
+      ? error.message
+      : "";
+  const code =
+    "code" in error && typeof error.code === "string" ? error.code : "";
+
+  return (
+    code === "PGRST205" ||
+    code === "PGRST200" ||
+    code === "42P01" ||
+    code === "42703" ||
+    /screening_/i.test(message) ||
+    /relation .* does not exist/i.test(message) ||
+    /column .* does not exist/i.test(message)
+  );
+}
+
 async function resolveShowsScope(options: ShowsRouteOptions): Promise<{
   portalContext: PortalQueryContext;
   portalCity: string;
@@ -233,6 +284,144 @@ async function resolveShowsScope(options: ShowsRouteOptions): Promise<{
     sourceIds: sourceAccess?.sourceIds ?? [],
     supabase,
   };
+}
+
+async function loadStoredShowtimeEvents(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  options: {
+    dateFrom: string;
+    dateTo: string;
+    portalCity: string;
+    sourceIds: number[];
+    includeChains: boolean;
+    portalId?: string | null;
+  },
+): Promise<ShowtimeEvent[] | null> {
+  const timesResult = await supabase
+    .from("screening_times")
+    .select("id, screening_run_id, event_id, start_date, start_time")
+    .gte("start_date", options.dateFrom)
+    .lte("start_date", options.dateTo)
+    .not("start_time", "is", null)
+    .order("start_date", { ascending: true })
+    .limit(SHOWTIMES_META_DATE_LIMIT);
+
+  if (timesResult.error) {
+    if (isMissingScreeningSchemaError(timesResult.error)) return null;
+    throw timesResult.error;
+  }
+
+  const times = (timesResult.data as StoredScreeningTime[] | null) ?? [];
+  if (times.length === 0) return [];
+
+  const runIds = Array.from(new Set(times.map((time) => time.screening_run_id)));
+  let runsQuery: any = supabase
+    .from("screening_runs")
+    .select("id, screening_title_id, place_id, source_id, festival_id, is_special_event")
+    .in("id", runIds);
+  if (options.sourceIds.length > 0) {
+    runsQuery = runsQuery.in("source_id", options.sourceIds);
+  } else if (options.portalId) {
+    // Portal without explicit federation — scope to portal-owned sources
+    const { data: ownedSources } = await supabase
+      .from("sources")
+      .select("id")
+      .eq("owner_portal_id", options.portalId);
+    const ownedIds = (ownedSources || []).map((r: { id: number }) => r.id);
+    if (ownedIds.length > 0) {
+      runsQuery = runsQuery.in("source_id", ownedIds);
+    }
+  }
+
+  const runsResult = await runsQuery;
+  if (runsResult.error) {
+    if (isMissingScreeningSchemaError(runsResult.error)) return null;
+    throw runsResult.error;
+  }
+
+  const runs = (runsResult.data as StoredScreeningRun[] | null) ?? [];
+  if (runs.length === 0) return [];
+  const runMap = new Map(runs.map((run) => [run.id, run]));
+
+  const titleIds = Array.from(new Set(runs.map((run) => run.screening_title_id)));
+  const titlesResult = await supabase
+    .from("screening_titles")
+    .select("id, canonical_title, slug, poster_image_url, genres, director, runtime_minutes, year, rating")
+    .in("id", titleIds);
+  if (titlesResult.error) {
+    if (isMissingScreeningSchemaError(titlesResult.error)) return null;
+    throw titlesResult.error;
+  }
+  const titleMap = new Map(
+    (((titlesResult.data as StoredScreeningTitle[] | null) ?? [])).map((title) => [
+      title.id,
+      title,
+    ]),
+  );
+
+  const placeIds = Array.from(
+    new Set(
+      runs
+        .map((run) => run.place_id)
+        .filter((placeId): placeId is number => typeof placeId === "number"),
+    ),
+  );
+  const placesResult = placeIds.length
+    ? await supabase
+        .from("places")
+        .select("id, name, slug, neighborhood, city, place_vertical_details(google)")
+        .in("id", placeIds)
+    : { data: [], error: null };
+  if (placesResult.error) {
+    throw placesResult.error;
+  }
+  const placeMap = new Map(
+    (((placesResult.data as ShowtimeVenue[] | null) ?? [])).map((place) => [
+      place.id,
+      place,
+    ]),
+  );
+
+  const events: ShowtimeEvent[] = [];
+  for (const time of times) {
+    const run = runMap.get(time.screening_run_id);
+    const title = run ? titleMap.get(run.screening_title_id) : null;
+    const venue = run?.place_id ? placeMap.get(run.place_id) ?? null : null;
+    if (!run || !title || !venue || !isVenueCityInScope(venue.city, options.portalCity)) {
+      continue;
+    }
+    if (!options.includeChains && isChainCinemaVenue(venue)) {
+      continue;
+    }
+    if (typeof time.event_id !== "number") {
+      continue;
+    }
+    events.push({
+      id: time.event_id,
+      start_date: time.start_date,
+      title: title.canonical_title,
+      start_time: time.start_time,
+      image_url: title.poster_image_url,
+      tags: run.is_special_event ? ["screening"] : ["showtime"],
+      series_id: title.id,
+      venue,
+      series: {
+        id: title.id,
+        slug: title.slug,
+        title: title.canonical_title,
+        image_url: title.poster_image_url,
+        genres: title.genres,
+        director: title.director ?? null,
+        year: title.year ?? null,
+        runtime_minutes: title.runtime_minutes ?? null,
+        rating: title.rating ?? null,
+        festival_id: run.festival_id,
+        festival: null,
+      },
+    });
+  }
+
+  return events;
 }
 
 function buildFilmMap(events: ShowtimeEvent[]) {
@@ -263,7 +452,7 @@ function buildFilmMap(events: ShowtimeEvent[]) {
     if (!venue) continue;
 
     const series = event.series;
-    const groupKey = event.series_id || `title:${normalizeFilmTitle(event.title)}`;
+    const groupKey = normalizeFilmTitle(series?.title || event.title);
     let film = filmMap.get(groupKey);
 
     if (!film) {
@@ -279,6 +468,12 @@ function buildFilmMap(events: ShowtimeEvent[]) {
 
     if (!film.image_url && event.image_url) {
       film.image_url = event.image_url;
+    }
+    if (!film.series_id && event.series_id) {
+      film.series_id = event.series_id;
+    }
+    if (!film.series_slug && series?.slug) {
+      film.series_slug = series.slug;
     }
 
     let theater = film.theaters.get(venue.id);
@@ -302,42 +497,6 @@ function buildFilmMap(events: ShowtimeEvent[]) {
         theater.times.push({ time, event_id: event.id });
       }
     }
-  }
-
-  const seriesByTitle = new Map<string, string>();
-  for (const [key, film] of filmMap) {
-    if (film.series_id) {
-      seriesByTitle.set(normalizeFilmTitle(film.title), key);
-    }
-  }
-
-  for (const [key, film] of filmMap) {
-    if (film.series_id) continue;
-    const seriesKey = seriesByTitle.get(normalizeFilmTitle(film.title));
-    if (!seriesKey || seriesKey === key) continue;
-
-    const target = filmMap.get(seriesKey);
-    if (!target) continue;
-
-    for (const [venueId, theater] of film.theaters) {
-      const existing = target.theaters.get(venueId);
-      if (!existing) {
-        target.theaters.set(venueId, theater);
-        continue;
-      }
-
-      for (const entry of theater.times) {
-        if (!existing.times.some((existingEntry) => existingEntry.time === entry.time)) {
-          existing.times.push(entry);
-        }
-      }
-    }
-
-    if (!target.image_url && film.image_url) {
-      target.image_url = film.image_url;
-    }
-
-    filmMap.delete(key);
   }
 
   return filmMap;
@@ -522,95 +681,41 @@ export async function getShowtimesPayload(
     cacheKey,
     SHOWTIMES_PAYLOAD_CACHE_TTL_MS,
     async () => {
-      let query = supabase
-        .from("events")
-        .select(
-          `
-          id,
-          title,
-          start_time,
-          image_url,
-          tags,
-          series_id,
-          venue:places!events_place_id_fkey(
-            id,
-            name,
-            slug,
-            neighborhood,
-            city,
-            place_vertical_details(google)
-          ),
-          series:series!events_series_id_fkey(
-            id,
-            slug,
-            title,
-            image_url,
-            genres,
-            director,
-            year,
-            runtime_minutes,
-            rating,
-            festival_id,
-            festival:festivals!series_festival_id_fkey(name)
-          )
-        `,
-        )
-        .eq("start_date", date)
-        .eq("category_id", "film")
-        .not("start_time", "is", null)
-        .order("start_time", { ascending: true })
-        .limit(SHOWTIMES_EVENT_LIMIT);
+      const [storedEventsForDate, storedEventsForWindow] = await Promise.all([
+        loadStoredShowtimeEvents(supabase, {
+          dateFrom: date,
+          dateTo: date,
+          portalCity,
+          sourceIds,
+          includeChains,
+          portalId,
+        }),
+        loadStoredShowtimeEvents(supabase, {
+          dateFrom: date,
+          dateTo: addDaysToDateString(date, SHOWTIMES_META_LOOKAHEAD_DAYS),
+          portalCity,
+          sourceIds,
+          includeChains,
+          portalId,
+        }),
+      ]);
 
-      query = applyFeedGate(query);
-      query = applyFederatedPortalScopeToQuery(query, {
-        portalId,
-        publicOnlyWhenNoPortal: true,
-        sourceIds,
-      });
+      if (storedEventsForDate !== null && storedEventsForWindow !== null) {
+        let displayEvents = (special
+          ? storedEventsForDate.filter((event) => !(event.tags || []).includes("showtime"))
+          : storedEventsForDate.filter((event) => (event.tags || []).includes("showtime")));
+        if (theaterFilter) {
+          displayEvents = displayEvents.filter((event) => event.venue?.slug === theaterFilter);
+        }
 
-      const { data, error } = await query;
-      if (error) throw error;
+        const storedFilmMap = buildFilmMap(displayEvents);
+        let urgencyMap: Map<string, { remaining_count: number; first_date: string | null }> | undefined;
 
-      const events = ((data as ShowtimeEvent[] | null) ?? [])
-        .filter((event) => event.venue && isVenueCityInScope(event.venue.city, portalCity));
-
-      const venueFilteredEvents = includeChains
-        ? events
-        : events.filter((event) => !isChainCinemaVenue(event.venue));
-
-      const regularEvents = venueFilteredEvents.filter((event) =>
-        (event.tags || []).includes("showtime"),
-      );
-      const specialEvents = venueFilteredEvents.filter(
-        (event) => !(event.tags || []).includes("showtime"),
-      );
-
-      let displayEvents = special ? specialEvents : regularEvents;
-      if (theaterFilter) {
-        displayEvents = displayEvents.filter((event) => event.venue?.slug === theaterFilter);
-      }
-
-      const filmMap = buildFilmMap(displayEvents);
-      let urgencyMap: Map<string, { remaining_count: number; first_date: string | null }> | undefined;
-
-      if (mode === "by-theater") {
-        const seriesIds = Array.from(filmMap.values())
-          .map((film) => film.series_id)
-          .filter((id): id is string => !!id);
-
-        if (seriesIds.length > 0) {
-          const { data: urgencyRows } = await supabase
-            .from("events")
-            .select("series_id, start_date")
-            .in("series_id", seriesIds)
-            .eq("category_id", "film")
-            .contains("tags", ["showtime"])
-            .gte("start_date", date)
-            .not("start_time", "is", null)
-            .limit(5000);
-
+        if (mode === "by-theater" && !special) {
           urgencyMap = new Map();
-          for (const row of (urgencyRows as Array<{ series_id: string; start_date: string }> | null) ?? []) {
+          for (const row of storedEventsForWindow.filter((event) =>
+            (event.tags || []).includes("showtime"),
+          )) {
             if (!row.series_id) continue;
             const existing = urgencyMap.get(row.series_id);
             if (!existing) {
@@ -620,125 +725,69 @@ export async function getShowtimesPayload(
               });
               continue;
             }
-
             existing.remaining_count += 1;
             if (!existing.first_date || row.start_date < existing.first_date) {
               existing.first_date = row.start_date;
             }
           }
         }
-      }
 
-      const payload: ShowtimesPayload = { date };
-      if (mode === "by-theater") {
-        payload.theaters = toTheatersResponse(filmMap, urgencyMap);
-      } else {
-        payload.films = toFilmsResponse(filmMap);
-      }
-
-      if (!includeMeta) return payload;
-
-      const dateWindowEnd = addDaysToDateString(date, SHOWTIMES_META_LOOKAHEAD_DAYS);
-      let availableDates: string[] = [];
-
-      if (includeChains) {
-        let metaQuery = supabase
-          .from("events")
-          .select("start_date")
-          .eq("category_id", "film")
-          .contains("tags", ["showtime"])
-          .gte("start_date", date)
-          .lte("start_date", dateWindowEnd)
-          .not("start_time", "is", null)
-          .order("start_date", { ascending: true })
-          .limit(SHOWTIMES_META_DATE_LIMIT);
-
-        metaQuery = applyFederatedPortalScopeToQuery(metaQuery, {
-          portalId,
-          publicOnlyWhenNoPortal: true,
-          sourceIds,
-        });
-
-        const { data: dateRows } = await metaQuery;
-        availableDates = [
-          ...new Set(
-            ((dateRows as Array<{ start_date: string }> | null) ?? []).map((row) => row.start_date),
-          ),
-        ];
-      } else {
-        let metaQuery = supabase
-          .from("events")
-          .select(
-            `
-            start_date,
-            venue:places!events_place_id_fkey(name, slug, city)
-            `,
-          )
-          .eq("category_id", "film")
-          .contains("tags", ["showtime"])
-          .gte("start_date", date)
-          .lte("start_date", dateWindowEnd)
-          .not("start_time", "is", null)
-          .order("start_date", { ascending: true })
-          .limit(SHOWTIMES_META_DATE_LIMIT);
-
-        metaQuery = applyFederatedPortalScopeToQuery(metaQuery, {
-          portalId,
-          publicOnlyWhenNoPortal: true,
-          sourceIds,
-        });
-
-        const { data: dateRows } = await metaQuery;
-        availableDates = [
-          ...new Set(
-            (((dateRows as Array<{ start_date: string; venue: ShowtimeVenue | null }> | null) ?? [])
-              .filter((row) =>
-                isVenueCityInScope(row.venue?.city ?? null, portalCity) &&
-                !isChainCinemaVenue(row.venue),
-              )
-              .map((row) => row.start_date)),
-          ),
-        ];
-      }
-
-      const allFilmMap = buildFilmMap(regularEvents);
-      const theaterMap = new Map<number, ShowtimesMeta["available_theaters"][number]>();
-      const filmMetaMap = new Map<string, ShowtimesMeta["available_films"][number]>();
-
-      for (const film of allFilmMap.values()) {
-        const filmKey = film.series_id || `title:${normalizeFilmTitle(film.title)}`;
-        if (!filmMetaMap.has(filmKey)) {
-          filmMetaMap.set(filmKey, {
-            title: film.title,
-            series_id: film.series_id,
-            series_slug: film.series_slug,
-            image_url: film.image_url,
-          });
+        const payload: ShowtimesPayload = { date };
+        if (mode === "by-theater") {
+          payload.theaters = toTheatersResponse(storedFilmMap, urgencyMap);
+        } else {
+          payload.films = toFilmsResponse(storedFilmMap);
         }
 
-        for (const theater of film.theaters.values()) {
-          if (!theaterMap.has(theater.venue_id)) {
-            theaterMap.set(theater.venue_id, {
-              venue_id: theater.venue_id,
-              venue_name: theater.venue_name,
-              venue_slug: theater.venue_slug,
-              neighborhood: theater.neighborhood,
+        if (!includeMeta) {
+          return payload;
+        }
+
+        const regularWindowEvents = storedEventsForWindow.filter((event) =>
+          (event.tags || []).includes("showtime"),
+        );
+        const allFilmMap = buildFilmMap(regularWindowEvents);
+        const theaterMap = new Map<number, ShowtimesMeta["available_theaters"][number]>();
+        const filmMetaMap = new Map<string, ShowtimesMeta["available_films"][number]>();
+
+        for (const film of allFilmMap.values()) {
+          const filmKey = film.series_id || `title:${normalizeFilmTitle(film.title)}`;
+          if (!filmMetaMap.has(filmKey)) {
+            filmMetaMap.set(filmKey, {
+              title: film.title,
+              series_id: film.series_id,
+              series_slug: film.series_slug,
+              image_url: film.image_url,
             });
           }
+          for (const theater of film.theaters.values()) {
+            if (!theaterMap.has(theater.venue_id)) {
+              theaterMap.set(theater.venue_id, {
+                venue_id: theater.venue_id,
+                venue_name: theater.venue_name,
+                venue_slug: theater.venue_slug,
+                neighborhood: theater.neighborhood,
+              });
+            }
+          }
         }
+
+        payload.meta = {
+          available_dates: [...new Set(regularWindowEvents.map((event) => event.start_date))],
+          available_theaters: Array.from(theaterMap.values()).sort((a, b) =>
+            a.venue_name.localeCompare(b.venue_name),
+          ),
+          available_films: Array.from(filmMetaMap.values()).sort((a, b) =>
+            a.title.localeCompare(b.title),
+          ),
+        };
+
+        return payload;
       }
 
-      payload.meta = {
-        available_dates: availableDates,
-        available_theaters: Array.from(theaterMap.values()).sort((a, b) =>
-          a.venue_name.localeCompare(b.venue_name),
-        ),
-        available_films: Array.from(filmMetaMap.values()).sort((a, b) =>
-          a.title.localeCompare(b.title),
-        ),
-      };
-
-      return payload;
+      // All cinema sources are screening-primary — screening tables should
+      // always be populated. Return empty payload as safe fallback.
+      return { date };
     },
     { maxEntries: SHOWTIMES_PAYLOAD_CACHE_MAX_ENTRIES },
   );

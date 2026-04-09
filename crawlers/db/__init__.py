@@ -37,6 +37,7 @@ from db.client import (
     events_support_field_metadata_columns,
     venues_support_location_designator,
     has_event_extractions_table,
+    screenings_support_tables,
     venues_support_destination_details_table,
     events_support_taxonomy_v2_columns,
     # module-level state (needed by scripts that directly access them)
@@ -73,6 +74,8 @@ from db.sources import (
     get_producer_id_for_source,
     create_crawl_log,
     update_crawl_log,
+    cancel_crawl_log,
+    cancel_stale_crawl_logs,
     update_source_last_crawled,
     update_expected_event_count,
     get_sources_due_for_crawl,
@@ -213,6 +216,21 @@ from db.editorial_mentions import (
 # ===== place_occasions.py (formerly venue_occasions.py) =====
 from db.place_occasions import (
     upsert_place_occasion,
+)
+
+# ===== screenings.py =====
+from db.screenings import (
+    build_screening_bundle_from_event_rows,
+    upsert_screening_title,
+    upsert_screening_run,
+    upsert_screening_time,
+    remove_stale_source_screenings,
+    persist_screening_bundle,
+    sync_source_screenings_from_events,
+    derive_run_event_from_screening,
+    sync_run_events_from_screenings,
+    remove_stale_showtime_events,
+    entries_to_event_like_rows,
 )
 
 # ===== volunteer_opportunities.py =====

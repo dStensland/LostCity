@@ -54,6 +54,7 @@ import ActiveContestSection from "./sections/ActiveContestSection";
 import { TodayInAtlantaSection } from "./sections/TodayInAtlantaSection";
 import RegularHangsSection from "./sections/RegularHangsSection";
 import HolidayHero from "./HolidayHero";
+import type { FeedEventData } from "@/components/EventCard";
 import type {
   FeedBlockId,
   CityPulseSectionType,
@@ -176,6 +177,12 @@ interface CityPulseShellProps {
    * directly from SSR HTML. Background refetch fires after staleTime (2 min).
    */
   serverFeedData?: CityPulseResponse | null;
+  /**
+   * Server-side pre-fetched regulars data.
+   * Seeds the ["regulars", portalSlug] React Query cache so
+   * RegularHangsSection renders without a client-side waterfall.
+   */
+  serverRegularsData?: { events: FeedEventData[] } | null;
 }
 
 function FeedError({ onRetry }: { onRetry: () => void }) {
@@ -194,7 +201,7 @@ function FeedError({ onRetry }: { onRetry: () => void }) {
   );
 }
 
-export default function CityPulseShell({ portalSlug, serverHeroUrl, serverFeedData }: CityPulseShellProps) {
+export default function CityPulseShell({ portalSlug, serverHeroUrl, serverFeedData, serverRegularsData }: CityPulseShellProps) {
   const searchParams = useSearchParams();
   const showTimeMachine = searchParams.get("admin") !== null;
   const { user } = useAuth();
@@ -262,10 +269,19 @@ export default function CityPulseShell({ portalSlug, serverHeroUrl, serverFeedDa
     }
   }, []);
 
-  // Pre-fetch regulars in the background after lineup loads.
-  // Warms the ["regulars", portalSlug] cache so RegularHangsSection gets a cache hit.
+  // Seed regulars cache from server-side prefetch.
+  // Eliminates client-side fetch for RegularHangsSection when server provided data.
   useEffect(() => {
-    if (!ENABLE_LINEUP_RECURRING || isLoading || !data) return;
+    if (!serverRegularsData) return;
+    queryClient.setQueryData(["regulars", portalSlug], serverRegularsData);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Background refresh for regulars cache.
+  // With server prefetch seeding the cache above, this is a no-op for staleTime (3 min).
+  // On cache miss (server returned null), fires immediately — no waterfall.
+  useEffect(() => {
+    if (!ENABLE_LINEUP_RECURRING) return;
     queryClient.prefetchQuery({
       queryKey: ["regulars", portalSlug],
       queryFn: async () => {
@@ -284,7 +300,38 @@ export default function CityPulseShell({ portalSlug, serverHeroUrl, serverFeedDa
       staleTime: 3 * 60 * 1000,
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [portalSlug, isLoading, !!data]);
+  }, [portalSlug]);
+
+  // Pre-fetch network feed for TodayInAtlantaSection.
+  // Fires immediately on mount — shares ["network-feed", portalSlug] cache key.
+  useEffect(() => {
+    queryClient.prefetchQuery({
+      queryKey: ["network-feed", portalSlug],
+      queryFn: async () => {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10_000);
+        try {
+          const res = await fetch(
+            `/api/portals/${portalSlug}/network-feed?limit=60`,
+            { signal: controller.signal },
+          );
+          if (!res.ok) throw new Error(`Network feed prefetch failed: ${res.status}`);
+          const data = await res.json();
+          const seenTitles = new Set<string>();
+          return ((data.posts || []) as { title: string }[]).filter((p) => {
+            const norm = p.title.toLowerCase().trim();
+            if (seenTitles.has(norm)) return false;
+            seenTitles.add(norm);
+            return true;
+          });
+        } finally {
+          clearTimeout(timeoutId);
+        }
+      },
+      staleTime: 5 * 60 * 1000,
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [portalSlug]);
 
   // Compute hidden block set and middle section order from feedLayout
   const hiddenBlockSet = useMemo(() => {

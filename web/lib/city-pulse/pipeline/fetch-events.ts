@@ -6,7 +6,7 @@
  * tab mode and per-interest supplemental fetches.
  */
 
-import type { SupabaseClient } from "@supabase/supabase-js";
+import type { PostgrestError, SupabaseClient } from "@supabase/supabase-js";
 import type { FeedEventData } from "@/components/EventCard";
 import type { PipelineContext } from "./resolve-portal";
 import { applyFeedGate } from "@/lib/feed-gate";
@@ -17,12 +17,19 @@ import {
 } from "@/lib/event-feed-health";
 import { suppressEventImagesIfVenueFlagged } from "@/lib/image-quality-suppression";
 import { getOrSetSharedCacheJson } from "@/lib/shared-cache";
+import {
+  annotateCanonicalHorizonEvent,
+  buildHorizonPoolFilter,
+  buildSyntheticFestivalHorizonEvent,
+  getPortalHorizonSourceSlugHints,
+  type HorizonFestivalRow,
+} from "@/lib/city-pulse/horizon-registry";
 
 // ---------------------------------------------------------------------------
 // Shared event SELECT (mirrors the route constant — single source of truth)
 // ---------------------------------------------------------------------------
 
-export const EVENT_SELECT = `
+const EVENT_SELECT_WITH_SERIES_BLURHASH = `
   id, title, start_date, start_time, end_date, end_time,
   is_all_day, is_free, price_min, price_max,
   category:category_id, genres, image_url, featured_blurb,
@@ -30,9 +37,24 @@ export const EVENT_SELECT = `
   importance, on_sale_date, presale_date, early_bird_deadline, sellout_risk,
   ticket_status, ticket_status_checked_at, ticket_url, source_url,
   cost_tier, duration, booking_required, indoor_outdoor, significance, significance_signals,
-  series:series_id(id, frequency, day_of_week, series_type),
+  series:series_id(id, frequency, day_of_week, series_type, image_url, blurhash),
   venue:places(id, name, neighborhood, slug, place_type, location_designator, city, image_url, is_active, place_vertical_details(google))
 `;
+
+const EVENT_SELECT_WITHOUT_SERIES_BLURHASH = `
+  id, title, start_date, start_time, end_date, end_time,
+  is_all_day, is_free, price_min, price_max,
+  category:category_id, genres, image_url, featured_blurb,
+  tags, festival_id, is_tentpole, is_featured, series_id, is_recurring, source_id, organization_id,
+  importance, on_sale_date, presale_date, early_bird_deadline, sellout_risk,
+  ticket_status, ticket_status_checked_at, ticket_url, source_url,
+  cost_tier, duration, booking_required, indoor_outdoor, significance, significance_signals,
+  series:series_id(id, frequency, day_of_week, series_type, image_url),
+  venue:places(id, name, neighborhood, slug, place_type, location_designator, city, image_url, is_active, place_vertical_details(google))
+`;
+
+export const EVENT_SELECT = EVENT_SELECT_WITH_SERIES_BLURHASH;
+export const HORIZON_POOL_FILTER = buildHorizonPoolFilter();
 
 // ---------------------------------------------------------------------------
 // Return types
@@ -46,6 +68,32 @@ export type EventPools = {
   /** Planning horizon events (flagship/major, 7–180 days out) */
   horizonEvents: FeedEventData[];
 };
+
+type QueryResult<T> = {
+  data: T[] | null;
+  error: PostgrestError | null;
+};
+
+function isMissingSeriesBlurhashError(error: PostgrestError | null | undefined): boolean {
+  if (!error || error.code !== "42703") return false;
+  return typeof error.message === "string" && error.message.includes("blurhash");
+}
+
+export async function resolveEventSelectClause(client: SupabaseClient): Promise<string> {
+  const { error } = await client
+    .from("series")
+    .select("blurhash")
+    .limit(1);
+
+  if (isMissingSeriesBlurhashError(error)) {
+    console.warn(
+      "[city-pulse] series.blurhash column missing; using legacy event select",
+    );
+    return EVENT_SELECT_WITHOUT_SERIES_BLURHASH;
+  }
+
+  return EVENT_SELECT_WITH_SERIES_BLURHASH;
+}
 
 // ---------------------------------------------------------------------------
 // Shared helpers
@@ -104,6 +152,19 @@ export function postProcessEvents(raw: FeedEventData[]): FeedEventData[] {
       ),
     ),
   );
+}
+
+function attachSourceSlugs(
+  events: FeedEventData[],
+  sourceSlugById: Map<number, string>,
+): FeedEventData[] {
+  return events.map((event) => {
+    const sourceId = (event as FeedEventData & { source_id?: number | null }).source_id;
+    if (!sourceId) return event;
+    const sourceSlug = sourceSlugById.get(sourceId);
+    if (!sourceSlug) return event;
+    return { ...event, source_slug: sourceSlug };
+  });
 }
 
 /**
@@ -301,9 +362,29 @@ export function buildEventQuery(
   limit: number,
   excludeSourceIds: number[] = [],
 ) {
+  return buildEventQueryWithSelect(
+    portalClient,
+    ctx,
+    start,
+    end,
+    limit,
+    excludeSourceIds,
+    EVENT_SELECT,
+  );
+}
+
+function buildEventQueryWithSelect(
+  portalClient: SupabaseClient,
+  ctx: PipelineContext,
+  start: string,
+  end: string,
+  limit: number,
+  excludeSourceIds: number[],
+  selectClause: string,
+) {
   let q = portalClient
     .from("events")
-    .select(EVENT_SELECT)
+    .select(selectClause)
     .gte("start_date", start)
     .lte("start_date", end)
     .is("canonical_event_id", null)
@@ -335,6 +416,7 @@ export function buildInterestQueries(
   start: string,
   end: string,
   excludeSourceIds: number[] = [],
+  selectClause = EVENT_SELECT,
 ): Array<Promise<{ data: FeedEventData[] | null }>> {
   const PER_INTEREST_LIMIT = 6;
   const queries: Array<Promise<{ data: FeedEventData[] | null }>> = [];
@@ -344,7 +426,7 @@ export function buildInterestQueries(
 
     let q = portalClient
       .from("events")
-      .select(EVENT_SELECT)
+      .select(selectClause)
       .gte("start_date", start)
       .lte("start_date", end)
       .is("canonical_event_id", null)
@@ -411,23 +493,52 @@ export async function fetchEventPools(
   portalClient: SupabaseClient,
   ctx: PipelineContext,
 ): Promise<EventPools> {
+  const eventSelect = await resolveEventSelectClause(portalClient);
+  const canonicalSourceHints = getPortalHorizonSourceSlugHints(ctx.canonicalSlug);
+  const canonicalSourceRows = canonicalSourceHints.length > 0
+    ? (
+        await portalClient
+          .from("sources")
+          .select("id, slug")
+          .in("slug", canonicalSourceHints)
+      ).data ?? []
+    : [];
+  const canonicalSourceIds = canonicalSourceRows
+    .map((row) => row.id)
+    .filter((id): id is number => Number.isInteger(id));
+  const canonicalSourceSlugById = new Map<number, string>(
+    canonicalSourceRows
+      .filter((row): row is { id: number; slug: string } =>
+        Number.isInteger(row.id) && typeof row.slug === "string" && row.slug.length > 0,
+      )
+      .map((row) => [row.id, row.slug]),
+  );
+
   // Look up YMCA source IDs to exclude from the curated feed.
   // The YMCA crawler produces fitness/sports events that are really scheduled
   // classes — not public events worth surfacing in discovery. This is a
   // short-term bridge until the crawler sets is_class=true on these events.
   const ymcaSourceIds = await getYmcaSourceIds(portalClient);
 
-  const [todayResult, eveningResult, trendingResult, horizonResult] =
+  const [todayResult, eveningResult, trendingResult, horizonResult, festivalResult] =
     await Promise.all([
       // Main today pool (up to 300 events covering all categories)
-      buildEventQuery(portalClient, ctx, ctx.today, ctx.today, 300, ymcaSourceIds),
+      buildEventQueryWithSelect(
+        portalClient,
+        ctx,
+        ctx.today,
+        ctx.today,
+        300,
+        ymcaSourceIds,
+        eventSelect,
+      ) as unknown as Promise<QueryResult<FeedEventData>>,
 
       // Evening supplemental: ensures Tonight section has events even when
       // the main today query's LIMIT is filled by morning/afternoon events
       (() => {
         let q = portalClient
           .from("events")
-          .select(EVENT_SELECT)
+          .select(eventSelect)
           .eq("start_date", ctx.today)
           .gte("start_time", "17:00:00")
           .is("canonical_event_id", null)
@@ -448,7 +559,7 @@ export async function fetchEventPools(
       (() => {
         let q = portalClient
           .from("events")
-          .select(EVENT_SELECT)
+          .select(eventSelect)
           .gte("start_date", ctx.today)
           .lte("start_date", ctx.twoWeeksAhead)
           .is("canonical_event_id", null)
@@ -472,21 +583,31 @@ export async function fetchEventPools(
       (() => {
         let q = portalClient
           .from("events")
-          .select(EVENT_SELECT)
-          .or("is_tentpole.eq.true,festival_id.not.is.null,importance.eq.flagship")
+          .select(eventSelect)
+          .or(buildHorizonPoolFilter(canonicalSourceIds))
           .gte("start_date", ctx.horizonStart)
           .lte("start_date", ctx.horizonEnd)
+          .eq("portal_id", ctx.portalData.id)
           .eq("is_active", true)
           .is("canonical_event_id", null)
           .neq("category_id", "tours")
           .not("category_id", "in", "(sports,recreation,support_group,religious)")
           .neq("category_id", "unknown")
           .neq("is_class", true);
-        q = ctx.applyPortalScope(q);
         return q
           .order("importance", { ascending: true })
           .order("start_date", { ascending: true })
           .limit(100);
+      })(),
+
+      (() => {
+        const q = portalClient
+          .from("festivals")
+          .select(
+            "id, name, slug, description, image_url, website, announced_start, announced_end, pending_start, pending_end, free, primary_type, categories, genres, neighborhood, location",
+          )
+          .eq("portal_id", ctx.portalData.id);
+        return q.limit(300);
       })(),
     ]);
 
@@ -503,6 +624,9 @@ export async function fetchEventPools(
   }
   if (horizonResult.error) {
     console.error("[city-pulse] horizonEvents query failed:", horizonResult.error.message, horizonResult.error.code);
+  }
+  if (festivalResult.error) {
+    console.error("[city-pulse] horizon festivals query failed:", festivalResult.error.message, festivalResult.error.code);
   }
 
   // Merge today + evening, deduplicating by ID
@@ -524,11 +648,25 @@ export async function fetchEventPools(
     processedTodayRaw = filterCivicIntent(todayRaw);
   }
 
+  const rawHorizonEvents = flattenGoogleRatings((horizonResult.data || []) as unknown as FeedEventData[]);
+  const annotatedHorizonEvents = attachSourceSlugs(rawHorizonEvents, canonicalSourceSlugById)
+    .map((event) => annotateCanonicalHorizonEvent(event, ctx.canonicalSlug));
+  const syntheticFestivalEvents = ((festivalResult.data || []) as HorizonFestivalRow[])
+    .map((row) => buildSyntheticFestivalHorizonEvent(row, ctx.canonicalSlug))
+    .filter((event): event is FeedEventData => {
+      if (!event) return false;
+      const startDate = event.start_date;
+      return startDate >= ctx.horizonStart && startDate <= ctx.horizonEnd;
+    });
+
   return {
     todayEvents: postProcessEvents(applySourceDiversity(processedTodayRaw)),
     trendingEvents: postProcessEvents((trendingResult.data || []) as unknown as FeedEventData[]),
     horizonEvents: dedupeEventsById(
-      filterOutInactiveVenueEvents(flattenGoogleRatings((horizonResult.data || []) as unknown as FeedEventData[])),
+      filterOutInactiveVenueEvents([
+        ...annotatedHorizonEvents,
+        ...syntheticFestivalEvents,
+      ]),
     ),
   };
 }
@@ -547,12 +685,30 @@ export async function fetchTabEventPool(
   tabStart: string,
   tabEnd: string,
 ): Promise<FeedEventData[]> {
+  const eventSelect = await resolveEventSelectClause(portalClient);
   // Mirror the YMCA exclusion from fetchEventPools so tab views are consistent.
   const ymcaSourceIds = await getYmcaSourceIds(portalClient);
 
   const [baseResult, interestResults] = await Promise.all([
-    buildEventQuery(portalClient, ctx, tabStart, tabEnd, 500, ymcaSourceIds),
-    Promise.all(buildInterestQueries(portalClient, ctx, tabStart, tabEnd, ymcaSourceIds)),
+    buildEventQueryWithSelect(
+      portalClient,
+      ctx,
+      tabStart,
+      tabEnd,
+      500,
+      ymcaSourceIds,
+      eventSelect,
+    ) as unknown as Promise<QueryResult<FeedEventData>>,
+    Promise.all(
+      buildInterestQueries(
+        portalClient,
+        ctx,
+        tabStart,
+        tabEnd,
+        ymcaSourceIds,
+        eventSelect,
+      ),
+    ),
   ]);
 
   const base = (baseResult.data || []) as unknown as FeedEventData[];
@@ -575,10 +731,11 @@ export async function fetchNewFromSpots(
   followedPlaceIds: number[],
 ): Promise<FeedEventData[]> {
   if (!ctx.userId || followedPlaceIds.length === 0) return [];
+  const eventSelect = await resolveEventSelectClause(portalClient);
 
   const { data: followedEvents } = await portalClient
     .from("events")
-    .select(EVENT_SELECT)
+    .select(eventSelect)
     .gte("start_date", ctx.today)
     .lte("start_date", ctx.twoWeeksAhead)
     .in("place_id", followedPlaceIds.slice(0, 50))

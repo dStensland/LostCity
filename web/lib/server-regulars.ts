@@ -55,7 +55,7 @@ export async function getServerRegularsData(
     // Cache miss — fall back to HTTP route (which will populate the cache)
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 8000);
+    const timeout = setTimeout(() => controller.abort("server-regulars-timeout"), 8000);
 
     const res = await fetch(
       `${baseUrl}/api/regulars?portal=${encodeURIComponent(portalSlug)}`,

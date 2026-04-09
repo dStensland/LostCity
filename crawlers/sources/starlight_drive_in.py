@@ -15,8 +15,14 @@ from datetime import datetime, timedelta
 
 from playwright.sync_api import sync_playwright
 
-from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event, remove_stale_source_events
-from dedupe import generate_content_hash
+from db import (
+    get_or_create_place,
+    persist_screening_bundle,
+    sync_run_events_from_screenings,
+    remove_stale_showtime_events,
+    build_screening_bundle_from_event_rows,
+    entries_to_event_like_rows,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -123,7 +129,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     total_found = 0
     total_new = 0
     total_updated = 0
-    seen_hashes: set[str] = set()
+    all_entries: list[dict] = []
 
     try:
         with sync_playwright() as p:
@@ -186,69 +192,48 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             continue
 
                         total_found += 1
-                        content_hash = generate_content_hash(
-                            title, "Starlight Drive-In Theatre", f"{date_str}|{start_time}"
-                        )
-                        seen_hashes.add(content_hash)
-
                         ticket_url = f"{BASE_URL}{movie_url}" if movie_url else None
-
                         event_url = ticket_url or EVENTS_URL
 
-
-
-                        event_record = {
-                            "source_id": source_id,
-                            "place_id": venue_id,
+                        all_entries.append({
                             "title": title,
-                            "description": None,
                             "start_date": date_str,
                             "start_time": start_time,
-                            "end_date": None,
-                            "end_time": None,
-                            "is_all_day": False,
-                            "category": "film",
-                            "subcategory": "drive_in",
-                            "tags": ["film", "cinema", "drive-in", "outdoor", "showtime", "starlight-drive-in", "independent"],
-                            "price_min": None,
-                            "price_max": None,
-                            "price_note": None,
-                            "is_free": False,
+                            "image_url": image_url,
                             "source_url": event_url,
                             "ticket_url": ticket_url,
-                            "image_url": image_url,
-                            "raw_text": None,
-                            "extraction_confidence": 0.90,
-                            "is_recurring": False,
-                            "recurrence_rule": None,
-                            "content_hash": content_hash,
-                        }
-
-                        existing = find_event_by_hash(content_hash)
-                        if existing:
-                            smart_update_existing_event(existing, event_record)
-                            total_updated += 1
-                            continue
-
-                        series_hint = {
-                            "series_type": "film",
-                            "series_title": title,
-                        }
-
-                        try:
-                            insert_event(event_record, series_hint=series_hint)
-                            total_new += 1
-                            logger.info(f"  Added: {title} on {date_str} at {start_time}")
-                        except Exception as e:
-                            logger.error(f"  Failed to insert: {e}")
+                            "description": None,
+                            "tags": ["film", "cinema", "drive-in", "outdoor", "showtime", "starlight-drive-in", "independent"],
+                            "source_id": source_id,
+                            "place_id": venue_id,
+                        })
+                        logger.info(f"  Queued: {title} on {date_str} at {start_time}")
 
             browser.close()
 
-        # Remove stale showtimes
-        if seen_hashes:
-            stale_removed = remove_stale_source_events(source_id, seen_hashes)
-            if stale_removed:
-                logger.info(f"Removed {stale_removed} stale showtimes no longer on schedule")
+        # --- Screening-primary persistence ---
+        source_slug = source.get("slug", "starlight-drive-in")
+
+        event_like_rows = entries_to_event_like_rows(all_entries)
+
+        bundle = build_screening_bundle_from_event_rows(
+            source_id=source_id, source_slug=source_slug, events=event_like_rows,
+        )
+        screening_summary = persist_screening_bundle(bundle)
+        logger.info(
+            "Starlight screening sync: %s titles, %s runs, %s times",
+            screening_summary.get("titles", 0),
+            screening_summary.get("runs", 0),
+            screening_summary.get("times", 0),
+        )
+
+        run_summary = sync_run_events_from_screenings(source_id=source_id, source_slug=source_slug)
+        total_new = run_summary.get("events_created", 0)
+        total_updated = run_summary.get("events_updated", 0)
+
+        run_event_hashes = run_summary.get("run_event_hashes", set())
+        if run_event_hashes:
+            remove_stale_showtime_events(source_id=source_id, run_event_hashes=run_event_hashes)
 
         logger.info(
             f"Starlight Drive-In crawl complete: {total_found} found, {total_new} new, {total_updated} updated"

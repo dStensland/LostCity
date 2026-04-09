@@ -347,9 +347,9 @@ function FeaturedCard({ event, portalSlug }: { event: FeaturedEvent; portalSlug:
         )}
 
         {/* Description preview - use featured_blurb if available */}
-        {(event.featured_blurb || event.description) && (
+        {event.featured_blurb && (
           <p className="text-xs text-[var(--soft)] line-clamp-2 leading-relaxed mb-3">
-            <LinkifyText text={event.featured_blurb || event.description || ""} />
+            <LinkifyText text={event.featured_blurb} />
           </p>
         )}
 

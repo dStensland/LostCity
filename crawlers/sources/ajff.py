@@ -16,14 +16,14 @@ import requests
 from bs4 import BeautifulSoup
 
 from db import (
-    find_event_by_hash,
     get_or_create_place,
     get_or_create_virtual_venue,
-    insert_event,
-    remove_stale_source_events,
-    smart_update_existing_event,
+    persist_screening_bundle,
+    sync_run_events_from_screenings,
+    remove_stale_showtime_events,
+    build_screening_bundle_from_event_rows,
+    entries_to_event_like_rows,
 )
-from dedupe import generate_content_hash
 from utils import slugify
 
 logger = logging.getLogger(__name__)
@@ -462,8 +462,6 @@ def _build_event_record(
         start_date, end_date = _normalize_ongoing_dates(
             original_start_date, end_date, today_iso
         )
-        hash_basis = f"{original_start_date or ''}|{end_date or ''}"
-        content_hash = generate_content_hash(title, "Online / Virtual Event", hash_basis)
         tags.append("virtual-cinema")
         place_data = None
         start_time = None
@@ -476,9 +474,6 @@ def _build_event_record(
         space = _entity_from_relationship(item, "field_space", included)
         venue = _entity_from_relationship(space, "field_venue", included)
         place_data = _build_venue_data(space, venue)
-        venue_name = place_data["name"]
-        hash_basis = f"{start_date or ''}|{start_time or ''}"
-        content_hash = generate_content_hash(title, venue_name, hash_basis)
         is_all_day = False
 
     return {
@@ -515,7 +510,6 @@ def _build_event_record(
         "extraction_confidence": 0.95,
         "is_recurring": False,
         "recurrence_rule": None,
-        "content_hash": content_hash,
         "is_virtual": is_virtual,
         "venue_data": place_data,
     }
@@ -558,11 +552,6 @@ def _build_tentpole_event_record(
     source_url = _build_web_url((attrs.get("path") or {}).get("alias") or attrs.get("field_path")) or f"{BASE_URL}{LISTING_PATH}"
     ticket_url = f"{BASE_URL}{LISTING_PATH}"
     image_url = _image_url_from_entity(hero, included)
-    content_hash = generate_content_hash(
-        title,
-        FESTIVAL_VENUE["name"],
-        f"{original_start_date}|{original_end_date}",
-    )
 
     price_note = None
     if teaser:
@@ -594,7 +583,6 @@ def _build_tentpole_event_record(
         "extraction_confidence": 0.95,
         "is_recurring": False,
         "recurrence_rule": None,
-        "content_hash": content_hash,
         "venue_data": FESTIVAL_VENUE,
     }
 
@@ -602,10 +590,7 @@ def _build_tentpole_event_record(
 def crawl(source: dict) -> tuple[int, int, int]:
     """Crawl AJFF screenings from the current festival series API."""
     source_id = source["id"]
-    events_found = 0
-    events_new = 0
-    events_updated = 0
-    seen_hashes: set[str] = set()
+    all_entries: list[dict] = []
     today_iso = date.today().isoformat()
 
     try:
@@ -625,21 +610,10 @@ def crawl(source: dict) -> tuple[int, int, int]:
             festival_payload,
             today_iso=today_iso,
         )
-        tentpole_hash = tentpole_record["content_hash"]
-        seen_hashes.add(tentpole_hash)
-        events_found += 1
-
         festival_venue_id = get_or_create_place(tentpole_record.pop("venue_data"))
         tentpole_record["source_id"] = source_id
-        tentpole_record["venue_id"] = festival_venue_id
-
-        existing = find_event_by_hash(tentpole_hash)
-        if existing:
-            smart_update_existing_event(existing, tentpole_record)
-            events_updated += 1
-        else:
-            insert_event(tentpole_record)
-            events_new += 1
+        tentpole_record["place_id"] = festival_venue_id
+        all_entries.append(tentpole_record)
 
         physical_items, physical_included = _fetch_happenings(
             session,
@@ -664,10 +638,6 @@ def crawl(source: dict) -> tuple[int, int, int]:
             if not event_record:
                 continue
 
-            content_hash = event_record["content_hash"]
-            seen_hashes.add(content_hash)
-            events_found += 1
-
             place_data = event_record.pop("venue_data")
             cache_key = place_data["slug"]
             venue_id = venue_cache.get(cache_key)
@@ -677,55 +647,68 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             event_record.pop("is_virtual", None)
             event_record["source_id"] = source_id
-            event_record["venue_id"] = venue_id
-
-            existing = find_event_by_hash(content_hash)
-            if existing:
-                smart_update_existing_event(existing, event_record)
-                events_updated += 1
-                continue
-
-            insert_event(event_record)
-            events_new += 1
+            event_record["place_id"] = venue_id
+            all_entries.append(event_record)
 
         for item, included in [(entry, virtual_included) for entry in virtual_items]:
             event_record = _build_event_record(item, included, today_iso=today_iso)
             if not event_record:
                 continue
 
-            content_hash = event_record["content_hash"]
-            seen_hashes.add(content_hash)
-            events_found += 1
-
             event_record.pop("venue_data", None)
             event_record.pop("is_virtual", None)
             if virtual_venue_id is None:
                 virtual_venue_id = get_or_create_virtual_venue()
             event_record["source_id"] = source_id
-            event_record["venue_id"] = virtual_venue_id
+            event_record["place_id"] = virtual_venue_id
+            all_entries.append(event_record)
 
-            existing = find_event_by_hash(content_hash)
-            if existing:
-                smart_update_existing_event(existing, event_record)
-                events_updated += 1
-                continue
+        # --- Screening-primary persistence ---
+        total_found = len(all_entries)
+        source_slug = source.get("slug", "ajff")
 
-            insert_event(event_record)
-            events_new += 1
+        event_like_rows = entries_to_event_like_rows(all_entries)
+        bundle = build_screening_bundle_from_event_rows(
+            source_id=source_id,
+            source_slug=source_slug,
+            events=event_like_rows,
+        )
+        screening_summary = persist_screening_bundle(bundle)
+        logger.info(
+            "AJFF screening sync: %s titles, %s runs, %s times",
+            screening_summary.get("titles", 0),
+            screening_summary.get("runs", 0),
+            screening_summary.get("times", 0),
+        )
 
-        if seen_hashes:
-            stale_removed = remove_stale_source_events(source_id, seen_hashes)
-            if stale_removed:
-                logger.info("Removed %s stale AJFF events", stale_removed)
+        run_summary = sync_run_events_from_screenings(
+            source_id=source_id,
+            source_slug=source_slug,
+        )
+        total_new = run_summary.get("events_created", 0)
+        total_updated = run_summary.get("events_updated", 0)
+        logger.info(
+            "AJFF run events: %s created, %s updated, %s times linked",
+            total_new, total_updated, run_summary.get("times_linked", 0),
+        )
+
+        run_event_hashes = run_summary.get("run_event_hashes", set())
+        if run_event_hashes:
+            cleanup = remove_stale_showtime_events(
+                source_id=source_id,
+                run_event_hashes=run_event_hashes,
+            )
+            if cleanup.get("deactivated") or cleanup.get("deleted"):
+                logger.info("AJFF stale showtime cleanup: %s", cleanup)
 
         logger.info(
-            "AJFF crawl complete: %s found, %s new, %s updated",
-            events_found,
-            events_new,
-            events_updated,
+            "AJFF crawl complete: %s found, %s new run events, %s updated",
+            total_found,
+            total_new,
+            total_updated,
         )
     except Exception as exc:
         logger.error("Failed to crawl AJFF: %s", exc)
         raise
 
-    return events_found, events_new, events_updated
+    return total_found, total_new, total_updated

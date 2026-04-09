@@ -9,17 +9,20 @@ import re
 import logging
 from datetime import datetime, timedelta
 from typing import Optional
+from urllib.parse import urljoin
 
 from playwright.sync_api import sync_playwright, Page
+from bs4 import BeautifulSoup
 
 from db import (
     get_or_create_place,
-    insert_event,
-    find_event_by_hash,
-    smart_update_existing_event,
+    persist_screening_bundle,
+    sync_run_events_from_screenings,
+    remove_stale_showtime_events,
+    build_screening_bundle_from_event_rows,
+    entries_to_event_like_rows,
 )
-from dedupe import generate_content_hash
-from utils import extract_images_from_page
+from utils import extract_image_url, extract_images_from_page, fetch_page
 
 logger = logging.getLogger(__name__)
 
@@ -124,15 +127,92 @@ def _build_showtime_description(title: str, rating_duration: str, director: str)
     return " ".join(part for part in parts if part)
 
 
+def _normalize_movie_title_key(title: str) -> str:
+    return re.sub(r"\s+", " ", (title or "").strip().lower())
+
+
+def extract_movie_detail_links(page: Page) -> dict[str, str]:
+    """Read movie detail links from the Landmark Midtown theatre page."""
+    movie_links: dict[str, str] = {}
+    for anchor in page.query_selector_all("a[href*='/movies/']"):
+        try:
+            href = (anchor.get_attribute("href") or "").strip()
+            if not href:
+                continue
+            text = (anchor.inner_text() or "").strip()
+            if not text:
+                continue
+            title = next(
+                (line.strip() for line in text.splitlines() if line.strip()),
+                "",
+            )
+            if not title:
+                continue
+            movie_links[_normalize_movie_title_key(title)] = urljoin(BASE_URL, href)
+        except Exception:
+            continue
+    return movie_links
+
+
+def extract_movie_detail_images(movie_url_map: dict[str, str]) -> dict[str, str]:
+    """Fetch poster images from Landmark movie detail pages."""
+    detail_images: dict[str, str] = {}
+    for title_key, detail_url in movie_url_map.items():
+        try:
+            html = fetch_page(detail_url)
+            soup = BeautifulSoup(html, "html.parser")
+            image_url = extract_image_url(soup, base_url=detail_url)
+            if image_url:
+                detail_images[title_key] = image_url
+        except Exception as exc:
+            logger.warning(
+                "Could not fetch Landmark poster image for %s: %s",
+                detail_url,
+                exc,
+            )
+    return detail_images
+
+
+def _merge_movie_maps(
+    *,
+    image_map: dict[str, str],
+    movie_url_map: dict[str, str],
+    detail_image_map: dict[str, str],
+    page: Page,
+) -> tuple[dict[str, str], dict[str, str], dict[str, str]]:
+    """Refresh poster and detail-link maps from the currently visible date page."""
+    page_image_map = extract_images_from_page(page)
+    if page_image_map:
+        image_map.update(page_image_map)
+
+    page_movie_links = extract_movie_detail_links(page)
+    new_movie_links = {
+        title_key: detail_url
+        for title_key, detail_url in page_movie_links.items()
+        if title_key not in movie_url_map
+    }
+    if page_movie_links:
+        movie_url_map.update(page_movie_links)
+    if new_movie_links:
+        detail_image_map.update(extract_movie_detail_images(new_movie_links))
+
+    return image_map, movie_url_map, detail_image_map
+
+
 def extract_movies_for_date(
     page: Page,
     target_date: datetime,
     source_id: int,
     venue_id: int,
     image_map: dict = None,
+    movie_url_map: dict[str, str] | None = None,
+    detail_image_map: dict[str, str] | None = None,
     seen_showtimes: set = None,
-) -> tuple[int, int, int]:
+) -> list[dict]:
     """Extract movies and showtimes for a specific date.
+
+    Returns a list of screening entry dicts (title, date, time, image, etc.)
+    for later bulk persistence via screening tables.
 
     Landmark page structure (text is concatenated without newlines):
     - "Trailer" marker (optional)
@@ -142,15 +222,8 @@ def extract_movies_for_date(
     - Content advisory, Genre, Cast info
     - "Today, January 23" date marker
     - Showtimes concatenated: "1:10PM4:00PM7:00PM10:00PM"
-
-    Args:
-        seen_showtimes: Caller-owned set of (title, date_str, start_time) tuples already
-            processed in this crawl run.  Guards against within-run duplicates when the
-            page's date navigation silently stays on the same day.
     """
-    events_found = 0
-    events_new = 0
-    events_updated = 0
+    entries: list[dict] = []
 
     if seen_showtimes is None:
         seen_showtimes = set()
@@ -299,7 +372,9 @@ def extract_movies_for_date(
             showtimes = sorted(set(showtimes))
 
             # Image lookup (case-insensitive, same for all showtimes of this film)
-            poster_url = next(
+            poster_url = (detail_image_map or {}).get(
+                _normalize_movie_title_key(movie["title"])
+            ) or next(
                 (
                     url
                     for title, url in (image_map or {}).items()
@@ -308,85 +383,41 @@ def extract_movies_for_date(
                 None,
             )
 
-            # Create one event per showtime (matches chain cinema model)
+            # Accumulate screening entries (1 per showtime)
+            movie_detail_url = (movie_url_map or {}).get(
+                _normalize_movie_title_key(movie["title"])
+            )
+
             for start_time in showtimes:
                 # In-process dedup guard: skip if this exact showtime was already
                 # processed in this crawl run (catches silent date-nav failures
                 # where the page stays on the same day's content).
                 showtime_key = (movie["title"], date_str, start_time)
                 if showtime_key in seen_showtimes:
-                    logger.debug(
-                        f"Skipping already-seen showtime: {movie['title']} at {start_time} on {date_str}"
-                    )
                     continue
                 seen_showtimes.add(showtime_key)
 
-                events_found += 1
-
-                # Content hash includes time — each showtime is a distinct event
-                content_hash = generate_content_hash(
-                    movie["title"],
-                    "Landmark Midtown Art Cinema",
-                    f"{date_str}|{start_time}",
-                )
-
-                event_record = {
-                    "source_id": source_id,
-                    "place_id": venue_id,
+                entries.append({
                     "title": movie["title"],
+                    "start_date": date_str,
+                    "start_time": start_time,
+                    "image_url": poster_url,
+                    "source_url": movie_detail_url or SHOWTIMES_URL,
+                    "ticket_url": movie_detail_url,
                     "description": _build_showtime_description(
                         movie["title"],
                         movie["rating_duration"],
                         movie["director"],
                     ),
-                    "start_date": date_str,
-                    "start_time": start_time,
-                    "end_date": None,
-                    "end_time": None,
-                    "is_all_day": False,
-                    "category": "film",
-                    "subcategory": "cinema",
                     "tags": ["film", "cinema", "arthouse", "showtime", "landmark"],
-                    "price_min": None,
-                    "price_max": None,
-                    "price_note": None,
-                    "is_free": False,
-                    "source_url": SHOWTIMES_URL,
-                    "ticket_url": None,
-                    "image_url": poster_url,
-                    "raw_text": None,
-                    "extraction_confidence": 0.90,
-                    "is_recurring": False,
-                    "recurrence_rule": None,
-                    "content_hash": content_hash,
-                }
-
-                existing = find_event_by_hash(content_hash)
-                if existing:
-                    smart_update_existing_event(existing, event_record)
-                    events_updated += 1
-                    continue
-
-                series_hint = {
-                    "series_type": "film",
-                    "series_title": movie["title"],
-                }
-
-                try:
-                    insert_event(event_record, series_hint=series_hint)
-                    events_new += 1
-                    logger.info(
-                        f"Added: {movie['title']} at {start_time} on {date_str}"
-                    )
-                except Exception as e:
-                    logger.error(
-                        f"Failed to insert: {movie['title']} at {start_time}: {e}"
-                    )
+                    "source_id": source_id,
+                    "place_id": venue_id,
+                })
 
     except Exception as e:
         logger.error(f"Error extracting movies: {e}")
 
-    return events_found, events_new, events_updated
+    return entries
 
 
 def select_midtown_location(page: Page) -> bool:
@@ -482,6 +513,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     total_found = 0
     total_new = 0
     total_updated = 0
+    all_entries: list[dict] = []
 
     try:
         with sync_playwright() as p:
@@ -513,35 +545,51 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
                 page.wait_for_timeout(1000)
 
-            # Extract movie poster images from page
-            image_map = extract_images_from_page(page)
+            image_map: dict[str, str] = {}
+            movie_url_map: dict[str, str] = {}
+            detail_image_map: dict[str, str] = {}
+            image_map, movie_url_map, detail_image_map = _merge_movie_maps(
+                image_map=image_map,
+                movie_url_map=movie_url_map,
+                detail_image_map=detail_image_map,
+                page=page,
+            )
             logger.info(f"Extracted {len(image_map)} movie images")
+            logger.info(f"Extracted {len(movie_url_map)} Landmark movie detail links from showtimes page")
+            try:
+                if not movie_url_map:
+                    venue_page = context.new_page()
+                    venue_page.goto(VENUE_PAGE_URL, wait_until="domcontentloaded", timeout=30000)
+                    venue_page.wait_for_timeout(3000)
+                    movie_url_map = extract_movie_detail_links(venue_page)
+                    venue_page.close()
+                    logger.info(f"Extracted {len(movie_url_map)} Landmark movie detail links from venue page fallback")
+                detail_image_map = extract_movie_detail_images(movie_url_map)
+                logger.info(f"Extracted {len(detail_image_map)} Landmark movie detail images")
+            except Exception as exc:
+                logger.warning(f"Could not extract Landmark movie detail links: {exc}")
 
             # Extract today's showtimes (already showing by default)
             logger.info(f"Scraping Today ({today.strftime('%Y-%m-%d')})")
-            found, new, updated = extract_movies_for_date(
+            all_entries.extend(extract_movies_for_date(
                 page,
                 datetime.combine(today, datetime.min.time()),
                 source_id,
                 venue_id,
                 image_map,
+                movie_url_map,
+                detail_image_map,
                 seen_showtimes,
-            )
-            total_found += found
-            total_new += new
-            total_updated += updated
+            ))
 
             # Click through dates for next 7 days
-            # Date buttons show day abbreviation and number (e.g., "Fri 23")
             for day_offset in range(1, 8):
                 target_date = today + timedelta(days=day_offset)
                 day_num = target_date.day
                 date_str = target_date.strftime("%Y-%m-%d")
 
-                # Try to click the date button by day number
                 clicked = False
                 try:
-                    # The date buttons contain just the day number
                     date_btn = page.locator(f"text=/^{day_num}$/").first
                     if date_btn.is_visible(timeout=1500):
                         date_btn.click()
@@ -551,30 +599,78 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     pass
 
                 if clicked:
-                    # Scroll to load content for this date
                     page.evaluate("window.scrollTo(0, 0)")
                     page.wait_for_timeout(500)
                     for _ in range(2):
                         page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
                         page.wait_for_timeout(800)
 
+                    image_map, movie_url_map, detail_image_map = _merge_movie_maps(
+                        image_map=image_map,
+                        movie_url_map=movie_url_map,
+                        detail_image_map=detail_image_map,
+                        page=page,
+                    )
+
                     logger.info(f"Scraping {date_str}")
-                    found, new, updated = extract_movies_for_date(
+                    all_entries.extend(extract_movies_for_date(
                         page,
                         datetime.combine(target_date, datetime.min.time()),
                         source_id,
                         venue_id,
                         image_map,
+                        movie_url_map,
+                        detail_image_map,
                         seen_showtimes,
-                    )
-                    total_found += found
-                    total_new += new
-                    total_updated += updated
+                    ))
 
             browser.close()
 
+        # --- Screening-primary persistence ---
+        total_found = len(all_entries)
+        source_slug = source.get("slug", "landmark-midtown")
+
+        # Build screening bundle from accumulated entries
+        # Convert entries to event-like dicts for build_screening_bundle_from_event_rows
+        event_like_rows = entries_to_event_like_rows(all_entries)
+
+        bundle = build_screening_bundle_from_event_rows(
+            source_id=source_id,
+            source_slug=source_slug,
+            events=event_like_rows,
+        )
+        screening_summary = persist_screening_bundle(bundle)
         logger.info(
-            f"Landmark Midtown crawl complete: {total_found} found, {total_new} new, {total_updated} updated"
+            "Landmark screening sync: %s titles, %s runs, %s times",
+            screening_summary.get("titles", 0),
+            screening_summary.get("runs", 0),
+            screening_summary.get("times", 0),
+        )
+
+        # Derive 1 event per run (for RSVP/save/social-proof backward compat)
+        run_summary = sync_run_events_from_screenings(
+            source_id=source_id,
+            source_slug=source_slug,
+        )
+        total_new = run_summary.get("events_created", 0)
+        total_updated = run_summary.get("events_updated", 0)
+        logger.info(
+            "Landmark run events: %s created, %s updated, %s times linked",
+            total_new, total_updated, run_summary.get("times_linked", 0),
+        )
+
+        # Clean up old per-showtime events
+        run_event_hashes = run_summary.get("run_event_hashes", set())
+        if run_event_hashes:
+            cleanup = remove_stale_showtime_events(
+                source_id=source_id,
+                run_event_hashes=run_event_hashes,
+            )
+            if cleanup.get("deactivated") or cleanup.get("deleted"):
+                logger.info("Stale showtime cleanup: %s", cleanup)
+
+        logger.info(
+            f"Landmark Midtown crawl complete: {total_found} showtimes, {total_new} new run events, {total_updated} updated"
         )
 
     except Exception as e:

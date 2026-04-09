@@ -1,5 +1,9 @@
 import { createClient } from "@/lib/supabase/server";
 import { getLocalDateString } from "@/lib/formats";
+import {
+  fetchScreeningBundleFromTables,
+  type ScreeningBundle,
+} from "@/lib/screenings";
 
 // Type for raw event data from Supabase query
 type RawFestivalEvent = {
@@ -11,9 +15,24 @@ type RawFestivalEvent = {
   start_time: string | null;
   end_time: string | null;
   category: string | null;
+  category_id?: string | null;
   image_url: string | null;
   series_id: string | null;
-  venues: {
+  tags: string[] | null;
+  source_url: string | null;
+  ticket_url: string | null;
+  series?: {
+    id: string;
+    slug: string;
+    title: string;
+    series_type: string;
+    image_url: string | null;
+    festival?: {
+      id?: string | null;
+      name?: string | null;
+    } | null;
+  } | null;
+  venue: {
     id: number;
     name: string;
     slug: string;
@@ -165,7 +184,7 @@ export async function getFestivalEvents(
     image_url,
     series_id,
     is_all_day,
-    venues (
+    venue:places (
       id,
       name,
       slug,
@@ -252,8 +271,22 @@ export async function getFestivalEvents(
     category: event.category,
     image_url: event.image_url,
     series_id: event.series_id,
-    venue: event.venues,
+    venue: event.venue,
   }));
+}
+
+export async function getFestivalScreenings(
+  festivalId: string,
+): Promise<ScreeningBundle | null> {
+  // All cinema sources are screening-primary — screening tables are the source of truth.
+  const supabase = await createClient();
+  const screeningsFromTables = await fetchScreeningBundleFromTables(
+    supabase as any,
+    { festivalId },
+  );
+  return screeningsFromTables && screeningsFromTables.titles.length > 0
+    ? screeningsFromTables
+    : null;
 }
 
 export async function getAllFestivals(portalId?: string): Promise<Festival[]> {

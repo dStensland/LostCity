@@ -12,8 +12,14 @@ from typing import Optional
 
 from playwright.sync_api import sync_playwright
 
-from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
-from dedupe import generate_content_hash
+from db import (
+    get_or_create_place,
+    persist_screening_bundle,
+    sync_run_events_from_screenings,
+    remove_stale_showtime_events,
+    build_screening_bundle_from_event_rows,
+    entries_to_event_like_rows,
+)
 from utils import extract_images_from_page, extract_event_links, find_event_url
 
 logger = logging.getLogger(__name__)
@@ -72,9 +78,7 @@ def parse_date(date_str: str) -> tuple[Optional[str], Optional[str]]:
 def crawl(source: dict) -> tuple[int, int, int]:
     """Crawl Atlanta Film Society events."""
     source_id = source["id"]
-    events_found = 0
-    events_new = 0
-    events_updated = 0
+    all_entries: list[dict] = []
 
     try:
         with sync_playwright() as p:
@@ -149,71 +153,70 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         ):
                             description = desc_line[:300]
 
-                    events_found += 1
-
-                    content_hash = generate_content_hash(
-                        title, "Atlanta Film Society", start_date
-                    )
-
-
-                    # Get specific event URL
-
-
                     event_url = find_event_url(title, event_links, EVENTS_URL)
 
-
-
-                    event_record = {
-                        "source_id": source_id,
-                        "place_id": venue_id,
+                    all_entries.append({
                         "title": title,
-                        "description": description,
                         "start_date": start_date,
                         "start_time": None,
                         "end_date": end_date,
-                        "end_time": None,
-                        "is_all_day": False,
-                        "category": "film",
-                        "subcategory": "screening",
-                        "tags": ["film", "screening", "atlanta-film-society"],
-                        "price_min": None,
-                        "price_max": None,
-                        "price_note": None,
-                        "is_free": False,
-                        "source_url": event_url,
-                        "ticket_url": event_url if event_url != (EVENTS_URL if "EVENTS_URL" in dir() else BASE_URL) else None,
                         "image_url": image_map.get(title),
-                        "raw_text": None,
-                        "extraction_confidence": 0.90,
-                        "is_recurring": False,
-                        "recurrence_rule": None,
-                        "content_hash": content_hash,
-                    }
-
-                    existing = find_event_by_hash(content_hash)
-                    if existing:
-                        smart_update_existing_event(existing, event_record)
-                        events_updated += 1
-                        i += 1
-                        continue
-
-                    try:
-                        insert_event(event_record)
-                        events_new += 1
-                        logger.info(f"Added: {title} on {start_date}")
-                    except Exception as e:
-                        logger.error(f"Failed to insert: {title}: {e}")
+                        "source_url": event_url,
+                        "ticket_url": event_url if event_url != EVENTS_URL else None,
+                        "description": description,
+                        "tags": ["film", "screening", "atlanta-film-society"],
+                        "source_id": source_id,
+                        "place_id": venue_id,
+                    })
 
                 i += 1
 
             browser.close()
 
+        # --- Screening-primary persistence ---
+        total_found = len(all_entries)
+        source_slug = source.get("slug", "atlanta-film-society")
+
+        event_like_rows = entries_to_event_like_rows(all_entries)
+        bundle = build_screening_bundle_from_event_rows(
+            source_id=source_id,
+            source_slug=source_slug,
+            events=event_like_rows,
+        )
+        screening_summary = persist_screening_bundle(bundle)
         logger.info(
-            f"Atlanta Film Society crawl complete: {events_found} found, {events_new} new"
+            "Atlanta Film Society screening sync: %s titles, %s runs, %s times",
+            screening_summary.get("titles", 0),
+            screening_summary.get("runs", 0),
+            screening_summary.get("times", 0),
+        )
+
+        run_summary = sync_run_events_from_screenings(
+            source_id=source_id,
+            source_slug=source_slug,
+        )
+        total_new = run_summary.get("events_created", 0)
+        total_updated = run_summary.get("events_updated", 0)
+        logger.info(
+            "Atlanta Film Society run events: %s created, %s updated, %s times linked",
+            total_new, total_updated, run_summary.get("times_linked", 0),
+        )
+
+        run_event_hashes = run_summary.get("run_event_hashes", set())
+        if run_event_hashes:
+            cleanup = remove_stale_showtime_events(
+                source_id=source_id,
+                run_event_hashes=run_event_hashes,
+            )
+            if cleanup.get("deactivated") or cleanup.get("deleted"):
+                logger.info("Stale showtime cleanup: %s", cleanup)
+
+        logger.info(
+            f"Atlanta Film Society crawl complete: {total_found} found, {total_new} new run events, {total_updated} updated"
         )
 
     except Exception as e:
         logger.error(f"Failed to crawl Atlanta Film Society: {e}")
         raise
 
-    return events_found, events_new, events_updated
+    return total_found, total_new, total_updated

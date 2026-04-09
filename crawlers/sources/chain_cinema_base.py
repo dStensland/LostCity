@@ -5,8 +5,8 @@ Provides shared logic for crawling showtime schedules from chain theater website
 Each chain subclass defines its LOCATIONS list and implements extract_showtimes()
 to handle the chain-specific DOM structure.
 
-Pattern: One event per showtime per movie per venue per day.
-Content hash: title + venue_name + date|time for dedup.
+Screening-primary: writes to screening_titles/runs/times tables, then derives
+one event per screening_run for backward compatibility (RSVP, saves, social proof).
 Tags: ["film", "cinema", "chain-cinema", chain_name]
 """
 
@@ -20,8 +20,14 @@ from typing import Optional
 
 from playwright.sync_api import sync_playwright, Page
 
-from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event, remove_stale_source_events
-from dedupe import generate_content_hash
+from db import (
+    get_or_create_place,
+    build_screening_bundle_from_event_rows,
+    persist_screening_bundle,
+    sync_run_events_from_screenings,
+    remove_stale_showtime_events,
+    entries_to_event_like_rows,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -107,7 +113,7 @@ class ChainCinemaCrawler:
         total_updated = 0
         total_load_failures = 0
         load_failures_by_venue: dict[str, int] = {}
-        seen_hashes: set[str] = set()
+        all_entries: list[dict] = []
 
         try:
             with sync_playwright() as p:
@@ -126,12 +132,10 @@ class ChainCinemaCrawler:
 
                     page = context.new_page()
                     try:
-                        found, new, updated, load_failures = self._crawl_location(
-                            page, location, source_id, venue_id, venue_name, seen_hashes
+                        entries, load_failures = self._crawl_location(
+                            page, location, source_id, venue_id, venue_name
                         )
-                        total_found += found
-                        total_new += new
-                        total_updated += updated
+                        all_entries.extend(entries)
                         total_load_failures += load_failures
                         if load_failures:
                             load_failures_by_venue[venue_name] = load_failures
@@ -142,11 +146,51 @@ class ChainCinemaCrawler:
 
                 browser.close()
 
-            # Remove stale events no longer on any schedule
-            if seen_hashes:
-                stale_removed = remove_stale_source_events(source_id, seen_hashes)
-                if stale_removed:
-                    logger.info(f"Removed {stale_removed} stale showtimes no longer on schedule")
+            # --- Screening-primary persistence ---
+            total_found = len(all_entries)
+            source_slug = source.get("slug", self.CHAIN_TAG)
+
+            # Build screening bundle from accumulated entries
+            event_like_rows = entries_to_event_like_rows(
+                all_entries,
+                default_tags=["film", "cinema", "chain-cinema", "showtime", self.CHAIN_TAG],
+            )
+
+            bundle = build_screening_bundle_from_event_rows(
+                source_id=source_id,
+                source_slug=source_slug,
+                events=event_like_rows,
+            )
+            screening_summary = persist_screening_bundle(bundle)
+            logger.info(
+                "%s screening sync: %s titles, %s runs, %s times",
+                self.CHAIN_NAME,
+                screening_summary.get("titles", 0),
+                screening_summary.get("runs", 0),
+                screening_summary.get("times", 0),
+            )
+
+            # Derive 1 event per run (for RSVP/save/social-proof backward compat)
+            run_summary = sync_run_events_from_screenings(
+                source_id=source_id,
+                source_slug=source_slug,
+            )
+            total_new = run_summary.get("events_created", 0)
+            total_updated = run_summary.get("events_updated", 0)
+            logger.info(
+                "%s run events: %s created, %s updated, %s times linked",
+                self.CHAIN_NAME, total_new, total_updated, run_summary.get("times_linked", 0),
+            )
+
+            # Clean up old per-showtime events
+            run_event_hashes = run_summary.get("run_event_hashes", set())
+            if run_event_hashes:
+                cleanup = remove_stale_showtime_events(
+                    source_id=source_id,
+                    run_event_hashes=run_event_hashes,
+                )
+                if cleanup.get("deactivated") or cleanup.get("deleted"):
+                    logger.info("%s stale showtime cleanup: %s", self.CHAIN_NAME, cleanup)
 
             if (
                 total_found == 0
@@ -163,7 +207,7 @@ class ChainCinemaCrawler:
                 )
 
             logger.info(
-                f"{self.CHAIN_NAME} crawl complete: {total_found} found, {total_new} new, {total_updated} updated"
+                f"{self.CHAIN_NAME} crawl complete: {total_found} showtimes, {total_new} new run events, {total_updated} updated"
             )
 
         except Exception as e:
@@ -179,19 +223,21 @@ class ChainCinemaCrawler:
         source_id: int,
         venue_id: int,
         venue_name: str,
-        seen_hashes: set[str],
-    ) -> tuple[int, int, int, int]:
-        """Crawl one location across multiple dates."""
-        found = 0
-        new = 0
-        updated = 0
+    ) -> tuple[list[dict], int]:
+        """Crawl one location across multiple dates.
+
+        Returns (entries, load_failures) where entries is a list of screening
+        entry dicts for bulk persistence.
+        """
+        entries: list[dict] = []
         load_failures = 0
+        seen_showtimes: set[tuple] = set()
         probe_days = self.get_probe_days_for_location(location)
 
         today = datetime.now().date()
 
         for day_offset in range(self.DAYS_AHEAD):
-            if probe_days and day_offset >= probe_days and found == 0:
+            if probe_days and day_offset >= probe_days and not entries:
                 logger.info(
                     "  %s: no showtimes in first %s day(s); skipping remaining days",
                     venue_name,
@@ -228,60 +274,22 @@ class ChainCinemaCrawler:
                     image_url = movie.get("image_url")
 
                     for start_time in times:
-                        content_hash = generate_content_hash(
-                            title, venue_name, f"{date_str}|{start_time}"
-                        )
-                        # Skip duplicate schedule rows within the same crawl run.
-                        if content_hash in seen_hashes:
+                        showtime_key = (title, date_str, start_time)
+                        if showtime_key in seen_showtimes:
                             continue
-                        seen_hashes.add(content_hash)
-                        found += 1
+                        seen_showtimes.add(showtime_key)
 
-
-                        event_record = {
-                            "source_id": source_id,
-                            "place_id": venue_id,
+                        entries.append({
                             "title": title,
-                            "description": None,
                             "start_date": date_str,
                             "start_time": start_time,
-                            "end_date": None,
-                            "end_time": None,
-                            "is_all_day": False,
-                            "category": "film",
-                            "subcategory": "cinema",
-                            "tags": ["film", "cinema", "chain-cinema", "showtime", self.CHAIN_TAG],
-                            "price_min": None,
-                            "price_max": None,
-                            "price_note": None,
-                            "is_free": False,
+                            "image_url": image_url,
                             "source_url": url,
                             "ticket_url": None,
-                            "image_url": image_url,
-                            "raw_text": None,
-                            "extraction_confidence": 0.85,
-                            "is_recurring": False,
-                            "recurrence_rule": None,
-                            "content_hash": content_hash,
-                        }
-
-                        existing = find_event_by_hash(content_hash)
-                        if existing:
-                            smart_update_existing_event(existing, event_record)
-                            updated += 1
-                            continue
-
-                        series_hint = {
-                            "series_type": "film",
-                            "series_title": title,
-                        }
-
-                        try:
-                            insert_event(event_record, series_hint=series_hint)
-                            new += 1
-                            logger.info(f"    Added: {title} at {start_time}")
-                        except Exception as e:
-                            logger.error(f"    Failed to insert {title}: {e}")
+                            "tags": ["film", "cinema", "chain-cinema", "showtime", self.CHAIN_TAG],
+                            "source_id": source_id,
+                            "place_id": venue_id,
+                        })
 
                 logger.info(f"  {venue_name} {date_str}: {len(movies)} movies found")
 
@@ -290,4 +298,4 @@ class ChainCinemaCrawler:
                 load_failures += 1
                 continue
 
-        return found, new, updated, load_failures
+        return entries, load_failures

@@ -182,8 +182,14 @@ def test_build_screening_event_record_shapes_session_event():
     assert record["place_id"] == 902
 
 
-def test_crawl_inserts_tentpole_and_screenings_and_cleans_up_stale_rows():
+def test_crawl_accumulates_entries_and_runs_screening_primary_pipeline():
     collection_events = parse_eventbrite_collection(EVENTBRITE_COLLECTION_HTML)
+    run_summary = {
+        "events_created": 3,
+        "events_updated": 0,
+        "times_linked": 3,
+        "run_event_hashes": set(),
+    }
     with patch(
         "sources.african_film_festival_atlanta._fetch_html",
         side_effect=[SUBMISSIONS_HTML, ANNOUNCEMENT_HTML, EVENTBRITE_COLLECTION_HTML],
@@ -193,21 +199,32 @@ def test_crawl_inserts_tentpole_and_screenings_and_cleans_up_stale_rows():
             side_effect=[901, 902, 903],
         ):
             with patch(
-                "sources.african_film_festival_atlanta.find_event_by_hash",
-                return_value=None,
+                "sources.african_film_festival_atlanta.entries_to_event_like_rows",
+                return_value=[],
             ):
-                with patch("sources.african_film_festival_atlanta.insert_event") as insert_event:
+                with patch(
+                    "sources.african_film_festival_atlanta.build_screening_bundle_from_event_rows",
+                    return_value={},
+                ):
                     with patch(
-                        "sources.african_film_festival_atlanta.remove_stale_source_events",
-                        return_value=0,
-                    ) as stale_cleanup:
-                        found, new, updated = crawl(
-                            {"id": 55, "slug": "african-film-festival-atlanta"}
-                        )
+                        "sources.african_film_festival_atlanta.persist_screening_bundle",
+                        return_value={"titles": 2, "runs": 3, "times": 3},
+                    ):
+                        with patch(
+                            "sources.african_film_festival_atlanta.sync_run_events_from_screenings",
+                            return_value=run_summary,
+                        ) as sync_mock:
+                            with patch(
+                                "sources.african_film_festival_atlanta.remove_stale_showtime_events",
+                            ) as stale_mock:
+                                found, new, updated = crawl(
+                                    {"id": 55, "slug": "african-film-festival-atlanta"}
+                                )
 
     assert len(collection_events) == 2
-    assert found == 3
+    assert found == 3  # 1 tentpole + 2 screenings
     assert new == 3
     assert updated == 0
-    assert insert_event.call_count == 3
-    stale_cleanup.assert_called_once()
+    sync_mock.assert_called_once_with(source_id=55, source_slug="african-film-festival-atlanta")
+    # run_event_hashes is empty set, so stale cleanup should not be called
+    stale_mock.assert_not_called()

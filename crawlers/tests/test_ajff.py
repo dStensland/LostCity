@@ -1,4 +1,3 @@
-from dedupe import generate_content_hash
 from sources.ajff import (
     _build_event_record,
     _build_tentpole_event_record,
@@ -112,11 +111,6 @@ def test_build_event_record_parses_physical_screening():
     assert record["image_url"].endswith("/film-abortion.png")
     assert "Q&A component" in record["description"]
     assert record["price_note"] == "Sold out"
-    assert record["content_hash"] == generate_content_hash(
-        "Abortion in the Holy Land",
-        "The Springs Cinema & Taphouse - Auditorium 1",
-        "2026-03-12|19:30",
-    )
 
 
 def test_build_event_record_parses_virtual_screening_window():
@@ -172,11 +166,6 @@ def test_build_event_record_parses_virtual_screening_window():
     assert "Streaming window" in record["description"]
     assert "Georgia" in record["price_note"]
     assert "virtual-cinema" in record["tags"]
-    assert record["content_hash"] == generate_content_hash(
-        "2026 Streaming Pass",
-        "Online / Virtual Event",
-        "2026-03-06|2026-03-15",
-    )
 
 
 def test_build_tentpole_event_record_parses_festival_series_payload():
@@ -267,8 +256,3 @@ def test_build_tentpole_event_record_parses_festival_series_payload():
     description = record["description"].lower()
     assert "festival returns to theaters and streaming" in description
     assert "streaming across metro atlanta" in description
-    assert record["content_hash"] == generate_content_hash(
-        "2026 Annual Festival",
-        "Atlanta Jewish Film Festival",
-        "2026-02-18|2026-03-15",
-    )
