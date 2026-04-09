@@ -869,7 +869,7 @@ function EventCards({
 
       {/* Cards container with carousel enhancements */}
       <div
-        className={isCarousel ? "relative -mx-4 group/carousel" : "relative"}
+        className={isCarousel ? "relative -mx-4 group/carousel mask-fade-x" : "relative"}
       >
         {/* Scroll buttons for desktop - appear on hover */}
         {isCarousel && canScrollLeft && (

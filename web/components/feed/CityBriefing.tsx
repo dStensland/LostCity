@@ -16,14 +16,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import SmartImage from "@/components/SmartImage";
+import WarpedNoiseBackground from "@/components/ambient/WarpedNoiseBackground";
 import {
   ArrowRight,
-  Sun,
-  Cloud,
-  CloudRain,
-  CloudLightning,
-  Snowflake,
-  Wind,
   Coffee,
   ForkKnife,
   Barbell,
@@ -53,7 +48,6 @@ import type {
   TextTreatment,
   QuickLink,
 } from "@/lib/city-pulse/types";
-import { formatTemperature, getWeatherIconName, type ForecastDay, type WeatherData } from "@/lib/weather-utils";
 
 import { SignalStrip } from "./SignalStrip";
 import { SummaryLine } from "./SummaryLine";
@@ -217,30 +211,6 @@ function getTreatmentStyle(treatment: TextTreatment): TreatmentStyle {
   }
 }
 
-// ── Weather icon ──────────────────────────────────────────────────────────────
-
-function WeatherIcon({ icon, className }: { icon: string; className?: string }) {
-  const name = getWeatherIconName(icon);
-  const cls = className || "w-4 h-4";
-  switch (name) {
-    case "clear":
-      return <Sun weight="duotone" className={cls} />;
-    case "partly-cloudy":
-    case "cloudy":
-      return <Cloud weight="duotone" className={cls} />;
-    case "rain":
-      return <CloudRain weight="duotone" className={cls} />;
-    case "thunderstorm":
-      return <CloudLightning weight="duotone" className={cls} />;
-    case "snow":
-      return <Snowflake weight="duotone" className={cls} />;
-    case "mist":
-      return <Wind weight="duotone" className={cls} />;
-    default:
-      return <Sun weight="duotone" className={cls} />;
-  }
-}
-
 // ── Hero quick links ──────────────────────────────────────────────────────────
 
 function HeroQuickLinks({
@@ -306,136 +276,6 @@ interface LayoutProps {
   categoryCounts?: { today: Record<string, number> } | null;
 }
 
-// ── Weather pill (shared across variants) ────────────────────────────────────
-
-function WeatherPill({
-  weather,
-  position = "top-right",
-  portalSlug,
-}: {
-  weather: FeedContext["weather"];
-  position?: "top-right" | "top-left" | "inline";
-  portalSlug: string;
-}) {
-  const [open, setOpen] = useState(false);
-  const [forecast, setForecast] = useState<ForecastDay[] | null>(null);
-  const ref = useRef<HTMLDivElement>(null);
-
-  // Fetch forecast on first open
-  useEffect(() => {
-    if (!open || forecast) return;
-    const controller = new AbortController();
-    fetch(`/api/portals/${portalSlug}/weather`, { signal: controller.signal })
-      .then((r) => r.json())
-      .then((d) => {
-        if (!controller.signal.aborted && d.forecast) {
-          setForecast(d.forecast);
-        }
-      })
-      .catch(() => {});
-    return () => controller.abort();
-  }, [open, forecast, portalSlug]);
-
-  // Close on click outside
-  useEffect(() => {
-    if (!open) return;
-    const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [open]);
-
-  if (!weather) return null;
-
-  const posClass =
-    position === "top-right"
-      ? "absolute top-4 right-4 z-20"
-      : position === "top-left"
-        ? "absolute top-4 right-4 z-20"
-        : "z-20";
-
-  const condition = weather.condition.charAt(0).toUpperCase() + weather.condition.slice(1);
-
-  return (
-    <div
-      ref={ref}
-      className={`${posClass} animate-fade-in hero-stagger-1`}
-
-    >
-      <button
-        onClick={() => setOpen(!open)}
-        className="flex items-center gap-1.5 rounded-full px-3 py-1.5 bg-black/25 backdrop-blur-md border border-white/10 text-[var(--cream)]/80 hover:bg-black/35 transition-colors cursor-pointer"
-      >
-        <WeatherIcon icon={weather.icon} className="w-3.5 h-3.5" />
-        <span className="font-mono text-xs tracking-wide">
-          {formatTemperature(weather.temperature_f)}
-        </span>
-      </button>
-
-      {/* Forecast popover */}
-      {open && (
-        <div className="absolute top-full right-0 mt-2 w-56 rounded-xl bg-[var(--night)]/95 backdrop-blur-xl border border-[var(--twilight)] shadow-2xl overflow-hidden animate-fade-in z-50">
-          {/* Current */}
-          <div className="px-4 py-3 border-b border-[var(--twilight)]/50">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-mono text-2xs uppercase tracking-wider text-[var(--muted)]">Now</p>
-                <p className="text-2xl font-semibold text-[var(--cream)] tabular-nums">
-                  {formatTemperature(weather.temperature_f)}
-                </p>
-              </div>
-              <div className="text-right">
-                <WeatherIcon icon={weather.icon} className="w-8 h-8 text-[var(--soft)] ml-auto" />
-                <p className="text-xs text-[var(--soft)] mt-0.5">{condition}</p>
-              </div>
-            </div>
-            {"humidity" in weather && "wind_mph" in weather && (
-              <div className="flex gap-3 mt-1.5">
-                <span className="font-mono text-2xs text-[var(--muted)]">
-                  💧 {(weather as WeatherData).humidity}%
-                </span>
-                <span className="font-mono text-2xs text-[var(--muted)]">
-                  💨 {Math.round((weather as WeatherData).wind_mph)} mph
-                </span>
-              </div>
-            )}
-          </div>
-
-          {/* Forecast days */}
-          {forecast && forecast.length > 0 ? (
-            <div className="divide-y divide-[var(--twilight)]/30">
-              {forecast.map((day) => (
-                <div key={day.date} className="flex items-center gap-3 px-4 py-2.5">
-                  <span className="font-mono text-xs text-[var(--soft)] w-16 shrink-0">
-                    {day.day_label}
-                  </span>
-                  <WeatherIcon icon={day.icon} className="w-4 h-4 text-[var(--soft)] shrink-0" />
-                  <span className="font-mono text-xs text-[var(--cream)] tabular-nums">
-                    {Math.round(day.high_f)}°
-                  </span>
-                  <span className="font-mono text-xs text-[var(--muted)] tabular-nums">
-                    {Math.round(day.low_f)}°
-                  </span>
-                  <span className="text-2xs text-[var(--muted)] truncate ml-auto">
-                    {day.condition.charAt(0).toUpperCase() + day.condition.slice(1)}
-                  </span>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="px-4 py-3">
-              <div className="h-3 w-24 rounded bg-[var(--twilight)] animate-pulse" />
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
 // ── Live count badge (shared across variants) ─────────────────────────────────
 
 function LiveBadge({
@@ -494,7 +334,6 @@ function CenteredLayout({
   return (
     <div className="relative z-10 flex flex-col items-center justify-end text-center min-h-[300px] sm:min-h-[480px] px-6 pb-7 pt-5">
       <LiveBadge liveCount={liveCount} portalSlug={portalSlug} />
-      <WeatherPill weather={weather} position="top-right" portalSlug={portalSlug} />
 
       <div className={`mt-auto mb-1 ${treatment.contentClass || ""}`} style={treatment.contentStyle}>
         <div
@@ -545,7 +384,6 @@ function BottomLeftLayout({
   return (
     <div className="relative z-10 flex flex-col justify-end min-h-[300px] sm:min-h-[520px] px-6 sm:px-10 pb-8 pt-5">
       <LiveBadge liveCount={liveCount} portalSlug={portalSlug} />
-      <WeatherPill weather={weather} position="top-right" portalSlug={portalSlug} />
 
       <div className={`mt-auto ${treatment.contentClass || ""}`} style={treatment.contentStyle}>
         <div
@@ -597,8 +435,8 @@ function SplitLayout({
     <div className="relative z-10 flex flex-col min-h-[300px] sm:min-h-[480px] px-6 pb-7 pt-6">
       <LiveBadge liveCount={liveCount} portalSlug={portalSlug} />
 
-      {/* Top: masthead + weather side-by-side (pr-14 clears any floating ToC button) */}
-      <div className="flex items-start justify-between pr-14">
+      {/* Top: masthead (pr-14 clears any floating ToC button) */}
+      <div className="pr-14">
         <div
           className="animate-fade-in hero-stagger-2"
 
@@ -625,7 +463,6 @@ function SplitLayout({
             </p>
           )}
         </div>
-        <WeatherPill weather={weather} position="inline" portalSlug={portalSlug} />
       </div>
 
       <div className="flex-1" />
@@ -652,7 +489,6 @@ function EditorialLayout({
   return (
     <div className="relative z-10 flex flex-col min-h-[300px] sm:min-h-[480px] px-6 pb-7 pt-5">
       <LiveBadge liveCount={liveCount} portalSlug={portalSlug} />
-      <WeatherPill weather={weather} position="top-right" portalSlug={portalSlug} />
 
       <div className="flex-1" />
 
@@ -722,11 +558,6 @@ function FlagshipHeroContent({
   return (
     <div className="relative z-10 flex flex-col justify-end min-h-[300px] sm:min-h-[520px] px-6 sm:px-10 pb-8 pt-5">
       <LiveBadge liveCount={liveCount} portalSlug={portalSlug} />
-      <WeatherPill
-        weather={weather}
-        position="top-right"
-        portalSlug={portalSlug}
-      />
 
       <div className="mt-auto">
         <div
@@ -952,6 +783,16 @@ export default function CityBriefing({
           <div
             className="absolute inset-0"
             style={{ background: "rgba(9,9,11,0.05)", mixBlendMode: "multiply" }}
+          />
+
+          {/* Atmospheric shader layer */}
+          <WarpedNoiseBackground
+            color1={[1.0, 0.42, 0.48]}
+            color2={[0.29, 0.1, 0.26]}
+            intensity={0.25}
+            speed={0.6}
+            resolutionScale={0.4}
+            className="absolute inset-0 mix-blend-soft-light opacity-60"
           />
 
           {/* Gradient overlay */}

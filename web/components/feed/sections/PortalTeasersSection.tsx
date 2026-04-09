@@ -145,7 +145,7 @@ export function PortalTeasersSection({ portalSlug }: PortalTeasersSectionProps) 
       />
 
       {/* Horizontal carousel */}
-      <div className="flex gap-3 overflow-x-auto scrollbar-hide snap-x snap-mandatory pb-1 -mx-4 px-4">
+      <div className="flex gap-3 overflow-x-auto scrollbar-hide snap-x snap-mandatory pb-1 -mx-4 px-4 mask-fade-x">
         {data.headlines.map((item) => (
           <div key={item.portal.slug} className="snap-start">
             <PortalTeaserCard item={item} />

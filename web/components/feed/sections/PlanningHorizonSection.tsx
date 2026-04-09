@@ -134,7 +134,7 @@ export default function PlanningHorizonSection({ section, portalSlug }: Props) {
       )}
 
       {/* Horizontal scroll carousel */}
-      <div ref={carouselRef} className="flex gap-3 overflow-x-auto scrollbar-hide snap-x snap-mandatory pb-2 -mx-4 px-4">
+      <div ref={carouselRef} className="flex gap-3 overflow-x-auto scrollbar-hide snap-x snap-mandatory pb-2 -mx-4 px-4 mask-fade-x">
         {filteredItems.map((item) => {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const rawEvent = item.event as any;

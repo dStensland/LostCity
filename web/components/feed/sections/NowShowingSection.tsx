@@ -65,6 +65,7 @@ type TheaterFilm = {
   festival_name?: string | null;
   remaining_count?: number | null;
   first_date?: string | null;
+  screen_name?: string | null;
   times: ShowtimeEntry[];
 };
 
@@ -342,7 +343,7 @@ export default function NowShowingSection({ portalSlug, embedded = false }: NowS
       )}
 
       {/* Carousel */}
-      <div className="relative">
+      <div className="relative mask-fade-x">
         <div
           ref={scrollRef}
           className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide snap-x snap-mandatory scroll-smooth"
@@ -478,15 +479,55 @@ function TheaterCard({
         </div>
       </Link>
 
-      {/* Film rows */}
+      {/* Film rows — grouped by screen when screen data is present */}
       <div className="pb-2.5">
-        {films.map((film) => (
-          <FilmRow
-            key={film.series_id || film.title}
-            film={film}
-            portalSlug={portalSlug}
-          />
-        ))}
+        {(() => {
+          const hasScreens = films.some((f) => f.screen_name);
+          if (!hasScreens) {
+            return (
+              <>
+                {films.map((film) => (
+                  <FilmRow
+                    key={film.series_id || film.title}
+                    film={film}
+                    portalSlug={portalSlug}
+                  />
+                ))}
+              </>
+            );
+          }
+
+          // Group films by screen
+          const screenGroups = new Map<string, TheaterFilm[]>();
+          for (const film of films) {
+            const screen = film.screen_name || "Other";
+            const group = screenGroups.get(screen) || [];
+            group.push(film);
+            screenGroups.set(screen, group);
+          }
+
+          // Sort screens naturally (Screen 1, Screen 2, ...)
+          const sortedScreens = Array.from(screenGroups.entries()).sort(
+            ([a], [b]) => a.localeCompare(b, undefined, { numeric: true }),
+          );
+
+          return sortedScreens.map(([screen, screenFilms]) => (
+            <div key={screen}>
+              <div className="px-3 pt-1.5 pb-0.5">
+                <span className="font-mono text-2xs font-bold uppercase tracking-wider text-[var(--vibe)]/60">
+                  {screen}
+                </span>
+              </div>
+              {screenFilms.map((film) => (
+                <FilmRow
+                  key={film.series_id || film.title}
+                  film={film}
+                  portalSlug={portalSlug}
+                />
+              ))}
+            </div>
+          ));
+        })()}
         {overflow > 0 && (
           <Link
             href={`/${portalSlug}?spot=${theater.venue_slug}`}
@@ -514,14 +555,6 @@ function FilmRow({
     ? `/${portalSlug}/series/${film.series_slug}`
     : undefined;
 
-  // ── Urgency badge logic ──────────────────────────────────────────
-  const isLastShowing =
-    film.remaining_count != null && film.remaining_count <= 2;
-  // "Opening Night" removed — first_date is MIN(remaining start_date), not
-  // the film's actual premiere. A film showing for 3 weeks gets first_date
-  // === today once prior dates expire, producing false "OPENING NIGHT" labels.
-  const urgencyBadge: "last" | null = isLastShowing ? "last" : null;
-
   // ── Metadata row ─────────────────────────────────────────────────
   const metaParts: string[] = [];
   if (film.rating) metaParts.push(film.rating);
@@ -535,17 +568,9 @@ function FilmRow({
 
   const row = (
     <div className="group px-3 py-1.5 transition-colors hover:bg-[var(--cream)]/[0.03]">
-      {/* Title + urgency badge */}
-      <div className="flex items-start gap-1.5">
-        <span className="text-sm text-[var(--soft)] truncate flex-1 min-w-0 group-hover:text-[var(--cream)] transition-colors">
-          {film.title}
-        </span>
-        {urgencyBadge === "last" && (
-          <span className="shrink-0 text-2xs font-mono font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-[var(--neon-red)]/15 text-[var(--neon-red)]">
-            Last Showing
-          </span>
-        )}
-      </div>
+      <span className="text-sm text-[var(--soft)] truncate group-hover:text-[var(--cream)] transition-colors">
+        {film.title}
+      </span>
 
       {/* Showtime chips */}
       <div className="flex items-center gap-1.5 mt-1 flex-wrap">

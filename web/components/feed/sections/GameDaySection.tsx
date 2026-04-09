@@ -306,7 +306,7 @@ export default function GameDaySection({ portalSlug }: GameDaySectionProps) {
       />
 
       {/* Carousel */}
-      <div className="relative">
+      <div className="relative mask-fade-x">
         <div
           ref={scrollRef}
           className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide snap-x snap-mandatory scroll-smooth"
