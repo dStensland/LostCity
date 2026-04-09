@@ -39,7 +39,8 @@ export default function GoblinRankingItem({
     ? { color: tierColor, glow: `0 0 8px ${tierColor}40, 0 0 20px ${tierColor}15` }
     : isHero ? RANK_NEON.hero : isMid ? RANK_NEON.mid : RANK_NEON.rest;
 
-  const delta = compareRank != null ? compareRank - rank : null;
+  // positive = you rank it higher (better), negative = you rank it lower (worse)
+  const delta = compareRank != null ? rank - compareRank : null;
 
   return (
     <div

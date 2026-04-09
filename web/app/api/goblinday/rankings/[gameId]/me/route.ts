@@ -1,18 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
-import { withAuth } from "@/lib/api-middleware";
+import { withAuthAndParams } from "@/lib/api-middleware";
 import { parseIntParam } from "@/lib/api-utils";
 import { applyRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
-export const GET = withAuth(async (
+export const GET = withAuthAndParams<{ gameId: string }>(async (
   request: NextRequest,
-  { user, serviceClient }
+  { user, serviceClient, params }
 ) => {
-  const url = new URL(request.url);
-  const segments = url.pathname.split("/");
-  const gameIdStr = segments[segments.indexOf("rankings") + 1];
-  const gameId = parseIntParam(gameIdStr);
+  const gameId = parseIntParam(params.gameId);
   if (gameId === null) {
     return NextResponse.json({ error: "Invalid gameId" }, { status: 400 });
   }
@@ -50,9 +47,9 @@ export const GET = withAuth(async (
   return NextResponse.json({ entries: entries || [] });
 });
 
-export const POST = withAuth(async (
+export const POST = withAuthAndParams<{ gameId: string }>(async (
   request: NextRequest,
-  { user, serviceClient }
+  { user, serviceClient, params }
 ) => {
   const rateLimitResult = await applyRateLimit(
     request,
@@ -61,10 +58,7 @@ export const POST = withAuth(async (
   );
   if (rateLimitResult) return rateLimitResult;
 
-  const url = new URL(request.url);
-  const segments = url.pathname.split("/");
-  const gameIdStr = segments[segments.indexOf("rankings") + 1];
-  const gameId = parseIntParam(gameIdStr);
+  const gameId = parseIntParam(params.gameId);
   if (gameId === null) {
     return NextResponse.json({ error: "Invalid gameId" }, { status: 400 });
   }
