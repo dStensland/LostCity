@@ -20,7 +20,7 @@ export default function GoblinRankingGamePage({ gameId }: Props) {
   const { user } = useGoblinUser();
   const router = useRouter();
   const isAuthenticated = user !== null;
-  const { game, myEntries, participants, loading, saving, saved, saveRankings } =
+  const { game, myEntries, participants, loading, saving, saved, saveRankings, addItem, editItem, deleteItem } =
     useRankingGame(gameId, isAuthenticated);
 
   const [activeCategoryIdx, setActiveCategoryIdx] = useState(0);
@@ -180,6 +180,9 @@ export default function GoblinRankingGamePage({ gameId }: Props) {
             categoryId={activeCategory.id}
             isOpen={isOpen ?? false}
             onSave={handleSave}
+            onAddItem={addItem}
+            onEditItem={editItem}
+            onDeleteItem={deleteItem}
           />
         ) : (
           <div className="py-12 text-center">

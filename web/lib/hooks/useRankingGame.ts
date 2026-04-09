@@ -106,6 +106,41 @@ export function useRankingGame(gameId: number, isAuthenticated: boolean) {
     fetchParticipants();
   }, [fetchParticipants]);
 
+  const addItem = useCallback(async (categoryId: number, name: string, subtitle: string | null) => {
+    const res = await fetch(`/api/goblinday/rankings/${gameId}/items`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ category_id: categoryId, name, subtitle }),
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    await fetchGame();
+    return data.item;
+  }, [gameId, fetchGame]);
+
+  const editItem = useCallback(async (itemId: number, name: string, subtitle: string | null) => {
+    const res = await fetch(`/api/goblinday/rankings/${gameId}/items`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ item_id: itemId, name, subtitle }),
+    });
+    if (!res.ok) return false;
+    await fetchGame();
+    return true;
+  }, [gameId, fetchGame]);
+
+  const deleteItem = useCallback(async (itemId: number) => {
+    const res = await fetch(`/api/goblinday/rankings/${gameId}/items`, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ item_id: itemId }),
+    });
+    if (!res.ok) return false;
+    await fetchGame();
+    await fetchParticipants();
+    return true;
+  }, [gameId, fetchGame, fetchParticipants]);
+
   return {
     game: state.game,
     myEntries: state.myEntries,
@@ -115,5 +150,8 @@ export function useRankingGame(gameId: number, isAuthenticated: boolean) {
     saved: state.saved,
     saveRankings,
     refreshParticipants,
+    addItem,
+    editItem,
+    deleteItem,
   };
 }

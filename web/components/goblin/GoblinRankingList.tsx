@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useRef, useEffect } from "react";
 import GoblinRankingItem from "./GoblinRankingItem";
 import type { RankingItem, RankingEntry } from "@/lib/ranking-types";
 
@@ -10,11 +10,177 @@ interface Props {
   categoryId: number;
   isOpen: boolean;
   onSave: (categoryId: number, entries: RankingEntry[]) => void;
+  onAddItem?: (categoryId: number, name: string, subtitle: string | null) => Promise<unknown>;
+  onEditItem?: (itemId: number, name: string, subtitle: string | null) => Promise<boolean>;
+  onDeleteItem?: (itemId: number) => Promise<boolean>;
 }
 
-export default function GoblinRankingList({ items, entries, categoryId, isOpen, onSave }: Props) {
+// ─── Inline add form ──────────────────────────────────────────────────────────
+
+function AddItemForm({
+  onSave,
+  onCancel,
+}: {
+  onSave: (name: string, subtitle: string | null) => Promise<void>;
+  onCancel: () => void;
+}) {
+  const [name, setName] = useState("");
+  const [subtitle, setSubtitle] = useState("");
+  const [saving, setSaving] = useState(false);
+  const nameRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    nameRef.current?.focus();
+  }, []);
+
+  const handleSave = async () => {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    setSaving(true);
+    await onSave(trimmed, subtitle.trim() || null);
+    setSaving(false);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") handleSave();
+    if (e.key === "Escape") onCancel();
+  };
+
+  return (
+    <div className="border border-dashed border-cyan-800/50 bg-zinc-950/30 p-3 space-y-2">
+      <input
+        ref={nameRef}
+        type="text"
+        placeholder="Item name"
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        onKeyDown={handleKeyDown}
+        className="w-full bg-transparent border-b border-cyan-500/50 text-white font-mono text-sm
+          outline-none pb-1 placeholder:text-zinc-700"
+      />
+      <input
+        type="text"
+        placeholder="Subtitle (optional)"
+        value={subtitle}
+        onChange={(e) => setSubtitle(e.target.value)}
+        onKeyDown={handleKeyDown}
+        className="w-full bg-transparent border-b border-zinc-700/50 text-zinc-400 font-mono text-xs
+          outline-none pb-1 placeholder:text-zinc-700"
+      />
+      <div className="flex items-center gap-3 pt-1">
+        <button
+          onClick={handleSave}
+          disabled={!name.trim() || saving}
+          className="font-mono text-2xs uppercase tracking-wider text-cyan-400
+            hover:text-cyan-300 disabled:text-zinc-700 transition-colors"
+        >
+          {saving ? "SAVING..." : "SAVE"}
+        </button>
+        <button
+          onClick={onCancel}
+          className="font-mono text-2xs uppercase tracking-wider text-zinc-600
+            hover:text-zinc-400 transition-colors"
+        >
+          CANCEL
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─── Inline edit form ─────────────────────────────────────────────────────────
+
+function EditItemForm({
+  initialName,
+  initialSubtitle,
+  onSave,
+  onCancel,
+}: {
+  initialName: string;
+  initialSubtitle: string | null;
+  onSave: (name: string, subtitle: string | null) => Promise<void>;
+  onCancel: () => void;
+}) {
+  const [name, setName] = useState(initialName);
+  const [subtitle, setSubtitle] = useState(initialSubtitle ?? "");
+  const [saving, setSaving] = useState(false);
+  const nameRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    nameRef.current?.focus();
+    nameRef.current?.select();
+  }, []);
+
+  const handleSave = async () => {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    setSaving(true);
+    await onSave(trimmed, subtitle.trim() || null);
+    setSaving(false);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") handleSave();
+    if (e.key === "Escape") onCancel();
+  };
+
+  return (
+    <div className="flex-1 min-w-0 py-2 pr-2 space-y-1.5">
+      <input
+        ref={nameRef}
+        type="text"
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        onKeyDown={handleKeyDown}
+        className="w-full bg-transparent border-b border-cyan-500/50 text-white font-mono text-sm
+          outline-none pb-0.5"
+      />
+      <input
+        type="text"
+        placeholder="Subtitle (optional)"
+        value={subtitle}
+        onChange={(e) => setSubtitle(e.target.value)}
+        onKeyDown={handleKeyDown}
+        className="w-full bg-transparent border-b border-zinc-700/50 text-zinc-400 font-mono text-xs
+          outline-none pb-0.5 placeholder:text-zinc-700"
+      />
+      <div className="flex items-center gap-3 pt-0.5">
+        <button
+          onClick={handleSave}
+          disabled={!name.trim() || saving}
+          className="font-mono text-2xs uppercase tracking-wider text-cyan-400
+            hover:text-cyan-300 disabled:text-zinc-700 transition-colors"
+        >
+          {saving ? "SAVING..." : "SAVE"}
+        </button>
+        <button
+          onClick={onCancel}
+          className="font-mono text-2xs uppercase tracking-wider text-zinc-600
+            hover:text-zinc-400 transition-colors"
+        >
+          CANCEL
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─── Main list component ──────────────────────────────────────────────────────
+
+export default function GoblinRankingList({
+  items,
+  entries,
+  categoryId,
+  isOpen,
+  onSave,
+  onAddItem,
+  onEditItem,
+  onDeleteItem,
+}: Props) {
   const [dragFrom, setDragFrom] = useState<number | null>(null);
   const [dragOver, setDragOver] = useState<number | null>(null);
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [editingItemId, setEditingItemId] = useState<number | null>(null);
 
   const { ranked, unranked } = useMemo(() => {
     const entryMap = new Map<number, RankingEntry>();
@@ -113,6 +279,34 @@ export default function GoblinRankingList({ items, entries, categoryId, isOpen, 
     return groups;
   }, [ranked]);
 
+  const handleAddItem = useCallback(
+    async (name: string, subtitle: string | null) => {
+      if (!onAddItem) return;
+      await onAddItem(categoryId, name, subtitle);
+      setShowAddForm(false);
+    },
+    [categoryId, onAddItem]
+  );
+
+  const handleEditItem = useCallback(
+    async (itemId: number, name: string, subtitle: string | null) => {
+      if (!onEditItem) return;
+      await onEditItem(itemId, name, subtitle);
+      setEditingItemId(null);
+    },
+    [onEditItem]
+  );
+
+  const handleDeleteItem = useCallback(
+    async (itemId: number) => {
+      if (!onDeleteItem) return;
+      // Also remove from ranking first so the save is consistent
+      removeFromRanking(itemId);
+      await onDeleteItem(itemId);
+    },
+    [onDeleteItem, removeFromRanking]
+  );
+
   return (
     <div onDragLeave={() => setDragOver(null)}>
       {ranked.length === 0 ? (
@@ -147,22 +341,52 @@ export default function GoblinRankingList({ items, entries, categoryId, isOpen, 
               <div className="flex-1 min-w-0 space-y-1">
                 {group.items.map((item) => {
                   const globalIdx = ranked.indexOf(item);
+                  const isEditing = editingItemId === item.id;
+
+                  if (isEditing && onEditItem) {
+                    return (
+                      <div
+                        key={item.id}
+                        className="flex items-stretch bg-zinc-950 border border-cyan-800/50"
+                      >
+                        <div className="flex-shrink-0 w-12 flex items-center justify-center">
+                          <span
+                            className="font-mono text-lg font-black tabular-nums leading-none text-zinc-700"
+                          >
+                            {globalIdx + 1}
+                          </span>
+                        </div>
+                        <EditItemForm
+                          initialName={item.name}
+                          initialSubtitle={item.subtitle}
+                          onSave={(name, subtitle) => handleEditItem(item.id, name, subtitle)}
+                          onCancel={() => setEditingItemId(null)}
+                        />
+                      </div>
+                    );
+                  }
+
                   return (
-                    <GoblinRankingItem
-                      key={item.id}
-                      name={item.name}
-                      subtitle={item.subtitle}
-                      rank={globalIdx + 1}
-                      tierColor={group.tierColor}
-                      readOnly={!isOpen}
-                      onMoveToRank={(r) => moveToRank(globalIdx, r)}
-                      onRemove={isOpen ? () => removeFromRanking(item.id) : undefined}
-                      onDragStart={() => setDragFrom(globalIdx)}
-                      onDragOver={() => setDragOver(globalIdx)}
-                      onDrop={() => handleDrop(globalIdx)}
-                      isDragging={dragFrom === globalIdx}
-                      isDragTarget={dragOver === globalIdx && dragFrom !== globalIdx}
-                    />
+                    <div key={item.id} className="flex items-stretch group">
+                      <div className="flex-1 min-w-0">
+                        <GoblinRankingItem
+                          name={item.name}
+                          subtitle={item.subtitle}
+                          rank={globalIdx + 1}
+                          tierColor={group.tierColor}
+                          readOnly={!isOpen}
+                          onMoveToRank={(r) => moveToRank(globalIdx, r)}
+                          onRemove={isOpen ? () => removeFromRanking(item.id) : undefined}
+                          onDragStart={() => setDragFrom(globalIdx)}
+                          onDragOver={() => setDragOver(globalIdx)}
+                          onDrop={() => handleDrop(globalIdx)}
+                          isDragging={dragFrom === globalIdx}
+                          isDragTarget={dragOver === globalIdx && dragFrom !== globalIdx}
+                          onEdit={isOpen && onEditItem ? () => setEditingItemId(item.id) : undefined}
+                          onDelete={isOpen && onDeleteItem ? () => handleDeleteItem(item.id) : undefined}
+                        />
+                      </div>
+                    </div>
                   );
                 })}
               </div>
@@ -171,34 +395,116 @@ export default function GoblinRankingList({ items, entries, categoryId, isOpen, 
         </div>
       )}
 
+      {/* Unranked section */}
       {unranked.length > 0 && isOpen && (
         <div className="mt-6">
           <p className="font-mono text-2xs text-zinc-600 uppercase tracking-[0.2em] mb-2">
             Unranked ({unranked.length})
           </p>
           <div className="space-y-1">
-            {unranked.map((item) => (
-              <button
-                key={item.id}
-                onClick={() => addToRanking(item)}
-                className="w-full flex items-stretch bg-zinc-950/50 border border-zinc-800/30
-                  hover:border-zinc-700/50 hover:bg-zinc-900/30 transition-all text-left"
-              >
-                <div className="flex-shrink-0 w-12 flex items-center justify-center">
-                  <span className="font-mono text-lg text-zinc-800">–</span>
-                </div>
-                <div className="flex-1 min-w-0 py-2.5 pr-2">
-                  <p className="text-sm text-zinc-500 truncate">{item.name}</p>
-                  {item.subtitle && (
-                    <p className="text-2xs text-zinc-700 font-mono mt-0.5 truncate">{item.subtitle}</p>
+            {unranked.map((item) => {
+              const isEditing = editingItemId === item.id;
+
+              if (isEditing && onEditItem) {
+                return (
+                  <div
+                    key={item.id}
+                    className="flex items-stretch bg-zinc-950/50 border border-cyan-800/50"
+                  >
+                    <div className="flex-shrink-0 w-12 flex items-center justify-center">
+                      <span className="font-mono text-lg text-zinc-800">–</span>
+                    </div>
+                    <EditItemForm
+                      initialName={item.name}
+                      initialSubtitle={item.subtitle}
+                      onSave={(name, subtitle) => handleEditItem(item.id, name, subtitle)}
+                      onCancel={() => setEditingItemId(null)}
+                    />
+                  </div>
+                );
+              }
+
+              return (
+                <div key={item.id} className="flex items-stretch group">
+                  <button
+                    onClick={() => addToRanking(item)}
+                    className="flex-1 flex items-stretch bg-zinc-950/50 border border-zinc-800/30
+                      hover:border-zinc-700/50 hover:bg-zinc-900/30 transition-all text-left"
+                  >
+                    <div className="flex-shrink-0 w-12 flex items-center justify-center">
+                      <span className="font-mono text-lg text-zinc-800">–</span>
+                    </div>
+                    <div className="flex-1 min-w-0 py-2.5 pr-2">
+                      <p className="text-sm text-zinc-500 truncate">{item.name}</p>
+                      {item.subtitle && (
+                        <p className="text-2xs text-zinc-700 font-mono mt-0.5 truncate">{item.subtitle}</p>
+                      )}
+                    </div>
+                    <div className="flex-shrink-0 flex items-center pr-3">
+                      <span className="text-2xs text-zinc-700 font-mono">TAP TO ADD</span>
+                    </div>
+                  </button>
+                  {/* Edit/delete controls for unranked items */}
+                  {(onEditItem || onDeleteItem) && (
+                    <div className="flex items-center gap-0.5 pl-1">
+                      {onEditItem && (
+                        <button
+                          onClick={() => setEditingItemId(item.id)}
+                          className="w-8 h-full flex items-center justify-center
+                            text-zinc-700 hover:text-cyan-400 transition-colors"
+                          title="Edit item"
+                        >
+                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                          </svg>
+                        </button>
+                      )}
+                      {onDeleteItem && (
+                        <button
+                          onClick={() => handleDeleteItem(item.id)}
+                          className="w-8 h-full flex items-center justify-center
+                            text-zinc-700 hover:text-red-400 transition-colors"
+                          title="Delete item"
+                        >
+                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <polyline points="3 6 5 6 21 6" />
+                            <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                            <path d="M10 11v6M14 11v6" />
+                            <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+                          </svg>
+                        </button>
+                      )}
+                    </div>
                   )}
                 </div>
-                <div className="flex-shrink-0 flex items-center pr-3">
-                  <span className="text-2xs text-zinc-700 font-mono">TAP TO ADD</span>
-                </div>
-              </button>
-            ))}
+              );
+            })}
           </div>
+        </div>
+      )}
+
+      {/* Add item */}
+      {isOpen && onAddItem && (
+        <div className="mt-4">
+          {showAddForm ? (
+            <AddItemForm
+              onSave={handleAddItem}
+              onCancel={() => setShowAddForm(false)}
+            />
+          ) : (
+            <button
+              onClick={() => setShowAddForm(true)}
+              className="w-full flex items-center justify-center gap-2 py-2.5
+                border border-dashed border-zinc-800/60 text-zinc-700
+                hover:border-cyan-800/50 hover:text-zinc-500
+                font-mono text-2xs uppercase tracking-[0.2em] transition-all"
+            >
+              <span>+ Add Item</span>
+            </button>
+          )}
         </div>
       )}
     </div>
