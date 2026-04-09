@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
 import { useSearchParams } from "next/navigation";
+import posthog from "posthog-js";
 import { PORTAL_CONTEXT_COOKIE } from "@/lib/auth-utils";
 import { HOSPITAL_MODE_VALUES } from "@/lib/analytics/portal-action-types";
 
@@ -141,6 +142,20 @@ export function usePortalTracking(portalSlug: string) {
       idleId = window.requestIdleCallback(send, { timeout: 1500 });
     } else {
       timeoutId = globalThis.setTimeout(send, 1200);
+    }
+
+    // Dual-write to PostHog with structured portal metadata
+    try {
+      posthog.capture("portal_page_view", {
+        portal: portalSlug,
+        page_type: pageType,
+        entity_id: entityId,
+        utm_source: utmSource,
+        utm_medium: utmMedium,
+        utm_campaign: utmCampaign,
+      });
+    } catch {
+      // PostHog not initialized or opted out — silently skip.
     }
 
     return () => {

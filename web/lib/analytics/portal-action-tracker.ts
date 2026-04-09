@@ -53,23 +53,22 @@ export function trackPortalAction(portalSlug: string, payload: PortalActionPaylo
   const bodyJson = JSON.stringify(body);
   const endpoint = endpointFor(portalSlug);
 
-  // Dual-write to PostHog (no-op when opted out or SDK not initialized)
-  try {
-    posthog.capture(`portal_${payload.action_type}`, {
-      portal: portalSlug,
-      page_type: body.page_type,
-      section_key: payload.section_key,
-      target_kind: payload.target_kind,
-      target_id: payload.target_id,
-    });
-  } catch {
-    // PostHog not initialized or opted out — silently skip.
-  }
-
   try {
     if (navigator.sendBeacon) {
       const blob = new Blob([bodyJson], { type: "application/json" });
       navigator.sendBeacon(endpoint, blob);
+      // Dual-write to PostHog (no-op when opted out or SDK not initialized)
+      try {
+        posthog.capture(`portal_${payload.action_type}`, {
+          portal: portalSlug,
+          page_type: body.page_type,
+          section_key: payload.section_key,
+          target_kind: payload.target_kind,
+          target_id: payload.target_id,
+        });
+      } catch {
+        // PostHog not initialized or opted out — silently skip.
+      }
       return;
     }
   } catch {
@@ -84,4 +83,17 @@ export function trackPortalAction(portalSlug: string, payload: PortalActionPaylo
   }).catch(() => {
     // Non-blocking analytics event.
   });
+
+  // Dual-write to PostHog (no-op when opted out or SDK not initialized)
+  try {
+    posthog.capture(`portal_${payload.action_type}`, {
+      portal: portalSlug,
+      page_type: body.page_type,
+      section_key: payload.section_key,
+      target_kind: payload.target_kind,
+      target_id: payload.target_id,
+    });
+  } catch {
+    // PostHog not initialized or opted out — silently skip.
+  }
 }
