@@ -5,6 +5,7 @@
 .env
 .env.local
 .env.*.local
+!.env.example
 
 # Python
 __pycache__/
@@ -120,6 +121,7 @@ web/public/portals/*/build-collage.py
 web/docs/auto-generated/
 
 # QA and screenshot artifacts
+web/.codex-artifacts/
 web/content/
 web/screenshots/
 web/build.log
