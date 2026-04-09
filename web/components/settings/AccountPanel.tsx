@@ -21,7 +21,7 @@ export default function AccountPanel() {
         {/* Email */}
         <div>
           <p className="font-mono text-xs tracking-[0.12em] uppercase text-[var(--muted)] mb-2">Account Email</p>
-          <div className="p-4 rounded-lg bg-[var(--dusk)] border border-[var(--twilight)]">
+          <div className="p-4 rounded-lg bg-[var(--dusk)] border border-[var(--twilight)]" data-ph-no-capture>
             <p className="font-mono text-sm text-[var(--cream)]">{user.email}</p>
           </div>
         </div>

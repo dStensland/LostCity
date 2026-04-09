@@ -261,7 +261,7 @@ export const ProfileView = memo(function ProfileView({ profile, portalSlug }: Pr
         </div>
 
         {/* Identity */}
-        <div className="mb-3">
+        <div className="mb-3" data-ph-no-capture>
           <div className="flex items-center gap-2 flex-wrap">
             <h1 className="text-xl font-bold text-[var(--cream)]">{displayName}</h1>
             <PrivacyBadge mode={profile.privacy_mode} />
@@ -271,7 +271,7 @@ export const ProfileView = memo(function ProfileView({ profile, portalSlug }: Pr
 
         {/* Bio */}
         {profile.bio && (
-          <p className="text-sm text-[var(--soft)] mb-4 max-w-md line-clamp-2">
+          <p className="text-sm text-[var(--soft)] mb-4 max-w-md line-clamp-2" data-ph-no-capture>
             {profile.bio}
           </p>
         )}

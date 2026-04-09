@@ -101,7 +101,7 @@ export default function ProfileHeader({
         </div>
 
         {/* Identity */}
-        <div className="mb-4">
+        <div className="mb-4" data-ph-no-capture>
           <h1 className="text-2xl md:text-3xl font-semibold text-[var(--cream)]">
             {profile.display_name || profile.username}
           </h1>

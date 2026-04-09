@@ -148,7 +148,7 @@ function ProfileForm({
         </div>
       )}
 
-      <div>
+      <div data-ph-no-capture>
         <label className="block font-mono text-xs text-[var(--muted)] uppercase tracking-wider mb-2">
           Display Name
         </label>
