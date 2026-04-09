@@ -146,7 +146,7 @@ export function DetailHero({
   // Default: image mode (full-width with overlay)
   return (
     <div
-      className={`relative w-full ${aspectClass} sm:rounded-xl overflow-hidden ${heroAccentClass?.className ?? ""}`}
+      className={`relative w-full ${aspectClass} sm:rounded-xl overflow-hidden mask-vignette ${heroAccentClass?.className ?? ""}`}
       style={entityId ? { viewTransitionName: `event-hero-${entityId}` } as CSSProperties : undefined}
     >
       <ScopedStyles css={heroAccentClass?.css} />

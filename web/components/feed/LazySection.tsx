@@ -56,6 +56,7 @@ export default function LazySection({
   return (
     <div
       ref={ref}
+      className="scroll-reveal"
       style={{
         minHeight: hasTransitioned ? undefined : minHeight,
         opacity: isVisible ? 1 : 0,

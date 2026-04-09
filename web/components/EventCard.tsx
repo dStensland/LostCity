@@ -31,6 +31,7 @@ import Image from "@/components/SmartImage";
 import type { RecommendationReason } from "./ReasonBadge";
 import RSVPButton, { type RSVPStatus } from "./RSVPButton";
 import { useImageParallax } from "@/lib/hooks/useImageParallax";
+import { usePointerGlow } from "@/lib/hooks/usePointerGlow";
 import type { Frequency, DayOfWeek } from "@/lib/recurrence";
 import Dot from "@/components/ui/Dot";
 import { EventCardImage } from "./event-card/EventCardImage";
@@ -227,6 +228,7 @@ function EventCard({
 
   const { containerRef: parallaxContainerRef, imageRef: parallaxImageRef } =
     useImageParallax();
+  const glowRef = usePointerGlow<HTMLDivElement>();
   // Optimistic RSVP count adjustments — user's own RSVP immediately ticks the count
   const [countAdjust, setCountAdjust] = useState({
     going: 0,
@@ -286,7 +288,7 @@ function EventCard({
   if (density === "compact") {
     return (
       <div
-        className={`find-row-card mb-2.5 rounded-xl border border-[var(--twilight)]/75 ${reflectionClass} ${animationClass} ${staggerClass} overflow-hidden group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-color)]/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--void)] ${
+        className={`find-row-card pointer-glow mb-2.5 rounded-xl border border-[var(--twilight)]/75 ${reflectionClass} ${animationClass} ${staggerClass} overflow-hidden group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-color)]/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--void)] ${
           event.category ? "border-l-[2px] border-l-[var(--accent-color)]" : ""
         }`}
         tabIndex={0}
@@ -420,7 +422,8 @@ function EventCard({
 
   return (
     <div
-      className={`find-row-card find-row-card-bg mb-2.5 sm:mb-3 rounded-xl border border-[var(--twilight)]/75 ${reflectionClass} ${animationClass} ${staggerClass} overflow-hidden group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-color)]/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--void)] ${
+      ref={glowRef}
+      className={`find-row-card find-row-card-bg pointer-glow mb-2.5 sm:mb-3 rounded-xl border border-[var(--twilight)]/75 ${reflectionClass} ${animationClass} ${staggerClass} overflow-hidden group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-color)]/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--void)] ${
         event.category ? "border-l-[2px] border-l-[var(--accent-color)]" : ""
       }`}
       tabIndex={0}

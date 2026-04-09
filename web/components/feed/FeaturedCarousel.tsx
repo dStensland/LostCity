@@ -215,7 +215,7 @@ export function FeaturedCarousel({ events }: Props) {
       </div>
 
       {/* Carousel container */}
-      <div className="relative -mx-4">
+      <div className="relative -mx-4 mask-fade-x">
 
         {/* Scrollable cards */}
         <div
