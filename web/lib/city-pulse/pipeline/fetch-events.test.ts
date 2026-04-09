@@ -1,6 +1,6 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { FeedEventData } from "@/components/EventCard";
-import { applySourceDiversity } from "./fetch-events";
+import { applySourceDiversity, resolveEventSelectClause } from "./fetch-events";
 
 // ---------------------------------------------------------------------------
 // Test helpers
@@ -172,5 +172,39 @@ describe("applySourceDiversity", () => {
     const events = Array.from({ length: 15 }, () => makeEvent(1));
     const result = applySourceDiversity(events, 0.4, 20);
     expect(result).toEqual(events);
+  });
+});
+
+describe("resolveEventSelectClause", () => {
+  it("falls back when series.blurhash is missing from the schema", async () => {
+    const limit = vi.fn().mockResolvedValue({
+      data: null,
+      error: {
+        code: "42703",
+        message: "column series_1.blurhash does not exist",
+      },
+    });
+    const select = vi.fn(() => ({ limit }));
+    const from = vi.fn(() => ({ select }));
+
+    const selectClause = await resolveEventSelectClause({ from } as never);
+
+    expect(from).toHaveBeenCalledWith("series");
+    expect(select).toHaveBeenCalledWith("blurhash");
+    expect(selectClause.includes("blurhash")).toBe(false);
+    expect(selectClause.includes("series:series_id")).toBe(true);
+  });
+
+  it("keeps the richer select when blurhash is available", async () => {
+    const limit = vi.fn().mockResolvedValue({
+      data: [],
+      error: null,
+    });
+    const select = vi.fn(() => ({ limit }));
+    const from = vi.fn(() => ({ select }));
+
+    const selectClause = await resolveEventSelectClause({ from } as never);
+
+    expect(selectClause.includes("blurhash")).toBe(true);
   });
 });

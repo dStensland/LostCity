@@ -11,12 +11,12 @@ function read(relativePath: string): string {
 describe("portal skeleton process guardrails", () => {
   it("keeps route skeleton markers for every required portal loading surface", () => {
     const routeLoader = read("loading.tsx");
-    const pageFile = read("page.tsx");
+    const feedLoader = read("_surfaces/feed/FeedLoading.tsx");
     const eventLoader = read("events/[id]/loading.tsx");
     const happeningLoader = read("happening-now/loading.tsx");
 
     expect(routeLoader).toContain('data-skeleton-route="portal-root"');
-    expect(pageFile).toContain('data-skeleton-route="feed-view"');
+    expect(feedLoader).toContain('data-skeleton-route="feed-view"');
     // happening-view and places-view skeleton markers removed — those views
     // were deleted in favor of the unified Find shell (FindShellClient).
     expect(eventLoader).toContain('data-skeleton-route="event-detail"');

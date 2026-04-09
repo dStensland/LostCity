@@ -217,4 +217,51 @@ describe("portal-auto-section", () => {
 
     expect(result.events.map((event) => event.id)).toEqual([20]);
   });
+
+  it("collapses duplicate regular showtimes but keeps special screenings separate", () => {
+    const result = selectPortalAutoSectionEvents({
+      pool: [
+        {
+          id: 30,
+          title: "Sinners",
+          start_date: "2026-03-10",
+          start_time: "18:00",
+          is_free: false,
+          price_min: 14,
+          category: "film",
+          tags: ["showtime"],
+          venue: { id: 401, neighborhood: "Midtown", venue_type: "theater" },
+        },
+        {
+          id: 31,
+          title: "Sinners",
+          start_date: "2026-03-10",
+          start_time: "20:30",
+          is_free: false,
+          price_min: 14,
+          category: "film",
+          tags: ["showtime"],
+          venue: { id: 402, neighborhood: "Midtown", venue_type: "theater" },
+        },
+        {
+          id: 32,
+          title: "Sinners 35mm Screening",
+          start_date: "2026-03-10",
+          start_time: "21:00",
+          is_free: false,
+          price_min: 18,
+          category: "film",
+          tags: ["screening", "35mm"],
+          venue: { id: 403, neighborhood: "Midtown", venue_type: "theater" },
+        },
+      ],
+      filter: { sort_by: "date" },
+      limit: 5,
+      currentDate: new Date("2026-03-09T12:00:00Z"),
+      rsvpCounts: {},
+      resolveDateRange: () => ({ start: "2026-03-09", end: "2026-03-30" }),
+    });
+
+    expect(result.events.map((event) => event.id)).toEqual([30, 32]);
+  });
 });

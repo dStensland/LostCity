@@ -211,7 +211,6 @@ export async function GET(request: NextRequest) {
         id,
         portal_id,
         source_id,
-        venue_id,
         name,
         slug,
         description,
@@ -296,7 +295,6 @@ export async function GET(request: NextRequest) {
       id: string;
       portal_id: string | null;
       source_id: number | null;
-      venue_id: number | null;
       name: string;
       slug: string | null;
       description: string | null;

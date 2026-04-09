@@ -64,6 +64,7 @@ import {
 } from "@/lib/portal-section-presentation";
 import { createServerTimingRecorder } from "@/lib/server-timing";
 import { fetchHolidayEvents } from "@/lib/portal-feed-holiday";
+import { sortEventsByPortalCityPreference } from "@/lib/portal-locality";
 
 // ---------------------------------------------------------------------------
 // Cache constants (shared with route.ts via re-export)
@@ -201,6 +202,7 @@ export type LoadPortalFeedParams = {
   sectionIds: string[] | undefined;
   defaultLimit: number;
   timing: ReturnType<typeof createServerTimingRecorder>;
+  bypassFeaturedSections?: boolean;
 };
 
 export type LoadPortalFeedResult = {
@@ -316,7 +318,14 @@ const PORTAL_FEED_SOCIAL_COUNTS_TIMEOUT_MS = 120;
 export async function loadPortalFeed(
   params: LoadPortalFeedParams,
 ): Promise<LoadPortalFeedResult> {
-  const { canonicalSlug, requestSlug, sectionIds, defaultLimit, timing } =
+  const {
+    canonicalSlug,
+    requestSlug,
+    sectionIds,
+    defaultLimit,
+    timing,
+    bypassFeaturedSections = false,
+  } =
     params;
 
   const supabase = await createClient();
@@ -421,97 +430,134 @@ export async function loadPortalFeed(
   // 2. Load portal sections (with caching)
   // ---------------------------------------------------------------------------
   let sectionsToFetch = sectionIds;
-  if (!sectionsToFetch && feedSettings.featured_section_ids?.length) {
+  if (
+    !sectionsToFetch &&
+    !bypassFeaturedSections &&
+    feedSettings.featured_section_ids?.length
+  ) {
     sectionsToFetch = feedSettings.featured_section_ids;
   }
 
-  const sectionsCacheKey = buildPortalSectionsCacheKey(
-    portal.id,
-    sectionsToFetch,
-  );
-  let sectionsData = await getSharedCacheJson<Section[]>(
-    SECTION_CACHE_NAMESPACE,
-    sectionsCacheKey,
-  );
+  const filterPortalSections = (input: Section[]) =>
+    input.filter((section) => {
+      if (!isPortalSectionVisible(section)) return false;
 
-  if (!sectionsData) {
-    let sectionsQuery = supabase
-      .from("portal_sections")
-      .select(
-        `
-        id,
-        title,
-        slug,
-        description,
-        section_type,
-        block_type,
-        layout,
-        items_per_row,
-        max_items,
-        auto_filter,
-        block_content,
-        display_order,
-        is_visible,
-        schedule_start,
-        schedule_end,
-        show_on_days,
-        show_after_time,
-        show_before_time,
-        style,
-        portal_section_items(id, entity_type, entity_id, display_order)
-      `,
-      )
-      .eq("portal_id", portal.id)
-      .eq("is_visible", true)
-      .order("display_order", { ascending: true });
+      const hospitalOnlySections = [
+        "outdoor-wellness",
+        "food-access-support",
+        "public-health-resources",
+      ];
+      if (
+        hospitalOnlySections.includes(section.slug) &&
+        portal.portal_type !== "hospital"
+      ) {
+        return false;
+      }
 
-    if (sectionsToFetch?.length) {
-      sectionsQuery = sectionsQuery.in("id", sectionsToFetch);
+      return true;
+    });
+
+  const loadSectionsData = async (
+    requestedSectionIds: string[] | undefined,
+  ): Promise<Section[] | null> => {
+    const sectionsCacheKey = buildPortalSectionsCacheKey(
+      portal.id,
+      requestedSectionIds,
+    );
+    let cachedSections = await getSharedCacheJson<Section[]>(
+      SECTION_CACHE_NAMESPACE,
+      sectionsCacheKey,
+    );
+
+    if (!cachedSections) {
+      let sectionsQuery = supabase
+        .from("portal_sections")
+        .select(
+          `
+          id,
+          title,
+          slug,
+          description,
+          section_type,
+          block_type,
+          layout,
+          items_per_row,
+          max_items,
+          auto_filter,
+          block_content,
+          display_order,
+          is_visible,
+          schedule_start,
+          schedule_end,
+          show_on_days,
+          show_after_time,
+          show_before_time,
+          style,
+          portal_section_items(id, entity_type, entity_id, display_order)
+        `,
+        )
+        .eq("portal_id", portal.id)
+        .eq("is_visible", true)
+        .order("display_order", { ascending: true });
+
+      if (requestedSectionIds?.length) {
+        sectionsQuery = sectionsQuery.in("id", requestedSectionIds);
+      }
+
+      const { data, error: sectionsError } = await sectionsQuery;
+
+      if (sectionsError) {
+        return null;
+      }
+
+      cachedSections = (data || []) as Section[];
+      await setSharedCacheJson(
+        SECTION_CACHE_NAMESPACE,
+        sectionsCacheKey,
+        cachedSections,
+        SECTION_CACHE_TTL_MS,
+        { maxEntries: FEED_CACHE_MAX_ENTRIES },
+      );
     }
 
-    const { data, error: sectionsError } = await sectionsQuery;
+    return cachedSections;
+  };
 
-    if (sectionsError) {
+  const initialSectionsData = await loadSectionsData(sectionsToFetch);
+  if (!initialSectionsData) {
+    return {
+      payload: {
+        error: "Failed to load portal feed sections",
+      },
+      serverTiming: timing.toHeader(),
+      status: 500,
+    };
+  }
+
+  let allSections = initialSectionsData;
+  let sections = filterPortalSections(allSections);
+
+  // If stale featured_section_ids resolve to no visible consumer sections,
+  // fall back to all visible sections rather than returning an empty feed.
+  if (
+    sections.length === 0 &&
+    !sectionIds?.length &&
+    feedSettings.featured_section_ids?.length
+  ) {
+    const fallbackSectionsData = await loadSectionsData(undefined);
+    if (!fallbackSectionsData) {
       return {
         payload: {
-          error:
-            sectionsError.message || "Failed to load portal feed sections",
+          error: "Failed to load portal feed sections",
         },
         serverTiming: timing.toHeader(),
         status: 500,
       };
     }
 
-    sectionsData = (data || []) as Section[];
-    await setSharedCacheJson(
-      SECTION_CACHE_NAMESPACE,
-      sectionsCacheKey,
-      sectionsData,
-      SECTION_CACHE_TTL_MS,
-      { maxEntries: FEED_CACHE_MAX_ENTRIES },
-    );
+    allSections = fallbackSectionsData;
+    sections = filterPortalSections(allSections);
   }
-
-  const allSections = (sectionsData || []) as Section[];
-
-  // Filter sections by visibility rules
-  const sections = allSections.filter((section) => {
-    if (!isPortalSectionVisible(section)) return false;
-
-    const hospitalOnlySections = [
-      "outdoor-wellness",
-      "food-access-support",
-      "public-health-resources",
-    ];
-    if (
-      hospitalOnlySections.includes(section.slug) &&
-      portal.portal_type !== "hospital"
-    ) {
-      return false;
-    }
-
-    return true;
-  });
 
   // ---------------------------------------------------------------------------
   // 3. Load curated + pinned events (with caching)
@@ -1220,7 +1266,10 @@ export async function loadPortalFeed(
   // ---------------------------------------------------------------------------
   // 6. Assemble sections from pre-fetched pools
   // ---------------------------------------------------------------------------
-  const autoEventPoolValues = Array.from(autoEventPool.values());
+  const autoEventPoolValues = sortEventsByPortalCityPreference(
+    Array.from(autoEventPool.values()),
+    portalCities,
+  );
   const feedSections = await timing.measure("sections", async () =>
     sections
       .map((section) => {
@@ -1377,6 +1426,22 @@ export async function loadPortalFeed(
       holidaySections.map((section) => [section.id, section.display_order]),
     ),
   );
+
+  if (
+    filteredFinalSections.length === 0 &&
+    !sectionIds?.length &&
+    !bypassFeaturedSections &&
+    feedSettings.featured_section_ids?.length
+  ) {
+    return loadPortalFeed({
+      canonicalSlug,
+      requestSlug,
+      sectionIds,
+      defaultLimit,
+      timing,
+      bypassFeaturedSections: true,
+    });
+  }
 
   // ---------------------------------------------------------------------------
   // 8. Social proof counts (with timeout)

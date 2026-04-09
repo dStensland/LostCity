@@ -29,12 +29,15 @@ if (typeof window !== "undefined" && !(window as unknown as Record<string, boole
 
   history.pushState = function (...args: Parameters<typeof origPush>) {
     origPush(...args);
-    window.dispatchEvent(new Event(URL_CHANGE_EVENT));
+    // Defer so the event fires after React's current rendering phase completes.
+    // Synchronous dispatch inside pushState violates React 19's concurrent
+    // rendering rules (useInsertionEffect must not schedule updates).
+    queueMicrotask(() => window.dispatchEvent(new Event(URL_CHANGE_EVENT)));
   };
 
   history.replaceState = function (...args: Parameters<typeof origReplace>) {
     origReplace(...args);
-    window.dispatchEvent(new Event(URL_CHANGE_EVENT));
+    queueMicrotask(() => window.dispatchEvent(new Event(URL_CHANGE_EVENT)));
   };
 }
 

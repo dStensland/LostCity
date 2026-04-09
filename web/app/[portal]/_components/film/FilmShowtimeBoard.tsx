@@ -6,6 +6,7 @@ import { buildExploreUrl } from "@/lib/find-url";
 import SmartImage from "@/components/SmartImage";
 import { Clock, FilmSlate, MapPin } from "@phosphor-icons/react";
 import { buildFilmCapsule } from "@/lib/film-capsule";
+import type { ShowtimeEntry } from "@/lib/explore-platform/lane-data";
 
 type Mode = "by-film" | "by-theater";
 
@@ -14,7 +15,7 @@ type FilmVenue = {
   venue_name: string;
   venue_slug: string;
   neighborhood: string | null;
-  times: string[];
+  times: ShowtimeEntry[];
 };
 
 type FilmItem = {
@@ -36,7 +37,7 @@ type TheaterFilm = {
   genres?: string[];
   director?: string | null;
   year?: number | null;
-  times: string[];
+  times: ShowtimeEntry[];
 };
 
 type TheaterItem = {
@@ -110,6 +111,10 @@ function formatTimeLabel(time: string): string {
   const normalizedHour = hour % 12 === 0 ? 12 : hour % 12;
   const period = hour >= 12 ? "PM" : "AM";
   return `${normalizedHour}:${minute} ${period}`;
+}
+
+function formatShowtimeEntry(entry: ShowtimeEntry): string {
+  return formatTimeLabel(entry.time);
 }
 
 function posterTone(index: number): string {
@@ -411,7 +416,7 @@ export default function FilmShowtimeBoard({
                       )}
                       <p className="mt-2 inline-flex items-center gap-1 text-xs uppercase tracking-[0.12em] text-[#dbe4f7]">
                         <Clock size={11} />
-                        {(firstVenue?.times || []).slice(0, 3).map(formatTimeLabel).join(" • ") || "Times pending"}
+                        {(firstVenue?.times || []).slice(0, 3).map(formatShowtimeEntry).join(" • ") || "Times pending"}
                       </p>
                       {hasMultipleVenues && (
                         <p className="mt-1 text-xs uppercase tracking-[0.12em] text-[#9fb0cf]">
@@ -464,7 +469,7 @@ export default function FilmShowtimeBoard({
                         ) : (
                           <span className="font-medium">{film.title}</span>
                         )}
-                        <span className="text-[#9fb0cf]"> • {film.times.slice(0, 3).map(formatTimeLabel).join(" • ") || "Times pending"}</span>
+                        <span className="text-[#9fb0cf]"> • {film.times.slice(0, 3).map(formatShowtimeEntry).join(" • ") || "Times pending"}</span>
                       </p>
                       {capsule && !compact && (
                         <p className="text-2xs italic text-[#8ea4c8]">{capsule}</p>

@@ -42,13 +42,13 @@ describe("buildInstantSearchPayload", () => {
         type: "event",
         title: "Afrobeat",
         subtitle: "Search events",
-        href: "/atlanta?view=find&lane=events&search=Afrobeat",
+        href: "/atlanta/explore?lane=events&search=Afrobeat",
       },
       {
         type: "venue",
         title: "Afrobeat",
         subtitle: "Search places",
-        href: "/atlanta?view=find&lane=places&search=Afrobeat",
+        href: "/atlanta/explore?lane=places&search=Afrobeat",
       },
     ]);
     expect(instantSearchMock).not.toHaveBeenCalled();
@@ -81,7 +81,7 @@ describe("buildInstantSearchPayload", () => {
         type: "event",
         title: "synthwave",
         subtitle: "Search events",
-        href: "/atlanta?view=find&lane=events&search=synthwave",
+        href: "/atlanta/explore?lane=events&search=synthwave",
       },
     ]);
     expect(instantSearchMock).not.toHaveBeenCalled();
@@ -110,7 +110,7 @@ describe("buildInstantSearchPayload", () => {
       type: "event",
       title: "live music tonight",
       subtitle: "Search events",
-      href: "/atlanta?view=find&lane=events&search=live%20music%20tonight",
+      href: "/atlanta/explore?lane=events&search=live+music+tonight",
     });
     expect(instantSearchMock).not.toHaveBeenCalled();
   });
@@ -138,7 +138,7 @@ describe("buildInstantSearchPayload", () => {
     expect(payload.suggestions[0]).toMatchObject({
       type: "neighborhood",
       title: "Little Five Points",
-      href: "/atlanta?view=find&lane=events&neighborhoods=Little%20Five%20Points",
+      href: "/atlanta/explore?lane=events&neighborhoods=Little+Five+Points",
     });
     expect(payload.suggestions[1]).toMatchObject({
       type: "event",

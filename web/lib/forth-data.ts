@@ -802,7 +802,7 @@ async function fetchDestinationsDirect(
 
   const propertyVenueSlugs = new Set(['bar-premio', 'il-premio', 'elektra-forth', 'moonlight-forth', 'forth-hotel-atlanta']);
   // Venue types that don't belong in a hotel neighborhood guide
-  const excludedVenueTypes = new Set(['nonprofit', 'food_bank', 'charity', 'church', 'school', 'government', 'hospital', 'office']);
+  const excludedVenueTypes = new Set(['nonprofit', 'food_bank', 'charity', 'church', 'religious', 'school', 'government', 'hospital', 'office', 'organization', 'institution', 'community_center', 'convention_center', 'event_space']);
   const filteredVenues = venuesInRadius.filter((v) =>
     !propertyVenueSlugs.has(v.slug) &&
     (!v.place_type || !excludedVenueTypes.has(v.place_type))

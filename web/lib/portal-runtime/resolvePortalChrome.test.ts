@@ -42,15 +42,15 @@ const baseRequest = {
 } satisfies PortalResolvedRequest;
 
 describe("resolvePortalChrome", () => {
-  it("suppresses generic chrome for explore", () => {
+  it("shows shared chrome for explore", () => {
     expect(
       resolvePortalChrome({
         surface: "explore",
         request: baseRequest,
       }),
     ).toEqual({
-      showHeader: false,
-      showFooter: false,
+      showHeader: true,
+      showFooter: true,
       showTracker: false,
       showCannyWidget: false,
     });

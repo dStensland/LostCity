@@ -28,6 +28,7 @@ import type { Spot } from "@/lib/spots-constants";
 import { getTimeSlotLabel, isNightlifeTime } from "./time-slots";
 import { scoreEvent, scoreDestination, applyWildCardSorting } from "./scoring";
 import { getWeatherContextLabel } from "./weather-mapping";
+import { getEffectiveEventImageUrl, isFestivalLikeEvent } from "./event-signals";
 import {
   isSceneEvent,
   matchActivityType,
@@ -61,6 +62,7 @@ function makeEventItem(
   },
   editorialMap?: EditorialMap,
 ): CityPulseEventItem {
+  const effectiveImageUrl = getEffectiveEventImageUrl(event);
   const venueId = event.venue?.id;
   const editorialMentions = (venueId != null && editorialMap)
     ? editorialMap[venueId]
@@ -72,7 +74,7 @@ function makeEventItem(
       is_tentpole: event.is_tentpole,
       is_featured: (event as Record<string, unknown>).is_featured as boolean | undefined,
       festival_id: event.festival_id,
-      image_url: event.image_url,
+      image_url: effectiveImageUrl,
       featured_blurb: event.featured_blurb,
       importance: (event as Record<string, unknown>).importance as
         | "flagship"
@@ -95,6 +97,7 @@ function makeEventItem(
     item_type: "event",
     event: {
       ...event,
+      image_url: effectiveImageUrl,
       contextual_label: opts?.contextual_label,
       friends_going: opts?.friends_going,
       score: opts?.score,
@@ -457,11 +460,13 @@ export function buildRightNowSection(
 
   // Select hero event: first tentpole/featured with image, or highest-scored with image, or highest-scored
   const heroIdx = scoredEvents.findIndex(
-    (e) => ((e as Record<string, unknown>).is_tentpole || (e as Record<string, unknown>).is_featured) && e.image_url,
+    (e) =>
+      ((e as Record<string, unknown>).is_tentpole || (e as Record<string, unknown>).is_featured) &&
+      !!getEffectiveEventImageUrl(e),
   );
   const heroEvent = heroIdx !== -1
     ? scoredEvents[heroIdx]
-    : scoredEvents.find((e) => e.image_url) || scoredEvents[0];
+    : scoredEvents.find((e) => !!getEffectiveEventImageUrl(e)) || scoredEvents[0];
 
   // Build event items — hero first, then the rest
   const eventItems: CityPulseEventItem[] = [];
@@ -1074,26 +1079,134 @@ export function buildPlanningHorizonSection(
   const horizonEvents = events.filter((e) => {
     const raw = e as Record<string, unknown>;
     const importance = raw.importance as string | undefined;
-    // Accept tentpoles, festival sub-events, multi-day events, and flagships.
-    // Note: "major" is intentionally excluded here — major single-day events
-    // belong in the Lineup, not the planning carousel.
+    const canonicalKey = raw.canonical_key as string | undefined;
+    // Accept tentpoles, explicit/heuristic festivals, multi-day events,
+    // and flagship/major events.
     const qualifies =
+      !!canonicalKey ||
       raw.is_tentpole ||
       raw.festival_id ||
+      isFestivalLikeEvent(e) ||
       importance === "flagship" ||
+      importance === "major" ||
       (e.end_date && e.end_date !== e.start_date);
     return qualifies && e.start_date >= weekFromNowStr;
   });
 
   if (horizonEvents.length < 2) return null;
 
-  // Interleave flagship and major by date so arena concerts get carousel slots.
-  // Within the same date, flagship sorts first.
-  const sorted = [...horizonEvents].sort((a, b) => {
+  const horizonTierRank = (tier: string | undefined): number => {
+    if (tier === "tier_a") return 0;
+    if (tier === "tier_b") return 1;
+    return 2;
+  };
+
+  const canonicalStrength = (event: FeedEventData): number => {
+    const raw = event as Record<string, unknown>;
+    let score = 0;
+    if (raw.entity_type !== "festival") score += 8;
+    if (raw.festival_id) score += 4;
+    if (raw.is_tentpole) score += 2;
+    if (raw.importance === "flagship") score += 2;
+    if (getEffectiveEventImageUrl(event)) score += 1;
+    const desc = (event.featured_blurb ?? event.description ?? "").trim();
+    if (desc.length >= 20) score += 1;
+    return score;
+  };
+
+  const pickPreferredCanonicalEvent = (a: FeedEventData, b: FeedEventData): FeedEventData => {
+    const scoreDiff = canonicalStrength(b) - canonicalStrength(a);
+    if (scoreDiff !== 0) return scoreDiff > 0 ? b : a;
+
+    const entityDiff =
+      (((a as Record<string, unknown>).entity_type === "festival") ? 1 : 0) -
+      (((b as Record<string, unknown>).entity_type === "festival") ? 1 : 0);
+    if (entityDiff !== 0) return entityDiff > 0 ? b : a;
+
+    const dateDiff = a.start_date.localeCompare(b.start_date);
+    if (dateDiff !== 0) return dateDiff <= 0 ? a : b;
+
+    return a.id <= b.id ? a : b;
+  };
+
+  // Quality gate: only genuinely plan-ahead events.
+  // The pool query is already filtered to tentpoles/festivals/flagships, but
+  // the section builder also receives events from other pools (e.g. trending).
+  // This gate ensures no single-day recurring events slip through either path.
+  //
+  // Additional tightening:
+  //   1. Require image_url — a showcase carousel without images is noise.
+  //   2. Exclude series events from the multi-day path — a recurring class that
+  //      happens to span multiple days is not "On the Horizon" material. Series
+  //      events can still pass via is_tentpole or festival_id.
+  //   3. Far-future events (90+ days out) also require a description — thin
+  //      placeholder entries 3+ months away with no details get cut.
+  const ninetyDaysAhead = new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000);
+  const ninetyDaysAheadStr = ninetyDaysAhead.toISOString().split("T")[0];
+
+  const qualityFiltered = horizonEvents.filter((e) => {
+    const raw = e as Record<string, unknown>;
+    const effectiveImageUrl = getEffectiveEventImageUrl(e);
+    const festivalLike = isFestivalLikeEvent(e);
+    const canonicalKey = raw.canonical_key as string | undefined;
+
+    if (!effectiveImageUrl) return false;
+
+    if (!canonicalKey && !raw.is_tentpole && !festivalLike && e.start_date >= ninetyDaysAheadStr) {
+      const desc = (e.featured_blurb ?? e.description ?? "").trim();
+      if (desc.length < 20) return false;
+    }
+
+    if (canonicalKey) return true;
+    if (raw.is_tentpole) return true;
+    if (festivalLike) return true;
+    if (e.importance === "flagship" || e.importance === "major") return true;
+
+    if (e.end_date && e.end_date !== e.start_date) {
+      if (e.series_id) return false;
+      return true;
+    }
+
+    return false;
+  });
+
+  const canonicalCollapsed = Array.from(
+    qualityFiltered.reduce((groups, event) => {
+      const canonicalKey = (event as Record<string, unknown>).canonical_key as string | undefined;
+      if (!canonicalKey) {
+        groups.set(`__event:${event.id}`, event);
+        return groups;
+      }
+
+      const current = groups.get(canonicalKey);
+      groups.set(
+        canonicalKey,
+        current ? pickPreferredCanonicalEvent(current, event) : event,
+      );
+      return groups;
+    }, new Map<string, FeedEventData>()).values(),
+  );
+
+  const sorted = [...canonicalCollapsed].sort((a, b) => {
+    const aRaw = a as Record<string, unknown>;
+    const bRaw = b as Record<string, unknown>;
+    const aTier = aRaw.canonical_tier as string | undefined;
+    const bTier = bRaw.canonical_tier as string | undefined;
+    const groupCompare = horizonTierRank(aTier) - horizonTierRank(bTier);
+    if (groupCompare !== 0) return groupCompare;
+
     const dateCompare = a.start_date.localeCompare(b.start_date);
     if (dateCompare !== 0) return dateCompare;
-    const aImportance = (a as Record<string, unknown>).importance as string | undefined;
-    const bImportance = (b as Record<string, unknown>).importance as string | undefined;
+
+    if (horizonTierRank(aTier) < 2) {
+      const entityCompare =
+        (((aRaw.entity_type === "festival") ? 1 : 0) -
+        ((bRaw.entity_type === "festival") ? 1 : 0));
+      if (entityCompare !== 0) return entityCompare;
+    }
+
+    const aImportance = aRaw.importance as string | undefined;
+    const bImportance = bRaw.importance as string | undefined;
     if (aImportance === "flagship" && bImportance !== "flagship") return -1;
     if (bImportance === "flagship" && aImportance !== "flagship") return 1;
     return 0;
@@ -1106,6 +1219,12 @@ export function buildPlanningHorizonSection(
   const seen = new Set<string>();
   const deduped = sorted.filter((e) => {
     const raw = e as Record<string, unknown>;
+    const canonicalKey = raw.canonical_key as string | null;
+    if (canonicalKey) {
+      const registryKey = `canonical:${canonicalKey}`;
+      if (seen.has(registryKey)) return false;
+      seen.add(registryKey);
+    }
     const key = e.title
       .toLowerCase()
       .replace(/[:,\-–—]\s*.*/g, "")  // Strip subtitles after : or - or —
@@ -1130,58 +1249,12 @@ export function buildPlanningHorizonSection(
     return true;
   });
 
-  // Quality gate: only genuinely plan-ahead events.
-  // The pool query is already filtered to tentpoles/festivals/flagships, but
-  // the section builder also receives events from other pools (e.g. trending).
-  // This gate ensures no single-day recurring events slip through either path.
-  //
-  // Additional tightening:
-  //   1. Require image_url — a showcase carousel without images is noise.
-  //   2. Exclude series events from the multi-day path — a recurring class that
-  //      happens to span multiple days is not "On the Horizon" material. Series
-  //      events can still pass via is_tentpole or festival_id.
-  //   3. Far-future events (90+ days out) also require a description — thin
-  //      placeholder entries 3+ months away with no details get cut.
-  const ninetyDaysAhead = new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000);
-  const ninetyDaysAheadStr = ninetyDaysAhead.toISOString().split("T")[0];
-
-  const qualityFiltered = deduped.filter((e) => {
-    const raw = e as Record<string, unknown>;
-
-    // Gate 1: All events in this section must have an image — it's a showcase carousel.
-    if (!e.image_url) return false;
-
-    // Gate 2: Far-future events (90+ days out) need a real description too.
-    // Placeholder entries with no copy don't earn a slot months in advance.
-    if (e.start_date >= ninetyDaysAheadStr) {
-      const desc = (e.description ?? "").trim();
-      if (desc.length < 20) return false;
-    }
-
-    // Always include tentpoles and festival sub-events (they already cleared Gate 1+2)
-    if (raw.is_tentpole) return true;
-    if (raw.festival_id) return true;
-
-    // Include flagship importance
-    if (e.importance === "flagship") return true;
-
-    // Include multi-day events — but NOT if they belong to a recurring series.
-    // A 3-day workshop that recurs monthly is a class, not a landmark event.
-    if (e.end_date && e.end_date !== e.start_date) {
-      if (e.series_id) return false;
-      return true;
-    }
-
-    // Exclude everything else (single-day non-tentpole events)
-    return false;
-  });
-
   // Flagships first, then remainder, chronological within each tier.
   // Dedup + curation keeps the list clean — no artificial per-month caps.
-  const flagships = qualityFiltered.filter(
+  const flagships = deduped.filter(
     (e) => (e as Record<string, unknown>).importance === "flagship",
   );
-  const majors = qualityFiltered.filter(
+  const majors = deduped.filter(
     (e) => (e as Record<string, unknown>).importance !== "flagship",
   );
   const capped = [...flagships, ...majors].slice(0, 40);

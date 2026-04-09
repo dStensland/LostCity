@@ -12,22 +12,10 @@ export function useViewTransition() {
 
   const navigate = useCallback(
     (href: string) => {
-      if (
-        typeof document !== "undefined" &&
-        "startViewTransition" in document
-      ) {
-        try {
-          document.startViewTransition(() => {
-            router.push(href);
-          });
-        } catch {
-          // Transition may throw if another is already in progress.
-          // Fall back to normal navigation.
-          router.push(href);
-        }
-      } else {
-        router.push(href);
-      }
+      // Skip View Transitions API — it silently swallows navigation failures
+      // when combined with Next.js concurrent rendering. router.push alone
+      // handles the navigation correctly.
+      router.push(href);
     },
     [router]
   );

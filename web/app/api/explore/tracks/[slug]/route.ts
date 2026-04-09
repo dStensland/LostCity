@@ -148,7 +148,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
         is_featured,
         upvote_count,
         sort_order,
-        places (
+        venues:places (
           id,
           name,
           slug,

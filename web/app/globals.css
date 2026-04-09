@@ -3018,6 +3018,15 @@ textarea:focus-visible {
   box-shadow: 0 0 0 1px var(--focus-ring);
 }
 
+/* Header search input inherits focus styling from its pill container */
+.header-search-input,
+.header-search-input:focus,
+.header-search-input:focus-visible {
+  border: none !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
 /* ============================================
    LINK UNDERLINE ANIMATION
    ============================================ */

@@ -10,12 +10,19 @@
  * fetch layer is swapped.
  */
 
-import type { SupabaseClient } from "@supabase/supabase-js";
+import type { PostgrestError, SupabaseClient } from "@supabase/supabase-js";
 import type { FeedEventData } from "@/components/EventCard";
 import type { PipelineContext } from "./resolve-portal";
 import type { EventPools } from "./fetch-events";
 import { postProcessEvents } from "./fetch-events";
 import { dedupeEventsById, filterOutInactiveVenueEvents } from "@/lib/event-feed-health";
+import {
+  annotateCanonicalHorizonEvent,
+  buildHorizonPoolFilter,
+  buildSyntheticFestivalHorizonEvent,
+  getPortalHorizonSourceSlugHints,
+  type HorizonFestivalRow,
+} from "@/lib/city-pulse/horizon-registry";
 
 // ---------------------------------------------------------------------------
 // Flat row type from feed_events_ready
@@ -71,6 +78,22 @@ type FeedReadyRow = {
   duration: string | null;
   significance: string | null;
 };
+
+type SeriesAssetRow = {
+  id: string;
+  image_url: string | null;
+  blurhash: string | null;
+};
+
+type SourceSlugRow = {
+  id: number;
+  slug: string;
+};
+
+function isMissingSeriesBlurhashError(error: PostgrestError | null | undefined): boolean {
+  if (!error || error.code !== "42703") return false;
+  return typeof error.message === "string" && error.message.includes("blurhash");
+}
 
 // ---------------------------------------------------------------------------
 // Reshape flat row → FeedEventData nested structure
@@ -144,6 +167,33 @@ function reshapeWithExtras(row: FeedReadyRow): FeedEventData {
   return base;
 }
 
+function attachSeriesAssets(
+  events: FeedEventData[],
+  seriesAssetMap: Map<string, SeriesAssetRow>,
+): FeedEventData[] {
+  for (const event of events) {
+    if (!event.series) continue;
+    const asset = seriesAssetMap.get(event.series.id);
+    if (!asset) continue;
+    event.series.image_url = asset.image_url;
+    event.series.blurhash = asset.blurhash;
+  }
+  return events;
+}
+
+function attachSourceSlugs(
+  events: FeedEventData[],
+  sourceSlugMap: Map<number, string>,
+): FeedEventData[] {
+  return events.map((event) => {
+    const sourceId = (event as FeedEventData & { source_id?: number | null }).source_id;
+    if (!sourceId) return event;
+    const sourceSlug = sourceSlugMap.get(sourceId);
+    if (!sourceSlug) return event;
+    return { ...event, source_slug: sourceSlug };
+  });
+}
+
 // ---------------------------------------------------------------------------
 // Main export
 // ---------------------------------------------------------------------------
@@ -165,8 +215,23 @@ export async function fetchEventPoolsFromReady(
   ctx: PipelineContext,
 ): Promise<EventPools> {
   const portalId = ctx.portalData.id;
+  const canonicalSourceHints = getPortalHorizonSourceSlugHints(ctx.canonicalSlug);
+  const canonicalSourceRows = canonicalSourceHints.length > 0
+    ? (
+        await supabase
+          .from("sources")
+          .select("id, slug")
+          .in("slug", canonicalSourceHints)
+      ).data ?? []
+    : [];
+  const canonicalSourceIds = canonicalSourceRows
+    .map((row) => row.id)
+    .filter((id): id is number => Number.isInteger(id));
+  const canonicalSourceSlugMap = new Map<number, string>(
+    (canonicalSourceRows as SourceSlugRow[]).map((row) => [row.id, row.slug]),
+  );
 
-  const [todayResult, trendingResult, horizonResult] = await Promise.all([
+  const [todayResult, trendingResult, horizonResult, festivalResult] = await Promise.all([
     // Today's events — the primary feed pool
     supabase
       .from("feed_events_ready")
@@ -197,10 +262,18 @@ export async function fetchEventPoolsFromReady(
       .eq("portal_id", portalId)
       .gte("start_date", ctx.horizonStart)
       .lte("start_date", ctx.horizonEnd)
-      .or("is_tentpole.eq.true,festival_id.not.is.null,importance.eq.flagship")
+      .or(buildHorizonPoolFilter(canonicalSourceIds))
       .order("importance", { ascending: true })
       .order("start_date", { ascending: true })
       .limit(100),
+
+    supabase
+      .from("festivals")
+      .select(
+        "id, name, slug, description, image_url, website, announced_start, announced_end, pending_start, pending_end, free, primary_type, categories, genres, neighborhood, location",
+      )
+      .eq("portal_id", portalId)
+      .limit(300),
   ]);
 
   if (todayResult.error) {
@@ -212,15 +285,76 @@ export async function fetchEventPoolsFromReady(
   if (horizonResult.error) {
     console.error("[feed-ready] horizonEvents query failed:", horizonResult.error.message, horizonResult.error.code);
   }
+  if (festivalResult.error) {
+    console.error("[feed-ready] horizon festivals query failed:", festivalResult.error.message, festivalResult.error.code);
+  }
 
   const todayRaw = (todayResult.data ?? []) as unknown as FeedReadyRow[];
   const trendingRaw = (trendingResult.data ?? []) as unknown as FeedReadyRow[];
   const horizonRaw = (horizonResult.data ?? []) as unknown as FeedReadyRow[];
 
-  const todayEvents = postProcessEvents(todayRaw.map(reshapeWithExtras));
-  const trendingEvents = postProcessEvents(trendingRaw.map(reshapeWithExtras));
+  const seriesIds = Array.from(
+    new Set(
+      [...todayRaw, ...trendingRaw, ...horizonRaw]
+        .map((row) => row.series_id)
+        .filter((id): id is string => typeof id === "string" && id.length > 0),
+    ),
+  );
+
+  const seriesAssetMap = new Map<string, SeriesAssetRow>();
+  if (seriesIds.length > 0) {
+    let { data: seriesRows, error: seriesError } = await supabase
+      .from("series")
+      .select("id, image_url, blurhash")
+      .in("id", seriesIds);
+    if (isMissingSeriesBlurhashError(seriesError)) {
+      console.warn(
+        "[feed-ready] series.blurhash column missing; using legacy series asset select",
+      );
+      const fallback = await supabase
+        .from("series")
+        .select("id, image_url")
+        .in("id", seriesIds);
+      seriesRows = fallback.data as SeriesAssetRow[] | null;
+      seriesError = fallback.error;
+    }
+    if (seriesError) {
+      console.error("[feed-ready] series asset query failed:", seriesError.message, seriesError.code);
+    } else {
+      for (const row of (seriesRows ?? []) as SeriesAssetRow[]) {
+        seriesAssetMap.set(row.id, row);
+      }
+    }
+  }
+
+  const todayEvents = attachSeriesAssets(
+    postProcessEvents(todayRaw.map(reshapeWithExtras)),
+    seriesAssetMap,
+  );
+  const trendingEvents = attachSeriesAssets(
+    postProcessEvents(trendingRaw.map(reshapeWithExtras)),
+    seriesAssetMap,
+  );
+  const readyHorizonEvents = attachSeriesAssets(
+    dedupeEventsById(
+      filterOutInactiveVenueEvents(horizonRaw.map(reshapeWithExtras)),
+    ),
+    seriesAssetMap,
+  );
+  const annotatedHorizonEvents = attachSourceSlugs(readyHorizonEvents, canonicalSourceSlugMap)
+    .map((event) => annotateCanonicalHorizonEvent(event, ctx.canonicalSlug));
+  const syntheticFestivalEvents = ((festivalResult.data ?? []) as HorizonFestivalRow[])
+    .map((row) => buildSyntheticFestivalHorizonEvent(row, ctx.canonicalSlug))
+    .filter((event): event is FeedEventData => {
+      if (!event) return false;
+      const startDate = event.start_date;
+      return startDate >= ctx.horizonStart && startDate <= ctx.horizonEnd;
+    });
   const horizonEvents = dedupeEventsById(
-    filterOutInactiveVenueEvents(horizonRaw.map(reshapeWithExtras)),
+    filterOutInactiveVenueEvents([
+      ...annotatedHorizonEvents,
+      ...syntheticFestivalEvents,
+    ]),
   );
 
   return { todayEvents, trendingEvents, horizonEvents };

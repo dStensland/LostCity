@@ -49,6 +49,7 @@ import Badge from "@/components/ui/Badge";
 import Dot from "@/components/ui/Dot";
 import SaveButton from "@/components/SaveButton";
 import PlaceShowtimes, { type ShowtimeEvent } from "@/components/PlaceShowtimes";
+import PlaceScreeningsSection from "@/components/detail/PlaceScreeningsSection";
 import DogNearbySection from "@/components/detail/DogNearbySection";
 import { DestinationDetailSections } from "@/components/adventure/DestinationDetailSections";
 import { LibraryPassCallout, type LibraryPassData } from "@/components/family/LibraryPassCallout";
@@ -57,6 +58,7 @@ import { useDetailNavigation } from "@/lib/hooks/useDetailNavigation";
 import { ContentSwap } from "@/components/ui/ContentSwap";
 import { isFeatureHeavyType, type PlaceFeature } from "@/lib/place-features";
 import { type VenueSpecial } from "@/lib/specials-utils";
+import type { ScreeningBundle } from "@/lib/screenings";
 import PlaceFeaturesSection from "@/components/detail/PlaceFeaturesSection";
 import PlaceSpecialsSection from "@/components/detail/PlaceSpecialsSection";
 import { PlanYourVisitSection } from "@/components/detail/PlanYourVisitSection";
@@ -208,6 +210,7 @@ type VenueExhibition = {
 export type SpotApiResponse = {
   spot: SpotData;
   upcomingEvents: UpcomingEvent[];
+  screenings?: ScreeningBundle | null;
   exhibitions: VenueExhibition[];
   nearbyDestinations: NearbyDestinations | null;
   highlights: unknown[];
@@ -291,6 +294,7 @@ export default function PlaceDetailView({ slug, portalSlug, onClose, initialData
   // Derive all data slices from fetch response
   const spot = data?.spot ?? null;
   const upcomingEvents = useMemo(() => data?.upcomingEvents ?? [], [data]);
+  const screenings = useMemo(() => data?.screenings ?? null, [data]);
   const nearbyDestinations = useMemo(() => data?.nearbyDestinations ?? null, [data]);
   const editorialMentions = useMemo(() => data?.editorialMentions ?? [], [data]);
   const occasions = useMemo(() => data?.occasions ?? [], [data]);
@@ -841,6 +845,15 @@ export default function PlaceDetailView({ slug, portalSlug, onClose, initialData
 
   // ── Upcoming Events ─────────────────────────────────────────────────────
   const renderUpcomingEvents = () => {
+    if (screenings) {
+      return (
+        <PlaceScreeningsSection
+          screenings={screenings}
+          title={spot.spot_type === "cinema" ? "Now Showing" : "Screenings"}
+          onTimeClick={handleEventClick}
+        />
+      );
+    }
     if (upcomingEvents.length === 0) return null;
     return (
       <div>

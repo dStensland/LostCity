@@ -78,7 +78,7 @@ describe("feed-request-plan", () => {
       shouldFetchTrending: true,
       shouldRunSupplementalQueries: false,
       shouldRestrictToPersonalizedMatches: false,
-      shouldBuildSections: false,
+      shouldBuildSections: true,
     });
   });
 });

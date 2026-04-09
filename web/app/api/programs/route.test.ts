@@ -175,4 +175,74 @@ describe("GET /api/programs", () => {
       compatibility_mode: "include_events_fallback",
     });
   });
+
+  it("does not select the stale programs.venue_id column", async () => {
+    const programRows = [
+      {
+        id: "prog-1",
+        portal_id: "portal-family",
+        source_id: 101,
+        name: "Robotics Club",
+        slug: "robotics-club",
+        description: "Build and test robots.",
+        program_type: "class",
+        provider_name: "Atlanta Parks & Recreation",
+        age_min: 8,
+        age_max: 12,
+        season: "spring",
+        session_start: "2026-04-10",
+        session_end: "2026-05-20",
+        schedule_days: [2, 4],
+        schedule_start_time: "15:00:00",
+        schedule_end_time: "17:00:00",
+        cost_amount: 0,
+        cost_period: "season",
+        cost_notes: null,
+        registration_status: "open",
+        registration_opens: null,
+        registration_closes: null,
+        registration_url: null,
+        before_after_care: false,
+        lunch_included: false,
+        tags: ["stem"],
+        status: "active",
+        venue: {
+          id: 44,
+          name: "Grove Park Recreation Center",
+          neighborhood: "Grove Park",
+          address: "750 Francis Pl NW",
+          city: "Atlanta",
+          lat: 33.77,
+          lng: -84.46,
+          image_url: "https://example.com/program.jpg",
+          indoor_outdoor: "indoor",
+        },
+      },
+    ];
+    const programsQuery = buildProgramsQuery(programRows);
+    mocks.createClient.mockResolvedValue({
+      from: vi.fn(() => programsQuery),
+    });
+    mocks.createServiceClient.mockReturnValue({
+      from: vi.fn(() => programsQuery),
+    });
+    mocks.getPortalSourceAccess.mockResolvedValue({
+      entityFamily: "programs",
+      sourceIds: [101],
+      categoryConstraints: new Map([[101, null]]),
+      accessDetails: [],
+    });
+
+    const { GET } = await import("@/app/api/programs/route");
+    const request = new NextRequest(
+      "http://localhost:3000/api/programs?portal=atlanta-families",
+    );
+
+    const response = await GET(request);
+    const body = await response.json();
+
+    expect(programsQuery.select.mock.calls[0][0]).not.toContain("venue_id");
+    expect(body.programs).toHaveLength(1);
+    expect(body.programs[0].name).toBe("Robotics Club");
+  });
 });

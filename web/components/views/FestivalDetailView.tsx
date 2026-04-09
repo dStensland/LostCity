@@ -30,6 +30,8 @@ import { useDetailNavigation } from "@/lib/hooks/useDetailNavigation";
 import { decodeHtmlEntities, formatTimeSplit } from "@/lib/formats";
 import { useState } from "react";
 import { buildExploreUrl } from "@/lib/find-url";
+import PlaceScreeningsSection from "@/components/detail/PlaceScreeningsSection";
+import type { ScreeningBundle } from "@/lib/screenings";
 
 // ── Types ────────────────────────────────────────────────────────────────
 
@@ -85,6 +87,7 @@ interface ProgramData {
 interface FestivalResponse {
   festival: FestivalData;
   programs: ProgramData[];
+  screenings?: ScreeningBundle | null;
 }
 
 interface FestivalDetailViewProps {
@@ -303,6 +306,7 @@ export default function FestivalDetailView({
 
   const festival = data?.festival ?? null;
   const programs = useMemo(() => data?.programs ?? [], [data]);
+  const screenings = useMemo(() => data?.screenings ?? null, [data]);
 
   // Flatten programs[].sessions[] into a single sorted event list
   const allEvents = useMemo(() => {
@@ -696,6 +700,16 @@ export default function FestivalDetailView({
       )}
 
       {/* Schedule */}
+      {screenings ? (
+        <div>
+          <PlaceScreeningsSection
+            screenings={screenings}
+            title="Screenings"
+            onTimeClick={toEvent}
+          />
+        </div>
+      ) : null}
+
       {allEvents.length > 0 ? (
         <div>
           <div className="flex items-center gap-3 mb-4">

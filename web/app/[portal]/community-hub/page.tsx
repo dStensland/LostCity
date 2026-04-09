@@ -241,7 +241,7 @@ export default async function CommunityHubPage({ params }: Props) {
   if (!request) notFound();
 
   if (!request.isFilm) {
-    redirect(`/${request.portal.slug}/community-hub`);
+    redirect(`/${request.portal.slug}`);
   }
 
   const { groups, upcomingMeetups } = await getFilmCommunityData();

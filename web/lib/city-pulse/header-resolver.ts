@@ -13,6 +13,7 @@ import { getEditorialHeadline, getCityPhoto, getDefaultAccentColor, getTimeLabel
 import { getDashboardCards } from "./dashboard-cards";
 import { composeBriefing } from "./briefing-engine";
 import type { BriefingContext } from "./briefing-engine";
+import { getEffectiveEventImageUrl } from "./event-signals";
 import type { FeedEventData } from "@/components/EventCard";
 import type {
   FeedContext,
@@ -216,7 +217,7 @@ function resolveFlagshipEvent(
   const candidates = todayEvents.filter(
     (e) =>
       (e.importance === "flagship" || e.is_tentpole || !!e.festival_id) &&
-      !!e.image_url,
+      !!getEffectiveEventImageUrl(e),
   );
 
   if (candidates.length === 0) return null;
@@ -230,7 +231,8 @@ function resolveFlagshipEvent(
   candidates.sort((a, b) => priority(a) - priority(b));
 
   const best = candidates[0];
-  if (!best.image_url) return null;
+  const imageUrl = getEffectiveEventImageUrl(best);
+  if (!imageUrl) return null;
 
   const priceInfo =
     best.is_free
@@ -244,7 +246,7 @@ function resolveFlagshipEvent(
   return {
     id: best.id,
     title: best.title,
-    image_url: best.image_url,
+    image_url: imageUrl,
     venue_name: best.venue?.name ?? null,
     start_time: best.start_time ?? null,
     price_info: priceInfo,

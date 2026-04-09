@@ -14,10 +14,10 @@ describe("CivicTabBar", () => {
     expect(isCivicTabActive("support", "/helpatl", params, "helpatl")).toBe(false);
   });
 
-  it("keeps calendar activation scoped to the feed route", () => {
-    const params = new URLSearchParams({ view: "find", tab: "calendar" });
+  it("keeps calendar activation scoped to the explore route", () => {
+    const params = new URLSearchParams({ tab: "calendar" });
 
-    expect(isCivicTabActive("calendar", "/helpatl", params, "helpatl")).toBe(true);
+    expect(isCivicTabActive("calendar", "/helpatl/explore", params, "helpatl")).toBe(true);
     expect(isCivicTabActive("calendar", "/helpatl/support", params, "helpatl")).toBe(false);
   });
 });

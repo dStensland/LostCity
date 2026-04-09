@@ -424,8 +424,8 @@ async function main() {
     .from("explore_track_venues")
     .select(`
       id, track_id, venue_id, sort_order, is_featured, editorial_blurb, source_url, source_label, status,
-      venues (
-        id, slug, name, neighborhood, city, venue_type, website,
+      venues:places (
+        id, slug, name, neighborhood, city, venue_type:place_type, website,
         description, short_description, image_url, hero_image_url, data_quality, last_verified_at
       )
     `)

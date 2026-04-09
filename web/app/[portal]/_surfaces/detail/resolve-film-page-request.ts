@@ -11,14 +11,8 @@ export async function resolveFilmPageRequest({
   portalSlug,
   pathname,
 }: ResolveFilmPageRequestArgs) {
-  const request = await resolveDetailPageRequest({
+  return resolveDetailPageRequest({
     portalSlug,
     pathname,
   });
-
-  if (!request || !request.isFilm) {
-    return null;
-  }
-
-  return request;
 }

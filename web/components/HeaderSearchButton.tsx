@@ -166,7 +166,7 @@ export default function HeaderSearchButton({ portalSlug }: HeaderSearchButtonPro
         <div
           className={`flex items-center gap-2 h-8 pl-3 pr-2 rounded-full border transition-all duration-150 ${
             isFocused
-              ? "bg-[var(--dusk)] border-[var(--coral)]/60 ring-2 ring-[var(--coral)]/20 w-52"
+              ? "bg-[var(--dusk)] border-[var(--coral)]/60 w-52"
               : "bg-[var(--twilight)]/60 border-[var(--twilight)] hover:border-[var(--soft)]/40 hover:bg-[var(--twilight)]/80 w-44"
           }`}
         >
@@ -203,7 +203,7 @@ export default function HeaderSearchButton({ portalSlug }: HeaderSearchButtonPro
             role="combobox"
             aria-autocomplete="list"
             autoComplete="off"
-            className="flex-1 min-w-0 bg-transparent font-mono text-xs text-[var(--cream)] placeholder:text-[var(--muted)] focus:outline-none"
+            className="header-search-input flex-1 min-w-0 bg-transparent border-none shadow-none font-mono text-xs text-[var(--cream)] placeholder:text-[var(--muted)] focus:outline-none"
           />
 
           {/* ⌘K badge — visible when idle (no focus, no query) */}

@@ -25,13 +25,13 @@ describe("runSearchPreview", () => {
     expect(result.results[0]).toMatchObject({
       type: "event",
       title: "Afrobeat Night",
-      href: "/atlanta?view=find&lane=events&search=Afrobeat%20Night",
+      href: "/atlanta/explore?lane=events&search=Afrobeat+Night",
     });
     expect(result.results[1]).toMatchObject({
       type: "venue",
       title: "Afrobeat Night",
       subtitle: "Search places",
-      href: "/atlanta?view=find&lane=places&search=Afrobeat%20Night",
+      href: "/atlanta/explore?lane=places&search=Afrobeat+Night",
     });
   });
 
@@ -55,7 +55,7 @@ describe("runSearchPreview", () => {
       type: "event",
       title: "Pottery Wheel",
       subtitle: "Search classes",
-      href: "/atlanta?view=find&lane=events&search=Pottery%20Wheel",
+      href: "/atlanta/explore?lane=classes&search=Pottery+Wheel",
     });
   });
 });

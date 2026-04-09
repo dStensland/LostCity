@@ -389,26 +389,9 @@ export function getDisplayParticipants(
       }
     }
 
-    const allowFallbackFromTitle = category === "music" || category === "comedy" || category === "nightlife";
-    if (!allowFallbackFromTitle) return [];
-
-    const fallbackHeadliner = extractLikelyHeadlinerFromTitle(context.eventTitle);
-    if (!fallbackHeadliner) return [];
-    if (isLowSignalParticipantName(fallbackHeadliner, category)) return [];
-
-    if (category === "comedy" && /(comedy|night|open mic)/i.test(fallbackHeadliner)) {
-      return [];
-    }
-
-    return [{
-      id: -1,
-      event_id: 0,
-      name: fallbackHeadliner,
-      role: "headliner",
-      billing_order: 1,
-      is_headliner: true,
-      artist: null,
-    }];
+    // If no structured participant data, omit section per AGENTS.md:
+    // "Never synthesize participants from event title tokenization."
+    return [];
   }
 
   const parsedTeams = parseSportsTeamsFromTitle(context.eventTitle);

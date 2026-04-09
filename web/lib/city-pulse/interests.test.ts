@@ -87,13 +87,13 @@ describe("sports interest chip", () => {
   });
 });
 
-describe("recreation interest chip", () => {
+describe("fitness interest chip", () => {
   it("matches pickup and pickleball tags via recreation signal genres", () => {
-    const recreationChip = INTEREST_MAP.get("recreation");
+    const fitnessChip = INTEREST_MAP.get("fitness");
 
-    expect(recreationChip?.match(
+    expect(fitnessChip?.match(
       makeEvent({
-        category: "recreation",
+        category: "fitness",
         tags: ["pickup", "pickleball"],
         title: "Friday Pickleball Open Play",
       }),
@@ -101,11 +101,11 @@ describe("recreation interest chip", () => {
   });
 
   it("matches open-gym via recreation signal genres", () => {
-    const recreationChip = INTEREST_MAP.get("recreation");
+    const fitnessChip = INTEREST_MAP.get("fitness");
 
-    expect(recreationChip?.match(
+    expect(fitnessChip?.match(
       makeEvent({
-        category: "sports",
+        category: "fitness",
         tags: ["open-gym", "basketball"],
         title: "Rec Center Open Gym",
       }),
@@ -113,25 +113,26 @@ describe("recreation interest chip", () => {
   });
 });
 
-describe("exercise interest chip", () => {
-  it("matches event with category exercise", () => {
-    const exerciseChip = INTEREST_MAP.get("exercise");
+describe("fitness category match", () => {
+  it("matches event with category fitness", () => {
+    const fitnessChip = INTEREST_MAP.get("fitness");
 
-    expect(exerciseChip?.match(
+    expect(fitnessChip?.match(
       makeEvent({
-        category: "exercise",
+        category: "fitness",
         title: "Morning Yoga Flow",
       }),
     )).toBe(true);
   });
 
-  it("backward compat: category fitness also matches exercise chip", () => {
-    const exerciseChip = INTEREST_MAP.get("exercise");
+  it("matches recreation signal genres even when category is different", () => {
+    const fitnessChip = INTEREST_MAP.get("fitness");
 
-    expect(exerciseChip?.match(
+    expect(fitnessChip?.match(
       makeEvent({
-        category: "fitness",
-        title: "Sunrise Yoga in the Park",
+        category: "community",
+        tags: ["pickleball"],
+        title: "Pickleball Tournament",
       }),
     )).toBe(true);
   });

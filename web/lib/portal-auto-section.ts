@@ -1,5 +1,6 @@
 import { addDays } from "date-fns";
 import type { PortalFeedDateFilter } from "@/lib/portal-feed-plan";
+import { deduplicateCinemaEvents } from "@/lib/cinema-filter";
 import { getLocalDateString } from "@/lib/formats";
 import { isSceneEvent } from "@/lib/scene-event-routing";
 
@@ -435,6 +436,10 @@ export function selectPortalAutoSectionEvents<T extends PortalAutoSectionEvent>(
     default:
       break;
   }
+
+  // Generic discovery surfaces should not spend section slots on duplicate
+  // chain/standard showtimes when a single film card can represent the day.
+  filtered = deduplicateCinemaEvents(filtered) as T[];
 
   if (input.limit >= 8 && filtered.length > input.limit) {
     return {

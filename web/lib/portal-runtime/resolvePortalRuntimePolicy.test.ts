@@ -34,7 +34,7 @@ const baseRequest = {
 } satisfies Omit<PortalResolvedRequest, "runtimePolicy">;
 
 describe("resolvePortalRuntimePolicy", () => {
-  it("gives explore an isolated, no-shared-chrome runtime", () => {
+  it("gives explore shared chrome with no tracker", () => {
     expect(
       resolvePortalRuntimePolicy({
         surface: "explore",
@@ -44,7 +44,7 @@ describe("resolvePortalRuntimePolicy", () => {
       surface: "explore",
       cacheMode: "revalidate",
       revalidateSeconds: 300,
-      requiresSharedChrome: false,
+      requiresSharedChrome: true,
       supportsOverlayEntry: true,
       showTracker: false,
       showCannyWidget: false,

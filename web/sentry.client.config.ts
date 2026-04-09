@@ -6,11 +6,11 @@ Sentry.init({
   // Only send errors in production
   enabled: process.env.NODE_ENV === "production",
 
-  // Sample rate for error events (1.0 = 100%)
-  sampleRate: 1.0,
+  // Sample rate — 10% of errors is plenty for signal, saves Sentry quota
+  sampleRate: 0.1,
 
-  // Sample rate for performance transactions (lower to reduce volume)
-  tracesSampleRate: 0.1,
+  // Performance transactions — 1% keeps costs low
+  tracesSampleRate: 0.01,
 
   // Don't send PII
   sendDefaultPii: false,

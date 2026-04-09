@@ -6,6 +6,7 @@ import {
   getFestivalBySlug,
   getFestivalPrograms,
   getFestivalEvents,
+  getFestivalScreenings,
 } from "@/lib/festivals";
 import { getFestivalArtists } from "@/lib/artists";
 import LineupSection from "@/components/LineupSection";
@@ -28,6 +29,7 @@ import { buildBreadcrumbSchema } from "@/lib/breadcrumb-schema";
 import { getFestivalLayout, type FestivalLayout } from "@/lib/festival-layout";
 import { buildExploreUrl } from "@/lib/find-url";
 import { resolveDetailPageRequest } from "../../_surfaces/detail/resolve-detail-page-request";
+import PlaceScreeningsSection from "@/components/detail/PlaceScreeningsSection";
 
 export const revalidate = 120;
 
@@ -513,6 +515,7 @@ async function FestivalScheduleSection({
     getFestivalPrograms(festivalId),
     getFestivalEvents(festivalId),
   ]);
+  const screenings = await getFestivalScreenings(festivalId);
 
   // Detect single-venue festival for transit info
   const venueIds = new Set(sessions.filter((s) => s.venue).map((s) => s.venue!.id));
@@ -648,6 +651,12 @@ async function FestivalScheduleSection({
       </InfoCard>
 
       {/* Next Up — concise preview, full planner on dedicated page */}
+      {screenings && screenings.titles.length > 0 ? (
+        <section>
+          <PlaceScreeningsSection screenings={screenings} title="Screenings" />
+        </section>
+      ) : null}
+
       {sessions.length > 0 ? (
         <section id="next-up" className="rounded-xl border border-[var(--twilight)]/85 bg-[var(--night)] px-4 py-4 sm:px-5 sm:py-5">
           <div className="flex flex-wrap items-start justify-between gap-3 mb-3">

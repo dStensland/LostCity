@@ -439,6 +439,7 @@ function TeamCard({
             width={96}
             height={96}
             className="object-contain max-h-24 max-w-32"
+            style={{ width: "auto", height: "auto" }}
             fallback={
               <span
                 className="text-5xl font-black"

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { resolvePortalSurface } from "@/lib/portal-runtime/resolvePortalSurface";
+import { toCanonicalExploreUrl } from "@/lib/normalize-find-url";
 
 /**
  * Vanity domains that map to specific paths on the main site.
@@ -142,12 +143,8 @@ export function middleware(request: NextRequest) {
   });
 
   if (portalSlug && !childSegment && routeMatch.isLegacyExplore) {
-    const redirectUrl = request.nextUrl.clone();
-    redirectUrl.pathname = `/${portalSlug}/explore`;
-    if (searchParams.get("view") === "find") {
-      redirectUrl.searchParams.delete("view");
-    }
-    return NextResponse.redirect(redirectUrl, 307);
+    const canonicalPath = toCanonicalExploreUrl(portalSlug, searchParams);
+    return NextResponse.redirect(new URL(canonicalPath, request.url), 307);
   }
 
   if (subdomain && KNOWN_VERTICALS.has(subdomain)) {

@@ -43,12 +43,19 @@ export default async function FreePage({ params }: Props) {
 
   const sourceAccess = await getPortalSourceAccess(request.portal.id);
 
+  // Floor start_date to 7 days ago to exclude stale multi-day events
+  // with absurdly long date ranges (e.g., start_date 7 months ago)
+  const floorDate = new Date();
+  floorDate.setDate(floorDate.getDate() - 7);
+  const dateFloor = floorDate.toISOString().slice(0, 10);
+
   const { events: rawEvents } = await getFilteredEventsWithCursor(
     {
       is_free: true,
       portal_id: request.portal.id,
       source_ids: sourceAccess.sourceIds,
       exclude_classes: true,
+      date_range_start: dateFloor,
     },
     null,
     50

@@ -17,6 +17,7 @@ export function mapSpotDetailToViewData(detail: SpotDetailPayload): SpotApiRespo
   return {
     spot: detail.spot as SpotApiResponse["spot"],
     upcomingEvents: detail.upcomingEvents as SpotApiResponse["upcomingEvents"],
+    screenings: detail.screenings as SpotApiResponse["screenings"],
     nearbyDestinations: detail.nearbyDestinations as unknown as SpotApiResponse["nearbyDestinations"],
     highlights: detail.highlights as SpotApiResponse["highlights"],
     features: detail.features as SpotApiResponse["features"],

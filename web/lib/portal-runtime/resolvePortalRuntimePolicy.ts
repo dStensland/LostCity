@@ -15,7 +15,6 @@ export function resolvePortalRuntimePolicy({
   request,
 }: ResolvePortalRuntimePolicyArgs): PortalSurfaceRuntimePolicy {
   const requiresSharedChrome =
-    surface !== "explore" &&
     !request.isHotel &&
     !request.isMarketplace &&
     !request.isFilm &&

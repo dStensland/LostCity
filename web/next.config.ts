@@ -211,10 +211,9 @@ export default withBundleAnalyzer(
     // Don't widen source maps (smaller bundles)
     widenClientFileUpload: false,
 
-    // Source maps configuration
+    // Source maps configuration — skip upload on preview deploys to save build time
     sourcemaps: {
-      // Hide source maps from client (delete after upload)
-      disable: false,
+      disable: process.env.VERCEL_ENV === "preview",
     },
   })
 );

@@ -18,7 +18,7 @@ describe("mapSuggestionToSearchResult", () => {
     expect(result).toMatchObject({
       type: "event",
       subtitle: "Class",
-      href: "/atlanta?view=find&lane=events&search=Ceramics",
+      href: "/atlanta/explore?lane=classes&search=Ceramics",
     });
   });
 
@@ -51,7 +51,7 @@ describe("mapSuggestionToSearchResult", () => {
 
     expect(result).toMatchObject({
       type: "venue",
-      href: "/atlanta?view=find&lane=places&vibes=Rooftop",
+      href: "/atlanta/explore?lane=places&vibes=Rooftop",
     });
   });
 });
