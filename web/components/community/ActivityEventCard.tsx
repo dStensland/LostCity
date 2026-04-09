@@ -46,7 +46,7 @@ export function ActivityEventCard({ event, users, activityType, timeAgo }: Activ
   const isSave = activityType === "save";
 
   // CTA config
-  const ctaLabel = isSave ? "Check it out" : "Join them";
+  const ctaLabel = isSave ? "Check it out →" : "See event →";
   const ctaColor = isSave ? "var(--neon-magenta)" : "var(--coral)";
   const hoverGlow = isSave ? "hover-glow-magenta-coral" : "hover-glow-coral-magenta";
   const hoverBorder = isSave ? "hover:border-[var(--neon-magenta)]/30" : "hover:border-[var(--coral)]/30";
@@ -164,16 +164,10 @@ export function ActivityEventCard({ event, users, activityType, timeAgo }: Activ
                 </p>
               )}
               <span
-                className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full font-mono text-xs font-medium flex-shrink-0 transition-colors"
-                style={{
-                  backgroundColor: `color-mix(in srgb, ${ctaColor} 15%, transparent)`,
-                  color: ctaColor,
-                }}
+                className="font-mono text-xs font-medium flex-shrink-0 transition-opacity hover:opacity-80"
+                style={{ color: ctaColor }}
               >
                 {ctaLabel}
-                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                </svg>
               </span>
             </div>
           </div>

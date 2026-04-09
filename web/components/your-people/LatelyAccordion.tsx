@@ -4,7 +4,7 @@ import { useState } from "react";
 import { FriendsActivity } from "@/components/community/FriendsActivity";
 
 export default function LatelyAccordion() {
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(true);
 
   return (
     <div className="border border-[var(--twilight)] rounded-xl overflow-hidden">
@@ -19,7 +19,7 @@ export default function LatelyAccordion() {
           </span>
         </div>
         <svg
-          className={`w-4 h-4 text-[var(--muted)] transition-transform ${expanded ? "rotate-180" : ""}`}
+          className={`w-4 h-4 text-[var(--soft)] transition-transform ${expanded ? "rotate-180" : ""}`}
           fill="none" stroke="currentColor" viewBox="0 0 24 24"
         >
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />

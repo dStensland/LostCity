@@ -3,6 +3,7 @@
 import { useState, useCallback } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth-context";
+import { useToast } from "@/components/Toast";
 
 type ImInState = "default" | "going" | "interested";
 
@@ -14,6 +15,7 @@ interface ImInButtonProps {
 
 export default function ImInButton({ eventId, initialState = "default", className = "" }: ImInButtonProps) {
   const { user } = useAuth();
+  const { showToast } = useToast();
   const queryClient = useQueryClient();
   const [state, setState] = useState<ImInState>(initialState);
 
@@ -40,6 +42,7 @@ export default function ImInButton({ eventId, initialState = "default", classNam
     },
     onError: () => {
       setState(initialState);
+      showToast("Couldn't RSVP. Try again.", "error");
     },
   });
 
@@ -57,6 +60,7 @@ export default function ImInButton({ eventId, initialState = "default", classNam
     },
     onError: () => {
       setState("going");
+      showToast("Couldn't undo RSVP. Try again.", "error");
     },
   });
 
@@ -87,7 +91,7 @@ export default function ImInButton({ eventId, initialState = "default", classNam
     <button
       onClick={handleClick}
       disabled={rsvpMutation.isPending || undoMutation.isPending}
-      className={`min-h-[44px] px-3.5 py-2 rounded-lg border font-mono text-xs font-semibold transition-all disabled:opacity-50 flex items-center gap-1.5 ${styles[state]} ${className}`}
+      className={`min-h-[44px] min-w-[64px] px-3.5 py-2 rounded-lg border font-mono text-xs font-semibold transition-all disabled:opacity-50 flex items-center gap-1.5 ${styles[state]} ${className}`}
     >
       {state === "going" && (
         <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">

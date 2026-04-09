@@ -246,6 +246,14 @@ async function clean() {
   if (followsError) console.error("  Error cleaning follows:", followsError.message);
   else console.log("  Deleted follows");
 
+  // Clean friendships table
+  const { error: friendshipsError } = await supabase
+    .from("friendships")
+    .delete()
+    .or(`user_a_id.in.(${SEED_IDS.join(",")}),user_b_id.in.(${SEED_IDS.join(",")})`);
+  if (friendshipsError) console.error("  Error cleaning friendships:", friendshipsError.message);
+  else console.log("  Deleted friendships");
+
   const { error: prefsError } = await supabase
     .from("user_preferences")
     .delete()
@@ -404,6 +412,26 @@ async function seed() {
   console.log(
     `Friend connections: ${followsCreated} created (${allPairs.length - followsCreated} already existed)`
   );
+
+  // ── Step 4b: Friendships table (required for get_friend_ids RPC) ──────────
+  // The follows table is for backward compat; the friendships table is what
+  // get_friend_ids actually reads from. Create friendship rows for each pair.
+  const uniquePairs = new Set<string>();
+  let friendshipsCreated = 0;
+  for (const pair of allPairs) {
+    const a = pair.follower_id;
+    const b = pair.following_id;
+    const key = a < b ? `${a}:${b}` : `${b}:${a}`;
+    if (uniquePairs.has(key)) continue;
+    uniquePairs.add(key);
+
+    const { error: fErr } = await supabase.rpc(
+      "create_friendship" as never,
+      { user_a: a, user_b: b } as never
+    );
+    if (!fErr) friendshipsCreated++;
+  }
+  console.log(`Friendships created: ${friendshipsCreated} (${uniquePairs.size} unique pairs)`);
 
   // ── Step 5: RSVPs ─────────────────────────────────────────────────────────
   const today = new Date().toISOString().split("T")[0];

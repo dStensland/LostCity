@@ -59,7 +59,7 @@ export default function FindFriendsSection() {
       />
 
       {/* Action cards — mobile: 3-col grid, desktop: row with descriptions */}
-      <div className="grid grid-cols-3 sm:grid-cols-1 gap-2 sm:gap-2.5">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-2.5">
         {actions.map((action) => {
           const content = (
             <div className="flex flex-col sm:flex-row items-center sm:items-center gap-1.5 sm:gap-3 p-3 sm:px-4 sm:py-3.5 rounded-[10px] border border-[var(--twilight)] hover:bg-[var(--twilight)]/10 transition-colors">
