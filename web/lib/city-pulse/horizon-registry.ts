@@ -43,7 +43,7 @@ export type HorizonFestivalRow = {
 
 type CanonicalMatchable = Pick<
   FeedEventData,
-  "festival_id" | "title" | "source_slug" | "image_url" | "venue"
+  "festival_id" | "title" | "image_url" | "venue"
 > & {
   source_slug?: string | null;
 };
