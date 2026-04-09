@@ -5,7 +5,9 @@
 .env
 .env.local
 .env.*.local
-!**/.env.example
+# Allow .env.example as documentation
+!.env.example
+!web/.env.example
 
 # Python
 __pycache__/
