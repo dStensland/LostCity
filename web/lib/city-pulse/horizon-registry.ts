@@ -187,7 +187,8 @@ export function annotateCanonicalHorizonEvent<T extends FeedEventData>(
   event: T,
   portalSlug: string,
 ): T {
-  const existingKey = (event as T & { canonical_key?: string | null }).canonical_key;
+  const feedEvent = event as FeedEventData;
+  const existingKey = feedEvent.canonical_key;
   const target = existingKey
     ? getSurfaceablePortalHorizonTargets(portalSlug).find(
         (candidate) => candidate.canonical_key === existingKey,
@@ -198,17 +199,17 @@ export function annotateCanonicalHorizonEvent<T extends FeedEventData>(
 
   return {
     ...event,
-    entity_type: (event.entity_type ?? "event"),
+    entity_type: (feedEvent.entity_type ?? "event"),
     canonical_key: target.canonical_key,
     canonical_tier: target.tier,
-    is_tentpole: target.tier === "tier_a" ? true : event.is_tentpole,
+    is_tentpole: target.tier === "tier_a" ? true : feedEvent.is_tentpole,
     importance:
       target.tier === "tier_a"
         ? "flagship"
-        : event.importance === "flagship"
+        : feedEvent.importance === "flagship"
           ? "flagship"
           : "major",
-  };
+  } as T;
 }
 
 export function buildSyntheticFestivalHorizonEvent(
