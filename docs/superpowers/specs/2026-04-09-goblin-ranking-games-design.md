@@ -1,13 +1,13 @@
 # Goblin Day: Ranking Games
 
 **Date:** 2026-04-09
-**Status:** Draft
+**Status:** Draft (v2 — updated after architecture, product, and strategy review)
 
 ## Overview
 
-A generic ranking game system for Goblin Day that lets participants independently rank items across categories, then browse each other's rankings. First use case: Mission: Impossible franchise — rank the movies, the stunts, and the sequences.
+A generic ranking game system for Goblin Day that lets participants independently rank items across categories, then browse and compare each other's rankings. First use case: Mission: Impossible franchise — rank the movies, the stunts, and the sequences.
 
-Games are seeded by the creator (no submission UX). Each participant drags items into their preferred order with optional tier buckets, reusing the same UX pattern as the existing movie log.
+Games are seeded by the creator (no submission UX). Each participant drags items into their preferred order with optional tier buckets, reusing the same UX pattern as the existing movie log. The social payoff comes from comparison — seeing where you agree and disagree with friends, with an aggregate "Group Rankings" view as the centerpiece.
 
 ## Data Model
 
@@ -19,16 +19,17 @@ Games are seeded by the creator (no submission UX). Each participant drags items
 | name | text NOT NULL | e.g., "Mission: Impossible" |
 | description | text | optional flavor text |
 | image_url | text | optional hero/poster image |
-| created_by | uuid FK auth.users | game creator |
-| status | text NOT NULL DEFAULT 'open' | 'open' or 'closed' |
+| status | text NOT NULL DEFAULT 'open' | CHECK (status IN ('open', 'closed')) |
 | created_at | timestamptz DEFAULT now() | |
+
+No `created_by` — games are seeded via migration, not created through the UI.
 
 ### `goblin_ranking_categories`
 
 | Column | Type | Notes |
 |--------|------|-------|
 | id | serial PK | |
-| game_id | integer FK goblin_ranking_games | |
+| game_id | integer FK goblin_ranking_games ON DELETE CASCADE | |
 | name | text NOT NULL | e.g., "Movies", "Stunts", "Sequences" |
 | description | text | optional |
 | sort_order | integer NOT NULL DEFAULT 0 | display order of categories |
@@ -39,7 +40,7 @@ Games are seeded by the creator (no submission UX). Each participant drags items
 | Column | Type | Notes |
 |--------|------|-------|
 | id | serial PK | |
-| category_id | integer FK goblin_ranking_categories | |
+| category_id | integer FK goblin_ranking_categories ON DELETE CASCADE | |
 | name | text NOT NULL | e.g., "Burj Khalifa Climb" |
 | subtitle | text | e.g., "Ghost Protocol" — which movie it's from |
 | image_url | text | optional |
@@ -50,8 +51,8 @@ Games are seeded by the creator (no submission UX). Each participant drags items
 | Column | Type | Notes |
 |--------|------|-------|
 | id | serial PK | |
-| item_id | integer FK goblin_ranking_items | |
-| user_id | uuid FK auth.users | |
+| item_id | integer FK goblin_ranking_items ON DELETE CASCADE | |
+| user_id | uuid FK auth.users ON DELETE CASCADE | |
 | sort_order | integer NOT NULL | position (1 = top) |
 | tier_name | text | optional, e.g., "Transcendent" |
 | tier_color | text | optional hex color |
@@ -60,11 +61,33 @@ Games are seeded by the creator (no submission UX). Each participant drags items
 
 **Unique constraint:** `(item_id, user_id)` — one ranking per user per item.
 
-### RLS Policy
+### Indexes
 
-- **Read:** Any authenticated user can read all games, categories, items, and entries.
-- **Write entries:** Users can only insert/update/delete their own entries (`user_id = auth.uid()`).
-- **Write games/categories/items:** No client-side writes. Seeded via migration or direct SQL.
+- `idx_ranking_entries_user_item` on `goblin_ranking_entries(user_id, item_id)` — user-first lookups for "my rankings"
+- `idx_ranking_categories_game_order` on `goblin_ranking_categories(game_id, sort_order)` — category ordering
+- `idx_ranking_items_category` on `goblin_ranking_items(category_id)` — item lookups by category
+
+### RLS Policies
+
+Reference tables (games, categories, items) — authenticated read-only:
+
+```sql
+CREATE POLICY "read_games" ON goblin_ranking_games FOR SELECT USING (true);
+CREATE POLICY "read_categories" ON goblin_ranking_categories FOR SELECT USING (true);
+CREATE POLICY "read_items" ON goblin_ranking_items FOR SELECT USING (true);
+-- No INSERT/UPDATE/DELETE policies — seeded via service client only
+```
+
+Entry table — owner writes, public reads:
+
+```sql
+CREATE POLICY "read_all_entries" ON goblin_ranking_entries
+  FOR SELECT USING (true);
+CREATE POLICY "manage_own_entries" ON goblin_ranking_entries
+  FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+```
+
+Two policies per table, matching the movie log pattern.
 
 ## API Routes
 
@@ -80,7 +103,25 @@ Game detail with nested categories and items. Returns the game object with `cate
 
 ### `GET /rankings/[gameId]/entries`
 
-All participants' ranking entries for this game. Returns entries grouped by user (with display name and avatar from profiles). Used for browsing others' rankings.
+All participants' ranking entries for this game, returned as a user-grouped structure:
+
+```json
+{
+  "participants": [
+    {
+      "user_id": "...",
+      "display_name": "Daniel",
+      "avatar_url": "...",
+      "items_ranked": 34,
+      "entries": [
+        { "item_id": 10, "sort_order": 1, "tier_name": "Masterpiece", "tier_color": "#00f0ff" }
+      ]
+    }
+  ]
+}
+```
+
+Grouped by user in the API layer (not flat entries). Profile data joined from user profiles. Includes users who have ranked at least one item.
 
 ### `GET /rankings/[gameId]/me`
 
@@ -101,7 +142,13 @@ Bulk upsert for a single category. Request body:
 }
 ```
 
-Validates that all `item_id`s belong to the given `category_id` and the category belongs to the game. Upserts on `(item_id, user_id)`. Items omitted from the array are deleted (user un-ranked them). Updates `updated_at` on every touched entry.
+**Validation:**
+- All `item_id`s must belong to the given `category_id`, and the category must belong to the game.
+- **Game must be open.** If `status = 'closed'`, reject with 403.
+
+**Delete scope:** Items omitted from the array **for this category only** are deleted. Entries in other categories are untouched. This prevents race conditions when auto-saving across rapid tab switches.
+
+**Upserts** on `(item_id, user_id)`. Updates `updated_at` on every touched entry.
 
 Rate limited at `RATE_LIMITS.write` (30/min).
 
@@ -111,28 +158,79 @@ Rate limited at `RATE_LIMITS.write` (30/min).
 
 `/goblinday/rankings/[gameId]`
 
-Entry point: card/link from the main Goblin Day page, or direct URL.
+Entry point: card/link from the main Goblin Day page, or direct URL share.
+
+### Landing / First Visit
+
+When a user first opens the game (no entries yet):
+
+- Game header with name, description, hero image.
+- Category tabs default to the first category.
+- The ranked list is empty with a prompt: **"Drag items up to rank them, or tap a number to place them."**
+- All items appear in the **Unranked** section below, visually dimmed (no rank badge, lower opacity). These are the pool to draw from.
+
+The prompt and visual distinction between ranked/unranked make the mechanic self-evident without a tutorial.
 
 ### Layout
 
 1. **Game header** — name, description, optional hero image.
 
-2. **Category tabs** — horizontal tab bar switching between categories (e.g., "Movies" | "Stunts" | "Sequences"). Tab order follows `sort_order`.
+2. **Category tabs** — horizontal tab bar switching between categories (e.g., "Movies" | "Stunts" | "Sequences"). Tab order follows `sort_order`. Max 4 visible tabs (overflow scrolls). Tab labels should be 1-2 words. Switching tabs preserves scroll position per tab.
 
-3. **View toggle** — "My Rankings" vs "Everyone's Rankings".
+3. **View toggle** — three views: "My Rankings" | "Compare" | "Group Rankings".
 
-4. **My Rankings view:**
-   - Drag-to-reorder list, same UX as the movie log.
-   - Each item shows rank number (with neon glow treatment for top positions), name, and subtitle.
-   - Optional image thumbnail if `image_url` is set.
-   - Tier bucket support — items grouped under tier headers with colored dividers.
-   - **Unranked section** at the bottom: items the user hasn't positioned yet. Drag from here into the ranked list.
-   - Auto-saves on reorder/tier change (debounced bulk upsert).
+4. **Save indicator** — subtle "Saving..." / "Saved" at the top of the list during auto-save. Silent on success after initial indicator, visible on error with retry.
 
-5. **Everyone's Rankings view:**
-   - List of participants who have entries in this game.
-   - Tap a participant to see their read-only ranked list for the current category.
-   - Participant list shows name, avatar, and count of items ranked.
+### My Rankings View
+
+- Drag-to-reorder list, same UX as the movie log.
+- Each item shows rank number (with neon glow treatment for top positions), name, and subtitle.
+- Optional image thumbnail if `image_url` is set. Items without images get a category-tinted placeholder.
+- Tier bucket support — items grouped under tier headers with colored dividers.
+- **Unranked section** at the bottom: items the user hasn't positioned yet, visually dimmed. Drag from here into the ranked list.
+- **Un-rank action**: each ranked item has a small remove button (X) to send it back to unranked. Dragging back to the unranked section also works.
+- Auto-saves on reorder/tier change (debounced bulk upsert).
+
+**Mobile mechanics:**
+- **Tap rank number** to type a target position (jump to #3) — primary mobile ranking mechanic, already exists in log entry cards.
+- **Long-press to drag** on mobile (not always-draggable) so taps on card content remain tappable.
+- **Remove button** for un-ranking (more reliable than drag-back on mobile).
+
+### Compare View
+
+The social core of the feature. Two modes:
+
+**Person comparison:** Select a participant from a dropdown/list. Their ranked list is shown for the current category with your rank displayed alongside each item:
+
+```
+Sarah's #1:  Burj Khalifa Climb (Ghost Protocol)     You: #7  [-6]
+Sarah's #2:  HALO Jump (Fallout)                      You: #1  [+1]
+Sarah's #3:  Helicopter Canyon (Fallout)               You: #3  [=]
+```
+
+Disagreements (delta > 3 positions) are visually highlighted. Agreements (same position or within 1) get a subtle match indicator.
+
+Items the other person ranked but you haven't are shown as "Unranked by you." Items you ranked but they haven't are omitted from this view (it's their list).
+
+**Participant list** shows all users with entries, their avatar, name, and items ranked count. Users who haven't started ranking anything are shown as "Hasn't ranked yet" — creates gentle peer pressure.
+
+### Group Rankings View
+
+Aggregate view across all participants for the current category. Each item shows:
+
+- **Average position** across all participants who ranked it
+- **Spread** — highest and lowest rank given (e.g., "Avg #3 — range #1–#7")
+- **Your rank** alongside for quick comparison
+
+Sorted by average position (best first). Items where participants disagree most (highest spread) get a visual "contested" indicator — these are the debate starters.
+
+This view is always available but becomes the primary view when the game is closed.
+
+### Game States
+
+**Open:** All views available. My Rankings is editable. Compare and Group Rankings update as people rank.
+
+**Closed:** My Rankings becomes read-only. The page defaults to Group Rankings as the landing view. Compare view still works. A "Final Results" header replaces the game description. This is the reveal moment — the host closes the game and everyone sees the group consensus (and controversies) together.
 
 ### Components
 
@@ -147,8 +245,9 @@ New components:
 - `GoblinRankingGamePage` — page-level container, fetches game data + user entries.
 - `GoblinRankingCategoryTabs` — tab bar for category switching.
 - `GoblinRankingList` — the drag-reorder ranking list (my rankings).
-- `GoblinRankingReadOnly` — read-only view of another participant's rankings.
-- `GoblinRankingParticipants` — participant list for "Everyone's Rankings" view.
+- `GoblinRankingCompare` — side-by-side comparison of your rankings vs another participant.
+- `GoblinRankingGroup` — aggregate group rankings with average positions and spread.
+- `GoblinRankingParticipants` — participant picker for compare view.
 
 ## Seed Data: Mission: Impossible
 
@@ -211,7 +310,6 @@ New components:
 ## Out of Scope
 
 - Submission/nomination UX for participants (items are seeded by creator)
-- Aggregate scoring / average position views (nice-to-have for later)
 - Comments or discussion per item
 - Multiple rankings per user per item (one position, one tier)
 - Bracket/tournament mode
