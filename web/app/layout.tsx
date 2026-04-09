@@ -10,6 +10,7 @@ import { QueryProvider } from "@/lib/providers/QueryProvider";
 import { safeJsonLd } from "@/lib/formats";
 import { getSiteUrl } from "@/lib/site-url";
 import DarkHoursTheme from "@/components/DarkHoursTheme";
+import PostHogProvider from "@/lib/analytics/PostHogProvider";
 import { NavigationProgress } from "@/components/ui/NavigationProgress";
 import SkipLink from "@/components/SkipLink";
 import ClientEffects from "@/components/ClientEffects";
@@ -144,7 +145,9 @@ export default async function RootLayout({
             <ClientEffects />
             <AuthProvider>
               <DarkHoursTheme />
-              <ToastProvider>{children}</ToastProvider>
+              <PostHogProvider>
+                <ToastProvider>{children}</ToastProvider>
+              </PostHogProvider>
             </AuthProvider>
           </QueryProvider>
         </ThemeProvider>
