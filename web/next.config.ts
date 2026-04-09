@@ -168,6 +168,7 @@ const nextConfig: NextConfig = {
   },
   experimental: {
     optimizePackageImports: ["@phosphor-icons/react", "date-fns"],
+    viewTransition: true,
   },
   images: {
     formats: ["image/avif", "image/webp"],

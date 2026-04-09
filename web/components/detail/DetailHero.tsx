@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, type ReactNode } from "react";
+import { useState, useCallback, type ReactNode, type CSSProperties } from "react";
 import Image from "@/components/SmartImage";
 import CategoryPlaceholder from "../CategoryPlaceholder";
 import BackButton from "../headers/BackButton";
@@ -8,6 +8,7 @@ import ScopedStyles from "@/components/ScopedStyles";
 import { createCssVarClass } from "@/lib/css-utils";
 
 export interface DetailHeroProps {
+  entityId?: number | string;
   mode: "image" | "poster" | "fallback";
   imageUrl?: string | null;
   title: string;
@@ -30,6 +31,7 @@ const BACK_BUTTON_CLASS =
   "absolute top-3 left-3 sm:top-4 sm:left-4 z-10 flex items-center justify-center w-9 h-9 rounded-full bg-black/50 backdrop-blur-sm text-white/90 hover:bg-black/70 hover:text-white transition-colors";
 
 export function DetailHero({
+  entityId,
   mode,
   imageUrl,
   title,
@@ -60,7 +62,10 @@ export function DetailHero({
 
   if (effectiveMode === "fallback") {
     return (
-      <div className={`relative w-full ${aspectClass} sm:rounded-xl overflow-hidden bg-gradient-to-br from-[var(--dusk)] via-[var(--night)] to-[var(--void)] ${heroAccentClass?.className ?? ""}`}>
+      <div
+        className={`relative w-full ${aspectClass} sm:rounded-xl overflow-hidden bg-gradient-to-br from-[var(--dusk)] via-[var(--night)] to-[var(--void)] ${heroAccentClass?.className ?? ""}`}
+        style={entityId ? { viewTransitionName: `event-hero-${entityId}` } as CSSProperties : undefined}
+      >
         <ScopedStyles css={heroAccentClass?.css} />
         {backFallbackHref && (
           <BackButton fallbackHref={backFallbackHref} label="Back" className={BACK_BUTTON_CLASS} iconOnly />
@@ -82,7 +87,10 @@ export function DetailHero({
 
   if (effectiveMode === "poster") {
     return (
-      <div className={`relative w-full sm:rounded-xl overflow-hidden bg-[var(--night)] ${heroAccentClass?.className ?? ""}`}>
+      <div
+        className={`relative w-full sm:rounded-xl overflow-hidden bg-[var(--night)] ${heroAccentClass?.className ?? ""}`}
+        style={entityId ? { viewTransitionName: `event-hero-${entityId}` } as CSSProperties : undefined}
+      >
         <ScopedStyles css={heroAccentClass?.css} />
         {backFallbackHref && (
           <BackButton fallbackHref={backFallbackHref} label="Back" className={BACK_BUTTON_CLASS} iconOnly />
@@ -137,7 +145,10 @@ export function DetailHero({
 
   // Default: image mode (full-width with overlay)
   return (
-    <div className={`relative w-full ${aspectClass} sm:rounded-xl overflow-hidden ${heroAccentClass?.className ?? ""}`}>
+    <div
+      className={`relative w-full ${aspectClass} sm:rounded-xl overflow-hidden ${heroAccentClass?.className ?? ""}`}
+      style={entityId ? { viewTransitionName: `event-hero-${entityId}` } as CSSProperties : undefined}
+    >
       <ScopedStyles css={heroAccentClass?.css} />
       {backFallbackHref && (
         <BackButton fallbackHref={backFallbackHref} label="Back" className={BACK_BUTTON_CLASS} iconOnly />

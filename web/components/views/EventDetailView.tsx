@@ -476,6 +476,7 @@ export default function EventDetailView({ eventId, portalSlug, onClose, initialD
 
       {/* Hero image — compact */}
       <DetailHeroImage
+        entityId={event.id}
         imageUrl={event.image_url}
         alt={event.title}
         category={event.category || "other"}

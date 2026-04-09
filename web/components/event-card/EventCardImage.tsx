@@ -1,6 +1,6 @@
 "use client";
 
-import type { RefObject } from "react";
+import type { RefObject, CSSProperties } from "react";
 import Image from "@/components/SmartImage";
 import CategoryIcon, { getCategoryColor } from "@/components/CategoryIcon";
 
@@ -10,6 +10,7 @@ interface DateInfo {
 }
 
 interface EventCardImageProps {
+  eventId?: number | string;
   railImageUrl: string | undefined;
   railBlurhash: string | null;
   hasRailImage: boolean;
@@ -24,6 +25,7 @@ interface EventCardImageProps {
 }
 
 export function EventCardImage({
+  eventId,
   railImageUrl,
   railBlurhash,
   hasRailImage,
@@ -45,7 +47,8 @@ export function EventCardImage({
       style={{
         borderTopLeftRadius: "inherit",
         borderBottomLeftRadius: "inherit",
-      }}
+        viewTransitionName: eventId ? `event-hero-${eventId}` : undefined,
+      } as CSSProperties}
     >
       {railImageUrl && (
         <div

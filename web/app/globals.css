@@ -2923,19 +2923,32 @@ body:has([data-vertical="hospital"])::after {
   animation: page-enter 0.25s ease-out forwards;
 }
 
-/* View Transitions — progressive enhancement for page navigation */
+/* ── View transitions ───────────────────────────────────────────── */
 @keyframes vt-fade-out {
+  from { opacity: 1; }
   to { opacity: 0; }
 }
+
 @keyframes vt-fade-in {
   from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes vt-slide-out {
+  from { opacity: 1; transform: scale(1); }
+  to { opacity: 0; transform: scale(0.96); }
+}
+
+@keyframes vt-slide-in {
+  from { opacity: 0; transform: scale(1.02); }
+  to { opacity: 1; transform: scale(1); }
 }
 
 ::view-transition-old(root) {
-  animation: 250ms ease-out both vt-fade-out;
+  animation: var(--duration-normal) var(--ease-in) both vt-slide-out;
 }
 ::view-transition-new(root) {
-  animation: 250ms ease-out both vt-fade-in;
+  animation: var(--duration-normal) var(--ease-out) both vt-slide-in;
 }
 
 /* Outing planner: "added" checkmark entrance */

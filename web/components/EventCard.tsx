@@ -445,6 +445,7 @@ function EventCard({
           <div className="flex gap-2.5 sm:gap-3">
             {/* Time/image rail — desktop only */}
             <EventCardImage
+              eventId={event.id}
               railImageUrl={railImageUrl}
               railBlurhash={railBlurhash}
               hasRailImage={hasRailImage}
