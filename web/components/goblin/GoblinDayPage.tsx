@@ -596,6 +596,30 @@ export default function GoblinDayPage({ initialMovies, activeSessionId }: Props)
         </div>
       </div>
 
+      {/* Ranking Game Link */}
+      <div className="relative z-10 bg-black/90 px-3 pt-3">
+        <a
+          href="/goblinday/rankings/1"
+          className="block mb-4 p-3 border border-cyan-900/40 bg-cyan-950/10
+            hover:bg-cyan-950/20 hover:border-cyan-800/50 transition-all group"
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="font-mono text-2xs text-cyan-500 uppercase tracking-[0.2em]">
+                RANKING GAME
+              </p>
+              <p className="text-base font-bold text-white mt-0.5 group-hover:text-cyan-200 transition-colors">
+                Mission: Impossible
+              </p>
+              <p className="text-2xs text-zinc-600 font-mono mt-1">
+                Rank the movies, the stunts, and the sequences.
+              </p>
+            </div>
+            <span className="text-zinc-600 text-lg">→</span>
+          </div>
+        </a>
+      </div>
+
       {/* Tabs — brutalist rectangles */}
       <div className="flex sm:justify-center overflow-x-auto scrollbar-hide border-b-2 border-zinc-800 relative z-10 bg-black/90">
         {TAB_CONFIG.filter((t) => t.key !== "log" || !!goblinUser.user).map(({ key, label, labelLong, active }) => (
