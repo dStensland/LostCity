@@ -3,6 +3,7 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 import { checkBodySize, isValidEnum, sanitizeString, type AnySupabase } from "@/lib/api-utils";
 import { resolvePortalSlugAlias } from "@/lib/portal-aliases";
+import { getPostHogServer } from "@/lib/analytics/posthog-server";
 import {
   HOSPITAL_MODE_VALUES,
   PORTAL_INTERACTION_ACTION_TYPES,
@@ -154,6 +155,22 @@ export async function POST(
 
   if (insertError) {
     return new Response(null, { status: 500 });
+  }
+
+  // Server-side dual-write to PostHog (fallback for ad-blocked clients)
+  const phServer = getPostHogServer();
+  if (phServer) {
+    phServer.capture({
+      distinctId: "anonymous",
+      event: `portal_${canonicalActionType}`,
+      properties: {
+        portal: canonicalSlug,
+        page_type: pageType,
+        section_key: sectionKey,
+        target_kind: targetKind,
+        target_id: targetId,
+      },
+    });
   }
 
   return new Response(null, { status: 204 });
