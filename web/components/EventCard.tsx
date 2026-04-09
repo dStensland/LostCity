@@ -31,7 +31,6 @@ import Image from "@/components/SmartImage";
 import type { RecommendationReason } from "./ReasonBadge";
 import RSVPButton, { type RSVPStatus } from "./RSVPButton";
 import { useImageParallax } from "@/lib/hooks/useImageParallax";
-import { useViewTransition } from "@/lib/hooks/useViewTransition";
 import type { Frequency, DayOfWeek } from "@/lib/recurrence";
 import Dot from "@/components/ui/Dot";
 import { EventCardImage } from "./event-card/EventCardImage";
@@ -118,6 +117,7 @@ export type FeedEventData = {
   importance?: "flagship" | "major" | "standard" | null;
   ticket_url?: string | null;
   source_url?: string | null;
+  source_slug?: string | null;
   // Taxonomy v2 derived attributes
   cost_tier?: string | null;
   duration?: string | null;
@@ -136,6 +136,9 @@ export type FeedEventData = {
     frequency?: string | null;
     day_of_week?: string | null;
   } | null;
+  entity_type?: "event" | "festival";
+  canonical_key?: string | null;
+  canonical_tier?: "tier_a" | "tier_b" | null;
   venue: {
     id: number;
     name: string;
@@ -224,8 +227,6 @@ function EventCard({
 
   const { containerRef: parallaxContainerRef, imageRef: parallaxImageRef } =
     useImageParallax();
-  const { navigate } = useViewTransition();
-
   // Optimistic RSVP count adjustments — user's own RSVP immediately ticks the count
   const [countAdjust, setCountAdjust] = useState({
     going: 0,
@@ -264,7 +265,7 @@ function EventCard({
     if (!portalSlug) return `/events/${event.id}`;
     const civicHref = getCivicEventHref({ id: event.id, category: event.category }, portalSlug, vertical);
     if (civicHref) return civicHref;
-    return `/${portalSlug}?event=${event.id}`;
+    return `/${portalSlug}/events/${event.id}`;
   }, [portalSlug, event.id, event.category, vertical]);
   const linkOutUrl = event.ticket_url || event.source_url || eventHref;
   const isExternalLinkOut = Boolean(event.ticket_url || event.source_url);
@@ -306,10 +307,8 @@ function EventCard({
         <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 px-2.5 sm:px-3 py-2.5">
           <Link
             href={eventHref}
-            scroll={false}
             data-row-primary-link="true"
             className="min-w-0"
-            onClick={(e) => { if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return; e.preventDefault(); navigate(eventHref); }}
           >
             <div className="min-w-0 space-y-1.5 sm:space-y-1">
               <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
@@ -440,10 +439,8 @@ function EventCard({
       <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-2 sm:gap-3">
         <Link
           href={eventHref}
-          scroll={false}
           data-row-primary-link="true"
           className="block min-w-0 p-3 sm:p-3.5"
-          onClick={(e) => { if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return; e.preventDefault(); navigate(eventHref); }}
         >
           <div className="flex gap-2.5 sm:gap-3">
             {/* Time/image rail — desktop only */}
@@ -992,7 +989,7 @@ export const CompactEventCard = memo(function CompactEventCard({
         <Link
           href={
             portalSlug
-              ? (getCivicEventHref(event, portalSlug, vertical) ?? `/${portalSlug}?event=${event.id}`)
+              ? (getCivicEventHref(event, portalSlug, vertical) ?? `/${portalSlug}/events/${event.id}`)
               : `/events/${event.id}`
           }
           scroll={false}
@@ -1104,7 +1101,7 @@ export const HeroEventCard = memo(function HeroEventCard({
 
   const heroImageUrl = event.image_url || event.series?.image_url || event.venue?.image_url;
   const hasImage = !hideImages && heroImageUrl;
-  const heroEventHref = getCivicEventHref(event, portalSlug, vertical) ?? `/${portalSlug}?event=${event.id}`;
+  const heroEventHref = getCivicEventHref(event, portalSlug, vertical) ?? `/${portalSlug}/events/${event.id}`;
   return (
     <Link
       href={heroEventHref}
