@@ -1,11 +1,13 @@
 "use client";
 
 import { useState, useMemo, useRef, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { useRankingGame } from "@/lib/hooks/useRankingGame";
 import { useGoblinUser } from "@/lib/hooks/useGoblinUser";
 import GoblinRankingList from "./GoblinRankingList";
 import GoblinRankingCompare from "./GoblinRankingCompare";
 import GoblinRankingGroup from "./GoblinRankingGroup";
+import { GoblinLoginPrompt } from "./GoblinLoginPrompt";
 import type { RankingEntry } from "@/lib/ranking-types";
 
 interface Props {
@@ -16,12 +18,14 @@ type View = "mine" | "compare" | "group";
 
 export default function GoblinRankingGamePage({ gameId }: Props) {
   const { user } = useGoblinUser();
+  const router = useRouter();
   const isAuthenticated = user !== null;
   const { game, myEntries, participants, loading, saving, saved, saveRankings } =
     useRankingGame(gameId, isAuthenticated);
 
   const [activeCategoryIdx, setActiveCategoryIdx] = useState(0);
   const [view, setView] = useState<View>("mine");
+  const [showLogin, setShowLogin] = useState(false);
   const scrollPositions = useRef<Map<number, number>>(new Map());
 
   const activeCategory = game?.categories[activeCategoryIdx] ?? null;
@@ -169,22 +173,54 @@ export default function GoblinRankingGamePage({ gameId }: Props) {
 
       {/* View content */}
       {activeCategory && effectiveView === "mine" && (
-        <GoblinRankingList
-          items={activeCategory.items}
-          entries={myCategoryEntries}
-          categoryId={activeCategory.id}
-          isOpen={isOpen ?? false}
-          onSave={handleSave}
-        />
+        isAuthenticated ? (
+          <GoblinRankingList
+            items={activeCategory.items}
+            entries={myCategoryEntries}
+            categoryId={activeCategory.id}
+            isOpen={isOpen ?? false}
+            onSave={handleSave}
+          />
+        ) : (
+          <div className="py-12 text-center">
+            <p className="font-mono text-sm text-zinc-500 tracking-widest uppercase mb-4">
+              Sign in to start ranking
+            </p>
+            <button
+              onClick={() => setShowLogin(true)}
+              className="px-5 py-2 border border-cyan-800/40 text-cyan-400
+                font-mono text-xs uppercase tracking-wider
+                hover:bg-cyan-950/20 hover:border-cyan-700/50 transition-all"
+            >
+              SIGN IN
+            </button>
+          </div>
+        )
       )}
 
-      {activeCategory && effectiveView === "compare" && user && (
-        <GoblinRankingCompare
-          items={activeCategory.items}
-          myEntries={myCategoryEntries}
-          participants={categoryParticipants}
-          currentUserId={user.id}
-        />
+      {activeCategory && effectiveView === "compare" && (
+        isAuthenticated && user ? (
+          <GoblinRankingCompare
+            items={activeCategory.items}
+            myEntries={myCategoryEntries}
+            participants={categoryParticipants}
+            currentUserId={user.id}
+          />
+        ) : (
+          <div className="py-12 text-center">
+            <p className="font-mono text-sm text-zinc-500 tracking-widest uppercase mb-4">
+              Sign in to compare rankings
+            </p>
+            <button
+              onClick={() => setShowLogin(true)}
+              className="px-5 py-2 border border-cyan-800/40 text-cyan-400
+                font-mono text-xs uppercase tracking-wider
+                hover:bg-cyan-950/20 hover:border-cyan-700/50 transition-all"
+            >
+              SIGN IN
+            </button>
+          </div>
+        )
       )}
 
       {activeCategory && effectiveView === "group" && (
@@ -194,6 +230,12 @@ export default function GoblinRankingGamePage({ gameId }: Props) {
           participants={categoryParticipants}
         />
       )}
+
+      <GoblinLoginPrompt
+        open={showLogin}
+        onClose={() => setShowLogin(false)}
+        onSignIn={() => router.push("/auth/login?redirect=/goblinday/rankings/" + gameId)}
+      />
     </div>
   );
 }
