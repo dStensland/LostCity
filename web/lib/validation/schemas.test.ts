@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { paginationSchema, uuidSchema, portalSlugSchema, sortSchema } from "./schemas";
+import { paginationSchema, uuidSchema, portalSlugSchema, sortSchema, positiveIntSchema } from "./schemas";
 
 describe("paginationSchema", () => {
   it("applies defaults when no values provided", () => {
@@ -66,5 +66,31 @@ describe("sortSchema", () => {
   it("rejects invalid sort_by values", () => {
     const schema = sortSchema(["date", "name"]);
     expect(() => schema.parse({ sort_by: "invalid" })).toThrow();
+  });
+});
+
+describe("positiveIntSchema", () => {
+  it("accepts positive integers", () => {
+    const result = positiveIntSchema.parse(5);
+    expect(result).toBe(5);
+  });
+
+  it("coerces string numbers", () => {
+    const result = positiveIntSchema.parse("42");
+    expect(result).toBe(42);
+  });
+
+  it("rejects zero", () => {
+    expect(() => positiveIntSchema.parse(0)).toThrow();
+  });
+
+  it("rejects negative numbers", () => {
+    expect(() => positiveIntSchema.parse(-5)).toThrow();
+    expect(() => positiveIntSchema.parse("-10")).toThrow();
+  });
+
+  it("rejects non-numeric strings", () => {
+    expect(() => positiveIntSchema.parse("abc")).toThrow();
+    expect(() => positiveIntSchema.parse("")).toThrow();
   });
 });

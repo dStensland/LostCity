@@ -46,6 +46,8 @@
     "maplibre-gl": "^4.7.1",
     "next": "^16.1.6",
     "openai": "^6.22.0",
+    "posthog-js": "^1.366.0",
+    "posthog-node": "^5.29.2",
     "qrcode.react": "^4.2.0",
     "react": "19.2.3",
     "react-dom": "19.2.3",
