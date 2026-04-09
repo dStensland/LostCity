@@ -2,6 +2,10 @@
 
 import { useEffect, useRef, useState } from "react";
 
+/** Check if the browser supports CSS scroll-driven animations */
+const supportsScrollTimeline =
+  typeof CSS !== "undefined" && CSS.supports("animation-timeline", "view()");
+
 interface UseScrollRevealOptions {
   threshold?: number;
   rootMargin?: string;
@@ -9,8 +13,9 @@ interface UseScrollRevealOptions {
 }
 
 /**
- * Hook to trigger reveal animations when element scrolls into view
- * Returns a ref to attach to the element and a boolean for visibility
+ * Hook to trigger reveal animations when element scrolls into view.
+ * On browsers with animation-timeline support, returns a CSS class
+ * and skips the IntersectionObserver (let CSS handle it).
  */
 export function useScrollReveal<T extends HTMLElement = HTMLDivElement>({
   threshold = 0.1,
@@ -18,13 +23,15 @@ export function useScrollReveal<T extends HTMLElement = HTMLDivElement>({
   triggerOnce = true,
 }: UseScrollRevealOptions = {}) {
   const ref = useRef<T>(null);
-  const [isVisible, setIsVisible] = useState(false);
+  const [isVisible, setIsVisible] = useState(supportsScrollTimeline);
 
   useEffect(() => {
+    // If CSS handles it, no JS observer needed
+    if (supportsScrollTimeline) return;
+
     const element = ref.current;
     if (!element) return;
 
-    // Check for reduced motion preference
     const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (prefersReducedMotion) {
       // eslint-disable-next-line react-hooks/set-state-in-effect -- Accessibility: skip animation for reduced motion
@@ -47,22 +54,23 @@ export function useScrollReveal<T extends HTMLElement = HTMLDivElement>({
     );
 
     observer.observe(element);
-
     return () => observer.disconnect();
   }, [threshold, rootMargin, triggerOnce]);
 
-  return { ref, isVisible };
+  return {
+    ref,
+    isVisible,
+    /** Add this class to the element for CSS-native scroll reveal */
+    cssRevealClass: supportsScrollTimeline ? "scroll-reveal" : "",
+  };
 }
 
 /**
  * Utility classes for scroll reveal animations
  */
 export const scrollRevealClasses = {
-  // Base hidden state
   hidden: "opacity-0 translate-y-4",
-  // Revealed state
   visible: "opacity-100 translate-y-0",
-  // Transition
   transition: "transition-all duration-500 ease-out",
 };
 

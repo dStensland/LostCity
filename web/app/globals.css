@@ -7301,3 +7301,213 @@ body:has([data-vertical="hospital"]) .rain-overlay {
 .skull-on-fire img {
   animation: skull-fire-img 1.2s ease-in-out infinite;
 }
+
+/* ── Scroll-driven reveal animations ────────────────────────────── */
+@keyframes scroll-reveal-up {
+  from {
+    opacity: 0;
+    transform: translateY(1rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scroll-reveal-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@supports (animation-timeline: view()) {
+  .scroll-reveal {
+    animation: scroll-reveal-up var(--duration-slower) var(--ease-out) both;
+    animation-timeline: view();
+    animation-range: entry 0% entry 30%;
+  }
+
+  .scroll-reveal-fade {
+    animation: scroll-reveal-fade var(--duration-slower) var(--ease-out) both;
+    animation-timeline: view();
+    animation-range: entry 0% entry 25%;
+  }
+
+  .scroll-reveal-stagger > * {
+    animation: scroll-reveal-up var(--duration-slower) var(--ease-out) both;
+    animation-timeline: view();
+    animation-range: entry 0% entry 35%;
+  }
+
+  .scroll-reveal-stagger > *:nth-child(1) { animation-delay: 0ms; }
+  .scroll-reveal-stagger > *:nth-child(2) { animation-delay: var(--stagger-item); }
+  .scroll-reveal-stagger > *:nth-child(3) { animation-delay: calc(var(--stagger-item) * 2); }
+  .scroll-reveal-stagger > *:nth-child(4) { animation-delay: calc(var(--stagger-item) * 3); }
+  .scroll-reveal-stagger > *:nth-child(5) { animation-delay: calc(var(--stagger-item) * 4); }
+  .scroll-reveal-stagger > *:nth-child(6) { animation-delay: calc(var(--stagger-item) * 5); }
+}
+
+/* ── Entry/exit animations (@starting-style) ────────────────────── */
+.animate-enter {
+  opacity: 1;
+  transform: translateY(0);
+  transition:
+    opacity var(--duration-normal) var(--ease-out),
+    transform var(--duration-normal) var(--ease-out),
+    display var(--duration-normal) allow-discrete;
+
+  @starting-style {
+    opacity: 0;
+    transform: translateY(0.75rem);
+  }
+}
+
+.animate-enter[hidden],
+.animate-enter.is-hidden {
+  opacity: 0;
+  transform: translateY(-0.5rem);
+  display: none;
+  transition:
+    opacity var(--duration-fast) var(--ease-in),
+    transform var(--duration-fast) var(--ease-in),
+    display var(--duration-fast) allow-discrete;
+}
+
+.animate-enter-scale {
+  opacity: 1;
+  transform: scale(1);
+  transition:
+    opacity var(--duration-fast) var(--ease-out),
+    transform var(--duration-fast) var(--ease-spring),
+    display var(--duration-fast) allow-discrete;
+
+  @starting-style {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+}
+
+.animate-enter-scale[hidden],
+.animate-enter-scale.is-hidden {
+  opacity: 0;
+  transform: scale(0.97);
+  display: none;
+  transition:
+    opacity var(--duration-instant) var(--ease-in),
+    transform var(--duration-instant) var(--ease-in),
+    display var(--duration-instant) allow-discrete;
+}
+
+.animate-enter-right {
+  opacity: 1;
+  transform: translateX(0);
+  transition:
+    opacity var(--duration-normal) var(--ease-out),
+    transform var(--duration-normal) var(--ease-out),
+    display var(--duration-normal) allow-discrete;
+
+  @starting-style {
+    opacity: 0;
+    transform: translateX(1.5rem);
+  }
+}
+
+.animate-enter-right[hidden],
+.animate-enter-right.is-hidden {
+  opacity: 0;
+  transform: translateX(1rem);
+  display: none;
+}
+
+/* ── Pointer-following card glow ────────────────────────────────── */
+.pointer-glow {
+  position: relative;
+  overflow: hidden;
+}
+
+.pointer-glow::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  opacity: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  background: radial-gradient(
+    600px circle at var(--glow-x, 50%) var(--glow-y, 50%),
+    color-mix(in srgb, var(--action-primary, var(--coral)) 12%, transparent),
+    transparent 40%
+  );
+  transition: opacity var(--duration-fast) var(--ease-standard);
+}
+
+.pointer-glow:hover::before {
+  opacity: 1;
+}
+
+/* ── Animated gradient border ───────────────────────────────────── */
+@property --border-angle {
+  inherits: false;
+  initial-value: 0deg;
+  syntax: "<angle>";
+}
+
+@keyframes border-spin {
+  to { --border-angle: 360deg; }
+}
+
+.gradient-border {
+  --border-color-1: var(--action-primary, var(--coral));
+  --border-color-2: var(--gold);
+  border: 1px solid transparent;
+  background:
+    linear-gradient(var(--night), var(--night)) padding-box,
+    conic-gradient(
+      from var(--border-angle) in oklch longer hue,
+      var(--border-color-1),
+      var(--border-color-2),
+      var(--border-color-1)
+    ) border-box;
+}
+
+.gradient-border:hover {
+  animation: border-spin 3s linear infinite;
+}
+
+.gradient-border-subtle {
+  --border-color-1: color-mix(in srgb, var(--action-primary, var(--coral)) 40%, transparent);
+  --border-color-2: color-mix(in srgb, var(--gold) 30%, transparent);
+  border: 1px solid transparent;
+  background:
+    linear-gradient(var(--night), var(--night)) padding-box,
+    conic-gradient(
+      from var(--border-angle) in oklch longer hue,
+      var(--border-color-1),
+      var(--border-color-2),
+      var(--border-color-1)
+    ) border-box;
+}
+
+.gradient-border-subtle:hover {
+  animation: border-spin 4s linear infinite;
+}
+
+/* ── Mask-image edge fades ──────────────────────────────────────── */
+.mask-fade-x {
+  -webkit-mask-image: linear-gradient(to right, transparent, black 5%, black 95%, transparent);
+  mask-image: linear-gradient(to right, transparent, black 5%, black 95%, transparent);
+}
+
+.mask-fade-bottom {
+  -webkit-mask-image: linear-gradient(to bottom, black 80%, transparent 100%);
+  mask-image: linear-gradient(to bottom, black 80%, transparent 100%);
+}
+
+.mask-vignette {
+  -webkit-mask-image: radial-gradient(ellipse 80% 80% at center, black 50%, transparent 100%);
+  mask-image: radial-gradient(ellipse 80% 80% at center, black 50%, transparent 100%);
+}
+
+.mask-fade-top {
+  -webkit-mask-image: linear-gradient(to bottom, transparent, black 15%);
+  mask-image: linear-gradient(to bottom, transparent, black 15%);
+}
