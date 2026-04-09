@@ -8,102 +8,83 @@ import { resolvePortalAttributionForWrite } from "@/lib/portal-attribution";
 import { logger } from "@/lib/logger";
 import { resolveSessionEngagementContext } from "@/lib/session-engagement";
 import { sendPushToUser } from "@/lib/push-notifications";
-
-const VALID_STATUSES = ["going", "interested", "went"] as const;
-const VALID_VISIBILITIES = ["friends", "public", "private"] as const;
+import { rsvpBodySchema } from "@/lib/validation/schemas";
 
 /**
  * POST /api/rsvp
  * Create or update an RSVP
  */
-export const POST = withAuth(async (request, { user, serviceClient }) => {
-  // Check body size (10KB limit)
-  const sizeCheck = checkBodySize(request);
-  if (sizeCheck) return sizeCheck;
+export const POST = withAuth(
+  { body: rsvpBodySchema },
+  async (request, { user, serviceClient, validated }) => {
+    // Check body size (10KB limit)
+    const sizeCheck = checkBodySize(request);
+    if (sizeCheck) return sizeCheck;
 
-  // Apply rate limiting
-  // Use a per-user identifier so local/dev traffic (often missing forwarded IP headers) doesn't collapse into
-  // a single shared "unknown" bucket and trip 429s immediately.
-  const rateLimitId = `${user.id}:${getClientIdentifier(request)}`;
-  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write, rateLimitId);
-  if (rateLimitResult) return rateLimitResult;
+    // Apply rate limiting
+    // Use a per-user identifier so local/dev traffic (often missing forwarded IP headers) doesn't collapse into
+    // a single shared "unknown" bucket and trip 429s immediately.
+    const rateLimitId = `${user.id}:${getClientIdentifier(request)}`;
+    const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write, rateLimitId);
+    if (rateLimitResult) return rateLimitResult;
 
-  try {
-    const body = await request.json();
-    const { event_id, status, visibility = "friends", notify_friends } = body;
+    try {
+      const { event_id, status, visibility, notify_friends } = validated.body;
 
-    // Validate event_id is a number
-    if (typeof event_id !== "number" || !Number.isInteger(event_id) || event_id <= 0) {
-      return validationError("Invalid event_id");
+      // Ensure user has a profile (create if missing)
+      await ensureUserProfile(user, serviceClient);
+
+      const attribution = await resolvePortalAttributionForWrite(request, {
+        endpoint: "/api/rsvp",
+        body: validated.body,
+        requireWhenHinted: true,
+      });
+      if (attribution.response) return attribution.response;
+      const portalId = attribution.portalId;
+      const engagementContext = await resolveSessionEngagementContext(serviceClient, event_id);
+
+      // Upsert the RSVP
+      const { data, error } = await serviceClient
+        .from("event_rsvps")
+        .upsert(
+          {
+            user_id: user.id,
+            event_id,
+            status,
+            visibility,
+            engagement_target: engagementContext.engagement_target,
+            festival_id: engagementContext.festival_id,
+            program_id: engagementContext.program_id,
+            updated_at: new Date().toISOString(),
+            ...(portalId ? { portal_id: portalId } : {}),
+          } as never,
+          { onConflict: "user_id,event_id" }
+        )
+        .select()
+        .single();
+
+      if (error) {
+        logger.error("RSVP upsert error", error, { userId: user.id, eventId: event_id, component: "rsvp" });
+        return NextResponse.json({ error: "Failed to save RSVP" }, { status: 500 });
+      }
+
+      // Schedule async notification fan-out AFTER the response is sent.
+      // next/server after() ensures the work completes even on Vercel serverless.
+      if (notify_friends && status === "going") {
+        after(() =>
+          notifyFriendsOfJoining(user.id, event_id, serviceClient).catch((err) => {
+            logger.error("Friend notification failed", err, { userId: user.id, eventId: event_id, component: "rsvp" });
+          })
+        );
+      }
+
+      return NextResponse.json({ success: true, rsvp: data });
+    } catch (error) {
+      logger.error("RSVP API error", error, { userId: user.id, component: "rsvp" });
+      return NextResponse.json({ error: "Failed to save RSVP" }, { status: 500 });
     }
-
-    if (!status || !VALID_STATUSES.includes(status)) {
-      return validationError("Invalid status. Must be: going, interested, or went");
-    }
-
-    if (!VALID_VISIBILITIES.includes(visibility)) {
-      return validationError("Invalid visibility. Must be: friends, public, or private");
-    }
-
-    // Ensure user has a profile (create if missing)
-    await ensureUserProfile(user, serviceClient);
-
-    const attribution = await resolvePortalAttributionForWrite(request, {
-      endpoint: "/api/rsvp",
-      body,
-      requireWhenHinted: true,
-    });
-    if (attribution.response) return attribution.response;
-    const portalId = attribution.portalId;
-    const engagementContext = await resolveSessionEngagementContext(serviceClient, event_id);
-
-    // Upsert the RSVP
-    const { data, error } = await serviceClient
-      .from("event_rsvps")
-      .upsert(
-        {
-          user_id: user.id,
-          event_id,
-          status,
-          visibility,
-          engagement_target: engagementContext.engagement_target,
-          festival_id: engagementContext.festival_id,
-          program_id: engagementContext.program_id,
-          updated_at: new Date().toISOString(),
-          ...(portalId ? { portal_id: portalId } : {}),
-        } as never,
-        { onConflict: "user_id,event_id" }
-      )
-      .select()
-      .single();
-
-    if (error) {
-      logger.error("RSVP upsert error", error, { userId: user.id, eventId: event_id, component: "rsvp" });
-      return NextResponse.json(
-        { error: "Failed to save RSVP" },
-        { status: 500 }
-      );
-    }
-
-    // Schedule async notification fan-out AFTER the response is sent.
-    // next/server after() ensures the work completes even on Vercel serverless.
-    if (notify_friends && status === "going") {
-      after(() =>
-        notifyFriendsOfJoining(user.id, event_id, serviceClient).catch((err) => {
-          logger.error("Friend notification failed", err, { userId: user.id, eventId: event_id, component: "rsvp" });
-        })
-      );
-    }
-
-    return NextResponse.json({ success: true, rsvp: data });
-  } catch (error) {
-    logger.error("RSVP API error", error, { userId: user.id, component: "rsvp" });
-    return NextResponse.json(
-      { error: "Failed to save RSVP" },
-      { status: 500 }
-    );
   }
-});
+);
 
 /**
  * DELETE /api/rsvp

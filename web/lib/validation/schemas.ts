@@ -38,3 +38,17 @@ export const positiveIntSchema = z
   .union([z.string(), z.number()])
   .transform((v) => (typeof v === "string" ? parseInt(v, 10) : v))
   .pipe(z.number().int().min(1, "Must be a positive integer"));
+
+/** RSVP creation schema. */
+export const rsvpBodySchema = z.object({
+  event_id: z.number().int().positive("Invalid event_id"),
+  status: z.enum(["going", "interested", "went"], {
+    error: "Invalid status. Must be: going, interested, or went",
+  }),
+  visibility: z
+    .enum(["friends", "public", "private"], {
+      error: "Invalid visibility. Must be: friends, public, or private",
+    })
+    .default("friends"),
+  notify_friends: z.boolean().optional(),
+});
