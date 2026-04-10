@@ -605,3 +605,21 @@ def events_support_taxonomy_v2_columns() -> bool:
     except Exception:
         _EVENTS_HAS_TAXONOMY_V2_COLUMNS = False
     return _EVENTS_HAS_TAXONOMY_V2_COLUMNS
+
+
+def _error_indicates_missing_relation(exc: Exception) -> bool:
+    """Return True when an exception signals a missing table or column.
+
+    Covers both Supabase REST PGRST205 schema-cache misses and direct Postgres
+    'relation does not exist' / 'column does not exist' messages.
+    """
+    error_str = str(exc).lower()
+    missing_keywords = (
+        "does not exist",
+        "relation",
+        "pgrst205",
+        "could not find the table",
+        "column",
+        "schema cache",
+    )
+    return any(kw in error_str for kw in missing_keywords)

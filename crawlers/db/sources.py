@@ -420,6 +420,59 @@ def update_crawl_log(
     client.table("crawl_logs").update(update_data).eq("id", log_id).execute()
 
 
+def cancel_crawl_log(log_id: int, reason: str = "cancelled") -> None:
+    """Cancel a crawl log entry that is still in 'running' state.
+
+    Only updates the row if status == 'running' to avoid overwriting completed logs.
+    """
+    if not writes_enabled():
+        _log_write_skip(f"cancel crawl_logs id={log_id}")
+        return
+
+    client = get_client()
+    client.table("crawl_logs").update(
+        {
+            "status": "cancelled",
+            "error_message": reason,
+            "completed_at": datetime.utcnow().isoformat(),
+        }
+    ).eq("id", log_id).eq("status", "running").execute()
+
+
+def cancel_stale_crawl_logs(max_age_hours: float = 4.0) -> int:
+    """Cancel any crawl_log rows stuck in 'running' beyond max_age_hours.
+
+    Returns the number of rows cancelled.
+    """
+    if not writes_enabled():
+        _log_write_skip("cancel stale crawl_logs")
+        return 0
+
+    cutoff = datetime.utcnow() - timedelta(hours=max_age_hours)
+    client = get_client()
+
+    stale_resp = (
+        client.table("crawl_logs")
+        .select("id")
+        .eq("status", "running")
+        .lt("started_at", cutoff.isoformat())
+        .order("id")
+        .execute()
+    )
+    stale_rows = stale_resp.data or []
+
+    for row in stale_rows:
+        client.table("crawl_logs").update(
+            {
+                "status": "cancelled",
+                "error_message": f"Stale: exceeded {max_age_hours}h runtime limit",
+                "completed_at": datetime.utcnow().isoformat(),
+            }
+        ).eq("id", row["id"]).execute()
+
+    return len(stale_rows)
+
+
 def update_source_last_crawled(source_id: int) -> None:
     """Set last_crawled_at = NOW() for a source after successful crawl."""
     if not writes_enabled():
