@@ -1414,46 +1414,6 @@ html {
   }
 }
 
-/* Subtle grain texture overlay - can be disabled via --grain-opacity: 0 */
-body::after {
-  content: '';
-  position: fixed;
-  inset: 0;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
-  opacity: var(--grain-opacity, 0.01);
-  pointer-events: none;
-  z-index: 50; /* Lower z-index to avoid blocking map controls */
-}
-
-/* Detail pages need cleaner readability than feed-style grain textures. */
-body:has(main[data-festival-detail="true"])::after,
-body:has(main[data-clean-detail="true"])::after {
-  opacity: 0 !important;
-}
-
-body:has(main[data-festival-detail="true"]) .rain-overlay,
-body:has(main[data-festival-detail="true"]) .ambient-glow,
-body:has(main[data-festival-detail="true"]) .cursor-glow,
-body:has(main[data-clean-detail="true"]) .rain-overlay,
-body:has(main[data-clean-detail="true"]) .ambient-glow,
-body:has(main[data-clean-detail="true"]) .cursor-glow {
-  display: none !important;
-}
-
-/* Disable grain for hotel verticals (body-level attribute is set by PortalThemeClient). */
-body[data-vertical="hotel"]::after {
-  opacity: 0;
-}
-body:has([data-vertical="hotel"])::after {
-  opacity: 0;
-}
-body[data-vertical="hospital"]::after {
-  opacity: 0;
-}
-body:has([data-vertical="hospital"])::after {
-  opacity: 0;
-}
-
 @import "../styles/portals/film.css";
 @import "../styles/portals/forth.css";
 

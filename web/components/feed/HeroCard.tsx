@@ -110,7 +110,7 @@ export const HeroCard = memo(function HeroCard({
       href={`/${portalSlug}/events/${event.id}`}
       prefetch={false}
       className={[
-        "block relative w-full rounded-card overflow-hidden hover-lift gradient-border animate-page-enter",
+        "block relative w-full rounded-card overflow-hidden hover-lift gradient-border-subtle animate-page-enter",
         staggerClass,
       ]
         .filter(Boolean)
