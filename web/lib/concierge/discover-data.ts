@@ -392,13 +392,13 @@ async function fetchSignatureVenueSpecials(
 
     // 3. Group by slug
     for (const row of specialsRows as {
-      venue_id: number;
+      place_id: number;
       title: string;
       time_start: string | null;
       time_end: string | null;
       days_of_week: number[] | null;
     }[]) {
-      const slug = venueIdToSlug.get(row.venue_id);
+      const slug = venueIdToSlug.get(row.place_id);
       if (!slug) continue;
       if (!result.has(slug)) result.set(slug, []);
       result.get(slug)!.push({

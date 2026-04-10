@@ -307,7 +307,7 @@ type DbVenue = {
 
 type DbSpecial = {
   id: number;
-  venue_id: number;
+  place_id: number;
   title: string;
   type: string;
   days_of_week: number[] | null;
@@ -325,7 +325,7 @@ type DbNextEvent = {
   title: string;
   start_date: string;
   start_time: string | null;
-  venue_id: number | null;
+  place_id: number | null;
   source_id: number | null;
   category_id: string | null;
   significance: string | null;
@@ -850,14 +850,14 @@ async function fetchDestinationsDirect(
   // Group specials by venue
   const specialsByVenue = new Map<number, DbSpecial[]>();
   for (const special of (specialsRaw || []) as DbSpecial[]) {
-    if (!specialsByVenue.has(special.venue_id)) specialsByVenue.set(special.venue_id, []);
-    specialsByVenue.get(special.venue_id)!.push(special);
+    if (!specialsByVenue.has(special.place_id)) specialsByVenue.set(special.place_id, []);
+    specialsByVenue.get(special.place_id)!.push(special);
   }
 
   // Find next event per venue
   const nextEventByVenue = new Map<number, DbNextEvent>();
   for (const event of (eventsRaw || []) as DbNextEvent[]) {
-    if (!event.venue_id) continue;
+    if (!event.place_id) continue;
     if (
       !isEventCategoryAllowedForSourceAccess(
         federationAccess,
@@ -865,7 +865,7 @@ async function fetchDestinationsDirect(
         event.category_id,
       )
     ) continue;
-    if (!nextEventByVenue.has(event.venue_id)) nextEventByVenue.set(event.venue_id, event);
+    if (!nextEventByVenue.has(event.place_id)) nextEventByVenue.set(event.place_id, event);
   }
 
   // 3. Build destination list
