@@ -6,6 +6,7 @@ import SmartImage from "@/components/SmartImage";
 interface Props {
   name: string;
   subtitle: string | null;
+  description?: string | null;
   imageUrl?: string | null;
   rank: number;
   tierColor?: string | null;
@@ -22,14 +23,15 @@ interface Props {
   compareRank?: number | null;
 }
 
-const RANK_NEON = {
-  hero: { color: "#00f0ff", glow: "0 0 10px rgba(0,240,255,0.4), 0 0 30px rgba(0,240,255,0.15)" },
-  mid: { color: "#ff00aa", glow: "0 0 8px rgba(255,0,170,0.3), 0 0 20px rgba(255,0,170,0.1)" },
-  rest: { color: "#52525b", glow: "none" },
+const getRankTier = (rank: number, tierColor?: string | null) => {
+  if (tierColor) return { color: tierColor, tier: "custom" as const };
+  if (rank <= 3) return { color: "#00f0ff", tier: "hero" as const };
+  if (rank <= 10) return { color: "#ff00aa", tier: "mid" as const };
+  return { color: "#52525b", tier: "rest" as const };
 };
 
 export default function GoblinRankingItem({
-  name, subtitle, imageUrl, rank, tierColor, readOnly,
+  name, subtitle, description, imageUrl, rank, tierColor, readOnly,
   onMoveToRank, onRemove, onEdit, onDelete,
   onDragStart, onDragOver, onDrop, isDragging, isDragTarget,
   compareRank,
@@ -37,11 +39,7 @@ export default function GoblinRankingItem({
   const [editingRank, setEditingRank] = useState(false);
   const [rankInput, setRankInput] = useState("");
 
-  const isHero = rank <= 3;
-  const isMid = rank > 3 && rank <= 10;
-  const tier = tierColor
-    ? { color: tierColor, glow: `0 0 8px ${tierColor}40, 0 0 20px ${tierColor}15` }
-    : isHero ? RANK_NEON.hero : isMid ? RANK_NEON.mid : RANK_NEON.rest;
+  const rankTier = getRankTier(rank, tierColor);
 
   // positive = you rank it higher (better), negative = you rank it lower (worse)
   const delta = compareRank != null ? rank - compareRank : null;
@@ -65,10 +63,14 @@ export default function GoblinRankingItem({
         ${isDragging ? "opacity-30 scale-95" : ""}
         ${isDragTarget ? "ring-1 ring-cyan-500/50" : ""}
         ${!readOnly ? "cursor-grab active:cursor-grabbing" : ""}
-        bg-zinc-950 border border-zinc-800/50 hover:border-zinc-700/50`}
+        ${rankTier.tier === "hero"
+          ? "bg-zinc-950 border border-cyan-500/20 shadow-[inset_0_0_20px_rgba(0,240,255,0.03)]"
+          : rankTier.tier === "mid"
+          ? "bg-zinc-950 border border-zinc-800/40"
+          : "bg-zinc-950/80 border border-zinc-800/30"}`}
     >
       {/* Rank badge */}
-      <div className="flex-shrink-0 w-12 flex items-center justify-center">
+      <div className="flex-shrink-0 w-14 flex items-center justify-center relative">
         {editingRank ? (
           <input
             autoFocus
@@ -99,14 +101,19 @@ export default function GoblinRankingItem({
               setRankInput(String(rank));
               setEditingRank(true);
             }}
-            className="font-mono text-lg font-black tabular-nums leading-none"
-            style={{
-              color: tier.color,
-              textShadow: tier.glow,
-            }}
+            className={`font-mono font-black tabular-nums leading-none relative
+              ${rankTier.tier === "hero" ? "text-[28px]" : rankTier.tier === "mid" ? "text-xl" : "text-lg"}`}
+            style={{ color: rankTier.color }}
             title={readOnly ? undefined : "Tap to jump to rank"}
           >
-            {rank}
+            {rankTier.tier === "hero" ? String(rank).padStart(2, "0") : rank}
+            {/* Glow pulse — compositor-friendly opacity animation on pseudo-element */}
+            {rankTier.tier === "hero" && (
+              <span
+                className="absolute inset-0 rounded-full blur-xl motion-safe:animate-[glowPulse_2s_ease-in-out_infinite] pointer-events-none"
+                style={{ background: `radial-gradient(circle, ${rankTier.color}60 0%, transparent 70%)` }}
+              />
+            )}
           </button>
         )}
       </div>
@@ -124,17 +131,20 @@ export default function GoblinRankingItem({
         {subtitle && (
           <p className="text-2xs text-zinc-500 font-mono mt-0.5 truncate">{subtitle}</p>
         )}
+        {description && (
+          <p className="text-2xs text-zinc-500 mt-0.5 line-clamp-1">{description}</p>
+        )}
       </div>
 
       {/* Edit button */}
       {onEdit && (
         <button
           onClick={(e) => { e.stopPropagation(); onEdit(); }}
-          className="flex-shrink-0 w-7 flex items-center justify-center
-            text-zinc-700 hover:text-cyan-400 transition-colors"
+          className="flex-shrink-0 w-11 min-h-[44px] flex items-center justify-center
+            text-zinc-600 hover:text-cyan-400 transition-colors"
           title="Edit item"
         >
-          <svg width="10" height="10" viewBox="0 0 24 24" fill="none"
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
             stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
             <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
@@ -146,11 +156,11 @@ export default function GoblinRankingItem({
       {onDelete && (
         <button
           onClick={(e) => { e.stopPropagation(); onDelete(); }}
-          className="flex-shrink-0 w-7 flex items-center justify-center
-            text-zinc-700 hover:text-red-400 transition-colors"
+          className="flex-shrink-0 w-11 min-h-[44px] flex items-center justify-center
+            text-zinc-600 hover:text-red-400 transition-colors"
           title="Delete item"
         >
-          <svg width="10" height="10" viewBox="0 0 24 24" fill="none"
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
             stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <polyline points="3 6 5 6 21 6" />
             <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
@@ -172,6 +182,16 @@ export default function GoblinRankingItem({
             {delta === 0 ? "=" : delta > 0 ? `+${delta}` : String(delta)}
           </span>
         </div>
+      )}
+
+      {/* Threat-level sidebar */}
+      {rankTier.tier !== "rest" && (
+        <div
+          className="flex-shrink-0 w-1 self-stretch"
+          style={{
+            background: `linear-gradient(180deg, ${rankTier.color}, ${rankTier.color}${rankTier.tier === "hero" ? "40" : "20"})`,
+          }}
+        />
       )}
 
       {/* Remove button */}

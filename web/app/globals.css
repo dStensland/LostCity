@@ -7559,3 +7559,8 @@ body:has([data-vertical="hospital"]) .rain-overlay {
   -webkit-mask-image: linear-gradient(to bottom, transparent, black 15%);
   mask-image: linear-gradient(to bottom, transparent, black 15%);
 }
+
+@keyframes glowPulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 1; }
+}
