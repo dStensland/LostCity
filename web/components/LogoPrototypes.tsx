@@ -61,7 +61,7 @@ const sharedStyles = `
     background: radial-gradient(ellipse at center, rgba(255, 107, 122, 0.15) 0%, transparent 70%);
   }
   .logo1-word {
-    font-family: var(--font-outfit), sans-serif;
+    font-family: var(--font-sans), sans-serif;
     font-weight: 800;
     font-size: 3rem;
     letter-spacing: 0.1em;
@@ -172,7 +172,7 @@ const sharedStyles = `
     fill: #00ff00;
   }
   .logo4-wordmark {
-    font-family: var(--font-outfit), sans-serif;
+    font-family: var(--font-sans), sans-serif;
     font-weight: 800;
     font-size: 2rem;
     letter-spacing: 0.1em;

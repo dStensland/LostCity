@@ -369,7 +369,7 @@ export default function Home() {
                   {/* Small label */}
                   <div
                     style={{
-                      fontFamily: "var(--font-outfit)",
+                      fontFamily: "var(--font-sans)",
                       fontSize: "8px",
                       fontWeight: 700,
                       letterSpacing: "0.2em",
@@ -384,13 +384,13 @@ export default function Home() {
                   {/* Wordmark: brand name big, tagline small — matches other cards */}
                   <div className="mb-3">
                     <div
-                      className="font-[family-name:var(--font-outfit)] leading-[0.92]"
+                      className="font-[family-name:var(--font-sans)] leading-[0.92]"
                       style={{ fontSize: "7px", fontWeight: 600, letterSpacing: "0.35em", color: "#E8830A", textTransform: "uppercase" }}
                     >
                       Lost
                     </div>
                     <div
-                      className="font-[family-name:var(--font-outfit)] leading-[0.88]"
+                      className="font-[family-name:var(--font-sans)] leading-[0.88]"
                       style={{ fontSize: "clamp(2.2rem, 10vw, 3rem)", fontWeight: 800, color: "#2A2017", letterSpacing: "-0.01em" }}
                     >
                       Youth
@@ -400,7 +400,7 @@ export default function Home() {
                         <path d="M0 3C2 1 3 1 5 3C7 5 8 5 10 3C12 1 13 1 15 3C17 5 18 5 20 3" stroke="#E8830A" strokeWidth="1.5" fill="none" />
                       </svg>
                       <span
-                        className="font-[family-name:var(--font-outfit)]"
+                        className="font-[family-name:var(--font-sans)]"
                         style={{ fontSize: "11px", fontWeight: 600, color: "#E8830A", letterSpacing: "0.02em" }}
                       >
                         go play.
@@ -416,7 +416,7 @@ export default function Home() {
                     className="mt-3 pt-2 flex items-center justify-between"
                     style={{ borderTop: "1.5px solid #E8830A30" }}
                   >
-                    <span style={{ fontFamily: "var(--font-outfit)", fontSize: "8px", fontWeight: 700, letterSpacing: "0.18em", textTransform: "uppercase", color: "#E8830A" }}>
+                    <span style={{ fontFamily: "var(--font-sans)", fontSize: "8px", fontWeight: 700, letterSpacing: "0.18em", textTransform: "uppercase", color: "#E8830A" }}>
                       Coming soon
                     </span>
                     <div

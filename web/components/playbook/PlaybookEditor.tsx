@@ -512,7 +512,7 @@ export default function PlaybookEditor({ itineraryId, portalId, portalSlug, port
               >
                 <h1
                   className="text-[15px] font-semibold truncate"
-                  style={{ color: "var(--cream)", fontFamily: "var(--font-outfit)" }}
+                  style={{ color: "var(--cream)", fontFamily: "var(--font-sans)" }}
                 >
                   {activeItinerary.title}
                 </h1>
@@ -554,7 +554,7 @@ export default function PlaybookEditor({ itineraryId, portalId, portalSlug, port
               className="flex items-center gap-1.5 mb-2 transition-colors hover:opacity-80 text-[var(--muted)]"
             >
               <MapTrifold size={13} className="opacity-40" />
-              <span className="text-[11px] font-medium" style={{ fontFamily: "var(--font-outfit)" }}>
+              <span className="text-[11px] font-medium" style={{ fontFamily: "var(--font-sans)" }}>
                 {mapExpanded ? "Hide route" : "Show route"}
               </span>
               <CaretDown
@@ -583,7 +583,7 @@ export default function PlaybookEditor({ itineraryId, portalId, portalSlug, port
                 </div>
                 <h2
                   className="text-base font-semibold mb-1"
-                  style={{ color: "var(--cream)", fontFamily: "var(--font-outfit)" }}
+                  style={{ color: "var(--cream)", fontFamily: "var(--font-sans)" }}
                 >
                   Add your first stop
                 </h2>

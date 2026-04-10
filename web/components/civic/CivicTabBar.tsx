@@ -118,7 +118,7 @@ export function CivicTabBar({ portalSlug, actLabel = "Act" }: CivicTabBarProps) 
               <span
                 className="text-2xs"
                 style={{
-                  fontFamily: "var(--font-outfit, var(--font-sans, sans-serif))",
+                  fontFamily: "var(--font-sans, sans-serif)",
                   fontWeight: active ? 600 : 400,
                 }}
               >

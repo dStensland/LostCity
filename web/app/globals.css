@@ -1359,11 +1359,11 @@ body[data-animations="subtle"] *:not(.ambient-layer):not(.ambient-layer *):not(.
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-outfit);
-  --font-display: var(--font-outfit); /* Use primary font for display text */
+  --font-sans: var(--font-sans);
+  --font-display: var(--font-display); /* Bricolage Grotesque - expressive display headings */
   --font-mono: var(--font-mono);
-  --font-baloo: var(--font-outfit); /* Alias Baloo to Outfit for ATLittle portal */
-  --font-bebas: var(--font-outfit); /* Alias Bebas to Outfit for logo */
+  --font-baloo: var(--font-sans); /* Alias Baloo to DM Sans for ATLittle portal */
+  --font-bebas: var(--font-sans); /* Alias Bebas to DM Sans for logo */
 
   /* Typography scale — overrides Tailwind defaults to match design system.
      CORRECT namespace: --text-* (Tailwind v4 uses --text-* for font-size in @theme).
@@ -1394,6 +1394,10 @@ body {
   -moz-osx-font-smoothing: grayscale;
   /* Prevent horizontal scroll on mobile — clip preserves sticky positioning */
   overflow-x: clip;
+}
+
+h1, h2, h3 {
+  font-family: var(--font-display), var(--font-sans), system-ui, sans-serif;
 }
 
 /* Keep global scrolling deterministic; opt-in smooth scroll per component. */
@@ -1498,7 +1502,7 @@ body:has([data-vertical="hospital"])::after {
 }
 
 .font-display {
-  font-family: var(--font-outfit), system-ui, sans-serif;
+  font-family: var(--font-display), system-ui, sans-serif;
   font-weight: 600;
   letter-spacing: -0.02em;
 }
@@ -2969,10 +2973,10 @@ body:has([data-vertical="hospital"])::after {
   inset: 0;
   pointer-events: none;
   z-index: 9999;
-  opacity: 0.035;
+  opacity: 0.08;
   background-image: url('/textures/noise-256.png');
   background-repeat: repeat;
-  mix-blend-mode: overlay;
+  mix-blend-mode: soft-light;
   animation: grain-shift 400ms steps(6) infinite;
 }
 
@@ -5385,7 +5389,7 @@ body:has([data-vertical="hospital"]) .rain-overlay {
    ============================================ */
 
 .section-header-primary {
-  font-family: var(--font-outfit), system-ui, sans-serif;
+  font-family: var(--font-sans), system-ui, sans-serif;
   font-size: var(--fs-2xl);
   font-weight: 700;
   line-height: var(--leading-tight);
@@ -5397,7 +5401,7 @@ body:has([data-vertical="hospital"]) .rain-overlay {
 }
 
 .section-header-secondary {
-  font-family: var(--font-outfit), system-ui, sans-serif;
+  font-family: var(--font-sans), system-ui, sans-serif;
   font-size: var(--fs-xl);
   font-weight: 700;
   line-height: var(--leading-snug);
@@ -6072,7 +6076,7 @@ body:has([data-vertical="hospital"]) .rain-overlay {
 
 /* LOST — cream/white, the poetic anchor */
 .logo-lost {
-  font-family: var(--font-outfit), system-ui, sans-serif;
+  font-family: var(--font-sans), system-ui, sans-serif;
   font-weight: 700; /* Refined: restraint creates voltage */
   color: var(--cream, #FAFAF9);
   letter-spacing: 0.01em; /* Refined: tighter lockup */
@@ -6080,7 +6084,7 @@ body:has([data-vertical="hospital"]) .rain-overlay {
 
 /* CITY — coral, the energy */
 .logo-city {
-  font-family: var(--font-outfit), system-ui, sans-serif;
+  font-family: var(--font-sans), system-ui, sans-serif;
   font-weight: 700; /* Refined: restraint creates voltage */
   color: var(--coral, #FF6B7A);
   letter-spacing: 0.01em; /* Refined: tighter lockup */
@@ -6088,7 +6092,7 @@ body:has([data-vertical="hospital"]) .rain-overlay {
 
 /* City name — cream, matching LOST */
 .logo-portal {
-  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-family: var(--font-mono), ui-monospace, monospace;
   font-weight: 700;
   color: var(--cream, #FAFAF9);
   letter-spacing: 0.14em;
@@ -6109,7 +6113,7 @@ body:has([data-vertical="hospital"]) .rain-overlay {
 .logo-size-sm .logo-portal {
   font-size: 0.65rem;
   margin-top: 0.15em;
-  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-family: var(--font-mono), ui-monospace, monospace;
   color: var(--cream, #FAFAF9);
   opacity: 0.7;
   letter-spacing: 0.08em;
@@ -6150,7 +6154,7 @@ body:has([data-vertical="hospital"]) .rain-overlay {
 
 /* Beta badge — neon accent tucked beside wordmark */
 .logo-beta {
-  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-family: var(--font-mono), ui-monospace, monospace;
   font-weight: 700;
   font-size: 0.5rem;
   letter-spacing: 0.18em;
@@ -6422,7 +6426,7 @@ body:has([data-vertical="hospital"]) .rain-overlay {
 .family-theme [data-family-tone="teal"] { --family-accent: var(--family-teal); }
 
 .family-font {
-  font-family: var(--font-outfit), system-ui, sans-serif;
+  font-family: var(--font-sans), system-ui, sans-serif;
 }
 
 .family-font-display {
@@ -6911,7 +6915,7 @@ body:has([data-vertical="hospital"]) .rain-overlay {
    EXPLORE — Display headline font (Syne)
    ============================================ */
 .explore-display-heading {
-  font-family: var(--font-display-alt), var(--font-outfit), system-ui, sans-serif;
+  font-family: var(--font-display-alt), var(--font-sans), system-ui, sans-serif;
   font-weight: 700;
   font-style: normal;
   text-transform: none;

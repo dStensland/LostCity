@@ -123,7 +123,7 @@ export default function SharedPlaybookView({
           <div className="flex-1 min-w-0">
             <h1
               className="text-[15px] font-semibold truncate"
-              style={{ color: "var(--cream, #F5F0E8)", fontFamily: "var(--font-outfit)" }}
+              style={{ color: "var(--cream, #F5F0E8)", fontFamily: "var(--font-sans)" }}
             >
               {itinerary.title}
             </h1>
@@ -184,7 +184,7 @@ export default function SharedPlaybookView({
               style={{ color: "var(--muted, #8B8B9E)" }}
             >
               <MapTrifold size={13} className="opacity-40" />
-              <span className="text-[11px] font-medium" style={{ fontFamily: "var(--font-outfit)" }}>
+              <span className="text-[11px] font-medium" style={{ fontFamily: "var(--font-sans)" }}>
                 {mapExpanded ? "Hide route" : "Show route"}
               </span>
               <CaretDown

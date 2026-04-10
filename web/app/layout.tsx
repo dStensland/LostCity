@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { Suspense } from "react";
-import { Outfit, JetBrains_Mono, Space_Grotesk, Bebas_Neue, Newsreader } from "next/font/google";
+import { DM_Sans, Bricolage_Grotesque, Space_Mono, Space_Grotesk, Bebas_Neue, Fraunces } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import { AuthProvider } from "@/lib/auth-context";
 import { ThemeProvider } from "@/lib/theme-context";
@@ -19,18 +19,25 @@ import "./globals.css";
 
 const SITE_URL = getSiteUrl();
 
-// Primary sans-serif font - used globally
-// Only load weights we actually use to reduce font file size
-const outfit = Outfit({
+// Primary body font - geometric-humanist with optical sizing
+const dmSans = DM_Sans({
   weight: ["400", "500", "600", "700"],
-  variable: "--font-outfit",
+  variable: "--font-sans",
   subsets: ["latin"],
   display: "swap",
 });
 
-// Monospace font - used for badges, code, and technical elements
-const jetbrainsMono = JetBrains_Mono({
-  weight: ["400", "500"],
+// Display heading font - expressive grotesque with ink traps
+const bricolageGrotesque = Bricolage_Grotesque({
+  weight: ["400", "600", "700", "800"],
+  variable: "--font-display",
+  subsets: ["latin"],
+  display: "swap",
+});
+
+// Monospace font - retro-futuristic console
+const spaceMono = Space_Mono({
+  weight: ["400", "700"],
   variable: "--font-mono",
   subsets: ["latin"],
   display: "swap",
@@ -52,9 +59,9 @@ const bebasNeue = Bebas_Neue({
   display: "swap",
 });
 
-// Serif display font - civic/editorial headings
-const newsreader = Newsreader({
-  weight: ["400", "500", "600"],
+// Serif display font - cinematic, variable softness
+const fraunces = Fraunces({
+  weight: ["400", "500", "600", "700"],
   style: ["normal", "italic"],
   variable: "--font-serif",
   subsets: ["latin"],
@@ -126,7 +133,7 @@ export default async function RootLayout({
         <link rel="preconnect" href="https://s1.ticketm.net" />
         <link rel="dns-prefetch" href="https://images.unsplash.com" />
       </head>
-      <body className={`${outfit.variable} ${jetbrainsMono.variable} ${spaceGrotesk.variable} ${bebasNeue.variable} ${newsreader.variable} antialiased`}>
+      <body className={`${dmSans.variable} ${bricolageGrotesque.variable} ${spaceMono.variable} ${spaceGrotesk.variable} ${bebasNeue.variable} ${fraunces.variable} antialiased`}>
         <ThemeProvider>
           <QueryProvider>
             {/* Skip link for keyboard users */}

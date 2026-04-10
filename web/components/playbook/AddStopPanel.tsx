@@ -361,7 +361,7 @@ export default function AddStopPanel({
                 <div className="flex-1 min-w-0">
                   <p
                     className="text-[13px] font-medium truncate"
-                    style={{ color: "var(--cream)", fontFamily: "var(--font-outfit)" }}
+                    style={{ color: "var(--cream)", fontFamily: "var(--font-sans)" }}
                   >
                     {venue.name}
                   </p>
@@ -403,7 +403,7 @@ export default function AddStopPanel({
                 >
                   <MagnifyingGlass size={12} className="text-white/30" />
                 </div>
-                <span className="text-[12px] text-white/40" style={{ fontFamily: "var(--font-outfit)" }}>
+                <span className="text-[12px] text-white/40" style={{ fontFamily: "var(--font-sans)" }}>
                   {hint.label}
                 </span>
               </button>
@@ -478,7 +478,7 @@ export default function AddStopPanel({
                   <div className="flex-1 min-w-0">
                     <p
                       className="text-[13px] font-medium truncate"
-                      style={{ color: "var(--cream)", fontFamily: "var(--font-outfit)" }}
+                      style={{ color: "var(--cream)", fontFamily: "var(--font-sans)" }}
                     >
                       {s.title}
                     </p>
