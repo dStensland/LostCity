@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import re
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional
 
 from playwright.sync_api import sync_playwright
@@ -304,7 +304,6 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             past_count += 1
                             continue
                         # Sanity check: skip if more than 6 months out
-                        from datetime import timedelta
                         if check_dt > today + timedelta(days=183):
                             logger.info(f"Skipping far-future show: {title} ({check_date})")
                             past_count += 1

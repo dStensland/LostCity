@@ -166,12 +166,12 @@ def crawl_location(
             start_date = start_dt.strftime("%Y-%m-%d")
             start_time = start_dt.strftime("%H:%M")
 
-            end_date = None
+            event_end_date = None
             end_time = None
             if end_raw:
                 try:
                     end_dt = datetime.strptime(end_raw, "%Y-%m-%d %H:%M:%S")
-                    end_date = end_dt.strftime("%Y-%m-%d")
+                    event_end_date = end_dt.strftime("%Y-%m-%d")
                     end_time = end_dt.strftime("%H:%M")
                 except ValueError:
                     pass
@@ -228,7 +228,7 @@ def crawl_location(
                 "description": description or f"{title} at {location_name}",
                 "start_date": start_date,
                 "start_time": start_time,
-                "end_date": end_date,
+                "end_date": event_end_date,
                 "end_time": end_time,
                 "is_all_day": is_all_day,
                 "category": "food_drink",

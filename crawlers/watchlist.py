@@ -145,7 +145,20 @@ def get_watchlist_status() -> list[WatchlistAlert]:
 
         count = _count_future_events(slug)
 
-        if count == 0:
+        if count == -1:
+            logger.warning("watchlist: source slug '%s' not found in sources table", slug)
+            alerts.append(
+                WatchlistAlert(
+                    slug=slug,
+                    name=name,
+                    category=category,
+                    severity="critical",
+                    expected_min=min_events,
+                    actual_count=0,
+                    message=f"CRITICAL: {name} ({slug}) — source not found in database",
+                )
+            )
+        elif count == 0:
             alerts.append(
                 WatchlistAlert(
                     slug=slug,
