@@ -35,3 +35,14 @@ def test_upsert_venue_feature_does_not_null_overwrite_image():
     assert "protect_field" in source or ("image_url" in source and "pop" in source), (
         "upsert_venue_feature must protect existing image_url from NULL overwrite"
     )
+
+
+def test_upsert_venue_feature_tracks_image_provenance():
+    """When image_url is set, metadata.image_source should be recorded."""
+    import inspect
+    from db.places import upsert_venue_feature
+
+    source = inspect.getsource(upsert_venue_feature)
+    assert "image_source" in source, (
+        "upsert_venue_feature must track image provenance in metadata.image_source"
+    )

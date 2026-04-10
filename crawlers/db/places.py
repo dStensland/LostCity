@@ -1059,6 +1059,13 @@ def upsert_venue_feature(venue_id: int, feature_data: dict) -> Optional[int]:
         if row.get(protect_field) is None:
             row.pop(protect_field, None)
 
+    # Track image provenance in metadata
+    if row.get("image_url"):
+        metadata = row.get("metadata") or {}
+        if "image_source" not in metadata:
+            metadata["image_source"] = feature_data.get("image_source", "crawler")
+        row["metadata"] = metadata
+
     if not writes_enabled():
         _log_write_skip(f"upsert venue_features slug={slug} venue_id={venue_id}")
         return _next_temp_id()
