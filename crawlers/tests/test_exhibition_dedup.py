@@ -66,3 +66,8 @@ def test_junk_title_regex_catches_view_fullsize_variations():
     junk = ["View Fullsize", "view fullsize", "VIEW FULLSIZE", "View  fullsize"]
     for title in junk:
         assert _JUNK_TITLE_RE.match(title.strip()), f"Should catch {title!r}"
+
+
+def test_exhibition_columns_includes_related_feature_id():
+    from db.exhibitions import _EXHIBITION_COLUMNS
+    assert "related_feature_id" in _EXHIBITION_COLUMNS
