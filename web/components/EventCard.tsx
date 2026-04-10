@@ -323,7 +323,7 @@ function EventCard({
                   </span>
                 )}
               </div>
-              <span className="block text-base sm:text-base font-semibold leading-[1.2] line-clamp-2 sm:line-clamp-1 text-[var(--cream)] group-hover:text-[var(--accent-color)] transition-colors">
+              <span className="block text-base sm:text-base font-semibold font-display leading-[1.2] line-clamp-2 sm:line-clamp-1 text-[var(--cream)] group-hover:text-[var(--accent-color)] transition-colors">
                 {eventTitle}
               </span>
               <div className="flex items-center gap-1.5 min-w-0 text-xs leading-[1.2] sm:text-xs text-[var(--soft)]">
@@ -525,7 +525,7 @@ function EventCard({
                     />
                   </span>
                 )}
-                <span className="text-[var(--text-primary)] font-semibold text-lg transition-colors line-clamp-1 group-hover:text-[var(--accent-color)] leading-tight">
+                <span className="text-[var(--text-primary)] font-semibold font-display text-lg transition-colors line-clamp-1 group-hover:text-[var(--accent-color)] leading-tight">
                   {eventTitle}
                 </span>
                 <EventCardBadges

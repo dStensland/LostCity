@@ -100,7 +100,7 @@ export const StandardRow = memo(function StandardRow({
           </div>
 
           {/* Title */}
-          <p className="text-sm font-medium text-[var(--cream)] truncate leading-snug group-hover:text-white transition-colors">
+          <p className="text-sm font-medium font-display text-[var(--cream)] truncate leading-snug group-hover:text-white transition-colors">
             {event.title}
           </p>
 

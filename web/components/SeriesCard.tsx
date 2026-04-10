@@ -21,6 +21,7 @@ import { isTicketingUrl, getLinkOutLabel } from "@/lib/card-utils";
 import Image from "@/components/SmartImage";
 import { useImageParallax } from "@/lib/hooks/useImageParallax";
 import { useViewTransition } from "@/lib/hooks/useViewTransition";
+import { usePointerGlow } from "@/lib/hooks/usePointerGlow";
 import Dot from "@/components/ui/Dot";
 
 export interface SeriesVenueGroup {
@@ -99,6 +100,7 @@ const SeriesCard = memo(function SeriesCard({
 }: Props) {
   const { containerRef: parallaxContainerRef, imageRef: parallaxImageRef } = useImageParallax();
   const { navigate } = useViewTransition();
+  const glowRef = usePointerGlow<HTMLDivElement>();
   const typeColor = getSeriesTypeColor(series.series_type);
   const seriesTitle = decodeHtmlEntities(series.title);
   const seriesUrl = useMemo(() => {
@@ -260,6 +262,7 @@ const SeriesCard = memo(function SeriesCard({
 
   return (
     <div
+      ref={glowRef}
       className={`find-row-card find-row-card-bg pointer-glow ${disableMargin ? "" : "mb-2.5 sm:mb-3"} rounded-xl border border-[var(--twilight)]/75 group overflow-hidden border-l-[2px] border-l-[var(--accent-color)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-color)]/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--void)] ${skipAnimation ? "" : "animate-card-emerge"} ${className ?? ""}`}
       tabIndex={0}
       data-list-row="true"
@@ -370,7 +373,7 @@ const SeriesCard = memo(function SeriesCard({
                         className="text-accent icon-neon-subtle"
                       />
                     </span>
-                    <span className="text-[var(--cream)] font-semibold text-lg transition-colors line-clamp-1 group-hover:text-[var(--accent-color)] leading-tight">
+                    <span className="text-[var(--cream)] font-semibold font-display text-lg transition-colors line-clamp-1 group-hover:text-[var(--accent-color)] leading-tight">
                       {seriesTitle}
                     </span>
                   </div>

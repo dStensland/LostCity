@@ -13,6 +13,7 @@ import { computeCountdown, formatFestivalDates } from "@/lib/moments-utils";
 import Image from "@/components/SmartImage";
 import { useImageParallax } from "@/lib/hooks/useImageParallax";
 import { useViewTransition } from "@/lib/hooks/useViewTransition";
+import { usePointerGlow } from "@/lib/hooks/usePointerGlow";
 import Dot from "@/components/ui/Dot";
 
 interface Props {
@@ -44,6 +45,7 @@ const FestivalCard = memo(function FestivalCard({
 }: Props) {
   const { containerRef: parallaxContainerRef, imageRef: parallaxImageRef } = useImageParallax();
   const { navigate } = useViewTransition();
+  const glowRef = usePointerGlow<HTMLAnchorElement>();
   const typeColor = getSeriesTypeColor("festival_program");
   const formatFestivalType = (value?: string | null) => {
     if (!value) return "Festival";
@@ -156,6 +158,7 @@ const FestivalCard = memo(function FestivalCard({
     <>
       <ScopedStyles css={scopedCss} />
       <Link
+        ref={glowRef}
         href={festivalUrl}
         className={`find-row-card find-row-card-bg pointer-glow block ${disableMargin ? "" : "mb-2.5 sm:mb-3"} rounded-xl border border-[var(--twilight)]/75 group overflow-hidden border-l-[2px] border-l-[var(--accent-color)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-color)]/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--void)] ${accentClass?.className ?? ""} ${contextAccentClass?.className ?? ""} ${skipAnimation ? "" : "animate-card-emerge"} ${className ?? ""}`}
         tabIndex={0}
@@ -235,7 +238,7 @@ const FestivalCard = memo(function FestivalCard({
                   {typeLabel.charAt(0)}
                 </span>
               </span>
-              <span className="text-[var(--cream)] font-semibold text-lg transition-colors line-clamp-1 group-hover:text-[var(--accent-color)] leading-tight">
+              <span className="text-[var(--cream)] font-semibold font-display text-lg transition-colors line-clamp-1 group-hover:text-[var(--accent-color)] leading-tight">
                 {festivalName}
               </span>
             </div>
