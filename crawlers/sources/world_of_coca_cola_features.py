@@ -95,6 +95,52 @@ PLACE_DATA = {
 # image_url values reference canonical CDN paths from the WOCC website.
 # ---------------------------------------------------------------------------
 
+# ---------------------------------------------------------------------------
+# Permanent exhibitions — hard-coded from worldofcoca-cola.com (April 2026).
+# These are always-on, admission-included experiences that are independently
+# discoverable via exhibition search and "What's On Now" feeds.
+# opening_date / closing_date are None because they have no scheduled end.
+# ---------------------------------------------------------------------------
+
+PERMANENT_EXHIBITIONS: list[dict] = [
+    {
+        "title": "Taste It! Experience",
+        "description": (
+            "Sample over 100 Coca-Cola beverages from around the world at this iconic "
+            "tasting station — the most popular stop in the building."
+        ),
+        "exhibition_type": "permanent",
+        "admission_type": "included",
+        "tags": ["tasting", "beverages", "interactive", "global", "coca-cola", "family-friendly"],
+        "source_url": f"{BASE_URL}/exhibits/taste-it/",
+        "image_url": "https://www.worldofcoca-cola.com/wp-content/uploads/2022/05/taste-it-beverages.jpg",
+    },
+    {
+        "title": "The Vault of the Secret Formula",
+        "description": (
+            "An interactive, multi-sensory experience exploring the mystery and lore behind "
+            "Coca-Cola's famously guarded secret recipe."
+        ),
+        "exhibition_type": "permanent",
+        "admission_type": "included",
+        "tags": ["vault", "secret-formula", "theatrical", "interactive", "coca-cola", "iconic"],
+        "source_url": f"{BASE_URL}/exhibits/vault-of-the-secret-formula/",
+        "image_url": "https://www.worldofcoca-cola.com/wp-content/uploads/2022/05/vault-secret-formula.jpg",
+    },
+    {
+        "title": "Milestones of Refreshment",
+        "description": (
+            "A journey through over 130 years of Coca-Cola history, advertising art, and "
+            "cultural impact through original artifacts and memorabilia."
+        ),
+        "exhibition_type": "permanent",
+        "admission_type": "included",
+        "tags": ["history", "artifacts", "gallery", "memorabilia", "coca-cola", "advertising"],
+        "source_url": f"{BASE_URL}/exhibits/milestones-of-refreshment/",
+        "image_url": "https://www.worldofcoca-cola.com/wp-content/uploads/2022/05/milestones-of-refreshment-gallery.jpg",
+    },
+]
+
 PERMANENT_FEATURES: list[dict] = [
     {
         "slug": "taste-it",
@@ -595,10 +641,42 @@ def crawl(source: dict) -> tuple[int, int, int]:
     )
 
     # -----------------------------------------------------------------------
-    # 2. Scrape current/upcoming exhibitions via Playwright
+    # 2. Build permanent exhibition records and add to envelope
     # -----------------------------------------------------------------------
     exhibition_envelope = TypedEntityEnvelope()
     seen: set = set()
+
+    for perm in PERMANENT_EXHIBITIONS:
+        rec, _artists = build_exhibition_record(
+            title=perm["title"],
+            venue_id=venue_id,
+            source_id=source_id,
+            opening_date=None,
+            closing_date=None,
+            venue_name=PLACE_DATA["name"],
+            description=perm.get("description"),
+            image_url=perm.get("image_url"),
+            source_url=perm.get("source_url"),
+            portal_id=portal_id,
+            admission_type=perm.get("admission_type", "included"),
+            tags=perm.get("tags", ["coca-cola", "world-of-coca-cola", "downtown"]),
+            exhibition_type=perm.get("exhibition_type", "permanent"),
+        )
+        exhibition_envelope.add("exhibitions", rec)
+        found += 1
+        logger.info(
+            "World of Coca-Cola Features: queued permanent exhibition %r",
+            perm["title"],
+        )
+
+    logger.info(
+        "World of Coca-Cola Features: %d permanent exhibitions queued",
+        len(PERMANENT_EXHIBITIONS),
+    )
+
+    # -----------------------------------------------------------------------
+    # 3. Scrape current/upcoming exhibitions via Playwright
+    # -----------------------------------------------------------------------
 
     urls_to_scrape = [
         (PLAN_VISIT_URL, "plan-your-visit"),
