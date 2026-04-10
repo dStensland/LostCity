@@ -283,7 +283,7 @@ export const HangFeedSection = memo(function HangFeedSection({
         {/* 3. Hot venues carousel */}
         {venues.length > 0 && (
           <div
-            className="flex gap-2.5 overflow-x-auto pb-1 scrollbar-hide snap-x snap-mandatory mask-fade-x"
+            className="flex gap-2.5 overflow-x-auto pb-1 scrollbar-hide snap-x snap-mandatory"
             role="list"
             aria-label="Hot venues right now"
           >

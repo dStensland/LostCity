@@ -146,7 +146,7 @@ export default function NowShowingSection({ portalSlug, embedded = false }: NowS
       });
 
     return () => controller.abort();
-  }, []);
+  }, [portalSlug]);
 
   // Build display list: indie theaters (minus hidden) + user-added chains
   const displayedTheaters = useMemo(() => {
@@ -343,7 +343,7 @@ export default function NowShowingSection({ portalSlug, embedded = false }: NowS
       )}
 
       {/* Carousel */}
-      <div className="relative mask-fade-x">
+      <div className="relative">
         <div
           ref={scrollRef}
           className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide snap-x snap-mandatory scroll-smooth"
