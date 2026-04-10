@@ -14,3 +14,13 @@ def test_valid_feature_types_excludes_space():
     from db.places import _VALID_FEATURE_TYPES
 
     assert "space" not in _VALID_FEATURE_TYPES
+
+
+def test_upsert_venue_feature_row_includes_new_columns():
+    """upsert_venue_feature must include all 7 new schema columns."""
+    import inspect
+    from db.places import upsert_venue_feature
+
+    source = inspect.getsource(upsert_venue_feature)
+    for col in ["source_id", "portal_id", "admission_type", "admission_url", "source_url", "tags", "metadata"]:
+        assert f'"{col}"' in source, f"upsert_venue_feature must include '{col}'"

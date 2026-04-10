@@ -1045,6 +1045,13 @@ def upsert_venue_feature(venue_id: int, feature_data: dict) -> Optional[int]:
         "sort_order": feature_data.get("sort_order", 0),
         "is_active": True,
         "updated_at": "now()",
+        "source_id": feature_data.get("source_id"),
+        "portal_id": feature_data.get("portal_id"),
+        "admission_type": feature_data.get("admission_type"),
+        "admission_url": feature_data.get("admission_url"),
+        "source_url": feature_data.get("source_url"),
+        "tags": feature_data.get("tags"),
+        "metadata": feature_data.get("metadata") or {},
     }
 
     if not writes_enabled():
