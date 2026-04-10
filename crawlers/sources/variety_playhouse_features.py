@@ -48,6 +48,13 @@ PLACE_DATA = {
 # Variety Playhouse's room layout is stable and well-documented.
 # ---------------------------------------------------------------------------
 
+# Variety Playhouse publishes a single venue image across all pages (og:image).
+# No feature-specific images are available on the site.
+_VENUE_IMAGE_URL = (
+    "https://aegwebprod.blob.core.windows.net/content/seo_images/140/"
+    "Tv6pLBdL8GeqQJExc345oItKj9uYYv1k2wwPMwCT.jpeg"
+)
+
 _FEATURES: list[dict] = [
     {
         "slug": "main-theater",
@@ -62,6 +69,8 @@ _FEATURES: list[dict] = [
         "admission_type": "ticketed",
         "source_url": BASE_URL,
         "sort_order": 10,
+        "image_url": _VENUE_IMAGE_URL,
+        "image_source": "og_image",
         "tags": [
             "concert-hall",
             "standing-room",
@@ -82,6 +91,8 @@ _FEATURES: list[dict] = [
         "admission_type": "included",
         "source_url": BASE_URL,
         "sort_order": 20,
+        "image_url": _VENUE_IMAGE_URL,
+        "image_source": "og_image",
         "tags": ["patio", "outdoor", "pre-show", "little-five-points", "gathering-space"],
     },
     {
@@ -96,6 +107,8 @@ _FEATURES: list[dict] = [
         "admission_type": "included",
         "source_url": BASE_URL,
         "sort_order": 30,
+        "image_url": _VENUE_IMAGE_URL,
+        "image_source": "og_image",
         "tags": ["balcony", "seating", "tables", "upper-level", "little-five-points"],
     },
 ]
