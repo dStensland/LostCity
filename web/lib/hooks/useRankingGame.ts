@@ -14,6 +14,7 @@ interface UseRankingGameState {
   loading: boolean;
   saving: boolean;
   saved: boolean;
+  saveError: boolean;
 }
 
 export function useRankingGame(gameId: number, isAuthenticated: boolean) {
@@ -24,6 +25,7 @@ export function useRankingGame(gameId: number, isAuthenticated: boolean) {
     loading: true,
     saving: false,
     saved: false,
+    saveError: false,
   });
 
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -78,7 +80,7 @@ export function useRankingGame(gameId: number, isAuthenticated: boolean) {
       if (savedTimerRef.current) clearTimeout(savedTimerRef.current);
 
       saveTimerRef.current = setTimeout(async () => {
-        setState((prev) => ({ ...prev, saving: true }));
+        setState((prev) => ({ ...prev, saving: true, saveError: false }));
         try {
           const res = await fetch(`/api/goblinday/rankings/${gameId}/me`, {
             method: "POST",
@@ -86,16 +88,16 @@ export function useRankingGame(gameId: number, isAuthenticated: boolean) {
             body: JSON.stringify({ category_id: categoryId, entries }),
           });
           if (res.ok) {
-            setState((prev) => ({ ...prev, saving: false, saved: true }));
+            setState((prev) => ({ ...prev, saving: false, saved: true, saveError: false }));
             savedTimerRef.current = setTimeout(() => {
               setState((prev) => ({ ...prev, saved: false }));
             }, 2000);
             fetchParticipants();
           } else {
-            setState((prev) => ({ ...prev, saving: false }));
+            setState((prev) => ({ ...prev, saving: false, saveError: true }));
           }
         } catch {
-          setState((prev) => ({ ...prev, saving: false }));
+          setState((prev) => ({ ...prev, saving: false, saveError: true }));
         }
       }, 500);
     },
@@ -150,6 +152,7 @@ export function useRankingGame(gameId: number, isAuthenticated: boolean) {
     loading: state.loading,
     saving: state.saving,
     saved: state.saved,
+    saveError: state.saveError,
     saveRankings,
     refreshParticipants,
     addItem,

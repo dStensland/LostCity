@@ -49,7 +49,7 @@ export async function GET(
 
   const { data: items, error: itemError } = await serviceClient
     .from("goblin_ranking_items")
-    .select("id, category_id, name, subtitle, image_url")
+    .select("id, category_id, name, subtitle, description, image_url")
     .in("category_id", categoryIds.length > 0 ? categoryIds : [-1]);
 
   if (itemError) {

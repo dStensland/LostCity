@@ -22,6 +22,7 @@ export interface RankingItem {
   category_id: number;
   name: string;
   subtitle: string | null;
+  description: string | null;
   image_url: string | null;
 }
 
