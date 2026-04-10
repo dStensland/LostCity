@@ -243,7 +243,7 @@ def get_venues_needing_hours(
     client = get_client()
 
     query = client.table("places").select(
-        "id, name, slug, address, city, lat, lng, hours, venue_type, hours_source, hours_updated_at"
+        "id, name, slug, address, city, lat, lng, hours, place_type, hours_source, hours_updated_at"
     ).eq("is_active", True).not_.is_("lat", "null").not_.is_("lng", "null")
 
     if city:
@@ -254,7 +254,7 @@ def get_venues_needing_hours(
     elif destinations_only:
         query = query.in_("place_type", DESTINATION_TYPES)
 
-    query = query.order("venue_type").limit(limit * 3)  # Over-fetch to filter client-side
+    query = query.order("place_type").limit(limit * 3)  # Over-fetch to filter client-side
 
     result = query.execute()
     venues = result.data or []
