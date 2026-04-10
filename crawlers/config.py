@@ -121,6 +121,7 @@ class APIConfig(BaseModel):
     omdb_api_key: str = Field(default_factory=lambda: os.getenv("OMDB_API_KEY", ""))
     spotify_client_id: str = Field(default_factory=lambda: os.getenv("SPOTIFY_CLIENT_ID", ""))
     spotify_client_secret: str = Field(default_factory=lambda: os.getenv("SPOTIFY_CLIENT_SECRET", ""))
+    nps_api_key: str = Field(default_factory=lambda: os.getenv("NPS_API_KEY", "DEMO_KEY"))
 
 
 class CrawlerConfig(BaseModel):
