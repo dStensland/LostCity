@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import type { ExhibitionWithVenue, ExhibitionType } from "@/lib/exhibitions-utils";
 import { isCurrentlyShowing, isClosingSoon } from "@/lib/exhibitions-utils";
 import { ExhibitionCard } from "./ExhibitionCard";
@@ -47,6 +47,39 @@ export function ExhibitionFeed({
   const [showingFilter, setShowingFilter] = useState<ShowingFilter>("current");
   const [typeFilter, setTypeFilter] = useState<ExhibitionType | "all">("all");
   const [visibleCount, setVisibleCount] = useState(12);
+  const [upcomingExhibitions, setUpcomingExhibitions] = useState<ExhibitionWithVenue[] | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  // Fetch "upcoming" exhibitions from the API when that tab is selected.
+  // "current" and "closing" are both served from the initial server-fetched set:
+  //   - current: filtered client-side by isCurrentlyShowing
+  //   - closing: filtered client-side by isClosingSoon (subset of current)
+  // "upcoming" has opening_date > today and is NOT in the initial current set.
+  useEffect(() => {
+    if (showingFilter !== "upcoming") return;
+
+    let cancelled = false;
+    const fetchUpcoming = async () => {
+      setLoading(true);
+      try {
+        const res = await fetch(
+          `/api/exhibitions?portal=${encodeURIComponent(portalSlug)}&showing=upcoming&limit=100`
+        );
+        if (res.ok && !cancelled) {
+          const data = await res.json();
+          setUpcomingExhibitions(data.exhibitions ?? []);
+        }
+      } catch {
+        // Silent fail — keep current data visible
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+    fetchUpcoming();
+    return () => {
+      cancelled = true;
+    };
+  }, [showingFilter, portalSlug]);
 
   function handleShowingChange(value: ShowingFilter) {
     setShowingFilter(value);
@@ -60,21 +93,23 @@ export function ExhibitionFeed({
     updateUrl({ showing: showingFilter, type: value });
   }
 
+  // Choose the source dataset based on the active showing filter.
+  // "upcoming" uses the API-fetched set; others use the initial server-rendered set.
+  const sourceData = showingFilter === "upcoming" ? (upcomingExhibitions ?? []) : initialExhibitions;
+
   const filtered = useMemo(() => {
-    return initialExhibitions.filter((ex) => {
-      // Showing filter
+    return sourceData.filter((ex) => {
+      // Showing filter (client-side subset filtering for current and closing)
       if (showingFilter === "current" && !isCurrentlyShowing(ex)) return false;
       if (showingFilter === "closing" && !isClosingSoon(ex, 14)) return false;
-      // "upcoming" uses the full initial set (opening_date > today) — no client-side filter
-      // since the server already returns upcoming when that tab is active.
-      // For now, pass through for upcoming since initial data is mixed.
+      // "upcoming" is already server-filtered — no additional showing filter needed
 
       // Type filter
       if (typeFilter !== "all" && ex.exhibition_type !== typeFilter) return false;
 
       return true;
     });
-  }, [initialExhibitions, showingFilter, typeFilter]);
+  }, [sourceData, showingFilter, typeFilter]);
 
   const visible = filtered.slice(0, visibleCount);
   const hasMore = filtered.length > visibleCount;
@@ -124,13 +159,15 @@ export function ExhibitionFeed({
 
       {/* Result count */}
       <p className="font-[family-name:var(--font-ibm-plex-mono)] text-xs text-[var(--muted)] tracking-wider">
-        {isEmpty
+        {loading
+          ? "// loading..."
+          : isEmpty
           ? "// no exhibitions match"
           : `// ${filtered.length} exhibition${filtered.length !== 1 ? "s" : ""}`}
       </p>
 
       {/* Exhibition list */}
-      {isEmpty ? (
+      {loading ? null : isEmpty ? (
         <EmptyState showingFilter={showingFilter} typeFilter={typeFilter} />
       ) : (
         <>
