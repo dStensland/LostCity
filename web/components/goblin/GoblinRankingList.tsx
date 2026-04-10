@@ -194,6 +194,14 @@ export default function GoblinRankingList({
   const [dragOver, setDragOver] = useState<number | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingItemId, setEditingItemId] = useState<number | null>(null);
+  const [animKey, setAnimKey] = useState(0);
+  const prevCategoryRef = useRef(categoryId);
+  useEffect(() => {
+    if (prevCategoryRef.current !== categoryId) {
+      setAnimKey((k) => k + 1);
+      prevCategoryRef.current = categoryId;
+    }
+  }, [categoryId]);
 
   const { ranked, unranked } = useMemo(() => {
     const entryMap = new Map<number, RankingEntry>();
@@ -381,26 +389,37 @@ export default function GoblinRankingList({
                   }
 
                   return (
-                    <div key={item.id} className="flex items-stretch group">
-                      <div className="flex-1 min-w-0">
-                        <GoblinRankingItem
-                          name={item.name}
-                          subtitle={item.subtitle}
-                          imageUrl={item.image_url}
-                          rank={globalIdx + 1}
-                          tierColor={group.tierColor}
-                          readOnly={!isOpen}
-                          onMoveToRank={(r) => moveToRank(globalIdx, r)}
-                          onRemove={isOpen ? () => removeFromRanking(item.id) : undefined}
-                          onDragStart={() => setDragFrom(globalIdx)}
-                          onDragOver={() => setDragOver(globalIdx)}
-                          onDrop={() => handleDrop(globalIdx)}
-                          isDragging={dragFrom === globalIdx}
-                          isDragTarget={dragOver === globalIdx && dragFrom !== globalIdx}
-                          onEdit={isOpen && onEditItem ? () => setEditingItemId(item.id) : undefined}
-                          onDelete={isOpen && onDeleteItem ? () => handleDeleteItem(item.id) : undefined}
-                        />
+                    <div key={`${item.id}-${animKey}`}>
+                      <div
+                        className="flex items-stretch group motion-safe:animate-[rankItemEntry_300ms_ease-out_backwards]"
+                        style={{
+                          animationDelay: globalIdx < 10 ? `${globalIdx * 50}ms` : "0ms",
+                        }}
+                      >
+                        <div className={`flex-1 min-w-0 ${globalIdx < 3 ? "motion-safe:animate-[rankItemGlitch_80ms_ease-out_300ms_backwards]" : ""}`}>
+                          <GoblinRankingItem
+                            name={item.name}
+                            subtitle={item.subtitle}
+                            description={item.description}
+                            imageUrl={item.image_url}
+                            rank={globalIdx + 1}
+                            tierColor={group.tierColor}
+                            readOnly={!isOpen}
+                            onMoveToRank={(r) => moveToRank(globalIdx, r)}
+                            onRemove={isOpen ? () => removeFromRanking(item.id) : undefined}
+                            onDragStart={() => setDragFrom(globalIdx)}
+                            onDragOver={() => setDragOver(globalIdx)}
+                            onDrop={() => handleDrop(globalIdx)}
+                            isDragging={dragFrom === globalIdx}
+                            isDragTarget={dragOver === globalIdx && dragFrom !== globalIdx}
+                            onEdit={isOpen && onEditItem ? () => setEditingItemId(item.id) : undefined}
+                            onDelete={isOpen && onDeleteItem ? () => handleDeleteItem(item.id) : undefined}
+                          />
+                        </div>
                       </div>
+                      {dragOver === globalIdx && dragFrom !== null && dragFrom !== globalIdx && (
+                        <div className="h-0.5 bg-cyan-500 shadow-[0_0_8px_rgba(0,240,255,0.4)] motion-safe:animate-pulse" />
+                      )}
                     </div>
                   );
                 })}
@@ -413,7 +432,7 @@ export default function GoblinRankingList({
       {/* Unranked section */}
       {unranked.length > 0 && isOpen && (
         <div className="mt-6">
-          <p className="font-mono text-2xs text-zinc-600 uppercase tracking-[0.2em] mb-2">
+          <p className="font-mono text-2xs text-zinc-500 uppercase tracking-[0.2em] mb-2">
             Unranked ({unranked.length})
           </p>
           <div className="space-y-1">
@@ -451,18 +470,22 @@ export default function GoblinRankingList({
                       <span className="font-mono text-lg text-zinc-800">–</span>
                     </div>
                     {item.image_url && (
-                      <div className="flex-shrink-0 w-14 h-14 relative overflow-hidden bg-zinc-900 opacity-50">
+                      <div className="flex-shrink-0 w-14 sm:w-20 relative overflow-hidden bg-zinc-900 opacity-50"
+                        style={{ aspectRatio: "16/10" }}>
                         <SmartImage src={item.image_url} alt="" fill className="object-cover" />
                       </div>
                     )}
                     <div className="flex-1 min-w-0 py-2.5 pr-2">
                       <p className="text-sm text-zinc-500 truncate">{item.name}</p>
                       {item.subtitle && (
-                        <p className="text-2xs text-zinc-700 font-mono mt-0.5 truncate">{item.subtitle}</p>
+                        <p className="text-2xs text-zinc-600 font-mono mt-0.5 truncate">{item.subtitle}</p>
+                      )}
+                      {item.description && (
+                        <p className="text-2xs text-zinc-600 mt-0.5 line-clamp-1">{item.description}</p>
                       )}
                     </div>
                     <div className="flex-shrink-0 flex items-center pr-3">
-                      <span className="text-2xs text-zinc-700 font-mono">TAP TO ADD</span>
+                      <span className="text-2xs text-zinc-500 font-mono">TAP TO ADD</span>
                     </div>
                   </button>
                   {/* Edit/delete controls for unranked items */}
@@ -471,11 +494,11 @@ export default function GoblinRankingList({
                       {onEditItem && (
                         <button
                           onClick={() => setEditingItemId(item.id)}
-                          className="w-8 h-full flex items-center justify-center
-                            text-zinc-700 hover:text-cyan-400 transition-colors"
+                          className="w-11 min-h-[44px] flex items-center justify-center
+                            text-zinc-600 hover:text-cyan-400 transition-colors"
                           title="Edit item"
                         >
-                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none"
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
                             stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
                             <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
@@ -485,11 +508,11 @@ export default function GoblinRankingList({
                       {onDeleteItem && (
                         <button
                           onClick={() => handleDeleteItem(item.id)}
-                          className="w-8 h-full flex items-center justify-center
-                            text-zinc-700 hover:text-red-400 transition-colors"
+                          className="w-11 min-h-[44px] flex items-center justify-center
+                            text-zinc-600 hover:text-red-400 transition-colors"
                           title="Delete item"
                         >
-                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none"
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
                             stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             <polyline points="3 6 5 6 21 6" />
                             <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
