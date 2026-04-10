@@ -4,10 +4,32 @@ import { useState, useEffect, useCallback } from "react";
 import type { WatchlistEntry, WatchlistTag } from "@/lib/goblin-watchlist-utils";
 import type { TMDBSearchResult } from "@/lib/goblin-log-utils";
 
+export interface Recommendation {
+  id: number;
+  recommender_name: string;
+  recommender_user_id: string | null;
+  note: string | null;
+  status: string;
+  created_at: string;
+  movie: {
+    id: number;
+    tmdb_id: number | null;
+    title: string;
+    poster_path: string | null;
+    release_date: string | null;
+    genres: string[] | null;
+    runtime_minutes: number | null;
+    director: string | null;
+    year: number | null;
+  };
+}
+
 interface UseGoblinWatchlistState {
   entries: WatchlistEntry[];
   tags: WatchlistTag[];
   loading: boolean;
+  recommendations: Recommendation[];
+  recommendationCount: number;
 }
 
 interface UseGoblinWatchlistActions {
@@ -31,6 +53,8 @@ interface UseGoblinWatchlistActions {
   deleteTag: (tagId: number) => Promise<boolean>;
   searchTMDB: (query: string) => Promise<TMDBSearchResult[]>;
   refreshEntries: () => Promise<void>;
+  addRecommendation: (id: number) => Promise<boolean>;
+  dismissRecommendation: (id: number) => Promise<boolean>;
 }
 
 export function useGoblinWatchlist(
@@ -39,6 +63,7 @@ export function useGoblinWatchlist(
   const [entries, setEntries] = useState<WatchlistEntry[]>([]);
   const [tags, setTags] = useState<WatchlistTag[]>([]);
   const [loading, setLoading] = useState(true);
+  const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
 
   const fetchEntries = useCallback(async () => {
     try {
@@ -62,6 +87,17 @@ export function useGoblinWatchlist(
     }
   }, []);
 
+  const fetchRecommendations = useCallback(async () => {
+    try {
+      const res = await fetch("/api/goblinday/me/recommendations");
+      if (!res.ok) return;
+      const data = await res.json();
+      setRecommendations(data.recommendations || []);
+    } catch {
+      // Non-critical
+    }
+  }, []);
+
   // Fetch on mount
   useEffect(() => {
     if (!isAuthenticated) {
@@ -69,8 +105,8 @@ export function useGoblinWatchlist(
       return;
     }
     setLoading(true);
-    Promise.all([fetchEntries(), fetchTags()]).finally(() => setLoading(false));
-  }, [isAuthenticated, fetchEntries, fetchTags]);
+    Promise.all([fetchEntries(), fetchTags(), fetchRecommendations()]).finally(() => setLoading(false));
+  }, [isAuthenticated, fetchEntries, fetchTags, fetchRecommendations]);
 
   const addEntry = useCallback(
     async (data: { tmdb_id: number; note?: string; tag_ids?: number[] }) => {
@@ -224,6 +260,51 @@ export function useGoblinWatchlist(
     [fetchTags, fetchEntries]
   );
 
+  const addRecommendation = useCallback(
+    async (recId: number) => {
+      setRecommendations((prev) => prev.filter((r) => r.id !== recId));
+      try {
+        const res = await fetch(`/api/goblinday/me/recommendations/${recId}/action`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "add" }),
+        });
+        if (!res.ok) {
+          await fetchRecommendations();
+          return false;
+        }
+        await fetchEntries();
+        return true;
+      } catch {
+        await fetchRecommendations();
+        return false;
+      }
+    },
+    [fetchRecommendations, fetchEntries]
+  );
+
+  const dismissRecommendation = useCallback(
+    async (recId: number) => {
+      setRecommendations((prev) => prev.filter((r) => r.id !== recId));
+      try {
+        const res = await fetch(`/api/goblinday/me/recommendations/${recId}/action`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "dismiss" }),
+        });
+        if (!res.ok) {
+          await fetchRecommendations();
+          return false;
+        }
+        return true;
+      } catch {
+        await fetchRecommendations();
+        return false;
+      }
+    },
+    [fetchRecommendations]
+  );
+
   const searchTMDB = useCallback(async (query: string): Promise<TMDBSearchResult[]> => {
     if (query.length < 2) return [];
     try {
@@ -242,6 +323,8 @@ export function useGoblinWatchlist(
     entries,
     tags,
     loading,
+    recommendations,
+    recommendationCount: recommendations.length,
     addEntry,
     updateEntry,
     deleteEntry,
@@ -251,5 +334,7 @@ export function useGoblinWatchlist(
     deleteTag,
     searchTMDB,
     refreshEntries: fetchEntries,
+    addRecommendation,
+    dismissRecommendation,
   };
 }
