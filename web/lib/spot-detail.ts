@@ -160,6 +160,7 @@ export type VenueOccasionRow = {
 
 export type VenueExhibitionRow = {
   id: string;
+  slug: string | null;
   title: string;
   description: string | null;
   image_url: string | null;
@@ -499,7 +500,7 @@ export async function getSpotDetail(slug: string): Promise<SpotDetailPayload | n
 
   const exhibitionsPromise = supabase
     .from("exhibitions")
-    .select("id, title, description, image_url, opening_date, closing_date, exhibition_type, admission_type, source_url")
+    .select("id, slug, title, description, image_url, opening_date, closing_date, exhibition_type, admission_type, source_url")
     .eq("place_id", spot.id)
     .eq("is_active", true)
     .or(`closing_date.gte.${today},closing_date.is.null`)

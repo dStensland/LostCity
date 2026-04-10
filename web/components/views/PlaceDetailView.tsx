@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useMemo, useEffect } from "react";
+import Link from "next/link";
 import { SPOT_TYPES, formatPriceLevel, getSpotTypeLabels, type SpotType } from "@/lib/spots-constants";
 import FollowButton from "@/components/FollowButton";
 import PlaceTagList from "@/components/PlaceTagList";
@@ -197,6 +198,7 @@ type NearbyDestinations = {
 
 type VenueExhibition = {
   id: string;
+  slug: string | null;
   title: string;
   description: string | null;
   image_url: string | null;
@@ -675,11 +677,10 @@ export default function PlaceDetailView({ slug, portalSlug, onClose, initialData
             ? Math.ceil((new Date(ex.closing_date + "T00:00:00").getTime() - Date.now()) / (1000 * 60 * 60 * 24))
             : null;
           return (
-            <a
+            <Link
               key={ex.id}
-              href={ex.source_url || undefined}
-              target="_blank"
-              rel="noopener noreferrer"
+              href={ex.slug ? `/${portalSlug}/exhibitions/${ex.slug}` : (ex.source_url || "#")}
+              {...(!ex.slug && ex.source_url ? { target: "_blank", rel: "noopener noreferrer" } : {})}
               className="group flex gap-3 p-3 rounded-xl border border-[var(--twilight)]/40 hover:border-[var(--soft)]/30 transition-colors find-row-card-bg"
             >
               {ex.image_url && (
@@ -707,7 +708,7 @@ export default function PlaceDetailView({ slug, portalSlug, onClose, initialData
                   </span>
                 )}
               </div>
-            </a>
+            </Link>
           );
         })}
       </div>
