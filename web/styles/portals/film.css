@@ -25,9 +25,7 @@ body:has([data-vertical="film"]) {
 body[data-vertical="film"] .ambient-glow,
 body:has([data-vertical="film"]) .ambient-glow,
 body[data-vertical="film"] .rain-overlay,
-body:has([data-vertical="film"]) .rain-overlay,
-body[data-vertical="film"] .cursor-glow,
-body:has([data-vertical="film"]) .cursor-glow {
+body:has([data-vertical="film"]) .rain-overlay {
   display: none !important;
 }
 

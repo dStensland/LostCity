@@ -4,8 +4,7 @@ import { useRef, useEffect } from "react";
 
 /**
  * Lightweight mouse-tracking parallax hook for card image panels.
- * Follows the CursorGlow pattern: direct DOM manipulation via refs,
- * no React re-renders per frame.
+ * Uses direct DOM manipulation via refs to avoid React re-renders per frame.
  *
  * Usage:
  *   const { containerRef, imageRef } = useImageParallax();

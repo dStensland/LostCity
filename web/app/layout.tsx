@@ -148,7 +148,7 @@ export default async function RootLayout({
             </Suspense>
             {/* Ambient glow effect */}
             <div className="ambient-glow" aria-hidden="true" />
-            {/* Visual effects (rain, cursor glow) */}
+            {/* Visual effects (rain) */}
             <ClientEffects />
             <AuthProvider>
               <DarkHoursTheme />

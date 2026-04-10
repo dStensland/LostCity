@@ -22,13 +22,12 @@
 import { coercePortalVertical } from "@/lib/portal-taxonomy";
 import type { PortalVertical } from "@/lib/portal-taxonomy";
 
-/** Suppress grain/rain/glow/cursor effects for the body. */
+/** Suppress grain/rain/glow effects for the body. */
 const DISABLE_ATMOSPHERE = `
   body::before { opacity: 0 !important; }
   body::after { opacity: 0 !important; }
   .ambient-glow { opacity: 0 !important; }
   .rain-overlay { display: none !important; }
-  .cursor-glow { display: none !important; }
 `;
 
 /** Suppress cinematic animations for a given vertical data-attribute selector. */

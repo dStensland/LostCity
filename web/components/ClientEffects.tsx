@@ -5,7 +5,6 @@ import dynamic from "next/dynamic";
 import { coercePortalVertical, shouldSuppressGlobalEffects } from "@/lib/portal-taxonomy";
 
 const RainEffect = dynamic(() => import("@/components/RainEffect"), { ssr: false });
-const CursorGlow = dynamic(() => import("@/components/CursorGlow"), { ssr: false });
 
 export default function ClientEffects() {
   const [shouldLoadEffects, setShouldLoadEffects] = useState(false);
@@ -33,7 +32,6 @@ export default function ClientEffects() {
   return (
     <>
       <RainEffect />
-      <CursorGlow />
     </>
   );
 }
