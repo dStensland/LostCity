@@ -74,10 +74,11 @@ CREATE TABLE venues (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- Venue specials: time-sensitive offerings (happy hours, daily specials, recurring deals)
-CREATE TABLE venue_specials (
+-- Place specials: time-sensitive offerings (happy hours, daily specials, recurring deals)
+-- Renamed from venue_specials → place_specials; venue_id → place_id via places_final_rename migration
+CREATE TABLE place_specials (
   id SERIAL PRIMARY KEY,
-  venue_id INTEGER NOT NULL REFERENCES venues(id) ON DELETE CASCADE,
+  place_id INTEGER NOT NULL REFERENCES venues(id) ON DELETE CASCADE,
   title TEXT NOT NULL,
   type TEXT NOT NULL,
   description TEXT,
@@ -96,15 +97,15 @@ CREATE TABLE venue_specials (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX idx_venue_specials_venue ON venue_specials(venue_id);
-CREATE INDEX idx_venue_specials_type ON venue_specials(type);
-CREATE INDEX idx_venue_specials_active ON venue_specials(is_active) WHERE is_active = true;
+CREATE INDEX idx_place_specials_place ON place_specials(place_id);
+CREATE INDEX idx_place_specials_type ON place_specials(type);
+CREATE INDEX idx_place_specials_active ON place_specials(is_active) WHERE is_active = true;
 
 -- Events table: the core event data
 CREATE TABLE events (
   id SERIAL PRIMARY KEY,
   source_id INTEGER REFERENCES sources(id),
-  venue_id INTEGER REFERENCES venues(id),
+  place_id INTEGER REFERENCES venues(id),
   title TEXT NOT NULL,
   description TEXT,
   start_date DATE NOT NULL,
@@ -206,7 +207,7 @@ CREATE TABLE crawl_logs (
 CREATE INDEX idx_events_start_date ON events(start_date);
 CREATE INDEX idx_events_category ON events(category);
 CREATE INDEX idx_events_content_kind ON events(content_kind);
-CREATE INDEX idx_events_venue_id ON events(venue_id);
+CREATE INDEX idx_events_place_id ON events(place_id);
 CREATE INDEX idx_events_content_hash ON events(content_hash);
 CREATE INDEX idx_events_source_id ON events(source_id);
 CREATE INDEX idx_events_is_active ON events(is_active);
@@ -217,9 +218,9 @@ CREATE INDEX IF NOT EXISTS idx_events_festival_id
   ON events (festival_id) WHERE festival_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_events_organization_id
   ON events (organization_id) WHERE organization_id IS NOT NULL;
-CREATE INDEX idx_events_spot_counts_portal_start_venue
-ON events(portal_id, start_date, venue_id)
-WHERE venue_id IS NOT NULL
+CREATE INDEX idx_events_spot_counts_portal_start_place
+ON events(portal_id, start_date, place_id)
+WHERE place_id IS NOT NULL
   AND is_active = true
   AND canonical_event_id IS NULL
   AND COALESCE(is_sensitive, false) = false
@@ -246,7 +247,7 @@ CREATE OR REPLACE FUNCTION get_spot_event_counts(
   p_limit INTEGER DEFAULT 480
 )
 RETURNS TABLE(
-  venue_id INTEGER,
+  place_id INTEGER,
   event_count BIGINT
 )
 LANGUAGE sql
@@ -254,11 +255,11 @@ STABLE
 SECURITY DEFINER
 AS $$
   SELECT
-    e.venue_id,
+    e.place_id,
     COUNT(*)::BIGINT AS event_count
   FROM events e
-  JOIN venues v ON v.id = e.venue_id
-  WHERE e.venue_id IS NOT NULL
+  JOIN venues v ON v.id = e.place_id
+  WHERE e.place_id IS NOT NULL
     AND e.start_date >= p_start_date
     AND e.start_date <= p_end_date
     AND e.is_active = true
@@ -274,8 +275,8 @@ AS $$
       OR array_length(p_city_names, 1) IS NULL
       OR v.city = ANY(p_city_names)
     )
-  GROUP BY e.venue_id
-  ORDER BY event_count DESC, e.venue_id ASC
+  GROUP BY e.place_id
+  ORDER BY event_count DESC, e.place_id ASC
   LIMIT GREATEST(COALESCE(p_limit, 480), 1);
 $$;
 
@@ -659,7 +660,7 @@ CREATE TABLE IF NOT EXISTS programs (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   portal_id UUID REFERENCES portals(id) ON DELETE SET NULL,
   source_id INTEGER REFERENCES sources(id) ON DELETE SET NULL,
-  venue_id INTEGER REFERENCES venues(id) ON DELETE SET NULL,
+  place_id INTEGER REFERENCES venues(id) ON DELETE SET NULL,
   name TEXT NOT NULL,
   slug TEXT UNIQUE,
   description TEXT,
@@ -783,7 +784,7 @@ CREATE TRIGGER update_venue_features_updated_at
 CREATE TABLE IF NOT EXISTS exhibitions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   slug TEXT NOT NULL UNIQUE,
-  venue_id INTEGER NOT NULL REFERENCES venues(id) ON DELETE CASCADE,
+  place_id INTEGER NOT NULL REFERENCES venues(id) ON DELETE CASCADE,
   source_id INTEGER REFERENCES sources(id) ON DELETE SET NULL,
   portal_id UUID REFERENCES portals(id) ON DELETE SET NULL,
   title TEXT NOT NULL,
@@ -805,7 +806,7 @@ CREATE TABLE IF NOT EXISTS exhibitions (
   CONSTRAINT exhibitions_date_order CHECK (opening_date IS NULL OR closing_date IS NULL OR opening_date <= closing_date)
 );
 
-CREATE INDEX IF NOT EXISTS idx_exhibitions_venue ON exhibitions(venue_id, is_active);
+CREATE INDEX IF NOT EXISTS idx_exhibitions_place ON exhibitions(place_id, is_active);
 CREATE INDEX IF NOT EXISTS idx_exhibitions_portal ON exhibitions(portal_id, is_active) WHERE portal_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_exhibitions_source ON exhibitions(source_id) WHERE source_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_exhibitions_dates ON exhibitions(opening_date, closing_date) WHERE is_active = true;
@@ -835,7 +836,7 @@ CREATE TABLE IF NOT EXISTS open_calls (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   slug TEXT NOT NULL UNIQUE,
   organization_id TEXT REFERENCES organizations(id) ON DELETE SET NULL,
-  venue_id INTEGER REFERENCES venues(id) ON DELETE SET NULL,
+  place_id INTEGER REFERENCES venues(id) ON DELETE SET NULL,
   source_id INTEGER REFERENCES sources(id) ON DELETE SET NULL,
   portal_id UUID REFERENCES portals(id) ON DELETE SET NULL,
   title TEXT NOT NULL,
@@ -857,7 +858,7 @@ CREATE TABLE IF NOT EXISTS open_calls (
 
 CREATE INDEX IF NOT EXISTS idx_open_calls_deadline ON open_calls(deadline) WHERE is_active = true AND status = 'open';
 CREATE INDEX IF NOT EXISTS idx_open_calls_portal ON open_calls(portal_id, is_active) WHERE portal_id IS NOT NULL;
-CREATE INDEX IF NOT EXISTS idx_open_calls_venue ON open_calls(venue_id) WHERE venue_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_open_calls_place ON open_calls(place_id) WHERE place_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_open_calls_org ON open_calls(organization_id) WHERE organization_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_open_calls_type ON open_calls(call_type, status) WHERE is_active = true;
 
@@ -873,7 +874,7 @@ ALTER TABLE open_calls ENABLE ROW LEVEL SECURITY;
 -- -------------------------------------------------------
 
 CREATE TABLE IF NOT EXISTS venue_destination_details (
-  venue_id INTEGER PRIMARY KEY REFERENCES venues(id) ON DELETE CASCADE,
+  place_id INTEGER PRIMARY KEY REFERENCES venues(id) ON DELETE CASCADE,
   destination_type TEXT,
   commitment_tier TEXT CHECK (commitment_tier IN ('hour','halfday','fullday','weekend')),
   primary_activity TEXT,
@@ -926,7 +927,7 @@ CREATE INDEX IF NOT EXISTS idx_venue_destination_details_weather_fit_tags
 
 -- place_profile: 1:1 enrichment extension on venues
 CREATE TABLE IF NOT EXISTS place_profile (
-  venue_id         INTEGER PRIMARY KEY REFERENCES venues(id) ON DELETE CASCADE,
+  place_id         INTEGER PRIMARY KEY REFERENCES venues(id) ON DELETE CASCADE,
   description      TEXT,
   short_description TEXT,
   hero_image_url   TEXT,
@@ -951,14 +952,14 @@ CREATE TABLE IF NOT EXISTS place_profile (
 );
 
 CREATE INDEX IF NOT EXISTS idx_place_profile_featured
-  ON place_profile(venue_id) WHERE featured = true;
+  ON place_profile(place_id) WHERE featured = true;
 
 CREATE INDEX IF NOT EXISTS idx_place_profile_explore_category
   ON place_profile(explore_category) WHERE explore_category IS NOT NULL;
 
 -- place_vertical_details: 1:1 JSONB extensions by vertical
 CREATE TABLE IF NOT EXISTS place_vertical_details (
-  venue_id  INTEGER PRIMARY KEY REFERENCES venues(id) ON DELETE CASCADE,
+  place_id  INTEGER PRIMARY KEY REFERENCES venues(id) ON DELETE CASCADE,
   dining    JSONB,
   outdoor   JSONB,
   civic     JSONB,
@@ -989,9 +990,9 @@ CREATE TABLE IF NOT EXISTS place_candidates (
   source_id            INTEGER REFERENCES sources(id) ON DELETE SET NULL,
   source_url           TEXT,
   match_confidence     DECIMAL(3,2) CHECK (match_confidence BETWEEN 0 AND 1),
-  potential_venue_id   INTEGER REFERENCES venues(id) ON DELETE SET NULL,
+  potential_place_id   INTEGER REFERENCES venues(id) ON DELETE SET NULL,
   status               place_candidate_status NOT NULL DEFAULT 'pending',
-  promoted_to_venue_id INTEGER REFERENCES venues(id) ON DELETE SET NULL,
+  promoted_to_place_id INTEGER REFERENCES venues(id) ON DELETE SET NULL,
   review_notes         TEXT,
   reviewed_at          TIMESTAMPTZ,
   reviewed_by          UUID REFERENCES auth.users(id) ON DELETE SET NULL,
@@ -1006,8 +1007,8 @@ CREATE INDEX IF NOT EXISTS idx_place_candidates_status
 CREATE INDEX IF NOT EXISTS idx_place_candidates_source
   ON place_candidates(source_id);
 
-CREATE INDEX IF NOT EXISTS idx_place_candidates_potential_venue
-  ON place_candidates(potential_venue_id) WHERE potential_venue_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_place_candidates_potential_place
+  ON place_candidates(potential_place_id) WHERE potential_place_id IS NOT NULL;
 
 -- -------------------------------------------------------
 -- Search term corpus (migration 486)
@@ -1253,7 +1254,7 @@ BEGIN
         AND EXISTS (
           SELECT 1
           FROM events e
-          LEFT JOIN venues v ON v.id = e.venue_id
+          LEFT JOIN venues v ON v.id = e.place_id
           WHERE e.id::TEXT = est.entity_id
             AND e.updated_at >= v_effective_since
             AND (v_metro_cities IS NULL OR v.city IS NULL OR v.city = ANY(v_metro_cities))
@@ -1289,7 +1290,7 @@ BEGIN
         AND EXISTS (
           SELECT 1
           FROM programs p
-          LEFT JOIN venues v ON v.id = p.venue_id
+          LEFT JOIN venues v ON v.id = p.place_id
           WHERE p.id::TEXT = est.entity_id
             AND p.updated_at >= v_effective_since
             AND (v_metro_cities IS NULL OR v.city IS NULL OR v.city = ANY(v_metro_cities))
@@ -1312,7 +1313,7 @@ BEGIN
   SELECT
     'event', e.id::TEXT, 'event', 'primary', e.title, normalize_search_term(e.title), v.city, 1, 'events.title'
   FROM events e
-  LEFT JOIN venues v ON v.id = e.venue_id
+  LEFT JOIN venues v ON v.id = e.place_id
   WHERE e.start_date >= CURRENT_DATE
     AND COALESCE(e.is_active, TRUE) = TRUE
     AND e.canonical_event_id IS NULL
@@ -1327,7 +1328,7 @@ BEGIN
     'event', e.id::TEXT, 'event', 'artist', e.title, normalize_search_term(ea.name), v.city, 1, 'event_artists.name'
   FROM events e
   JOIN event_artists ea ON ea.event_id = e.id
-  LEFT JOIN venues v ON v.id = e.venue_id
+  LEFT JOIN venues v ON v.id = e.place_id
   WHERE e.start_date >= CURRENT_DATE
     AND COALESCE(e.is_active, TRUE) = TRUE
     AND e.canonical_event_id IS NULL
@@ -1494,7 +1495,7 @@ BEGIN
   SELECT
     'program', p.id::TEXT, 'program', 'primary', p.name, normalize_search_term(p.name), v.city, 1, 'programs.name'
   FROM programs p
-  LEFT JOIN venues v ON v.id = p.venue_id
+  LEFT JOIN venues v ON v.id = p.place_id
   WHERE p.status = 'active'
     AND normalize_search_term(p.name) IS NOT NULL
     AND (p_full OR p.updated_at >= v_effective_since)
@@ -1506,7 +1507,7 @@ BEGIN
   SELECT
     'program', p.id::TEXT, 'program', 'alias', p.name, alias.term, v.city, 1, 'programs.generated_aliases'
   FROM programs p
-  LEFT JOIN venues v ON v.id = p.venue_id
+  LEFT JOIN venues v ON v.id = p.place_id
   CROSS JOIN LATERAL unnest(search_term_alias_candidates(p.name, p.slug)) AS alias(term)
   WHERE p.status = 'active'
     AND normalize_search_term(p.name) IS NOT NULL
@@ -1520,7 +1521,7 @@ BEGIN
   SELECT
     'program', p.id::TEXT, 'program', 'provider', p.name, normalize_search_term(p.provider_name), v.city, 1, 'programs.provider_name'
   FROM programs p
-  LEFT JOIN venues v ON v.id = p.venue_id
+  LEFT JOIN venues v ON v.id = p.place_id
   WHERE p.status = 'active'
     AND normalize_search_term(p.name) IS NOT NULL
     AND normalize_search_term(p.provider_name) IS NOT NULL
@@ -1535,7 +1536,7 @@ BEGIN
   SELECT
     'program', p.id::TEXT, 'program', 'venue', p.name, normalize_search_term(v.name), v.city, 1, 'programs.venue'
   FROM programs p
-  JOIN venues v ON v.id = p.venue_id
+  JOIN venues v ON v.id = p.place_id
   WHERE p.status = 'active'
     AND normalize_search_term(p.name) IS NOT NULL
     AND normalize_search_term(v.name) IS NOT NULL
@@ -1728,7 +1729,7 @@ ALTER TABLE school_calendar_events ENABLE ROW LEVEL SECURITY;
 
 CREATE TABLE IF NOT EXISTS editorial_mentions (
   id SERIAL PRIMARY KEY,
-  venue_id INT REFERENCES venues(id) ON DELETE CASCADE,
+  place_id INT REFERENCES venues(id) ON DELETE CASCADE,
   source_key TEXT NOT NULL,
   article_url TEXT NOT NULL,
   article_title TEXT NOT NULL,
@@ -1774,27 +1775,27 @@ CREATE TABLE IF NOT EXISTS editorial_mentions (
   )
 );
 
-CREATE INDEX IF NOT EXISTS idx_editorial_mentions_venue_id
-  ON editorial_mentions(venue_id)
+CREATE INDEX IF NOT EXISTS idx_editorial_mentions_place_id
+  ON editorial_mentions(place_id)
   WHERE is_active = true;
 
 CREATE INDEX IF NOT EXISTS idx_editorial_mentions_published
   ON editorial_mentions(published_at DESC)
-  WHERE is_active = true AND venue_id IS NOT NULL;
+  WHERE is_active = true AND place_id IS NOT NULL;
 
 CREATE INDEX IF NOT EXISTS idx_editorial_mentions_source
   ON editorial_mentions(source_key);
 
 CREATE INDEX IF NOT EXISTS idx_editorial_mentions_relevance
-  ON editorial_mentions(venue_id, is_active, relevance)
+  ON editorial_mentions(place_id, is_active, relevance)
   WHERE relevance = 'primary';
 
-CREATE UNIQUE INDEX IF NOT EXISTS idx_editorial_mentions_article_venue
-  ON editorial_mentions(article_url, venue_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_editorial_mentions_article_place
+  ON editorial_mentions(article_url, place_id);
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_editorial_mentions_article_unmatched
   ON editorial_mentions(article_url)
-  WHERE venue_id IS NULL;
+  WHERE place_id IS NULL;
 
 CREATE TRIGGER update_editorial_mentions_updated_at
   BEFORE UPDATE ON editorial_mentions
@@ -1803,14 +1804,15 @@ CREATE TRIGGER update_editorial_mentions_updated_at
 
 ALTER TABLE editorial_mentions ENABLE ROW LEVEL SECURITY;
 
-CREATE TABLE IF NOT EXISTS venue_occasions (
+-- Renamed from venue_occasions → place_occasions; venue_id → place_id via places_final_rename migration
+CREATE TABLE IF NOT EXISTS place_occasions (
   id SERIAL PRIMARY KEY,
-  venue_id INT NOT NULL REFERENCES venues(id) ON DELETE CASCADE,
+  place_id INT NOT NULL REFERENCES venues(id) ON DELETE CASCADE,
   occasion TEXT NOT NULL,
   confidence DECIMAL(3,2) NOT NULL DEFAULT 1.0,
   source TEXT NOT NULL DEFAULT 'manual',
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  CONSTRAINT venue_occasions_occasion_check CHECK (
+  CONSTRAINT place_occasions_occasion_check CHECK (
     occasion IN (
       'date_night',
       'groups',
@@ -1827,25 +1829,25 @@ CREATE TABLE IF NOT EXISTS venue_occasions (
       'live_music'
     )
   ),
-  CONSTRAINT venue_occasions_source_check CHECK (
+  CONSTRAINT place_occasions_source_check CHECK (
     source IN ('manual', 'inferred', 'editorial')
   ),
-  CONSTRAINT venue_occasions_confidence_range CHECK (
+  CONSTRAINT place_occasions_confidence_range CHECK (
     confidence >= 0.0 AND confidence <= 1.0
   ),
-  UNIQUE (venue_id, occasion)
+  UNIQUE (place_id, occasion)
 );
 
-CREATE INDEX IF NOT EXISTS idx_venue_occasions_occasion
-  ON venue_occasions(occasion);
+CREATE INDEX IF NOT EXISTS idx_place_occasions_occasion
+  ON place_occasions(occasion);
 
-CREATE INDEX IF NOT EXISTS idx_venue_occasions_occasion_confidence
-  ON venue_occasions (occasion, confidence DESC);
+CREATE INDEX IF NOT EXISTS idx_place_occasions_occasion_confidence
+  ON place_occasions (occasion, confidence DESC);
 
-CREATE INDEX IF NOT EXISTS idx_venue_occasions_venue
-  ON venue_occasions(venue_id);
+CREATE INDEX IF NOT EXISTS idx_place_occasions_place
+  ON place_occasions(place_id);
 
-ALTER TABLE venue_occasions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE place_occasions ENABLE ROW LEVEL SECURITY;
 
 -- -------------------------------------------------------
 -- Kid profiles (family portal)
@@ -2029,7 +2031,7 @@ CREATE TABLE IF NOT EXISTS feed_events_ready (
   early_bird_deadline DATE,
   sellout_risk    TEXT,
   attendee_count  INT DEFAULT 0,
-  venue_id        INT,
+  place_id        INT,
   venue_name      TEXT,
   venue_slug      TEXT,
   venue_neighborhood TEXT,
@@ -2082,7 +2084,7 @@ BEGIN
     featured_blurb, tags, festival_id, is_tentpole, is_featured, series_id,
     is_recurring, source_id, organization_id, importance, data_quality,
     on_sale_date, presale_date, early_bird_deadline, sellout_risk, attendee_count,
-    venue_id, venue_name, venue_slug, venue_neighborhood, venue_city, venue_type,
+    place_id, venue_name, venue_slug, venue_neighborhood, venue_city, venue_type,
     venue_image_url, venue_active, series_name, series_type, series_slug, refreshed_at
   )
   SELECT
@@ -2097,7 +2099,7 @@ BEGIN
     COALESCE(v.active, true), s.title, s.series_type, s.slug, now()
   FROM events e
   INNER JOIN portal_source_access psa ON psa.source_id = e.source_id
-  LEFT JOIN venues v ON v.id = e.venue_id
+  LEFT JOIN venues v ON v.id = e.place_id
   LEFT JOIN series s ON s.id = e.series_id
   WHERE
     e.is_active = true
@@ -2124,7 +2126,7 @@ BEGIN
     presale_date = EXCLUDED.presale_date,
     early_bird_deadline = EXCLUDED.early_bird_deadline,
     sellout_risk = EXCLUDED.sellout_risk, attendee_count = EXCLUDED.attendee_count,
-    venue_id = EXCLUDED.venue_id, venue_name = EXCLUDED.venue_name,
+    place_id = EXCLUDED.place_id, venue_name = EXCLUDED.venue_name,
     venue_slug = EXCLUDED.venue_slug, venue_neighborhood = EXCLUDED.venue_neighborhood,
     venue_city = EXCLUDED.venue_city, venue_type = EXCLUDED.venue_type,
     venue_image_url = EXCLUDED.venue_image_url, venue_active = EXCLUDED.venue_active,
