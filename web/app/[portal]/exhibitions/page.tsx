@@ -76,9 +76,21 @@ export default async function ExhibitionsPage({ params }: Props) {
 
   const { exhibitions, total } = await fetchExhibitions(portalSlug);
 
+  const isArtsPortal = portalSlug === "arts";
+
+  const pageTitle = isArtsPortal ? "What\u2019s Showing" : "What\u2019s On";
+
+  const pageSubtitle = isArtsPortal
+    ? "Currently showing across Atlanta\u2019s galleries and museums."
+    : portalSlug === "atlanta"
+      ? "Special exhibits, seasonal experiences, and more across Atlanta."
+      : portalSlug === "family"
+        ? "Exhibits and experiences for the whole family."
+        : "Current exhibitions and experiences across Atlanta.";
+
   return (
     <div className="min-h-screen">
-      <ArtsSecondaryNav portalSlug={portalSlug} />
+      {isArtsPortal && <ArtsSecondaryNav portalSlug={portalSlug} />}
       <main className="max-w-3xl mx-auto px-4 py-6 pb-16">
         {/* Page header — Underground Gallery style */}
         <header className="mb-8">
@@ -86,10 +98,10 @@ export default async function ExhibitionsPage({ params }: Props) {
             {"// exhibitions"}
           </p>
           <h1 className="text-2xl sm:text-3xl font-semibold text-[var(--cream)] leading-tight mb-2">
-            What&rsquo;s Showing
+            {pageTitle}
           </h1>
           <p className="font-[family-name:var(--font-ibm-plex-mono)] text-sm text-[var(--muted)]">
-            Currently showing across Atlanta&rsquo;s galleries and museums.
+            {pageSubtitle}
           </p>
         </header>
 
