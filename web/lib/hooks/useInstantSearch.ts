@@ -520,6 +520,7 @@ export function useInstantSearch({
       category: [],
       festival: [],
       program: [],
+      exhibition: [],
     };
     if (!showSuggestions) return empty;
 

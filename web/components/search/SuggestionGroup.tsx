@@ -161,6 +161,7 @@ function getTypeLabel(type: SearchResult["type"]): string {
     category: "Categories",
     festival: "Festivals",
     program: "Programs",
+    exhibition: "Exhibitions",
   };
   return labels[type] || type;
 }
@@ -176,6 +177,7 @@ function getTypeColor(type: SearchResult["type"]): string {
     category: "text-[var(--muted)]",
     festival: "text-[var(--gold)]",
     program: "text-[var(--neon-green)]",
+    exhibition: "text-[var(--vibe)]",
   };
   return colors[type] || "text-[var(--muted)]";
 }

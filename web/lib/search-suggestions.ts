@@ -64,7 +64,7 @@ const spellingSuggestionsInFlight = new Map<
 
 export interface SearchSuggestion {
   text: string;
-  type: "event" | "venue" | "neighborhood" | "organizer" | "category" | "tag" | "vibe" | "festival" | "program";
+  type: "event" | "venue" | "neighborhood" | "organizer" | "category" | "tag" | "vibe" | "festival" | "program" | "exhibition";
   frequency: number;
   similarity?: number;
 }
@@ -743,11 +743,12 @@ export async function getGroupedSuggestions(
     vibe: limits.vibe ?? defaultLimit,
     festival: limits.festival ?? defaultLimit,
     program: limits.program ?? defaultLimit,
+    exhibition: limits.exhibition ?? defaultLimit,
   };
 
   for (const suggestion of allSuggestions) {
     // Map singular type to plural result key
-    const typeToKeyMap: Record<SearchSuggestion["type"], keyof typeof result> = {
+    const typeToKeyMap: Partial<Record<SearchSuggestion["type"], keyof typeof result>> = {
       event: "events",
       venue: "venues",
       neighborhood: "neighborhoods",
@@ -757,11 +758,12 @@ export async function getGroupedSuggestions(
       vibe: "vibes",
       festival: "festivals",
       program: "programs",
+      // exhibition: not included in grouped result keys (not used by callers)
     };
 
     const resultKey = typeToKeyMap[suggestion.type];
     const limit = typeLimits[suggestion.type];
-    if (result[resultKey].length < limit) {
+    if (resultKey && result[resultKey].length < limit) {
       result[resultKey].push(suggestion);
     }
   }

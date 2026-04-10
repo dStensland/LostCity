@@ -16,7 +16,7 @@ import { fetchSocialProofCounts } from "@/lib/social-proof";
 
 export interface SearchResult {
   id: number | string;
-  type: "event" | "venue" | "organizer" | "series" | "list" | "neighborhood" | "category" | "festival" | "program";
+  type: "event" | "venue" | "organizer" | "series" | "list" | "neighborhood" | "category" | "festival" | "program" | "exhibition";
   title: string;
   subtitle?: string;
   href: string;
@@ -58,7 +58,7 @@ export interface SearchResult {
 
 export interface SearchOptions {
   query: string;
-  types?: ("event" | "venue" | "organizer" | "series" | "list" | "festival" | "program")[];
+  types?: ("event" | "venue" | "organizer" | "series" | "list" | "festival" | "program" | "exhibition")[];
   limit?: number;
   offset?: number;
   categories?: string[];
@@ -81,7 +81,7 @@ export interface SearchOptions {
 }
 
 export interface SearchFacet {
-  type: "event" | "venue" | "organizer" | "series" | "list" | "festival" | "program";
+  type: "event" | "venue" | "organizer" | "series" | "list" | "festival" | "program" | "exhibition";
   count: number;
 }
 
@@ -385,6 +385,22 @@ interface ProgramSearchRow {
   image_url: string | null;
   ts_rank: number;
   similarity_score: number;
+  combined_score: number;
+}
+
+interface ExhibitionSearchRow {
+  id: string;
+  title: string;
+  slug: string;
+  description: string | null;
+  image_url: string | null;
+  opening_date: string | null;
+  closing_date: string | null;
+  exhibition_type: string | null;
+  admission_type: string | null;
+  place_id: number | null;
+  venue_name: string | null;
+  venue_neighborhood: string | null;
   combined_score: number;
 }
 
@@ -951,6 +967,19 @@ export async function unifiedSearch(
     searchPromises.push(
       measureSearchTiming(timingRecorder, "search_programs_rpc", () =>
         searchPrograms(client, effectiveQuery, {
+          limit: limitPerType,
+          offset,
+          portalId,
+        }),
+      )
+    );
+  }
+
+  if (types.includes("exhibition")) {
+    searchTypes.push("exhibition");
+    searchPromises.push(
+      measureSearchTiming(timingRecorder, "search_exhibitions_rpc", () =>
+        searchExhibitions(client, effectiveQuery, {
           limit: limitPerType,
           offset,
           portalId,
@@ -1636,6 +1665,54 @@ async function searchPrograms(
         registrationStatus: row.registration_status || undefined,
         sessionStart: row.session_start || undefined,
         sessionEnd: row.session_end || undefined,
+      },
+    };
+  });
+}
+
+/**
+ * Search exhibitions using the search_exhibitions_ranked RPC function.
+ */
+async function searchExhibitions(
+  client: ReturnType<typeof createServiceClient>,
+  query: string,
+  options: {
+    limit: number;
+    offset: number;
+    portalId?: string;
+  }
+): Promise<SearchResult[]> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (client.rpc as any)("search_exhibitions_ranked", {
+    p_query: query,
+    p_limit: options.limit,
+    p_offset: options.offset,
+    p_portal_id: options.portalId || null,
+  });
+
+  if (error) {
+    console.error("Error searching exhibitions:", error);
+    return [];
+  }
+
+  const rows = (data as ExhibitionSearchRow[]) || [];
+
+  return rows.map((row) => {
+    const subtitle = row.venue_name
+      ? row.venue_name
+      : row.exhibition_type || undefined;
+
+    return {
+      id: row.id,
+      type: "exhibition" as const,
+      title: row.title,
+      subtitle,
+      href: `/arts/exhibitions/${row.slug}`,
+      score: row.combined_score,
+      metadata: {
+        neighborhood: row.venue_neighborhood || undefined,
+        date: row.opening_date || undefined,
+        category: row.exhibition_type || undefined,
       },
     };
   });

@@ -171,6 +171,15 @@ export function mapSuggestionToSearchResult(
         href: `/family?view=programs&search=${encoded}`,
         score: baseScore - 10,
       };
+    case "exhibition":
+      return {
+        id: syntheticId,
+        type: "exhibition",
+        title: suggestion.text,
+        subtitle: "Exhibition",
+        href: `/arts/exhibitions?search=${encoded}`,
+        score: baseScore - 25,
+      };
     case "organizer":
       return null;
     default:

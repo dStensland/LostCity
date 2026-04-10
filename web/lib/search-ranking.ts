@@ -62,10 +62,11 @@ const CONTEXT_BOOSTS: Record<
       neighborhood: 3,
       category: 2,
       program: 5,
+      exhibition: 10,
     },
-    events: { event: 10, venue: 10, organizer: 10, festival: 10, series: 8, list: 5, neighborhood: 3, category: 2, program: 5 },
-    classes: { event: 10, venue: 10, organizer: 10, festival: 5, series: 8, list: 5, neighborhood: 3, category: 2, program: 20 },
-    destinations: { event: 10, venue: 10, organizer: 10, festival: 8, series: 8, list: 5, neighborhood: 3, category: 2, program: 5 },
+    events: { event: 10, venue: 10, organizer: 10, festival: 10, series: 8, list: 5, neighborhood: 3, category: 2, program: 5, exhibition: 10 },
+    classes: { event: 10, venue: 10, organizer: 10, festival: 5, series: 8, list: 5, neighborhood: 3, category: 2, program: 20, exhibition: 5 },
+    destinations: { event: 10, venue: 10, organizer: 10, festival: 8, series: 8, list: 5, neighborhood: 3, category: 2, program: 5, exhibition: 12 },
   },
   find: {
     default: {
@@ -78,6 +79,7 @@ const CONTEXT_BOOSTS: Record<
       neighborhood: 8,
       category: 8,
       program: 5,
+      exhibition: 12,
     },
     events: {
       event: 30,
@@ -89,6 +91,7 @@ const CONTEXT_BOOSTS: Record<
       neighborhood: 10,
       category: 10,
       program: 5,
+      exhibition: 10,
     },
     destinations: {
       venue: 30,
@@ -100,6 +103,7 @@ const CONTEXT_BOOSTS: Record<
       neighborhood: 15,
       category: 5,
       program: 5,
+      exhibition: 15, // Exhibitions are destination-adjacent (museum/gallery visits)
     },
     classes: {
       event: 25, // Classes are events
@@ -111,6 +115,7 @@ const CONTEXT_BOOSTS: Record<
       neighborhood: 10,
       category: 10,
       program: 20, // Programs are primary for classes/enrollment queries
+      exhibition: 5,
     },
   },
   community: {
@@ -124,10 +129,11 @@ const CONTEXT_BOOSTS: Record<
       neighborhood: 3,
       category: 3,
       program: 5,
+      exhibition: 8,
     },
-    events: { organizer: 25, list: 20, event: 10, festival: 8, venue: 5, series: 10, neighborhood: 3, category: 3, program: 5 },
-    classes: { organizer: 25, list: 20, event: 10, festival: 5, venue: 5, series: 10, neighborhood: 3, category: 3, program: 15 },
-    destinations: { organizer: 25, list: 20, event: 10, festival: 8, venue: 5, series: 10, neighborhood: 3, category: 3, program: 5 },
+    events: { organizer: 25, list: 20, event: 10, festival: 8, venue: 5, series: 10, neighborhood: 3, category: 3, program: 5, exhibition: 8 },
+    classes: { organizer: 25, list: 20, event: 10, festival: 5, venue: 5, series: 10, neighborhood: 3, category: 3, program: 15, exhibition: 5 },
+    destinations: { organizer: 25, list: 20, event: 10, festival: 8, venue: 5, series: 10, neighborhood: 3, category: 3, program: 5, exhibition: 10 },
   },
 };
 
@@ -387,6 +393,7 @@ export function groupResultsByType(
     category: [],
     festival: [],
     program: [],
+    exhibition: [],
   };
 
   for (const result of results) {
@@ -405,18 +412,18 @@ export function getGroupDisplayOrder(context: SearchContext): ResultType[] {
   if (context.viewMode === "find") {
     switch (context.findType) {
       case "events":
-        return ["event", "festival", "venue", "organizer", "series", "neighborhood", "category", "list", "program"];
+        return ["event", "festival", "exhibition", "venue", "organizer", "series", "neighborhood", "category", "list", "program"];
       case "destinations":
-        return ["venue", "neighborhood", "festival", "event", "organizer", "series", "category", "list", "program"];
+        return ["venue", "neighborhood", "exhibition", "festival", "event", "organizer", "series", "category", "list", "program"];
       case "classes":
-        return ["program", "event", "venue", "organizer", "series", "festival", "neighborhood", "category", "list"];
+        return ["program", "event", "venue", "organizer", "series", "festival", "exhibition", "neighborhood", "category", "list"];
     }
   }
 
   if (context.viewMode === "community") {
-    return ["organizer", "list", "event", "festival", "venue", "series", "neighborhood", "category", "program"];
+    return ["organizer", "list", "event", "festival", "exhibition", "venue", "series", "neighborhood", "category", "program"];
   }
 
   // Feed: balanced display
-  return ["event", "festival", "venue", "organizer", "series", "list", "neighborhood", "category", "program"];
+  return ["event", "festival", "exhibition", "venue", "organizer", "series", "list", "neighborhood", "category", "program"];
 }
