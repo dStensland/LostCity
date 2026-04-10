@@ -94,6 +94,8 @@ PARKS: list[dict] = [
                 "is_free": True,
                 "sort_order": 10,
                 "tags": ["historic", "tour", "civil-rights", "family-friendly"],
+                "image_url": "https://www.nps.gov/common/uploads/structured_data/05E52B2F-1DD8-B71B-0BF2101AB9877F24.jpg",
+                "image_source": "crawler",
             },
             {
                 "slug": "ebenezer-baptist-heritage-sanctuary",
@@ -112,6 +114,8 @@ PARKS: list[dict] = [
                 "is_free": True,
                 "sort_order": 20,
                 "tags": ["historic", "church", "civil-rights", "self-guided"],
+                "image_url": "https://www.nps.gov/common/uploads/structured_data/0625B9FE-1DD8-B71B-0BAA913E3985A8BC.jpg",
+                "image_source": "crawler",
             },
             {
                 "slug": "international-civil-rights-walk-of-fame",
@@ -136,6 +140,8 @@ PARKS: list[dict] = [
                     "historic",
                     "self-guided",
                 ],
+                "image_url": "https://www.nps.gov/common/uploads/structured_data/5DC14EA9-047B-156E-0DEAFE4188EAD890.jpg",
+                "image_source": "crawler",
             },
             {
                 "slug": "freedom-hall",
@@ -154,6 +160,8 @@ PARKS: list[dict] = [
                 "is_free": True,
                 "sort_order": 40,
                 "tags": ["museum", "civil-rights", "historic", "landmark"],
+                "image_url": "https://www.nps.gov/common/uploads/structured_data/06A2AE8E-1DD8-B71B-0B35D421256AF991.jpg",
+                "image_source": "crawler",
             },
         ],
     },
@@ -207,6 +215,8 @@ PARKS: list[dict] = [
                 "is_free": True,
                 "sort_order": 10,
                 "tags": ["hiking", "outdoor", "views", "trail"],
+                "image_url": "https://www.nps.gov/common/uploads/structured_data/CB5DF472-ED7B-85BD-C4BF83B81CF6DEF0.jpg",
+                "image_source": "crawler",
             },
             {
                 "slug": "kennesaw-mountain-visitor-center",
@@ -225,6 +235,8 @@ PARKS: list[dict] = [
                 "is_free": True,
                 "sort_order": 20,
                 "tags": ["museum", "civil-war", "historic", "rangers"],
+                "image_url": "https://www.nps.gov/common/uploads/structured_data/D0C24881-1DD8-B71B-0B10784870E5F3FB.jpg",
+                "image_source": "crawler",
             },
             {
                 "slug": "cheatham-hill",
@@ -244,6 +256,8 @@ PARKS: list[dict] = [
                 "is_free": True,
                 "sort_order": 30,
                 "tags": ["civil-war", "historic", "outdoor", "battlefield"],
+                "image_url": "https://www.nps.gov/common/uploads/structured_data/D0AF3092-1DD8-B71B-0BA0839FF68F8071.jpg",
+                "image_source": "crawler",
             },
             {
                 "slug": "kennesaw-mountain-civil-war-earthworks",
@@ -269,6 +283,8 @@ PARKS: list[dict] = [
                     "battlefield",
                     "self-guided",
                 ],
+                "image_url": "https://www.nps.gov/common/uploads/structured_data/D087031F-1DD8-B71B-0BB9898C84464224.jpg",
+                "image_source": "crawler",
             },
         ],
     },
@@ -315,6 +331,8 @@ PARKS: list[dict] = [
                 "is_free": True,
                 "sort_order": 10,
                 "tags": ["hiking", "fishing", "outdoor", "trail", "river"],
+                "image_url": "https://www.nps.gov/common/uploads/structured_data/C9265B1A-1DD8-B71B-0B8D232058D0E4C9.jpg",
+                "image_source": "crawler",
             },
             {
                 "slug": "chat-cochran-shoals",
@@ -333,6 +351,8 @@ PARKS: list[dict] = [
                 "is_free": True,
                 "sort_order": 20,
                 "tags": ["hiking", "trail", "outdoor", "river", "fitness"],
+                "image_url": "https://www.nps.gov/common/uploads/structured_data/C8083BD1-1DD8-B71B-0BB3FE7205EBC05D.jpg",
+                "image_source": "crawler",
             },
             {
                 "slug": "chat-paces-mill",
@@ -351,6 +371,8 @@ PARKS: list[dict] = [
                 "is_free": True,
                 "sort_order": 30,
                 "tags": ["river", "outdoor", "swimming", "picnic", "tubing"],
+                "image_url": "https://www.nps.gov/common/uploads/structured_data/C8BC70DE-1DD8-B71B-0BF932BB754A6269.jpg",
+                "image_source": "crawler",
             },
             {
                 "slug": "chat-vickery-creek",
@@ -376,6 +398,8 @@ PARKS: list[dict] = [
                     "historic",
                     "bridge",
                 ],
+                "image_url": "https://www.nps.gov/common/uploads/structured_data/C877BEFD-1DD8-B71B-0BC94CDB1B8075BE.jpg",
+                "image_source": "crawler",
             },
         ],
     },
