@@ -323,7 +323,7 @@ function VenueShowCard({
       {/* Show rows */}
       <div className="pb-2.5">
         {displayShows.map((show) => (
-          <ShowRow key={show.id} show={show} />
+          <ShowRow key={show.id} show={show} portalSlug={portalSlug} />
         ))}
         {overflow > 0 && (
           <Link
@@ -340,7 +340,7 @@ function VenueShowCard({
 
 // ── ShowRow ───────────────────────────────────────────────────────
 
-function ShowRow({ show }: { show: VenueShow }) {
+function ShowRow({ show, portalSlug }: { show: VenueShow; portalSlug: string }) {
   const timeLabel = show.start_time ? formatTime(show.start_time) : null;
 
   let priceLabel: string | null = null;
@@ -351,31 +351,33 @@ function ShowRow({ show }: { show: VenueShow }) {
   }
 
   return (
-    <div className="group px-3 py-1.5 transition-colors hover:bg-[var(--cream)]/[0.03]">
-      <div className="flex items-start justify-between gap-2">
-        <span className="text-sm text-[var(--soft)] truncate block group-hover:text-[var(--cream)] transition-colors flex-1 min-w-0">
-          {show.title}
-        </span>
-        {priceLabel && (
-          <span
-            className={`shrink-0 text-2xs font-mono px-1.5 py-0.5 rounded ${
-              show.is_free
-                ? "bg-[var(--neon-green)]/10 text-[var(--neon-green)]/80"
-                : "bg-[var(--twilight)]/60 text-[var(--muted)]"
-            }`}
-          >
-            {priceLabel}
+    <Link href={`/${portalSlug}/events/${show.id}`} prefetch={false}>
+      <div className="group px-3 py-1.5 transition-colors hover:bg-[var(--cream)]/[0.03]">
+        <div className="flex items-start justify-between gap-2">
+          <span className="text-sm text-[var(--soft)] truncate block group-hover:text-[var(--cream)] transition-colors flex-1 min-w-0">
+            {show.title}
           </span>
+          {priceLabel && (
+            <span
+              className={`shrink-0 text-2xs font-mono px-1.5 py-0.5 rounded ${
+                show.is_free
+                  ? "bg-[var(--neon-green)]/10 text-[var(--neon-green)]/80"
+                  : "bg-[var(--twilight)]/60 text-[var(--muted)]"
+              }`}
+            >
+              {priceLabel}
+            </span>
+          )}
+        </div>
+        {timeLabel && (
+          <div className="flex items-center gap-1 mt-1">
+            <Ticket weight="duotone" className="w-3 h-3 text-[var(--show-accent)]/60 shrink-0" />
+            <span className="text-2xs font-mono tabular-nums text-[var(--show-accent)]/70">
+              {timeLabel}
+            </span>
+          </div>
         )}
       </div>
-      {timeLabel && (
-        <div className="flex items-center gap-1 mt-1">
-          <Ticket weight="duotone" className="w-3 h-3 text-[var(--show-accent)]/60 shrink-0" />
-          <span className="text-2xs font-mono tabular-nums text-[var(--show-accent)]/70">
-            {timeLabel}
-          </span>
-        </div>
-      )}
-    </div>
+    </Link>
   );
 }

@@ -28,7 +28,7 @@ export const NOISE_TITLE_PATTERNS = [
 
 export const EXCLUDED_VENUE_TYPES = new Set([
   "library", "recreation", "recreation_center", "school", "government", "religious",
-  "community_center", "institution",
+  "community_center", "institution", "fitness_center",
 ]);
 
 /**

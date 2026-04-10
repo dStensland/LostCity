@@ -106,6 +106,7 @@ export interface ShowtimesTheaterGroup {
     series_id: string | null;
     series_slug: string | null;
     image_url: string | null;
+    screen_name?: string | null;
     times: ShowtimeEntry[];
   }>;
 }

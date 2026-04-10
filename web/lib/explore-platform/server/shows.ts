@@ -89,6 +89,7 @@ type ShowtimeEvent = {
   image_url: string | null;
   tags: string[] | null;
   series_id: string | null;
+  screen_name: string | null;
   venue: ShowtimeVenue | null;
   series: ShowtimeSeries | null;
 };
@@ -112,6 +113,7 @@ type StoredScreeningRun = {
   source_id: number | null;
   festival_id: string | null;
   is_special_event: boolean;
+  screen_name: string | null;
 };
 
 type StoredScreeningTime = {
@@ -341,7 +343,29 @@ async function loadStoredShowtimeEvents(
 
   const runs = (runsResult.data as StoredScreeningRun[] | null) ?? [];
   if (runs.length === 0) return [];
-  const runMap = new Map(runs.map((run) => [run.id, run]));
+
+  let screenNameMap = new Map<string, string>();
+  try {
+    const screenResult = await supabase
+      .from("screening_runs")
+      .select("id, screen_name")
+      .in("id", runs.map((r) => r.id))
+      .not("screen_name", "is", null);
+    if (!screenResult.error && screenResult.data) {
+      for (const row of screenResult.data as { id: string; screen_name: string }[]) {
+        screenNameMap.set(row.id, row.screen_name);
+      }
+    }
+  } catch {
+    // Column doesn't exist yet — ignore
+  }
+
+  const runsWithScreen = runs.map((run) => ({
+    ...run,
+    screen_name: screenNameMap.get(run.id) ?? null,
+  }));
+
+  const runMap = new Map(runsWithScreen.map((run) => [run.id, run]));
 
   const titleIds = Array.from(new Set(runs.map((run) => run.screening_title_id)));
   const titlesResult = await supabase
@@ -404,6 +428,7 @@ async function loadStoredShowtimeEvents(
       image_url: title.poster_image_url,
       tags: run.is_special_event ? ["screening"] : ["showtime"],
       series_id: title.id,
+      screen_name: run.screen_name ?? null,
       venue,
       series: {
         id: title.id,
@@ -433,7 +458,7 @@ function buildFilmMap(events: ShowtimeEvent[]) {
       series_slug: string | null;
       image_url: string | null;
       theaters: Map<
-        number,
+        string,
         {
           venue_id: number;
           venue_name: string;
@@ -441,6 +466,7 @@ function buildFilmMap(events: ShowtimeEvent[]) {
           neighborhood: string | null;
           google_rating: number | null;
           google_rating_count: number | null;
+          screen_name: string | null;
           times: ShowtimeEntry[];
         }
       >;
@@ -476,7 +502,10 @@ function buildFilmMap(events: ShowtimeEvent[]) {
       film.series_slug = series.slug;
     }
 
-    let theater = film.theaters.get(venue.id);
+    const theaterKey = event.screen_name
+      ? `${venue.id}|${event.screen_name}`
+      : String(venue.id);
+    let theater = film.theaters.get(theaterKey);
     if (!theater) {
       const googleData = venue.place_vertical_details?.google ?? null;
       theater = {
@@ -486,9 +515,10 @@ function buildFilmMap(events: ShowtimeEvent[]) {
         neighborhood: venue.neighborhood,
         google_rating: googleData?.rating ?? null,
         google_rating_count: googleData?.rating_count ?? null,
+        screen_name: event.screen_name ?? null,
         times: [],
       };
-      film.theaters.set(venue.id, theater);
+      film.theaters.set(theaterKey, theater);
     }
 
     if (event.start_time) {
@@ -540,8 +570,8 @@ function toTheatersResponse(
 
   for (const film of filmMap.values()) {
     const urgency = film.series_id ? urgencyMap?.get(film.series_id) : undefined;
-    for (const [venueId, theater] of film.theaters) {
-      let theaterEntry = theaterMap.get(venueId);
+    for (const [, theater] of film.theaters) {
+      let theaterEntry = theaterMap.get(theater.venue_id);
       if (!theaterEntry) {
         theaterEntry = {
           venue_id: theater.venue_id,
@@ -552,7 +582,7 @@ function toTheatersResponse(
           google_rating_count: theater.google_rating_count,
           films: [],
         };
-        theaterMap.set(venueId, theaterEntry);
+        theaterMap.set(theater.venue_id, theaterEntry);
       }
 
       theaterEntry.films.push({
@@ -560,6 +590,7 @@ function toTheatersResponse(
         series_id: film.series_id,
         series_slug: film.series_slug,
         image_url: film.image_url,
+        screen_name: theater.screen_name ?? null,
         remaining_count: urgency?.remaining_count ?? null,
         first_date: urgency?.first_date ?? null,
         times: theater.times.sort((a, b) => a.time.localeCompare(b.time)),

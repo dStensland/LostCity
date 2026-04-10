@@ -55,45 +55,53 @@ export const PlacesToGoCategoryTile = memo(function PlacesToGoCategoryTile({
 
   return (
     <div
-      className={`rounded-[10px] border transition-all ${
+      className={`rounded-card hover-lift border transition-all ${
         isExpanded ? "col-span-2 sm:col-span-3 lg:col-span-4" : ""
       }`}
       style={{
-        backgroundColor: `color-mix(in srgb, ${accent} 15%, transparent)`,
-        borderColor: `color-mix(in srgb, ${accent} 19%, transparent)`,
+        background: `linear-gradient(160deg, color-mix(in srgb, ${accent} 14%, var(--night)) 0%, var(--night) 55%)`,
+        borderColor: isExpanded
+          ? `color-mix(in srgb, ${accent} 45%, transparent)`
+          : `color-mix(in srgb, ${accent} 28%, transparent)`,
+        boxShadow: `inset 0 1px 0 color-mix(in srgb, ${accent} 12%, transparent)`,
       }}
     >
       {/* Header — always visible, click to toggle */}
       <button
         type="button"
-        className="w-full text-left p-3.5 pb-3 cursor-pointer"
+        className="w-full text-left p-3.5 cursor-pointer"
         onClick={onToggle}
         aria-expanded={isExpanded}
       >
-        {/* Icon + title + count — all on one line */}
-        <div className="flex items-center gap-1.5">
-          <Icon
-            className="w-[18px] h-[18px] flex-shrink-0"
-            style={{ color: accent }}
-            weight="light"
-          />
+        {/* Two-column layout: left (icon + title + summary), right (big count) */}
+        <div className="flex items-center gap-2">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-1.5">
+              <Icon
+                className="w-5 h-5 flex-shrink-0"
+                style={{ color: accent }}
+                weight="duotone"
+              />
+              <span
+                className="flex-1 min-w-0 text-sm font-semibold leading-tight truncate"
+                style={{ color: accent }}
+              >
+                {category.label}
+              </span>
+            </div>
+            {/* Summary below icon+title */}
+            <p className="text-xs text-[var(--muted)] mt-1 line-clamp-1 hidden sm:block">
+              {category.summary}
+            </p>
+          </div>
+          {/* Big count on the right */}
           <span
-            className="flex-1 min-w-0 text-sm font-semibold leading-tight truncate"
-            style={{ color: accent }}
-          >
-            {category.label}
-          </span>
-          <span
-            className="font-mono text-xs font-semibold tabular-nums flex-shrink-0 leading-none"
+            className="text-3xl font-bold tabular-nums flex-shrink-0 min-w-[2ch] text-right leading-none"
             style={{ color: accent }}
           >
             {category.count}
           </span>
         </div>
-        {/* Summary below */}
-        <p className="text-xs text-[var(--soft)] mt-1.5 line-clamp-1">
-          {category.summary}
-        </p>
       </button>
 
       {/* Expanded content */}

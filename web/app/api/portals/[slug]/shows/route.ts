@@ -15,6 +15,7 @@ import { buildPortalManifest } from "@/lib/portal-manifest";
 import { getPortalSourceAccess } from "@/lib/federation";
 import { isNoiseEvent } from "@/lib/show-noise-filter";
 import { applyFeedGate } from "@/lib/feed-gate";
+import { filterMusicVenues } from "@/lib/music-venue-filter";
 
 type RouteContext = {
   params: Promise<{ slug: string }>;
@@ -171,6 +172,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
       slug: string;
       neighborhood: string | null;
       image_url: string | null;
+      place_type?: string | null;
     };
 
     type ShowRow = {
@@ -204,18 +206,27 @@ export async function GET(request: NextRequest, context: RouteContext) {
       });
     }
 
+    // Apply music tab venue quality filter when appropriate
+    const isMusicTab = categories.length === 1 && categories[0] === "music";
+    const qualifiedGroups = isMusicTab
+      ? filterMusicVenues(Array.from(venueMap.values()))
+      : Array.from(venueMap.values());
+
     // Sort venues: those with today's shows first, then by total show count
-    const venues = Array.from(venueMap.values()).sort((a, b) => {
+    const venues = qualifiedGroups.sort((a, b) => {
       const aHasToday = a.shows.some(s => s.start_date === today) ? 1 : 0;
       const bHasToday = b.shows.some(s => s.start_date === today) ? 1 : 0;
       if (bHasToday !== aHasToday) return bHasToday - aHasToday;
       return b.shows.length - a.shows.length;
     });
 
-    // Count unique shows this week (dedup by title to avoid recurrence inflation)
-    const weekTitles = new Set(filteredEvents.map((e: { title: string }) => e.title));
+    // Count unique shows this week using only qualified venues
+    const qualifiedVenueIds = new Set(qualifiedGroups.map(g => g.venue.id));
+    const qualifiedEvents = filteredEvents.filter(e => qualifiedVenueIds.has(e.venue?.id));
+    const weekTitles = new Set(qualifiedEvents.map((e: { title: string }) => e.title));
     const thisWeekCount = weekTitles.size;
-    const todayCount = new Set(todayEvents.map(e => e.title)).size;
+    const qualifiedTodayEvents = qualifiedEvents.filter(e => e.start_date === today);
+    const todayCount = new Set(qualifiedTodayEvents.map(e => e.title)).size;
 
     return NextResponse.json(
       {
