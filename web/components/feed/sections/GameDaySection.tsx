@@ -263,6 +263,7 @@ export default function GameDaySection({ portalSlug }: GameDaySectionProps) {
         <FeedSectionHeader
           title="Game Day"
           priority="secondary"
+          variant="gameday"
           accentColor="var(--neon-cyan)"
           icon={<Trophy weight="duotone" className="w-5 h-5" />}
           seeAllHref={buildExploreUrl({ portalSlug, lane: "game-day" })}
@@ -296,6 +297,7 @@ export default function GameDaySection({ portalSlug }: GameDaySectionProps) {
       <FeedSectionHeader
         title="Game Day"
         priority="secondary"
+        variant="gameday"
         accentColor="var(--neon-cyan)"
         icon={<Trophy weight="duotone" className="w-5 h-5" />}
         seeAllHref={buildExploreUrl({ portalSlug, lane: "game-day" })}

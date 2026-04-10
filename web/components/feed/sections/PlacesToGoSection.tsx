@@ -63,6 +63,7 @@ export function PlacesToGoSection({ portalSlug }: PlacesToGoSectionProps) {
       <FeedSectionHeader
         title="Places to Go"
         priority="secondary"
+        variant="destinations"
         accentColor="var(--neon-green)"
         icon={<MapPin weight="duotone" className="w-5 h-5" />}
         seeAllHref={buildExploreUrl({ portalSlug, lane: "places" })}

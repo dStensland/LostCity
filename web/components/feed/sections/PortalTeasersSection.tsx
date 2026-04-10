@@ -140,6 +140,7 @@ export function PortalTeasersSection({ portalSlug }: PortalTeasersSectionProps) 
       <FeedSectionHeader
         title="Around the City"
         priority="secondary"
+        variant="meta"
         accentColor="var(--neon-cyan)"
         icon={<Globe weight="duotone" className="w-5 h-5" />}
       />

@@ -528,6 +528,7 @@ export default function LineupSection({
       <FeedSectionHeader
         title={sectionTitle}
         priority="secondary"
+        variant="lineup"
         accentColor={sectionAccentColor}
         icon={<Lightning weight="duotone" className="w-5 h-5" />}
         seeAllHref={buildExploreUrl({ portalSlug, lane: "events" })}

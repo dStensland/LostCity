@@ -179,6 +179,7 @@ export function FeaturedCarousel({ events }: Props) {
           title="Featured Events"
           subtitle="Handpicked by our editors"
           priority="tertiary"
+          variant="featured"
           accentColor="var(--gold)"
         />
         {/* Navigation arrows - only show when scrollable */}

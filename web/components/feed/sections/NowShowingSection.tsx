@@ -271,6 +271,7 @@ export default function NowShowingSection({ portalSlug, embedded = false }: NowS
           <FeedSectionHeader
             title="Now Showing"
             priority="secondary"
+            variant="cinema"
             accentColor="var(--vibe)"
             icon={<FilmSlate weight="duotone" className="w-5 h-5" />}
             seeAllHref={buildExploreUrl({
@@ -328,6 +329,7 @@ export default function NowShowingSection({ portalSlug, embedded = false }: NowS
         <FeedSectionHeader
           title="Now Showing"
           priority="secondary"
+          variant="cinema"
           accentColor="var(--vibe)"
           icon={<FilmSlate weight="duotone" className="w-5 h-5" />}
           seeAllHref={buildExploreUrl({

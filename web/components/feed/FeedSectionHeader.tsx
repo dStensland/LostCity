@@ -7,6 +7,16 @@ import { createCssVarClass } from "@/lib/css-utils";
 
 export type SectionPriority = "primary" | "secondary" | "tertiary";
 
+export type SectionVariant =
+  | "lineup"
+  | "cinema"
+  | "destinations"
+  | "horizon"
+  | "regulars"
+  | "meta"
+  | "featured"
+  | "gameday";
+
 export interface SectionHeaderProps {
   title: string;
   subtitle?: string;
@@ -22,6 +32,8 @@ export interface SectionHeaderProps {
   onAction?: () => void;
   actionActive?: boolean;
   actionLabel?: string;
+  /** Visual variant — overrides priority-based styling when set */
+  variant?: SectionVariant;
 }
 
 // Electric bolt icon for featured sections - punk energy, not corporate star
@@ -58,6 +70,7 @@ export default function FeedSectionHeader({
   onAction,
   actionActive,
   actionLabel = "Customize",
+  variant,
 }: SectionHeaderProps) {
   // Priority-based styling
   const getPriorityStyles = () => {
@@ -114,6 +127,124 @@ export default function FeedSectionHeader({
   const seeAllClass = priority === "primary"
     ? "section-header-see-all section-header-see-all-primary"
     : "";
+
+  // ── Variant rendering (overrides priority-based layout) ──────────────────
+  if (variant) {
+    const seeAll = seeAllHref ? (
+      <Link
+        href={seeAllHref}
+        className="flex items-center gap-1 text-xs font-mono transition-all group hover:opacity-80 text-accent shrink-0"
+      >
+        {seeAllLabel}
+        <svg className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+        </svg>
+      </Link>
+    ) : null;
+
+    const variantContent = (() => {
+      switch (variant) {
+        case "lineup":
+          return (
+            <>
+              <div className="flex items-end justify-between">
+                <h3 className="section-header-lineup">{title}</h3>
+                {seeAll}
+              </div>
+              <div className="section-header-lineup-underline mt-2" />
+            </>
+          );
+
+        case "cinema":
+          return (
+            <div className="flex items-center justify-between">
+              <h3 className="section-header-cinema">{title}</h3>
+              {seeAll}
+            </div>
+          );
+
+        case "destinations":
+          return (
+            <div className="flex items-center gap-3">
+              {displayIcon && (
+                <span className="text-[var(--section-accent)] [&>svg]:w-[18px] [&>svg]:h-[18px]">{displayIcon}</span>
+              )}
+              <h3 className="section-header-destinations">{title}</h3>
+              <div className="flex-1" />
+              {seeAll}
+            </div>
+          );
+
+        case "horizon":
+          return (
+            <div className="flex items-end justify-between">
+              <h3 className="section-header-horizon">{title}</h3>
+              {seeAll}
+            </div>
+          );
+
+        case "regulars":
+          return (
+            <div className="flex items-center gap-3">
+              {displayIcon && (
+                <span className="text-[var(--section-accent)] [&>svg]:w-[18px] [&>svg]:h-[18px]">{displayIcon}</span>
+              )}
+              <h3 className="section-header-regulars">{title}</h3>
+              <div className="flex-1" />
+              {seeAll}
+            </div>
+          );
+
+        case "meta":
+          return (
+            <>
+              <div className="h-px bg-[var(--twilight)] mb-3" />
+              <div className="flex items-center justify-between">
+                <h3 className="section-header-meta">{title}</h3>
+                {seeAll}
+              </div>
+            </>
+          );
+
+        case "featured":
+          return (
+            <div className="flex items-center gap-3">
+              {badge && (
+                <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded bg-accent-20 border border-accent-40">
+                  {displayIcon && (
+                    <span className="text-[var(--section-accent)] [&>svg]:w-[14px] [&>svg]:h-[14px]">{displayIcon}</span>
+                  )}
+                  <span className="font-mono text-2xs font-bold uppercase tracking-[0.12em] text-accent">{badge}</span>
+                </span>
+              )}
+              <h3 className="section-header-featured">{title}</h3>
+              <div className="flex-1" />
+              {seeAll}
+            </div>
+          );
+
+        case "gameday":
+          return (
+            <div className="flex items-end justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-1 h-7 rounded-full bg-[var(--section-accent)]" />
+                <h3 className="section-header-gameday">{title}</h3>
+              </div>
+              {seeAll}
+            </div>
+          );
+      }
+    })();
+
+    return (
+      <div
+        className={`section-accent ${className} mb-4 ${accentClass?.className ?? ""}`}
+      >
+        <ScopedStyles css={accentClass?.css} />
+        {variantContent}
+      </div>
+    );
+  }
 
   return (
     <div

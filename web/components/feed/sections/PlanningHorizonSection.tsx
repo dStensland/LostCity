@@ -68,6 +68,7 @@ export default function PlanningHorizonSection({ section, portalSlug }: Props) {
       <FeedSectionHeader
         title={section.title || "On the Horizon"}
         priority="secondary"
+        variant="horizon"
         accentColor="var(--gold)"
         icon={<Binoculars weight="duotone" className="w-5 h-5" />}
         seeAllHref={buildExploreUrl({

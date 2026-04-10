@@ -43,6 +43,7 @@ export default function SeeShowsSection({ portalSlug }: SeeShowsSectionProps) {
       <FeedSectionHeader
         title="See Shows"
         priority="secondary"
+        variant="cinema"
         accentColor="var(--coral)"
         icon={<Ticket weight="duotone" className="w-5 h-5" />}
         seeAllHref={buildExploreUrl({ portalSlug, lane: "shows" })}

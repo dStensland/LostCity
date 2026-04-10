@@ -246,6 +246,7 @@ export const HangFeedSection = memo(function HangFeedSection({
       <FeedSectionHeader
         title="Hangs"
         priority="secondary"
+        variant="regulars"
         accentColor={ACCENT}
         icon={<MapPin weight="duotone" className="w-5 h-5" />}
       />
