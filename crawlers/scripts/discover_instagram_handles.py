@@ -181,26 +181,122 @@ def _extract_handles_from_html(html: str) -> list[str]:
     return sorted(valid, key=lambda h: seen[h])
 
 
+def _generate_handle_candidates(venue_name: str, city: str = "Atlanta") -> list[str]:
+    """
+    Generate plausible Instagram handle candidates from a venue name.
+    Tries common patterns venues use: exact slug, with city suffix, abbreviations.
+    """
+    # Normalize: lowercase, strip non-alphanumeric
+    clean = re.sub(r"[^a-z0-9\s]", "", venue_name.lower()).strip()
+    words = clean.split()
+    if not words:
+        return []
+
+    # Base slug variations
+    joined = "".join(words)           # e.g., "clermontlounge"
+    underscored = "_".join(words)     # e.g., "clermont_lounge"
+    dotted = ".".join(words)          # e.g., "clermont.lounge"
+
+    city_lower = city.lower()[:3]     # "atl"
+
+    candidates = [
+        joined,                       # clermontlounge
+        underscored,                  # clermont_lounge
+        f"{joined}{city_lower}",      # clermontloungeatl
+        f"{joined}_{city_lower}",     # clermontlounge_atl
+        f"{joined}atlanta",           # clermontloungeatlanta
+        f"{underscored}_{city_lower}",# clermont_lounge_atl
+        f"the{joined}",              # theclermontlounge
+        f"the_{underscored}",        # the_clermont_lounge
+        dotted,                       # clermont.lounge
+    ]
+
+    # If name starts with "The ", also try without it
+    if words[0] == "the" and len(words) > 1:
+        no_the = words[1:]
+        joined_no_the = "".join(no_the)
+        underscored_no_the = "_".join(no_the)
+        candidates.extend([
+            joined_no_the,
+            underscored_no_the,
+            f"{joined_no_the}{city_lower}",
+            f"{joined_no_the}_{city_lower}",
+            f"{underscored_no_the}_{city_lower}",
+        ])
+
+    # Initials for multi-word names (3+ words)
+    if len(words) >= 3:
+        initials = "".join(w[0] for w in words)
+        candidates.append(initials)
+        candidates.append(f"{initials}{city_lower}")
+        candidates.append(f"{initials}_{city_lower}")
+
+    # Deduplicate preserving order, filter valid handles
+    seen = set()
+    unique = []
+    for c in candidates:
+        c = c[:30]  # Instagram max handle length
+        if c and c not in seen and _HANDLE_RE.match(c) and c not in BLOCKLIST_HANDLES:
+            seen.add(c)
+            unique.append(c)
+
+    return unique
+
+
+def _try_venue_website_for_instagram(
+    website: str, session: requests.Session
+) -> list[str]:
+    """
+    Scrape the venue's own website for Instagram links.
+    Many venues link to their Instagram in the header/footer.
+    """
+    if not website:
+        return []
+    try:
+        resp = session.get(website, timeout=REQUEST_TIMEOUT, allow_redirects=True)
+        if resp.status_code != 200:
+            return []
+        return _extract_handles_from_html(resp.text)
+    except requests.RequestException:
+        return []
+
+
 def search_for_instagram_handle(
     venue_name: str,
     city: str,
     session: requests.Session,
+    website: str = "",
 ) -> list[str]:
     """
-    Search DuckDuckGo for the venue's Instagram profile.
-    Returns a ranked list of candidate handles (may be empty).
+    Find Instagram handle candidates for a venue.
+    Strategy:
+    1. Scrape the venue's own website for Instagram links (highest signal)
+    2. Generate handle candidates from the venue name (common patterns)
+    Returns a ranked list of candidate handles.
     """
-    query = f'"{venue_name}" {city} site:instagram.com'
-    html = _search_duckduckgo(query, session)
-    candidates = _extract_handles_from_html(html)
+    candidates = []
 
-    if not candidates:
-        # Broader fallback without site: restriction
-        query_broad = f'"{venue_name}" {city} instagram'
-        html_broad = _search_duckduckgo(query_broad, session)
-        candidates = _extract_handles_from_html(html_broad)
+    # Strategy 1: Check the venue's own website for Instagram links
+    if website:
+        website_handles = _try_venue_website_for_instagram(website, session)
+        candidates.extend(website_handles)
+        if website_handles:
+            time.sleep(1.0)
 
-    return candidates
+    # Strategy 2: Generate candidates from venue name
+    guessed = _generate_handle_candidates(venue_name, city)
+    candidates.extend(guessed)
+
+    # Deduplicate preserving order
+    seen = set()
+    unique = []
+    for c in candidates:
+        c_lower = c.lower()
+        if c_lower not in seen:
+            seen.add(c_lower)
+            unique.append(c)
+
+    return unique
 
 
 # ---------------------------------------------------------------------------
@@ -344,21 +440,43 @@ def discover_handle_for_venue(
     name = venue["name"]
     city = venue.get("city") or "Atlanta"
     neighborhood = venue.get("neighborhood")
+    website = venue.get("website") or ""
 
-    candidates = search_for_instagram_handle(name, city, session)
+    # Strategy 1: Check venue website for Instagram links (trusted source)
+    if website:
+        website_handles = _try_venue_website_for_instagram(website, session)
+        if website_handles:
+            # Filter: handle should plausibly belong to this venue, not a partner/sponsor
+            name_tokens = set(re.sub(r"[^a-z0-9]", "", name.lower()))
+            for wh in website_handles:
+                wh_clean = wh.lower().replace("_", "").replace(".", "")
+                # Accept if any significant name word appears in the handle
+                name_words = [w for w in re.split(r"\W+", name.lower()) if len(w) >= 3]
+                if any(w in wh_clean for w in name_words):
+                    return wh, f"found on venue website ({website[:40]})"
+            # If no name-matched handle, take first one only if website is the venue's own domain
+            from urllib.parse import urlparse
+            venue_domain = urlparse(website).netloc.lower()
+            # Skip if website is a third-party (atlutd, yelp, facebook, etc.)
+            third_party = {"atlutd.com", "yelp.com", "facebook.com", "google.com", "eventbrite.com", "instagram.com"}
+            if not any(tp in venue_domain for tp in third_party):
+                return website_handles[0], f"found on venue website ({website[:40]})"
+        time.sleep(1.0)
+
+    # Strategy 2: Generate handle candidates from venue name and validate
+    guessed = _generate_handle_candidates(name, city)
     time.sleep(SEARCH_DELAY)
 
-    if not candidates:
-        return None, "no Instagram results found"
+    if not guessed:
+        return None, "no candidates generated"
 
-    # Try each candidate in order until one validates
-    for handle in candidates[:5]:  # cap at 5 to avoid hammering Instagram
+    # Try each candidate — validate against Instagram profile
+    for handle in guessed[:5]:
         valid, reason = validate_handle(handle, name, neighborhood, session)
         if valid:
             return handle, reason
 
-    # All candidates failed — report the first reject reason
-    return None, f"no valid handle found (tried {len(candidates[:5])} candidates)"
+    return None, f"no valid handle found (tried {len(guessed[:5])} candidates)"
 
 
 def run(
