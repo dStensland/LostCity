@@ -13,6 +13,7 @@ interface GoblinList {
 interface GoblinUserState {
   user: User | null;
   bookmarks: Set<number>;
+  watchlistMovieIds: Set<number>;
   watched: Set<number>;
   lists: GoblinList[];
   loading: boolean;
@@ -31,6 +32,7 @@ export function useGoblinUser(): GoblinUserState & GoblinUserActions {
   const [bookmarks, setBookmarks] = useState<Set<number>>(new Set());
   const [watched, setWatched] = useState<Set<number>>(new Set());
   const [lists, setLists] = useState<GoblinList[]>([]);
+  const [watchlistMovieIds, setWatchlistMovieIds] = useState<Set<number>>(new Set());
   const [loading, setLoading] = useState(true);
 
   const fetchUserData = useCallback(async () => {
@@ -41,6 +43,7 @@ export function useGoblinUser(): GoblinUserState & GoblinUserActions {
       setBookmarks(new Set<number>(data.bookmarks ?? []));
       setWatched(new Set<number>(data.watched ?? []));
       setLists(data.lists ?? []);
+      setWatchlistMovieIds(new Set<number>(data.watchlistMovieIds ?? []));
     } catch {
       // Non-critical: user data simply won't be loaded
     }
@@ -77,6 +80,7 @@ export function useGoblinUser(): GoblinUserState & GoblinUserActions {
         setBookmarks(new Set());
         setWatched(new Set());
         setLists([]);
+        setWatchlistMovieIds(new Set());
       }
     });
 
@@ -87,32 +91,48 @@ export function useGoblinUser(): GoblinUserState & GoblinUserActions {
 
   const toggleBookmark = useCallback(
     async (movieId: number) => {
-      const wasBookmarked = bookmarks.has(movieId);
+      const wasOnWatchlist = watchlistMovieIds.has(movieId);
       // Optimistic update
-      setBookmarks((prev) => {
+      setWatchlistMovieIds((prev) => {
         const next = new Set(prev);
-        if (wasBookmarked) next.delete(movieId);
+        if (wasOnWatchlist) next.delete(movieId);
         else next.add(movieId);
         return next;
       });
       try {
-        const res = await fetch("/api/goblinday/me/bookmarks", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ movie_id: movieId, field: "bookmarked", value: !wasBookmarked }),
-        });
-        if (!res.ok) throw new Error("Failed");
+        if (wasOnWatchlist) {
+          // Find the watchlist entry to delete
+          const listRes = await fetch("/api/goblinday/me/watchlist");
+          if (!listRes.ok) throw new Error("Failed");
+          const listData = await listRes.json();
+          const entry = (listData.entries || []).find(
+            (e: any) => e.movie_id === movieId || e.movie?.id === movieId
+          );
+          if (entry) {
+            const res = await fetch(`/api/goblinday/me/watchlist/${entry.id}`, {
+              method: "DELETE",
+            });
+            if (!res.ok) throw new Error("Failed");
+          }
+        } else {
+          const res = await fetch("/api/goblinday/me/watchlist", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ movie_id: movieId }),
+          });
+          if (!res.ok) throw new Error("Failed");
+        }
       } catch {
         // Rollback
-        setBookmarks((prev) => {
+        setWatchlistMovieIds((prev) => {
           const next = new Set(prev);
-          if (wasBookmarked) next.add(movieId);
+          if (wasOnWatchlist) next.add(movieId);
           else next.delete(movieId);
           return next;
         });
       }
     },
-    [bookmarks]
+    [watchlistMovieIds]
   );
 
   const toggleWatched = useCallback(
@@ -163,11 +183,13 @@ export function useGoblinUser(): GoblinUserState & GoblinUserActions {
     setBookmarks(new Set());
     setWatched(new Set());
     setLists([]);
+    setWatchlistMovieIds(new Set());
   }, []);
 
   return {
     user,
-    bookmarks,
+    bookmarks: watchlistMovieIds,
+    watchlistMovieIds,
     watched,
     lists,
     loading,

@@ -10,13 +10,14 @@ import { GoblinAuthBar } from "./GoblinAuthBar";
 import { GoblinLoginPrompt } from "./GoblinLoginPrompt";
 import { useGoblinUser } from "@/lib/hooks/useGoblinUser";
 import GoblinLogView from "./GoblinLogView";
+import GoblinWatchlistView from "./GoblinWatchlistView";
 
 interface Props {
   initialMovies: GoblinMovie[];
   activeSessionId: number | null;
 }
 
-type Tab = "next" | "contenders" | "upcoming" | "watched" | "log";
+type Tab = "next" | "contenders" | "upcoming" | "watched" | "watchlist" | "log";
 type SortKey = "date" | "critics" | "audience" | "tmdb" | "alpha";
 type GenreFilter = string | null;
 type SubgenreFilter = string | null;
@@ -84,7 +85,7 @@ const MARQUEE_IMAGES = [
 
 const ZALGO_TEXT = "G\u0336\u0322\u0327\u0321\u030e\u0351\u034b\u0352\u0314\u0310\u0301\u030a\u0306\u0300\u030d\u031c\u031f\u0329\u0347\u0320\u031e\u0345\u032eO\u0334\u0321\u0328\u031c\u0326\u0324\u031f\u0356\u032c\u032b\u0323\u0349\u034e\u0353\u0339\u0316\u0355\u0330\u031d\u032f\u0354\u0301\u030c\u0313\u0307\u0302\u030a\u0363\u0310\u0351\u030e\u034a\u0311\u0357\u0300\u0303\u036b\u036aB\u0337\u0321\u0329\u0326\u031e\u032c\u0339\u034d\u0345\u031f\u0320\u032a\u032e\u0348\u0316\u031c\u0353\u0332\u0347\u0354\u0301\u0303\u0304\u0312\u030c\u0307\u030d\u030f\u0302\u0315\u0308\u036f\u035b\u0352\u034a\u034c\u036d\u0305\u0363\u036eL\u0334\u0321\u031d\u031c\u031e\u0329\u032a\u0339\u034e\u0316\u0356\u0345\u032f\u031f\u032b\u034d\u0353\u0355\u033b\u0332\u030b\u030f\u0312\u030d\u0303\u0311\u0351\u0306\u0300\u036c\u034b\u034a\u0310\u0357\u0363\u0365I\u0336\u0321\u0331\u032c\u0329\u031e\u0347\u031f\u034e\u032a\u0345\u032b\u034d\u0339\u033b\u033c\u032f\u0301\u030c\u0302\u0300\u0305\u0307\u030a\u0352\u036a\u036b\u0313\u034c\u0351\u0311N\u0334\u0328\u031c\u031e\u0320\u032c\u0324\u034e\u0349\u0339\u034d\u0356\u0316\u033c\u032f\u032a\u031d\u0345\u0300\u0303\u030d\u0312\u0352\u030e\u036f\u036b\u034a\u035b\u0306\u0310\u0315\u0363 D\u0336\u0323\u034d\u0316\u032f\u032b\u031d\u034e\u0356\u032a\u031e\u031f\u0339\u031c\u0349\u0347\u032c\u0345\u0355\u033b\u0332\u0305\u0311\u0301\u030c\u0307\u0300\u030a\u034b\u034a\u036c\u0357\u0352\u0350\u0314\u0351\u0363\u036fA\u0336\u0329\u032a\u031e\u032c\u0331\u031f\u032f\u034e\u032b\u031d\u034d\u031c\u0320\u0339\u0347\u0345\u0316\u0353\u030d\u030c\u0300\u0305\u0307\u0303\u030a\u030f\u0315\u034b\u036e\u0312\u035b\u034a\u0306\u0357\u036b\u034c\u0314\u0310\u0363Y\u0337\u032a\u0339\u034e\u0349\u0316\u0323\u031e\u0356\u032b\u034d\u031d\u031c\u031f\u032f\u0347\u0345\u0354\u0332\u033c\u0301\u0300\u0303\u030d\u0312\u0305\u0311\u030c\u030f\u030a\u0306\u0352\u034a\u034b\u0363\u036e\u0357\u0310\u036b\u0351\u036f\u035b";
 
-const VALID_TABS: Tab[] = ["next", "contenders", "upcoming", "watched", "log"];
+const VALID_TABS: Tab[] = ["next", "contenders", "upcoming", "watched", "watchlist", "log"];
 const VALID_SORTS: SortKey[] = ["date", "critics", "audience", "tmdb", "alpha"];
 
 function updateURL(params: Record<string, string | null>) {
@@ -396,6 +397,8 @@ export default function GoblinDayPage({ initialMovies, activeSessionId }: Props)
           return !mWatched && !isReleased(m);
         case "watched":
           return mWatched;
+        case "watchlist":
+          return false;
         case "log":
         default:
           return false;
@@ -409,6 +412,7 @@ export default function GoblinDayPage({ initialMovies, activeSessionId }: Props)
     contenders: movies.filter((m) => !goblinUser.watched.has(m.id) && isReleased(m)).length,
     upcoming: movies.filter((m) => !goblinUser.watched.has(m.id) && !isReleased(m)).length,
     watched: goblinUser.watched.size,
+    watchlist: goblinUser.watchlistMovieIds.size,
     log: 0,
   };
 
@@ -448,6 +452,7 @@ export default function GoblinDayPage({ initialMovies, activeSessionId }: Props)
     { key: "contenders" as const, label: "\u2625 CONTENDERS", labelLong: "\u2625 CONTENDERS", active: "bg-zinc-900 text-white border-zinc-400 shadow-[0_4px_12px_rgba(255,255,255,0.05)]" },
     { key: "upcoming" as const, label: "\u262F UPCOMING", labelLong: "\u262F UPCOMING", active: "bg-zinc-900 text-violet-400 border-violet-500 shadow-[0_4px_12px_rgba(139,92,246,0.15)]" },
     { key: "watched" as const, label: "\u2620 WATCHED", labelLong: "\u2620 WATCHED", active: "bg-zinc-900 text-emerald-400 border-emerald-500 shadow-[0_4px_12px_rgba(16,185,129,0.15)]" },
+    { key: "watchlist" as const, label: "\u2316 QUEUE", labelLong: "\u2316 THE QUEUE", active: "bg-black text-amber-300 border-amber-500 shadow-[0_0_15px_rgba(255,217,61,0.2)]" },
     { key: "log" as const, label: "\u269D THE LOG", labelLong: "\u269D THE LOG", active: "bg-black text-cyan-300 border-cyan-500 shadow-[0_0_15px_rgba(0,240,255,0.2)]" },
   ];
 
@@ -622,7 +627,7 @@ export default function GoblinDayPage({ initialMovies, activeSessionId }: Props)
 
       {/* Tabs — brutalist rectangles */}
       <div className="flex sm:justify-center overflow-x-auto scrollbar-hide border-b-2 border-zinc-800 relative z-10 bg-black/90">
-        {TAB_CONFIG.filter((t) => t.key !== "log" || !!goblinUser.user).map(({ key, label, labelLong, active }) => (
+        {TAB_CONFIG.filter((t) => (t.key !== "log" && t.key !== "watchlist") || !!goblinUser.user).map(({ key, label, labelLong, active }) => (
           <button
             key={key}
             onClick={() => setActiveTab(key)}
@@ -763,6 +768,12 @@ export default function GoblinDayPage({ initialMovies, activeSessionId }: Props)
       )}
 
       {/* Content */}
+      {activeTab === "watchlist" && (
+        <div className="relative z-10 px-3 pt-6">
+          <GoblinWatchlistView isAuthenticated={!!goblinUser.user} />
+        </div>
+      )}
+
       <main className="max-w-7xl mx-auto px-3 sm:px-6 py-6 pb-16 relative z-10">
         {activeTab === "log" ? (
           <GoblinLogView isAuthenticated={!!goblinUser.user} />
