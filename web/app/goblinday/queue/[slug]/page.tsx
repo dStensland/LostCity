@@ -66,6 +66,20 @@ export default async function PublicQueuePage({ params }: PageProps) {
     .eq("user_id", userId)
     .order("sort_order", { ascending: true, nullsFirst: false });
 
+  // Fetch recommendations (service client bypasses RLS)
+  const { data: recommendations } = await serviceClient
+    .from("goblin_watchlist_recommendations")
+    .select(`
+      id, recommender_name, note, created_at,
+      movie:goblin_movies!movie_id (
+        id, tmdb_id, title, poster_path, release_date, year
+      )
+    `)
+    .eq("target_user_id", userId)
+    .in("status", ["pending", "added"])
+    .order("recommender_name", { ascending: true })
+    .order("created_at", { ascending: false });
+
   return (
     <GoblinQueuePublicView
       user={{
@@ -75,6 +89,7 @@ export default async function PublicQueuePage({ params }: PageProps) {
       }}
       slug={slug}
       entries={(entries || []) as any}
+      recommendations={(recommendations || []) as any}
     />
   );
 }

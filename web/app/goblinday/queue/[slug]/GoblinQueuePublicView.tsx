@@ -21,6 +21,21 @@ interface QueueEntry {
   movie: Movie;
 }
 
+interface PublicRecommendation {
+  id: number;
+  recommender_name: string;
+  note: string | null;
+  created_at: string;
+  movie: {
+    id: number;
+    tmdb_id: number | null;
+    title: string;
+    poster_path: string | null;
+    release_date: string | null;
+    year: number | null;
+  };
+}
+
 interface Props {
   user: {
     username: string;
@@ -29,9 +44,10 @@ interface Props {
   };
   slug: string;
   entries: QueueEntry[];
+  recommendations?: PublicRecommendation[];
 }
 
-export default function GoblinQueuePublicView({ user, slug, entries }: Props) {
+export default function GoblinQueuePublicView({ user, slug, entries, recommendations = [] }: Props) {
   // Recommend form state
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<TMDBSearchResult[]>([]);
@@ -391,6 +407,66 @@ export default function GoblinQueuePublicView({ user, slug, entries }: Props) {
             </p>
           </div>
         )}
+
+        {/* Recommendations from others */}
+        {recommendations.length > 0 && (() => {
+          // Group by recommender_name
+          const grouped = new Map<string, PublicRecommendation[]>();
+          for (const rec of recommendations) {
+            const key = rec.recommender_name;
+            if (!grouped.has(key)) grouped.set(key, []);
+            grouped.get(key)!.push(rec);
+          }
+
+          return (
+            <div className="mb-12 pt-8" style={{ borderTop: "1px solid rgba(120,53,15,0.2)" }}>
+              <p
+                className="text-2xs text-amber-600/80 tracking-[0.5em] uppercase mb-6 font-mono"
+                style={{ textShadow: "0 0 6px rgba(255,217,61,0.15)" }}
+              >
+                Recommended
+              </p>
+              <div className="space-y-6">
+                {[...grouped.entries()].map(([name, recs]) => (
+                  <div key={name}>
+                    <p className="text-xs font-mono font-bold text-amber-500/70 uppercase tracking-[0.15em] mb-2">
+                      {name}
+                    </p>
+                    <div className="space-y-1.5">
+                      {recs.map((rec) => (
+                        <div key={rec.id}
+                          className="flex items-center gap-3 p-2.5 bg-white/[0.02] border border-zinc-800/30
+                            border-l-2 border-l-amber-800/30">
+                          <div className="w-8 h-12 flex-shrink-0 overflow-hidden bg-zinc-900 rounded-sm">
+                            {rec.movie.poster_path && (
+                              <SmartImage
+                                src={`${TMDB_POSTER_W185}${rec.movie.poster_path}`}
+                                alt={rec.movie.title} width={32} height={48} loading="lazy"
+                                className="object-cover w-full h-full" />
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm text-white font-mono truncate">
+                              {rec.movie.title}
+                              {rec.movie.year && (
+                                <span className="text-zinc-600 ml-1.5">{rec.movie.year}</span>
+                              )}
+                            </p>
+                            {rec.note && (
+                              <p className="text-2xs text-zinc-600 italic mt-0.5 line-clamp-1">
+                                &ldquo;{rec.note}&rdquo;
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Recommend section */}
         <div
