@@ -20,7 +20,7 @@ def test_flagship_sources_exist():
     assert "7-stages" in slugs
     assert "theatrical-outfit" in slugs
     assert "horizon-theatre" in slugs
-    assert "center-for-puppetry-arts" in slugs
+    assert "puppetry-arts" in slugs
 
     # Music
     assert "terminal-west" in slugs
@@ -43,14 +43,14 @@ def test_flagship_sources_exist():
     assert "landmark-midtown" in slugs
 
     # Arts
-    assert "high-museum-of-art" in slugs
+    assert "high-museum" in slugs
     assert "atlanta-contemporary" in slugs
     assert "atlanta-botanical-garden" in slugs
 
     # Family
     assert "georgia-aquarium" in slugs
-    assert "fernbank-museum" in slugs
-    assert "childrens-museum-of-atlanta" in slugs
+    assert "fernbank" in slugs
+    assert "childrens-museum" in slugs
 
     # Sports
     assert "truist-park" in slugs
