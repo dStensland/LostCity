@@ -175,6 +175,7 @@ _VENUES_HAS_FEATURES_TABLE: Optional[bool] = None
 _VENUES_HAS_DESTINATION_DETAILS_TABLE: Optional[bool] = None
 _VENUES_HAS_LOCATION_DESIGNATOR: Optional[bool] = None
 _HAS_EVENT_EXTRACTIONS_TABLE: Optional[bool] = None
+_HAS_SCREENING_TABLES: Optional[bool] = None
 _WRITES_ENABLED = True
 _WRITE_SKIP_REASON = ""
 _TEMP_ID_COUNTER = 0
@@ -212,7 +213,7 @@ def reset_client() -> None:
     global _client, _EVENTS_HAS_SHOW_SIGNAL_COLUMNS, _EVENTS_HAS_IS_SHOW_COLUMN, _EVENTS_HAS_FILM_IDENTITY_COLUMNS
     global _EVENTS_HAS_CONTENT_KIND_COLUMN, _EVENTS_HAS_FIELD_METADATA_COLUMNS
     global _EVENTS_HAS_IS_ACTIVE_COLUMN, _VENUES_HAS_FEATURES_TABLE
-    global _VENUES_HAS_DESTINATION_DETAILS_TABLE
+    global _VENUES_HAS_DESTINATION_DETAILS_TABLE, _HAS_SCREENING_TABLES
     _client = None
     _EVENTS_HAS_SHOW_SIGNAL_COLUMNS = None
     _EVENTS_HAS_IS_SHOW_COLUMN = None
@@ -222,6 +223,7 @@ def reset_client() -> None:
     _EVENTS_HAS_IS_ACTIVE_COLUMN = None
     _VENUES_HAS_FEATURES_TABLE = None
     _VENUES_HAS_DESTINATION_DETAILS_TABLE = None
+    _HAS_SCREENING_TABLES = None
     _SOURCE_CACHE.clear()
     _VENUE_CACHE.clear()
 
@@ -539,6 +541,54 @@ def has_event_extractions_table() -> bool:
             raise
 
     return bool(_HAS_EVENT_EXTRACTIONS_TABLE)
+
+
+def venues_support_destination_details_table() -> bool:
+    """Detect whether the venue_destination_details table exists."""
+    global _VENUES_HAS_DESTINATION_DETAILS_TABLE
+    if _VENUES_HAS_DESTINATION_DETAILS_TABLE is not None:
+        return _VENUES_HAS_DESTINATION_DETAILS_TABLE
+
+    client = get_client()
+    try:
+        client.table("venue_destination_details").select("place_id").limit(1).execute()
+        _VENUES_HAS_DESTINATION_DETAILS_TABLE = True
+    except Exception as e:
+        error_str = str(e).lower()
+        if "does not exist" in error_str or "relation" in error_str:
+            _VENUES_HAS_DESTINATION_DETAILS_TABLE = False
+            logger.warning(
+                "venue_destination_details table missing; run migrations 500_venue_destination_details.sql and 503_destination_details_contract.sql"
+            )
+        else:
+            raise
+
+    return bool(_VENUES_HAS_DESTINATION_DETAILS_TABLE)
+
+
+def screenings_support_tables() -> bool:
+    """Detect whether additive screening storage tables exist."""
+    global _HAS_SCREENING_TABLES
+    if _HAS_SCREENING_TABLES is not None:
+        return _HAS_SCREENING_TABLES
+
+    client = get_client()
+    try:
+        client.table("screening_runs").select("id").limit(1).execute()
+        client.table("screening_titles").select("id").limit(1).execute()
+        client.table("screening_times").select("id").limit(1).execute()
+        _HAS_SCREENING_TABLES = True
+    except Exception as e:
+        error_str = str(e).lower()
+        if "does not exist" in error_str or "relation" in error_str:
+            _HAS_SCREENING_TABLES = False
+            logger.warning(
+                "screening storage tables missing; run migration 602_screening_storage.sql"
+            )
+        else:
+            raise
+
+    return bool(_HAS_SCREENING_TABLES)
 
 
 def events_support_taxonomy_v2_columns() -> bool:

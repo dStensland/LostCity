@@ -29,7 +29,12 @@ def reset_db_write_mode():
 @pytest.fixture(autouse=True)
 def mock_has_event_extractions_table():
     """Mock has_event_extractions_table to return False by default in tests."""
-    with patch("db.events.has_event_extractions_table", return_value=False):
+    try:
+        with patch("db.events.has_event_extractions_table", return_value=False):
+            yield
+    except (ImportError, ModuleNotFoundError):
+        # db package may be partially unresolved during isolated unit tests
+        # (e.g. watchdog tests) that don't depend on the DB layer at all.
         yield
 
 
