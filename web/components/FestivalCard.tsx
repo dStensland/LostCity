@@ -1,6 +1,7 @@
 "use client";
 
 import { memo } from "react";
+import type { CSSProperties } from "react";
 import Link from "next/link";
 import { format, parseISO, isSameDay } from "date-fns";
 import { getSeriesTypeColor } from "@/lib/series-utils";
@@ -156,7 +157,7 @@ const FestivalCard = memo(function FestivalCard({
       <ScopedStyles css={scopedCss} />
       <Link
         href={festivalUrl}
-        className={`find-row-card find-row-card-bg block ${disableMargin ? "" : "mb-2.5 sm:mb-3"} rounded-xl border border-[var(--twilight)]/75 group overflow-hidden border-l-[2px] border-l-[var(--accent-color)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-color)]/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--void)] ${accentClass?.className ?? ""} ${contextAccentClass?.className ?? ""} ${skipAnimation ? "" : "animate-card-emerge"} ${className ?? ""}`}
+        className={`find-row-card find-row-card-bg pointer-glow block ${disableMargin ? "" : "mb-2.5 sm:mb-3"} rounded-xl border border-[var(--twilight)]/75 group overflow-hidden border-l-[2px] border-l-[var(--accent-color)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-color)]/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--void)] ${accentClass?.className ?? ""} ${contextAccentClass?.className ?? ""} ${skipAnimation ? "" : "animate-card-emerge"} ${className ?? ""}`}
         tabIndex={0}
         data-list-row="true"
         data-row-primary-link="true"
@@ -165,7 +166,7 @@ const FestivalCard = memo(function FestivalCard({
       >
       <div className="p-3 sm:p-3.5 flex gap-2.5 sm:gap-3">
         {/* Date cell - matches EventCard time cell */}
-        <div ref={parallaxContainerRef} className={`hidden sm:flex flex-shrink-0 self-stretch ${festival.image_url ? "relative w-[100px] -ml-3 sm:-ml-3.5 -my-3 sm:-my-3.5 overflow-hidden list-rail-media border-r border-[var(--twilight)]/60" : "w-[72px] flex-col items-start justify-center gap-1.5 pr-3 border-r border-[var(--twilight)]/60"}`}>
+        <div ref={parallaxContainerRef} className={`hidden sm:flex flex-shrink-0 self-stretch ${festival.image_url ? "relative w-[100px] -ml-3 sm:-ml-3.5 -my-3 sm:-my-3.5 overflow-hidden list-rail-media border-r border-[var(--twilight)]/60" : "w-[72px] flex-col items-start justify-center gap-1.5 pr-3 border-r border-[var(--twilight)]/60"}`} style={festival.id ? { viewTransitionName: `festival-hero-${festival.id}` } as CSSProperties : undefined}>
           {festival.image_url && (
             <div ref={parallaxImageRef} className="absolute inset-0 transform-gpu will-change-transform">
               <Image

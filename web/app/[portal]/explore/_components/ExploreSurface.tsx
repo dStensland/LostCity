@@ -15,6 +15,7 @@ import {
 import type { PortalResolvedRequest } from "@/lib/portal-runtime/types";
 import { AmbientSuppression } from "../../_surfaces/feed/AmbientSuppression";
 import { PortalSurfaceChrome } from "../../_surfaces/shared/PortalSurfaceChrome";
+import AuroraBackground from "@/components/ambient/AuroraBackground";
 
 export async function ExploreSurface({
   request,
@@ -54,7 +55,14 @@ export async function ExploreSurface({
     : null;
 
   const content = (
-    <div className="min-h-screen">
+    <div className="min-h-screen relative">
+      <AuroraBackground
+        color1="var(--action-primary)"
+        color2="var(--neon-cyan)"
+        opacity={0.08}
+        duration={25}
+        className="fixed inset-0 -z-10 overflow-hidden"
+      />
       {request.disableAmbientEffects && <AmbientSuppression />}
       <main className="mx-auto max-w-[1600px]">
         <ExploreShellClient

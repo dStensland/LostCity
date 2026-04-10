@@ -287,6 +287,8 @@ export default async function PortalFestivalPage({ params }: Props) {
           {/* Hero Section — renders immediately (festival is cached) */}
           <DetailHero
             mode="image"
+            entityId={festival.id}
+            viewTransitionPrefix="festival-hero"
             imageUrl={festival.image_url}
             title={festival.name}
             subtitle={heroSubtitle}

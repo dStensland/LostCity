@@ -379,6 +379,8 @@ export default async function PortalSeriesPage({ params }: Props) {
           {/* Hero Section - Poster Mode */}
           <DetailHero
             mode="poster"
+            entityId={series.id}
+            viewTransitionPrefix="series-hero"
             imageUrl={series.image_url}
             title={series.title}
             subtitle={heroSubtitle}

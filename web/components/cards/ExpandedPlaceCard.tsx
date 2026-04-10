@@ -244,7 +244,7 @@ export const ExpandedPlaceCard = memo(function ExpandedPlaceCard({
   return (
     <Link
       href={href}
-      className="block rounded-[var(--card-radius,12px)] border border-[var(--twilight)] bg-[var(--night)] overflow-hidden hover:bg-[var(--dusk)] transition-colors"
+      className="pointer-glow block rounded-[var(--card-radius,12px)] border border-[var(--twilight)] bg-[var(--night)] overflow-hidden hover:bg-[var(--dusk)] transition-colors"
     >
       {/* Hero image frame — 140px height */}
       <div className="relative h-[140px] w-full overflow-hidden bg-[var(--dusk)]">

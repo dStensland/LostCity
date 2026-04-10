@@ -9,6 +9,8 @@ import { createCssVarClass } from "@/lib/css-utils";
 
 export interface DetailHeroProps {
   entityId?: number | string;
+  /** Prefix for the CSS view-transition-name. Defaults to "event-hero". */
+  viewTransitionPrefix?: string;
   mode: "image" | "poster" | "fallback";
   imageUrl?: string | null;
   title: string;
@@ -32,6 +34,7 @@ const BACK_BUTTON_CLASS =
 
 export function DetailHero({
   entityId,
+  viewTransitionPrefix = "event-hero",
   mode,
   imageUrl,
   title,
@@ -64,7 +67,7 @@ export function DetailHero({
     return (
       <div
         className={`relative w-full ${aspectClass} sm:rounded-xl overflow-hidden bg-gradient-to-br from-[var(--dusk)] via-[var(--night)] to-[var(--void)] ${heroAccentClass?.className ?? ""}`}
-        style={entityId ? { viewTransitionName: `event-hero-${entityId}` } as CSSProperties : undefined}
+        style={entityId ? { viewTransitionName: `${viewTransitionPrefix}-${entityId}` } as CSSProperties : undefined}
       >
         <ScopedStyles css={heroAccentClass?.css} />
         {backFallbackHref && (
@@ -89,7 +92,7 @@ export function DetailHero({
     return (
       <div
         className={`relative w-full sm:rounded-xl overflow-hidden bg-[var(--night)] ${heroAccentClass?.className ?? ""}`}
-        style={entityId ? { viewTransitionName: `event-hero-${entityId}` } as CSSProperties : undefined}
+        style={entityId ? { viewTransitionName: `${viewTransitionPrefix}-${entityId}` } as CSSProperties : undefined}
       >
         <ScopedStyles css={heroAccentClass?.css} />
         {backFallbackHref && (
@@ -147,7 +150,7 @@ export function DetailHero({
   return (
     <div
       className={`relative w-full ${aspectClass} sm:rounded-xl overflow-hidden mask-vignette ${heroAccentClass?.className ?? ""}`}
-      style={entityId ? { viewTransitionName: `event-hero-${entityId}` } as CSSProperties : undefined}
+      style={entityId ? { viewTransitionName: `${viewTransitionPrefix}-${entityId}` } as CSSProperties : undefined}
     >
       <ScopedStyles css={heroAccentClass?.css} />
       {backFallbackHref && (

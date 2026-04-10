@@ -7,6 +7,8 @@ import CategoryIcon from "@/components/CategoryIcon";
 
 interface DetailHeroImageProps {
   entityId?: number | string;
+  /** Prefix for the CSS view-transition-name. Defaults to "event-hero". */
+  viewTransitionPrefix?: string;
   imageUrl: string | null;
   alt: string;
   /** Category for fallback icon */
@@ -25,6 +27,7 @@ interface DetailHeroImageProps {
 
 export default function DetailHeroImage({
   entityId,
+  viewTransitionPrefix = "event-hero",
   imageUrl,
   alt,
   category,
@@ -45,7 +48,7 @@ export default function DetailHeroImage({
     return (
       <div
         className={`${aspectClass} bg-[var(--night)] overflow-hidden relative ${liveRing}`}
-        style={entityId ? { viewTransitionName: `event-hero-${entityId}` } as CSSProperties : undefined}
+        style={entityId ? { viewTransitionName: `${viewTransitionPrefix}-${entityId}` } as CSSProperties : undefined}
       >
         {!imageLoaded && (
           <Skeleton className="absolute inset-0" />
@@ -71,7 +74,7 @@ export default function DetailHeroImage({
   return (
     <div
       className={`${aspectClass} bg-gradient-to-b from-[var(--dusk)] to-[var(--night)] flex items-center justify-center relative ${liveRing}`}
-      style={entityId ? { viewTransitionName: `event-hero-${entityId}` } as CSSProperties : undefined}
+      style={entityId ? { viewTransitionName: `${viewTransitionPrefix}-${entityId}` } as CSSProperties : undefined}
     >
       <CategoryIcon type={category || ""} size={40} className="opacity-20" />
       {overlay}

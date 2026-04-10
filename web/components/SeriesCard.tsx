@@ -260,7 +260,7 @@ const SeriesCard = memo(function SeriesCard({
 
   return (
     <div
-      className={`find-row-card find-row-card-bg ${disableMargin ? "" : "mb-2.5 sm:mb-3"} rounded-xl border border-[var(--twilight)]/75 group overflow-hidden border-l-[2px] border-l-[var(--accent-color)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-color)]/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--void)] ${skipAnimation ? "" : "animate-card-emerge"} ${className ?? ""}`}
+      className={`find-row-card find-row-card-bg pointer-glow ${disableMargin ? "" : "mb-2.5 sm:mb-3"} rounded-xl border border-[var(--twilight)]/75 group overflow-hidden border-l-[2px] border-l-[var(--accent-color)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-color)]/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--void)] ${skipAnimation ? "" : "animate-card-emerge"} ${className ?? ""}`}
       tabIndex={0}
       data-list-row="true"
       aria-label={`${seriesTitle}, ${totalShowtimes} showtimes`}
@@ -288,7 +288,7 @@ const SeriesCard = memo(function SeriesCard({
                 className={`hidden sm:flex flex-shrink-0 self-stretch relative w-[100px] -ml-3 sm:-ml-3.5 -my-3 sm:-my-3.5 overflow-hidden border-r border-[var(--twilight)]/60 ${
                   hasRailImage ? "list-rail-media" : "bg-[var(--night)]/44"
                 }`}
-                style={{ borderTopLeftRadius: "inherit", borderBottomLeftRadius: "inherit" }}
+                style={{ borderTopLeftRadius: "inherit", borderBottomLeftRadius: "inherit", ...(series.id ? { viewTransitionName: `series-hero-${series.id}` } : {}) } as CSSProperties}
               >
                 {railImageUrl && (
                   <div ref={parallaxImageRef} className="absolute inset-0 transform-gpu will-change-transform">
