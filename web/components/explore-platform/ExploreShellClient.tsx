@@ -133,6 +133,7 @@ function ExploreShellInner({
         <ExploreSidebar
           lanes={lanes}
           homeData={homeData}
+          portalSlug={portalSlug}
           onLaneHover={(laneId) => {
             const lane = lanes.find((entry) => entry.id === laneId);
             void lane?.preload();
@@ -140,7 +141,7 @@ function ExploreShellInner({
         />
       </div>
 
-      <ExploreMobileBar lanes={lanes} portalChromeVisible={portalChromeVisible} />
+      <ExploreMobileBar lanes={lanes} portalSlug={portalSlug} portalChromeVisible={portalChromeVisible} />
 
       <div className="lg:ml-[240px] min-w-0">
         {!state.lane && !state.q && (

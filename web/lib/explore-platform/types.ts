@@ -11,7 +11,8 @@ export type ExploreLaneId =
   | "game-day"
   | "regulars"
   | "places"
-  | "classes";
+  | "classes"
+  | "neighborhoods";
 
 export type ExploreUtilityView = "list" | "map" | "calendar";
 
@@ -55,7 +56,7 @@ export interface ExploreSearchResponse {
 }
 
 export interface ExploreHomePayload {
-  lanes: Record<ExploreLaneId, LanePreview>;
+  lanes: Partial<Record<ExploreLaneId, LanePreview>>;
   quickIntents: ExploreQuickIntent[];
   editorialPromos: ExploreEditorialPromo[];
 }
@@ -93,6 +94,8 @@ export interface ExploreLaneDefinition {
   supportsSearch: boolean;
   supportsMap: boolean;
   supportsCalendar: boolean;
+  /** When set, clicking this lane navigates to this URL instead of rendering inline. */
+  navigationHref?: (portalSlug: string) => string;
 }
 
 export type { LanePreview, LaneState, SearchResult };

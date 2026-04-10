@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { MagnifyingGlass } from "@phosphor-icons/react/dist/ssr";
 import type { ExploreHomePayload, ExploreLaneDefinition } from "@/lib/explore-platform/types";
 import { useExploreUrlState } from "@/lib/explore-platform/url-state";
@@ -7,15 +8,18 @@ import { useExploreUrlState } from "@/lib/explore-platform/url-state";
 interface ExploreSidebarProps {
   lanes: ExploreLaneDefinition[];
   homeData: ExploreHomePayload | null;
+  portalSlug: string;
   onLaneHover?: (laneId: ExploreLaneDefinition["id"]) => void;
 }
 
 export function ExploreSidebar({
   lanes,
   homeData,
+  portalSlug,
   onLaneHover,
 }: ExploreSidebarProps) {
   const state = useExploreUrlState();
+  const router = useRouter();
   const laneCounts = homeData?.lanes ?? null;
   const activeLane = state.lane;
 
@@ -66,7 +70,13 @@ export function ExploreSidebar({
                 <li key={lane.id}>
                   <button
                     type="button"
-                    onClick={() => state.setLane(lane.id)}
+                    onClick={() => {
+                      if (lane.navigationHref) {
+                        router.push(lane.navigationHref(portalSlug));
+                      } else {
+                        state.setLane(lane.id);
+                      }
+                    }}
                     onMouseEnter={() => onLaneHover?.(lane.id)}
                     className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg transition-colors text-left"
                     style={

@@ -1,18 +1,22 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import type { ExploreLaneDefinition } from "@/lib/explore-platform/types";
 import { useExploreUrlState } from "@/lib/explore-platform/url-state";
 
 interface ExploreMobileBarProps {
   lanes: ExploreLaneDefinition[];
+  portalSlug: string;
   portalChromeVisible?: boolean;
 }
 
 export function ExploreMobileBar({
   lanes,
+  portalSlug,
   portalChromeVisible = true,
 }: ExploreMobileBarProps) {
   const state = useExploreUrlState();
+  const router = useRouter();
 
   return (
     <div
@@ -37,7 +41,13 @@ export function ExploreMobileBar({
             <button
               key={lane.id}
               type="button"
-              onClick={() => state.setLane(lane.id)}
+              onClick={() => {
+                if (lane.navigationHref) {
+                  router.push(lane.navigationHref(portalSlug));
+                } else {
+                  state.setLane(lane.id);
+                }
+              }}
               className="shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors whitespace-nowrap"
               style={
                 isActive

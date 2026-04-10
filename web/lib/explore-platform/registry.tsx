@@ -1,5 +1,6 @@
 import {
   CalendarBlank,
+  Compass,
   FilmSlate,
   GraduationCap,
   MapPin,
@@ -40,6 +41,13 @@ function isConsumerPortal(portal: Portal): boolean {
     String(portal.settings?.vertical ?? "city"),
   );
 }
+
+// Neighborhoods is a nav-only lane — clicking navigates to /{portal}/neighborhoods.
+// loadComponent is a no-op stub; it is never invoked because navigationHref redirects first.
+const loadNeighborhoodsLane = () =>
+  Promise.resolve(() => null) as Promise<
+    import("react").ComponentType<import("./types").ExploreLaneComponentProps>
+  >;
 
 const ALL_LANES: Record<ExploreLaneId, ExploreLaneDefinition> = {
   events: {
@@ -138,6 +146,23 @@ const ALL_LANES: Record<ExploreLaneId, ExploreLaneDefinition> = {
     supportsMap: false,
     supportsCalendar: false,
   },
+  neighborhoods: {
+    id: "neighborhoods",
+    label: "Neighborhoods",
+    icon: Compass,
+    accentToken: "var(--neon-cyan)",
+    description: "Browse Atlanta's neighborhoods.",
+    enabled: isConsumerPortal,
+    preload: loadNeighborhoodsLane,
+    loadComponent: loadNeighborhoodsLane,
+    clientHydrationKey: "neighborhoods-v1",
+    analyticsKey: "explore_neighborhoods_lane",
+    searchPrompts: [],
+    supportsSearch: false,
+    supportsMap: false,
+    supportsCalendar: false,
+    navigationHref: (portalSlug: string) => `/${portalSlug}/neighborhoods`,
+  },
 };
 
 export const EXPLORE_LANE_ORDER: ExploreLaneId[] = [
@@ -146,6 +171,7 @@ export const EXPLORE_LANE_ORDER: ExploreLaneId[] = [
   "game-day",
   "regulars",
   "places",
+  "neighborhoods",
   "classes",
 ];
 

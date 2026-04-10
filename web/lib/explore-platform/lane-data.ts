@@ -163,4 +163,5 @@ export type ExploreLaneInitialDataMap = {
   shows: ShowsLaneInitialData;
   regulars: RegularsLaneInitialData;
   "game-day": GameDayLaneInitialData;
+  neighborhoods: null;
 };
