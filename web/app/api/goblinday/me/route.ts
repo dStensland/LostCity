@@ -31,9 +31,20 @@ export const GET = withAuth(async (_request, { user, serviceClient }) => {
     return NextResponse.json({ error: "Failed to fetch lists" }, { status: 500 });
   }
 
+  // Fetch watchlist movie IDs
+  const { data: watchlistRows } = await serviceClient
+    .from("goblin_watchlist_entries")
+    .select("movie_id")
+    .eq("user_id", user.id);
+
+  const watchlistMovieIds = (watchlistRows || []).map(
+    (r: { movie_id: number }) => r.movie_id
+  );
+
   return NextResponse.json({
     bookmarks,
     watched,
+    watchlistMovieIds,
     lists: (lists || []).map(
       (l: { id: number; name: string; goblin_list_movies: { movie_id: number }[] }) => ({
         id: l.id,
