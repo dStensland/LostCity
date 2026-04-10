@@ -1357,6 +1357,15 @@ def run_post_crawl_tasks(
     except Exception as e:
         logger.warning(f"Report generation failed: {e}")
 
+    # --- Health Digest ---
+    try:
+        from health_digest import generate_health_digest
+        digest = generate_health_digest()
+        digest.log_summary()
+        digest.save()
+    except Exception as e:
+        logger.warning(f"Health digest failed (non-fatal): {e}")
+
     if run_launch_maintenance:
         ok = run_launch_post_crawl_maintenance(
             city=maintenance_city,
