@@ -118,10 +118,37 @@ export default function GoblinRankingItem({
         )}
       </div>
 
-      {/* Thumbnail */}
-      {imageUrl && (
-        <div className="flex-shrink-0 w-14 h-14 relative overflow-hidden bg-zinc-900">
+      {/* Thumbnail with HUD frame */}
+      {imageUrl ? (
+        <div className={`flex-shrink-0 relative overflow-hidden bg-zinc-900
+          ${rankTier.tier === "hero" ? "w-20 sm:w-[100px]" : "w-14 sm:w-[100px]"}
+          ${rankTier.tier === "rest" ? "opacity-70" : ""}`}
+          style={{ aspectRatio: "16/10" }}
+        >
           <SmartImage src={imageUrl} alt="" fill className="object-cover" />
+          {/* Corner brackets — top 3 only */}
+          {rankTier.tier === "hero" && (
+            <>
+              <span className="absolute top-0 left-0 w-2 h-2 border-t-2 border-l-2 pointer-events-none" style={{ borderColor: rankTier.color }} />
+              <span className="absolute top-0 right-0 w-2 h-2 border-t-2 border-r-2 pointer-events-none" style={{ borderColor: rankTier.color }} />
+              <span className="absolute bottom-0 left-0 w-2 h-2 border-b-2 border-l-2 pointer-events-none" style={{ borderColor: rankTier.color }} />
+              <span className="absolute bottom-0 right-0 w-2 h-2 border-b-2 border-r-2 pointer-events-none" style={{ borderColor: rankTier.color }} />
+            </>
+          )}
+        </div>
+      ) : (
+        /* Empty placeholder with watermark rank */
+        <div className={`flex-shrink-0 relative overflow-hidden bg-zinc-900/50
+          ${rankTier.tier === "hero" ? "w-20 sm:w-[100px]" : "w-14 sm:w-[100px]"}
+          flex items-center justify-center`}
+          style={{ aspectRatio: "16/10" }}
+        >
+          <span className="font-mono text-2xl font-black text-zinc-800/30">{rank}</span>
+          {/* Zinc corner brackets on placeholder */}
+          <span className="absolute top-0 left-0 w-2 h-2 border-t-2 border-l-2 border-zinc-700/40 pointer-events-none" />
+          <span className="absolute top-0 right-0 w-2 h-2 border-t-2 border-r-2 border-zinc-700/40 pointer-events-none" />
+          <span className="absolute bottom-0 left-0 w-2 h-2 border-b-2 border-l-2 border-zinc-700/40 pointer-events-none" />
+          <span className="absolute bottom-0 right-0 w-2 h-2 border-b-2 border-r-2 border-zinc-700/40 pointer-events-none" />
         </div>
       )}
 
