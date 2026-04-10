@@ -20,14 +20,7 @@ import type { ExhibitionWithVenue } from "@/lib/exhibitions-utils";
 import { Ticket } from "@phosphor-icons/react/dist/ssr";
 import { resolveDetailPageRequest } from "../../_surfaces/detail/resolve-detail-page-request";
 
-const ART_EXHIBITION_TYPES = new Set([
-  "solo",
-  "group",
-  "installation",
-  "retrospective",
-  "popup",
-  "permanent",
-]);
+const ART_PORTAL_SLUGS = new Set(["arts"]);
 
 export const revalidate = 120;
 
@@ -176,7 +169,7 @@ export default async function ExhibitionDetailPage({ params }: Props) {
   const activePortalSlug = request?.portal.slug || portalSlug;
   const accentColor = "var(--action-primary)";
 
-  const isArtExhibition = ART_EXHIBITION_TYPES.has(exhibition.exhibition_type ?? "");
+  const isArtExhibition = ART_PORTAL_SLUGS.has(portalSlug);
 
   const artists = exhibition.artists ?? [];
   const venue = exhibition.venue ?? null;
