@@ -7564,3 +7564,21 @@ body:has([data-vertical="hospital"]) .rain-overlay {
   0%, 100% { opacity: 0.4; }
   50% { opacity: 1; }
 }
+
+/* Goblin ranking spy HUD animations */
+@keyframes scanSweep {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(100vh); }
+}
+
+@keyframes glitchWipe {
+  0% { clip-path: inset(0); transform: translateX(0); }
+  30% { clip-path: inset(0 0 60% 0); transform: translateX(2px); }
+  50% { clip-path: inset(40% 0 0 0); transform: translateX(-2px); }
+  100% { clip-path: inset(0); transform: translateX(0); }
+}
+
+@keyframes statusPulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
