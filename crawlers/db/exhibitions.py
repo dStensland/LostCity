@@ -131,6 +131,10 @@ def insert_exhibition(exhibition_data: dict, artists: Optional[list] = None) -> 
         logger.warning("Skipping exhibition %r — no place_id", title)
         return None
 
+    # Default exhibition_type if not provided
+    if not exhibition_data.get("exhibition_type"):
+        exhibition_data["exhibition_type"] = "group"
+
     # Generate content hash for dedup
     opening_date = exhibition_data.get("opening_date")
     content_hash = generate_exhibition_hash(title, venue_id, opening_date)

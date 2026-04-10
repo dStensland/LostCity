@@ -71,3 +71,13 @@ def test_junk_title_regex_catches_view_fullsize_variations():
 def test_exhibition_columns_includes_related_feature_id():
     from db.exhibitions import _EXHIBITION_COLUMNS
     assert "related_feature_id" in _EXHIBITION_COLUMNS
+
+
+def test_insert_exhibition_defaults_exhibition_type_to_group():
+    """When exhibition_type is not provided, it should default to 'group'."""
+    import inspect
+    from db.exhibitions import insert_exhibition
+    source = inspect.getsource(insert_exhibition)
+    assert "exhibition_type" in source and '"group"' in source, (
+        "insert_exhibition must default exhibition_type to 'group' when not provided"
+    )
