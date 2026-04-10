@@ -462,8 +462,9 @@ def _step_check_past_date(event_data: dict, ctx: InsertContext) -> dict:
 
     today = datetime.now().date()
 
-    # Hard-reject events more than 14 days old unless they are recurring/series
-    # or already exist in the DB (updates to existing events are always allowed).
+    # Hard-reject events more than 14 days old unless they are recurring/series,
+    # already exist in the DB (updates to existing events are always allowed),
+    # or are multi-day events still in progress (end_date is today or future).
     # 14 days gives crawlers a full weekly recrawl cycle of slack.
     if event_date < today - timedelta(days=14):
         is_recurring = event_data.get("is_recurring", False)
@@ -471,20 +472,46 @@ def _step_check_past_date(event_data: dict, ctx: InsertContext) -> dict:
         has_series_hint = getattr(ctx, "series_hint", None) is not None
         content_hash = event_data.get("content_hash")
         existing = find_event_by_hash(content_hash) if content_hash else None
-        if not is_recurring and not series_id and not has_series_hint and not existing:
+        # Multi-week events (exhibitions, festivals) have a future end_date even
+        # when start_date is well in the past — treat them as still-active.
+        end_date_str = event_data.get("end_date")
+        still_running = False
+        if end_date_str:
+            try:
+                end_dt = datetime.strptime(str(end_date_str)[:10], "%Y-%m-%d").date()
+                still_running = end_dt >= today
+            except (ValueError, TypeError):
+                pass
+        if not is_recurring and not series_id and not has_series_hint and not existing and not still_running:
             raise ValueError(
                 f"Rejecting stale event (start_date={start_date}, "
                 f">14 days in past): {(event_data.get('title') or 'untitled')[:60]}"
             )
 
-    # Mark yesterday/today-past as inactive (existing behavior)
+    # Mark past events as inactive, but keep multi-day events with a future
+    # end_date active — they are still running (exhibitions, festivals, etc.).
     if event_date < today:
-        logger.warning(
-            "Past start_date %s → inserting as inactive: %s",
-            start_date,
-            (event_data.get("title") or "N/A")[:60],
-        )
-        event_data["is_active"] = False
+        end_date_str2 = event_data.get("end_date")
+        still_active = False
+        if end_date_str2:
+            try:
+                end_dt2 = datetime.strptime(str(end_date_str2)[:10], "%Y-%m-%d").date()
+                still_active = end_dt2 >= today
+            except (ValueError, TypeError):
+                pass
+        if still_active:
+            logger.info(
+                "Past start_date %s but end_date is future → keeping active: %s",
+                start_date,
+                (event_data.get("title") or "N/A")[:60],
+            )
+        else:
+            logger.warning(
+                "Past start_date %s → inserting as inactive: %s",
+                start_date,
+                (event_data.get("title") or "N/A")[:60],
+            )
+            event_data["is_active"] = False
 
     return event_data
 
