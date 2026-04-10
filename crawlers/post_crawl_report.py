@@ -15,6 +15,7 @@ from datetime import datetime, timedelta
 from db import get_client
 from crawler_health import get_system_health_summary, get_unhealthy_sources
 from data_quality import get_sources_needing_attention, get_declining_sources
+from scripts.deactivate_past_exhibitions import deactivate_past_exhibitions
 
 logger = logging.getLogger(__name__)
 
@@ -119,6 +120,7 @@ def get_analytics_summary() -> dict:
 
 def generate_html_report(crawl_results: dict = None) -> str:
     """Generate HTML dashboard report."""
+    past_exhibitions_deactivated = deactivate_past_exhibitions()
     health = get_system_health_summary()
     analytics = get_analytics_summary()
     quality_issues = get_sources_needing_attention(threshold=70)[:15]
@@ -212,6 +214,13 @@ def generate_html_report(crawl_results: dict = None) -> str:
                 <div class="card-title">Data Quality Issues</div>
                 <div class="card-value">{len(quality_issues)}</div>
                 <div class="card-subtitle">Sources below 70% quality</div>
+            </div>
+            <div class="card">
+                <div class="card-title">Exhibitions Closed</div>
+                <div class="card-value">
+                    <span class="{'warning' if past_exhibitions_deactivated else 'success'}">{past_exhibitions_deactivated}</span>
+                </div>
+                <div class="card-subtitle">Deactivated past closing_date this run</div>
             </div>
         </div>
 
