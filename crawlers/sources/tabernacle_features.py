@@ -48,6 +48,11 @@ PLACE_DATA = {
 # The Tabernacle's room layout is stable and well-documented.
 # ---------------------------------------------------------------------------
 
+# og:image from tabernacleatl.com — the only venue-level photo the site exposes.
+# No feature-specific images are published; gallery images on the homepage are
+# event show cards, not venue space photos.
+_VENUE_IMAGE = "https://assets.livenationcdn.com/uploads/tabernacle_1024x576.jpg"
+
 _FEATURES: list[dict] = [
     {
         "slug": "main-concert-hall",
@@ -63,6 +68,8 @@ _FEATURES: list[dict] = [
         "source_url": BASE_URL,
         "sort_order": 10,
         "tags": ["concert-hall", "standing-room", "historic", "church-conversion", "downtown"],
+        "image_url": _VENUE_IMAGE,
+        "image_source": "og_image",
     },
     {
         "slug": "the-cotton-club",
@@ -77,6 +84,8 @@ _FEATURES: list[dict] = [
         "source_url": BASE_URL,
         "sort_order": 20,
         "tags": ["intimate-room", "dj", "small-venue", "450-capacity", "downtown"],
+        "image_url": _VENUE_IMAGE,
+        "image_source": "og_image",
     },
     {
         "slug": "balcony-level",
@@ -91,6 +100,8 @@ _FEATURES: list[dict] = [
         "source_url": BASE_URL,
         "sort_order": 30,
         "tags": ["balcony", "panoramic-view", "upper-level", "seating", "downtown"],
+        "image_url": _VENUE_IMAGE,
+        "image_source": "og_image",
     },
 ]
 
