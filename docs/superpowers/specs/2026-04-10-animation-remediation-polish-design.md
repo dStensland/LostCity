@@ -1,7 +1,7 @@
 # Animation System Remediation & Polish
 
 **Date:** 2026-04-10
-**Status:** Approved
+**Status:** Approved (revised after expert review)
 
 ## Goal
 
@@ -9,7 +9,7 @@ Fix issues identified in the design review of the animation/typography overhaul,
 
 ## Context
 
-The animation system (motion tokens, view transitions, pointer glow, gradient borders, film grain, ShaderCanvas, aurora) and typography swap (Bricolage Grotesque, DM Sans, Fraunces, Space Mono) were shipped 2026-04-09. A product design review identified critical issues, important fixes, and polish opportunities.
+The animation system (motion tokens, view transitions, pointer glow, gradient borders, film grain, ShaderCanvas, aurora) and typography swap (Bricolage Grotesque, DM Sans, Fraunces, Space Mono) were shipped 2026-04-09. A product design review identified critical issues, important fixes, and polish opportunities. An architecture review and design accuracy audit further refined the spec.
 
 ---
 
@@ -19,19 +19,21 @@ The animation system (motion tokens, view transitions, pointer glow, gradient bo
 
 **File:** `web/components/detail/DetailHero.tsx`
 
-Remove `mask-vignette` class from the image mode outer container div. The radial gradient mask clips the hero image into an oval shape, which looks like broken CSS rather than cinematic production. The existing gradient overlay inside the card already handles the transition from image to content below. A clean edge-to-edge image is more confident.
+Remove `mask-vignette` class from the image mode outer container div (line ~152). The radial gradient mask clips the hero image into an oval shape, which looks like broken CSS rather than cinematic production. The existing gradient overlay inside the card already handles the transition from image to content below. A clean edge-to-edge image is more confident.
 
 ### C2. Fix gradient-border on HeroCard
 
 **File:** `web/components/feed/HeroCard.tsx`
 
-Replace `gradient-border` with `gradient-border-subtle` on the outer `<Link>` element. The animated spinning border on hover is too aggressive for the highest-prominence card in the feed — two simultaneous motion effects (hover-lift + border spin) on one interaction is too much. The subtle variant provides a static, barely-visible coral-to-gold border at rest that signals "featured" without moving.
+Replace `gradient-border` with `gradient-border-subtle` on the outer `<Link>` element (line ~113). The animated spinning border on hover is too aggressive for the highest-prominence card in the feed — two simultaneous motion effects (hover-lift + border spin) on one interaction is too much. The subtle variant provides a static, barely-visible coral-to-gold border at rest that signals "featured" without moving.
 
-### C3. Delete duplicate grain system
+### C3. Delete duplicate grain system + dead suppression rules
 
-**File:** `web/app/globals.css` (~line 1417-1426)
+**File:** `web/app/globals.css`
 
-Delete the `body::after` SVG grain block. This is the old grain implementation using inline SVG `feTurbulence` at `opacity: var(--grain-opacity, 0.01)` — effectively invisible (1% opacity fallback). The PNG-based `.grain-overlay` div in the portal layout is the correct system. Running both creates two independent z-index layers (z-index 50 vs 9999) for no visual benefit. Remove the old one entirely.
+Delete the `body::after` SVG grain block (~lines 1417-1426). This is the old grain implementation using inline SVG `feTurbulence` at `opacity: var(--grain-opacity, 0.01)` — effectively invisible. The PNG-based `.grain-overlay` in the portal layout is the correct system.
+
+Also delete the suppression rules below it (~lines 1429-1455) that target `body::after` for festival-detail, clean-detail, and hotel verticals — these become dead code after the `body::after` block is removed. Review each rule to confirm it only targets the old grain system before deleting.
 
 ---
 
@@ -43,60 +45,38 @@ Delete the `body::after` SVG grain block. This is the old grain implementation u
 - `web/components/SeriesCard.tsx`
 - `web/components/FestivalCard.tsx`
 
-Both cards have the `.pointer-glow` CSS class but no `usePointerGlow` hook, so the glow defaults to the center of the card instead of tracking the cursor. Add the hook import, call it, and attach the returned ref to the outer card element.
+Both cards have the `.pointer-glow` CSS class but no `usePointerGlow` hook, so the glow defaults to the center of the card instead of tracking the cursor.
 
-- SeriesCard: outer element is a `<div>` — use `usePointerGlow<HTMLDivElement>()`
-- FestivalCard: outer element is a `<Link>` — use `usePointerGlow<HTMLAnchorElement>()`
+- **SeriesCard**: outer element is a `<div>` — use `usePointerGlow<HTMLDivElement>()`, attach ref to the comfortable-density outer div
+- **FestivalCard**: the comfortable-density branch wraps content in a `<>` fragment with `<ScopedStyles>` before the `<Link>`. Attach the ref to the `<Link>` element directly (inside the fragment), NOT the fragment itself. Use `usePointerGlow<HTMLAnchorElement>()`.
+
+Note: compact density branches intentionally excluded — they don't have the `pointer-glow` class.
 
 ### I2. Apply Bricolage Grotesque to card titles
 
 **Files:**
-- `web/app/globals.css` (add utility class)
-- `web/components/EventCard.tsx` (apply class to title)
-- `web/components/SeriesCard.tsx` (apply class to title)
-- `web/components/FestivalCard.tsx` (apply class to title)
-- `web/components/feed/StandardRow.tsx` (apply class to title, if it exists)
+- `web/components/EventCard.tsx` — apply `.font-display` to desktop `<span>` title (line ~528) and compact `<span>` title (line ~326). The mobile `<h3>` (line ~512) already gets Bricolage from the global `h1,h2,h3` rule — don't add redundant class.
+- `web/components/SeriesCard.tsx` — apply `.font-display` to desktop `<span>` title (line ~373). Mobile `<h3>` already covered.
+- `web/components/FestivalCard.tsx` — apply `.font-display` to desktop `<span>` title (line ~238). Mobile `<h3>` already covered.
+- `web/components/feed/StandardRow.tsx` — apply `.font-display` to `<p>` title (line ~103).
 
-The h1/h2/h3 global selector applies Bricolage Grotesque, but most card titles use `<span>` or `<p>` elements. Add a utility class in globals.css:
-
-```css
-.card-title-display {
-  font-family: var(--font-display), var(--font-sans), system-ui, sans-serif;
-}
-```
-
-Apply this class to the title elements in EventCard, SeriesCard, FestivalCard, and StandardRow. This makes the typography investment visible on the main feed surface.
-
-### I3. Guard viewTransitionName for unsupported browsers
-
-**Files:**
-- `web/components/event-card/EventCardImage.tsx`
-- `web/components/detail/DetailHero.tsx`
-- `web/components/detail/DetailHeroImage.tsx`
-- `web/components/SeriesCard.tsx`
-- `web/components/FestivalCard.tsx`
-
-The `viewTransitionName` style is currently set unconditionally. On browsers without View Transitions API support (Firefox, older Safari), this could cause unexpected behavior. Guard the assignment with a runtime check:
-
-```typescript
-const supportsVT = typeof document !== "undefined" && "startViewTransition" in document;
-```
-
-Only set `viewTransitionName` when `supportsVT` is true. This can be a shared constant exported from a utility module (e.g., `web/lib/view-transition-utils.ts`) to avoid repeating the check.
+Use the **existing** `.font-display` class from globals.css (line ~1504), which already sets `font-family: var(--font-display), system-ui, sans-serif; font-weight: 600; letter-spacing: -0.02em`. Do NOT create a new `.card-title-display` class — `.font-display` already does this.
 
 ---
 
 ## Polish
 
-### P1. Apply animate-enter utilities to modals/overlays
+### P1. Apply animate-enter to ConfirmDialog + CreateCollectionModal
+
+**Scope narrowed after review.** Only migrate components that use conditional rendering (mount/unmount). Components with class-based visibility toggles (Toast, SaveToListButton, ActiveFiltersRow) stay on the existing `animate-in` system.
 
 **Files:**
-- `web/components/ConfirmDialog.tsx` — replace `animate-in scale-in` with `animate-enter-scale`
-- `web/components/CreateCollectionModal.tsx` — replace `animate-in fade-in scale-in` with `animate-enter-scale`
-- `web/components/detail/DetailStickyBar.tsx` — add `animate-enter` for the floating CTA bar appearance
-- `web/components/filters/MobileFilterSheet.tsx` — add `animate-enter-right` for the side drawer entrance (if applicable to its pattern)
+- `web/components/ConfirmDialog.tsx` — replace `animate-in scale-in` on the panel div (line ~86) with `animate-enter-scale`. Also replace `animate-in fade-in` on the backdrop div (line ~77) with a simple opacity transition or keep as-is (backdrop animation is less critical).
+- `web/components/CreateCollectionModal.tsx` — replace `animate-in fade-in scale-in` on the panel div (line ~151) with `animate-enter-scale`.
 
-These replacements use the new `@starting-style` CSS entry/exit utilities which provide native CSS transitions including exit animations, replacing the JS-dependent `animate-in` approach.
+Keep the `animate-in` / `scale-in` keyframe system intact — it's still used by 10+ other components.
+
+**Browser support note:** `@starting-style` requires Chrome 117+, Safari 17.5+, Firefox 129+. Older browsers get no entrance animation (graceful degradation — modal just appears instantly).
 
 ### P2. Button press feedback
 
@@ -105,36 +85,59 @@ These replacements use the new `@starting-style` CSS entry/exit utilities which 
 - `web/components/filters/FilterChip.tsx`
 - `web/components/ui/Button.tsx`
 
-Add `active:scale-[0.96] transition-transform` to interactive elements. This provides immediate tactile feedback on tap/click. CSS-only, no JS needed. On mobile this is the difference between "dead tap" and "something happened."
+Add `active:scale-[0.96] transition-transform` to interactive elements. Instant scale-down on press, smooth release — the correct tactile feel. CSS-only.
 
-### P3. Remove global CursorGlow component
+### P3. Remove global CursorGlow + dead code cleanup
 
 **Files:**
 - Delete: `web/components/CursorGlow.tsx`
 - Modify: `web/components/ClientEffects.tsx` — remove CursorGlow import and rendering
-
-The global CursorGlow tracks the cursor across the entire viewport with an always-on RAF loop and a 400px radial gradient at z-index 9998. This is redundant with the card-level `pointer-glow` which is scoped to individual elements and only active on hover. Removing CursorGlow eliminates an always-on animation loop and one compositing layer.
+- Clean up dead CSS suppression rules referencing `.cursor-glow` in:
+  - `web/app/globals.css` (~lines 1436, 1439)
+  - `web/app/[portal]/_surfaces/feed/AmbientSuppression.tsx` (~line 8)
+  - `web/app/[portal]/map/page.tsx` (~line 33)
+  - `web/app/[portal]/_components/dog/DogDeepPageShell.tsx` (~line 34)
+- Delete: `web/lib/visual-settings-context.tsx` — exports `cursorGlowEnabled`/`setCursorGlowEnabled` but the provider is never mounted anywhere. `CursorGlow` and `RainEffect` both read localStorage directly. Entire file is dead code.
 
 ### P4. Fix AuroraBackground blob sizing
 
 **File:** `web/components/ambient/AuroraBackground.tsx`
 
-Current: 60vmax blobs with 5vw/3vh drift — the blobs are larger than the viewport and the drift is imperceptible. Fix:
 - Reduce default blob size from 60vmax to 40vmax
-- Increase drift range from `translate(5vw, 3vh)` to `translate(15vw, 10vh)`
+- Increase drift range: `translate(5vw, 3vh)` → `translate(15vw, 10vh)` on blob-1, `translate(-4vw, -2vh)` → `translate(-12vw, -8vh)` on blob-2, similar scale-up on blob-3
 - This makes the gradient edge visible within the viewport and the motion perceptible
 
 ### P5. Tab switching animation in LineupSection
 
-**File:** `web/components/feed/lineup/LineupSection.tsx` (or wherever tab content renders)
+**File:** `web/components/feed/lineup/LineupSection.tsx`
 
-When switching between feed tabs (Today/This Week/Weekend/etc.), the content currently hard-swaps. Add a cross-fade by applying the `animate-enter` class to the tab content container. Each tab switch triggers a re-mount with the entry animation, providing a smooth 250ms fade+slide transition.
+Use the View Transitions API for tab cross-fades, NOT `animate-enter` (which only fires on mount, not re-renders). In the `handleTabClick` callback, wrap the state update with `document.startViewTransition()`:
+
+```typescript
+const handleTabClick = (tabId: string) => {
+  if ("startViewTransition" in document) {
+    document.startViewTransition(() => {
+      setActiveTabId(tabId);
+    });
+  } else {
+    setActiveTabId(tabId);
+  }
+};
+```
+
+This gives a browser-native crossfade on Chrome/Edge/Safari with zero DOM restructuring. Unsupported browsers get the current instant swap (fine).
 
 ---
 
+## Dropped from Spec
+
+- **I3 (viewTransitionName guard)**: Dropped. Setting `viewTransitionName` on unsupported browsers is harmless — unknown CSS properties are silently ignored per spec. Not worth the complexity.
+- **DetailStickyBar animate-enter**: Dropped. The bar already has scroll-driven CSS transitions (`translate-y` + `opacity` toggle). `animate-enter` with `@starting-style` conflicts with this pattern.
+- **MobileFilterSheet animate-enter-right**: Dropped. The sheet already has a working slide animation (`transition-transform duration-300`).
+
 ## Out of Scope
 
-- Migrating all existing `ScrollReveal` component usage to CSS `scroll-reveal` classes (tracked separately)
-- Adding view transitions to venue/place detail pages (no generic VenueCard exists yet)
-- Portal-specific typography tuning (per-portal font-weight adjustments for dark theme)
-- Motion library (Framer Motion / Motion) evaluation — CSS-only approach is sufficient for current needs
+- Migrating all 10+ `animate-in` usages to `@starting-style` (incremental, do later)
+- Migrating all `ScrollReveal` component usage to CSS `scroll-reveal` classes
+- Portal-specific typography tuning
+- Motion library evaluation
