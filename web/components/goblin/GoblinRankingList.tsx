@@ -337,7 +337,7 @@ export default function GoblinRankingList({
           </p>
         </div>
       ) : (
-        <div className="space-y-1">
+        <div className="space-y-2">
           {tierGroups.map((group, gi) => (
             <div key={gi} className="flex mb-3">
               {group.tierName ? (
@@ -359,7 +359,7 @@ export default function GoblinRankingList({
               ) : (
                 <div className="w-0" />
               )}
-              <div className="flex-1 min-w-0 space-y-1">
+              <div className="flex-1 min-w-0 space-y-2">
                 {group.items.map((item) => {
                   const globalIdx = ranked.indexOf(item);
                   const isEditing = editingItemId === item.id;
@@ -464,15 +464,16 @@ export default function GoblinRankingList({
                   <button
                     onClick={() => addToRanking(item)}
                     className="flex-1 flex items-stretch bg-zinc-950/50 border border-zinc-800/30
-                      hover:border-zinc-700/50 hover:bg-zinc-900/30 transition-all text-left"
+                      hover:border-zinc-700/50 hover:bg-zinc-900/30 transition-all text-left
+                      rounded-lg p-2 gap-2"
                   >
                     <div className="flex-shrink-0 w-12 flex items-center justify-center">
                       <span className="font-mono text-lg text-zinc-800">–</span>
                     </div>
                     {item.image_url && (
-                      <div className="flex-shrink-0 w-14 sm:w-20 relative overflow-hidden bg-zinc-900 opacity-50"
+                      <div className="flex-shrink-0 w-20 sm:w-28 relative overflow-hidden bg-zinc-900 opacity-50 rounded-md"
                         style={{ aspectRatio: "16/10" }}>
-                        <SmartImage src={item.image_url} alt="" fill className="object-cover" />
+                        <SmartImage src={item.image_url} alt="" fill className="object-cover" sizes="(max-width: 640px) 80px, 112px" />
                       </div>
                     )}
                     <div className="flex-1 min-w-0 py-2.5 pr-2">

@@ -59,7 +59,7 @@ export default function GoblinRankingItem({
         e.preventDefault();
         onDrop?.();
       }}
-      className={`flex items-stretch transition-all duration-150
+      className={`flex items-stretch transition-all duration-150 rounded-lg p-2 gap-2
         ${isDragging ? "opacity-30 scale-95" : ""}
         ${isDragTarget ? "ring-1 ring-cyan-500/50" : ""}
         ${!readOnly ? "cursor-grab active:cursor-grabbing" : ""}
@@ -120,31 +120,29 @@ export default function GoblinRankingItem({
 
       {/* Thumbnail with HUD frame */}
       {imageUrl ? (
-        <div className={`flex-shrink-0 relative overflow-hidden bg-zinc-900
-          ${rankTier.tier === "hero" ? "w-20 sm:w-[100px]" : "w-14 sm:w-[100px]"}
+        <div className={`flex-shrink-0 relative overflow-hidden bg-zinc-900 rounded-md
+          ${rankTier.tier === "hero" ? "w-28 sm:w-36" : rankTier.tier === "mid" ? "w-24 sm:w-32" : "w-20 sm:w-28"}
           ${rankTier.tier === "rest" ? "opacity-70" : ""}`}
           style={{ aspectRatio: "16/10" }}
         >
-          <SmartImage src={imageUrl} alt="" fill className="object-cover" />
+          <SmartImage src={imageUrl} alt="" fill className="object-cover" sizes="(max-width: 640px) 112px, 144px" />
           {/* Corner brackets — top 3 only */}
           {rankTier.tier === "hero" && (
             <>
-              <span className="absolute top-0 left-0 w-2 h-2 border-t-2 border-l-2 pointer-events-none" style={{ borderColor: rankTier.color }} />
-              <span className="absolute top-0 right-0 w-2 h-2 border-t-2 border-r-2 pointer-events-none" style={{ borderColor: rankTier.color }} />
-              <span className="absolute bottom-0 left-0 w-2 h-2 border-b-2 border-l-2 pointer-events-none" style={{ borderColor: rankTier.color }} />
-              <span className="absolute bottom-0 right-0 w-2 h-2 border-b-2 border-r-2 pointer-events-none" style={{ borderColor: rankTier.color }} />
+              <span className="absolute top-0 left-0 w-2.5 h-2.5 border-t-2 border-l-2 pointer-events-none" style={{ borderColor: rankTier.color }} />
+              <span className="absolute top-0 right-0 w-2.5 h-2.5 border-t-2 border-r-2 pointer-events-none" style={{ borderColor: rankTier.color }} />
+              <span className="absolute bottom-0 left-0 w-2.5 h-2.5 border-b-2 border-l-2 pointer-events-none" style={{ borderColor: rankTier.color }} />
+              <span className="absolute bottom-0 right-0 w-2.5 h-2.5 border-b-2 border-r-2 pointer-events-none" style={{ borderColor: rankTier.color }} />
             </>
           )}
         </div>
       ) : (
-        /* Empty placeholder with watermark rank */
-        <div className={`flex-shrink-0 relative overflow-hidden bg-zinc-900/50
-          ${rankTier.tier === "hero" ? "w-20 sm:w-[100px]" : "w-14 sm:w-[100px]"}
+        <div className={`flex-shrink-0 relative overflow-hidden bg-zinc-900/50 rounded-md
+          ${rankTier.tier === "hero" ? "w-28 sm:w-36" : rankTier.tier === "mid" ? "w-24 sm:w-32" : "w-20 sm:w-28"}
           flex items-center justify-center`}
           style={{ aspectRatio: "16/10" }}
         >
           <span className="font-mono text-2xl font-black text-zinc-800/30">{rank}</span>
-          {/* Zinc corner brackets on placeholder */}
           <span className="absolute top-0 left-0 w-2 h-2 border-t-2 border-l-2 border-zinc-700/40 pointer-events-none" />
           <span className="absolute top-0 right-0 w-2 h-2 border-t-2 border-r-2 border-zinc-700/40 pointer-events-none" />
           <span className="absolute bottom-0 left-0 w-2 h-2 border-b-2 border-l-2 border-zinc-700/40 pointer-events-none" />
@@ -153,13 +151,13 @@ export default function GoblinRankingItem({
       )}
 
       {/* Content */}
-      <div className="flex-1 min-w-0 py-2.5 pr-2">
-        <p className="text-sm font-semibold text-white truncate">{name}</p>
+      <div className="flex-1 min-w-0 py-1">
+        <p className="text-sm sm:text-base font-semibold text-white truncate">{name}</p>
         {subtitle && (
-          <p className="text-2xs text-zinc-500 font-mono mt-0.5 truncate">{subtitle}</p>
+          <p className="text-2xs text-zinc-500 font-mono mt-1 truncate">{subtitle}</p>
         )}
         {description && (
-          <p className="text-2xs text-zinc-500 mt-0.5 line-clamp-1">{description}</p>
+          <p className="text-xs text-zinc-500 mt-1 line-clamp-2 leading-relaxed">{description}</p>
         )}
       </div>
 

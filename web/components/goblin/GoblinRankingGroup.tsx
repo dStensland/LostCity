@@ -92,6 +92,7 @@ export default function GoblinRankingGroup({ items, myEntries, participants }: P
           <div
             key={`${agg.item.id}-${animKey}`}
             className={`flex items-stretch transition-colors motion-safe:animate-[rankItemEntry_300ms_ease-out_backwards]
+              rounded-lg p-2 gap-2
               ${isHero
                 ? "bg-zinc-950 border border-cyan-500/20 shadow-[inset_0_0_20px_rgba(0,240,255,0.03)]"
                 : isContested
@@ -117,10 +118,10 @@ export default function GoblinRankingGroup({ items, myEntries, participants }: P
 
             {/* Image */}
             {agg.item.image_url && (
-              <div className="flex-shrink-0 w-[60px] sm:w-20 relative overflow-hidden bg-zinc-900"
+              <div className="flex-shrink-0 w-[60px] sm:w-20 relative overflow-hidden bg-zinc-900 rounded-md"
                 style={{ aspectRatio: "16/10" }}
               >
-                <SmartImage src={agg.item.image_url} alt="" fill className="object-cover" />
+                <SmartImage src={agg.item.image_url} alt="" fill className="object-cover" sizes="(max-width: 640px) 60px, 80px" />
                 {isHero && (
                   <>
                     <span className="absolute top-0 left-0 w-2 h-2 border-t-2 border-l-2 pointer-events-none" style={{ borderColor: tierColor }} />
@@ -190,9 +191,10 @@ export default function GoblinRankingGroup({ items, myEntries, participants }: P
               </div>
             )}
 
-            {isHero && (
-              <div className="flex-shrink-0 w-1 self-stretch"
-                style={{ background: `linear-gradient(180deg, ${tierColor}, ${tierColor}40)` }}
+            {/* Threat sidebar */}
+            {(isHero || isMid) && (
+              <div className="flex-shrink-0 w-1 self-stretch rounded-r-full"
+                style={{ background: `linear-gradient(180deg, ${tierColor}, ${tierColor}${isHero ? "40" : "20"})` }}
               />
             )}
           </div>

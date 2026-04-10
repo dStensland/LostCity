@@ -236,7 +236,7 @@ export default function GoblinRankingGamePage({ gameId }: Props) {
             <button
               onClick={() => setShowLogin(true)}
               className="px-3 py-1 border border-cyan-800/40 text-cyan-400
-                font-mono text-2xs uppercase tracking-wider
+                font-mono text-2xs uppercase tracking-wider whitespace-nowrap flex-shrink-0
                 hover:bg-cyan-950/20 hover:border-cyan-700/50 transition-all"
             >
               SIGN IN
