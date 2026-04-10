@@ -396,7 +396,7 @@ def _parse_exhibition_record(url: str, soup: BeautifulSoup, source_id: int, venu
         "place_id": venue_id,
         "title": title,
         "description": description,
-        "start_date": today,
+        "start_date": None,
         "end_date": end_date,
         "start_time": None,
         "end_time": None,

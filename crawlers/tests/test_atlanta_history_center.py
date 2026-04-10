@@ -75,6 +75,39 @@ def test_parse_summer_camp_records_prefers_heading_structure_when_present():
     )
 
 
+def test_parse_exhibition_record_does_not_set_start_date_to_today():
+    """Regression: start_date must NOT be today — it changes daily and breaks content hash dedup."""
+    future_close = date.today() + timedelta(days=60)
+    future_close_text = future_close.strftime("%B %d, %Y").replace(" 0", " ")
+    html = """
+    <html>
+      <head>
+        <title>Slavery at Monticello | Exhibitions | Atlanta History Center</title>
+        <meta name="description" content="An exploration of the enslaved community at Monticello." />
+      </head>
+      <body>
+        <main>
+          <h1>Slavery at Monticello</h1>
+          <p>Slavery at Monticello closes on FUTURE_CLOSE_DATE.</p>
+        </main>
+      </body>
+    </html>
+    """.replace("FUTURE_CLOSE_DATE", future_close_text)
+    soup = BeautifulSoup(html, "html.parser")
+
+    record = _parse_exhibition_record(
+        "https://www.atlantahistorycenter.com/exhibitions/slavery-at-monticello/",
+        soup,
+        source_id=105,
+        venue_id=211,
+    )
+
+    assert record is not None
+    assert record.get("start_date") != date.today().strftime("%Y-%m-%d"), (
+        "start_date must not be today's date — it would produce a new content hash on every crawl run"
+    )
+
+
 def test_parse_exhibition_record_marks_current_exhibit_as_ongoing():
     future_close = date.today() + timedelta(days=30)
     future_close_text = future_close.strftime("%B %d, %Y").replace(" 0", " ")
