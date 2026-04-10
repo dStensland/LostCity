@@ -158,7 +158,7 @@ export async function POST(
   if (recommenderUserId) {
     // Authenticated: check by (target_user_id, movie_id, recommender_user_id)
     const { data: existing } = await serviceClient
-      .from("goblin_recommendations")
+      .from("goblin_watchlist_recommendations")
       .select("id")
       .eq("target_user_id", targetUserId)
       .eq("movie_id", movie.id)
@@ -171,7 +171,7 @@ export async function POST(
   } else {
     // Anonymous: check by (target_user_id, movie_id, recommender_name) where recommender_user_id IS NULL
     const { data: existing } = await serviceClient
-      .from("goblin_recommendations")
+      .from("goblin_watchlist_recommendations")
       .select("id")
       .eq("target_user_id", targetUserId)
       .eq("movie_id", movie.id)
@@ -186,12 +186,12 @@ export async function POST(
 
   // Insert recommendation
   const { data: recommendation, error: insertError } = await serviceClient
-    .from("goblin_recommendations")
+    .from("goblin_watchlist_recommendations")
     .insert({
       target_user_id: targetUserId,
       movie_id: movie.id,
       recommender_user_id: recommenderUserId,
-      recommender_name: recommender_name || null,
+      recommender_name: recommender_name || "Anonymous",
       note: note?.trim() || null,
     } as never)
     .select("id, movie_id, recommender_name, recommender_user_id, note, created_at")

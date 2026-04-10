@@ -163,11 +163,146 @@ export default function GoblinQueuePublicView({ user, slug, entries }: Props) {
 
   const displayName = user.displayName || user.username;
 
+  // Trunk ring animation — amber/gold version of the log page's cyan/fuchsia rings
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    let animId: number;
+    let t = 0;
+
+    // Simplex-like noise (fast 2D hash-based)
+    const perm = new Uint8Array(512);
+    for (let i = 0; i < 256; i++) perm[i] = i;
+    for (let i = 255; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [perm[i], perm[j]] = [perm[j], perm[i]];
+    }
+    for (let i = 0; i < 256; i++) perm[i + 256] = perm[i];
+
+    const fade = (n: number) => n * n * n * (n * (n * 6 - 15) + 10);
+    const lerp = (a: number, b: number, n: number) => a + n * (b - a);
+    const grad2 = (hash: number, x: number, y: number) => {
+      const h = hash & 3;
+      return (h === 0 ? x + y : h === 1 ? -x + y : h === 2 ? x - y : -x - y);
+    };
+    const noise2d = (x: number, y: number) => {
+      const xi = Math.floor(x) & 255, yi = Math.floor(y) & 255;
+      const xf = x - Math.floor(x), yf = y - Math.floor(y);
+      const u = fade(xf), v = fade(yf);
+      const aa = perm[perm[xi] + yi], ab = perm[perm[xi] + yi + 1];
+      const ba = perm[perm[xi + 1] + yi], bb = perm[perm[xi + 1] + yi + 1];
+      return lerp(lerp(grad2(aa, xf, yf), grad2(ba, xf - 1, yf), u),
+                  lerp(grad2(ab, xf, yf - 1), grad2(bb, xf - 1, yf - 1), u), v);
+    };
+
+    const NUM_RINGS = 65;
+    const CHAOS = 1.5;
+    const ox = Math.random() * 100;
+    const oy_init = Math.random() * 100;
+    let oy_offset = 0;
+
+    const resize = () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    };
+    resize();
+    window.addEventListener("resize", resize);
+
+    const draw = () => {
+      const W = canvas.width;
+      const H = canvas.height;
+      ctx.clearRect(0, 0, W, H);
+
+      const cx = W * 0.62;
+      const cy = H * 0.25;
+
+      oy_offset -= 0.012;
+
+      // Trunk rings — amber to orange gradient
+      for (let ring = 0; ring < NUM_RINGS; ring++) {
+        const baseR = ring * 7 + 20;
+        const noiseScale = 0.02;
+
+        ctx.beginPath();
+        for (let angle = 0; angle <= 360; angle += 2) {
+          const rad = (angle * Math.PI) / 180;
+          const nx = Math.cos(rad) * noiseScale * ring + ox;
+          const ny = Math.sin(rad) * noiseScale * ring + oy_init + oy_offset;
+          const n = noise2d(nx, ny);
+          const r = baseR + CHAOS * n * 25;
+
+          const x = cx + Math.cos(rad) * r;
+          const y = cy + Math.sin(rad) * r;
+
+          if (angle === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+        ctx.closePath();
+
+        // Inner rings are warm amber, outer rings fade to deep orange
+        const ringT = ring / NUM_RINGS;
+        const cr = Math.floor(lerp(255, 180, ringT));
+        const cg = Math.floor(lerp(180, 80, ringT));
+        const cb = Math.floor(lerp(50, 20, ringT));
+        const alpha = 0.35 - ringT * 0.22;
+
+        ctx.strokeStyle = `rgba(${cr}, ${cg}, ${cb}, ${Math.max(alpha, 0.04)})`;
+        ctx.lineWidth = 1.2;
+        ctx.stroke();
+      }
+
+      // Glow rings radiating from trunk center
+      const numGlowRings = 5;
+      const maxGlowR = Math.max(W, H) * 0.8;
+      for (let i = 0; i < numGlowRings; i++) {
+        const baseR = ((t * 0.6 + i * (maxGlowR / numGlowRings)) % maxGlowR);
+        const ringAlpha = 0.06 * (1 - baseR / maxGlowR);
+        if (ringAlpha <= 0.005) continue;
+
+        const isGold = i % 2 === 0;
+        const color = isGold ? "255, 217, 61" : "245, 158, 11";
+
+        const grad = ctx.createRadialGradient(cx, cy, Math.max(baseR - 30, 0), cx, cy, baseR + 30);
+        grad.addColorStop(0, `rgba(${color}, 0)`);
+        grad.addColorStop(0.4, `rgba(${color}, ${ringAlpha})`);
+        grad.addColorStop(0.6, `rgba(${color}, ${ringAlpha})`);
+        grad.addColorStop(1, `rgba(${color}, 0)`);
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, W, H);
+      }
+
+      t += 1;
+      animId = requestAnimationFrame(draw);
+    };
+
+    draw();
+    return () => {
+      cancelAnimationFrame(animId);
+      window.removeEventListener("resize", resize);
+    };
+  }, []);
+
   return (
-    <main className="min-h-screen bg-black text-white font-mono relative">
+    <main className="min-h-screen bg-black text-white font-mono relative overflow-hidden">
+      {/* Animated trunk ring background */}
+      <canvas
+        ref={canvasRef}
+        className="fixed inset-0 pointer-events-none z-0"
+      />
+
+      {/* Vignette for readability */}
+      <div className="fixed inset-0 pointer-events-none z-[1]"
+        style={{
+          background: "radial-gradient(ellipse 65% 55% at 62% 25%, transparent 0%, transparent 40%, rgba(0,0,0,0.35) 75%, rgba(0,0,0,0.5) 100%)",
+        }} />
+
       {/* Top amber laser line */}
       <div
-        className="h-px w-full"
+        className="h-px w-full relative z-10"
         style={{
           background:
             "linear-gradient(to right, transparent 5%, rgba(251,191,36,0.7) 35%, rgba(245,158,11,0.7) 65%, transparent 95%)",
@@ -175,7 +310,7 @@ export default function GoblinQueuePublicView({ user, slug, entries }: Props) {
         }}
       />
 
-      <div className="max-w-2xl mx-auto px-4 py-12 sm:py-20">
+      <div className="max-w-2xl mx-auto px-4 py-12 sm:py-20 relative z-10">
         {/* Header */}
         <div className="mb-10 pb-6 px-6 pt-6 rounded-lg bg-white/[0.03] border border-amber-900/20 shadow-[0_8px_32px_rgba(0,0,0,0.6)]">
           <div className="flex items-end gap-4">
