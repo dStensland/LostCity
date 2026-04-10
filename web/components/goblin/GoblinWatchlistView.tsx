@@ -8,6 +8,7 @@ import GoblinWatchlistCard from "./GoblinWatchlistCard";
 import GoblinAddToWatchlistModal from "./GoblinAddToWatchlistModal";
 import GoblinWatchlistWatchedModal from "./GoblinWatchlistWatchedModal";
 import GoblinTagPicker from "./GoblinTagPicker";
+import SmartImage from "@/components/SmartImage";
 import type { WatchlistEntry, WatchlistTag } from "@/lib/goblin-watchlist-utils";
 
 interface Props {
@@ -27,6 +28,10 @@ export default function GoblinWatchlistView({ isAuthenticated }: Props) {
     createTag,
     deleteTag,
     searchTMDB,
+    recommendations,
+    recommendationCount,
+    addRecommendation,
+    dismissRecommendation,
   } = useGoblinWatchlist(isAuthenticated);
 
   // Log hook — needed for "Watched" flow (log tags + createTag)
@@ -38,6 +43,25 @@ export default function GoblinWatchlistView({ isAuthenticated }: Props) {
   const [activeTag, setActiveTag] = useState<string | null>(null);
   const [dragFrom, setDragFrom] = useState<number | null>(null);
   const [dragOver, setDragOver] = useState<number | null>(null);
+
+  const [copied, setCopied] = useState(false);
+  const [username, setUsername] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    fetch("/api/auth/profile")
+      .then((r) => r.ok ? r.json() : null)
+      .then((d) => { if (d?.profile?.username) setUsername(d.profile.username); })
+      .catch(() => {});
+  }, [isAuthenticated]);
+
+  const handleCopyShareLink = () => {
+    if (!username) return;
+    const url = `https://lostcity.ai/goblinday/queue/${username}`;
+    navigator.clipboard.writeText(url);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   // Edit inline modal state
   const [editNote, setEditNote] = useState("");
@@ -164,16 +188,29 @@ export default function GoblinWatchlistView({ isAuthenticated }: Props) {
               )}
             </p>
           </div>
-          <button
-            onClick={() => setAddModalOpen(true)}
-            className="px-4 py-1.5 text-white
-              font-mono text-2xs font-black tracking-[0.2em] uppercase
-              border border-amber-600 bg-amber-950/40
-              hover:bg-amber-900/40 hover:shadow-[0_0_20px_rgba(255,217,61,0.2)]
-              active:scale-95 transition-all"
-          >
-            + ADD
-          </button>
+          <div className="flex items-center gap-2">
+            {username && (
+              <button
+                onClick={handleCopyShareLink}
+                className="px-3 py-1.5 text-2xs font-mono font-bold tracking-[0.2em] uppercase
+                  border border-zinc-700 text-zinc-500
+                  hover:text-amber-300 hover:border-amber-700 hover:shadow-[0_0_12px_rgba(255,217,61,0.15)]
+                  active:scale-95 transition-all"
+              >
+                {copied ? "COPIED!" : "SHARE"}
+              </button>
+            )}
+            <button
+              onClick={() => setAddModalOpen(true)}
+              className="px-4 py-1.5 text-white
+                font-mono text-2xs font-black tracking-[0.2em] uppercase
+                border border-amber-600 bg-amber-950/40
+                hover:bg-amber-900/40 hover:shadow-[0_0_20px_rgba(255,217,61,0.2)]
+                active:scale-95 transition-all"
+            >
+              + ADD
+            </button>
+          </div>
         </div>
 
         {/* Tag filters */}
@@ -224,6 +261,64 @@ export default function GoblinWatchlistView({ isAuthenticated }: Props) {
           </div>
         )}
       </div>
+
+      {/* Recommendations */}
+      {recommendationCount > 0 && (
+        <div className="mb-8 relative z-10">
+          <div className="flex items-center gap-2 mb-4">
+            <h3 className="text-xs font-mono font-bold tracking-[0.2em] uppercase text-amber-500/80">
+              Recommendations
+            </h3>
+            <span className="px-1.5 py-0.5 text-2xs font-mono font-bold bg-amber-950/40 border border-amber-800/30 text-amber-400">
+              {recommendationCount}
+            </span>
+          </div>
+          <div className="space-y-2">
+            {recommendations.map((rec) => (
+              <div key={rec.id}
+                className="flex items-center gap-3 p-3 bg-[rgba(5,5,8,0.8)] border border-zinc-800/30
+                  border-l-2 border-l-amber-700/40">
+                <div className="w-10 h-15 flex-shrink-0 overflow-hidden bg-zinc-900">
+                  {rec.movie.poster_path && (
+                    <SmartImage
+                      src={`https://image.tmdb.org/t/p/w185${rec.movie.poster_path}`}
+                      alt={rec.movie.title} width={40} height={60} loading="lazy"
+                      className="object-cover w-full h-full" />
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold text-white uppercase tracking-wide truncate">
+                    {rec.movie.title}
+                    {rec.movie.year && <span className="text-zinc-600 font-normal ml-1.5">({rec.movie.year})</span>}
+                  </p>
+                  <p className="text-2xs text-zinc-500 font-mono mt-0.5">
+                    from <span className="text-amber-500/70">{rec.recommender_name}</span>
+                  </p>
+                  {rec.note && (
+                    <p className="text-2xs text-zinc-600 italic mt-1 line-clamp-1">
+                      &ldquo;{rec.note}&rdquo;
+                    </p>
+                  )}
+                </div>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <button
+                    onClick={() => addRecommendation(rec.id)}
+                    className="px-2 py-1 text-2xs font-mono font-bold text-emerald-500
+                      border border-emerald-800/40 hover:bg-emerald-950/30 transition-colors">
+                    + ADD
+                  </button>
+                  <button
+                    onClick={() => dismissRecommendation(rec.id)}
+                    className="px-2 py-1 text-2xs font-mono text-zinc-700
+                      hover:text-red-400 transition-colors">
+                    x
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Loading skeleton */}
       {loading ? (
