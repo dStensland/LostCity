@@ -5417,6 +5417,90 @@ body:has([data-vertical="hospital"]) .rain-overlay {
     inset 0 1px 0 rgba(255, 255, 255, 0.12);
 }
 
+/* ── Feed Section Header Variants ───────────────────────────────── */
+
+/* Variant: lineup — bold display, accent underline */
+.section-header-lineup {
+  font-family: var(--font-display), var(--font-sans), system-ui, sans-serif;
+  font-size: 2rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--cream);
+}
+
+.section-header-lineup-underline {
+  height: 3px;
+  background: linear-gradient(to right, var(--section-accent, var(--coral)) 80px, var(--twilight) 80px);
+}
+
+/* Variant: cinema — serif italic, editorial */
+.section-header-cinema {
+  font-family: var(--font-serif), Georgia, serif;
+  font-size: 1.625rem;
+  font-weight: 500;
+  font-style: italic;
+  letter-spacing: 0;
+  color: var(--section-accent, var(--vibe));
+}
+
+/* Variant: destinations — clean sans, discovery tone */
+.section-header-destinations {
+  font-family: var(--font-sans), system-ui, sans-serif;
+  font-size: 1.125rem;
+  font-weight: 600;
+  letter-spacing: 0;
+  color: var(--cream);
+}
+
+/* Variant: horizon — condensed poster, wide tracking */
+.section-header-horizon {
+  font-family: var(--font-masthead), sans-serif;
+  font-size: 2.25rem;
+  font-weight: 400;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: var(--section-accent, var(--gold));
+}
+
+/* Variant: regulars — friendly lowercase */
+.section-header-regulars {
+  font-family: var(--font-sans), system-ui, sans-serif;
+  font-size: 1.25rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: var(--cream);
+  text-transform: none;
+}
+
+/* Variant: meta — small caps mono, navigation-tier */
+.section-header-meta {
+  font-family: var(--font-mono), monospace;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--soft);
+}
+
+/* Variant: featured — display with badge prominence */
+.section-header-featured {
+  font-family: var(--font-display), var(--font-sans), system-ui, sans-serif;
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--cream);
+}
+
+/* Variant: gameday — condensed bold, sport energy */
+.section-header-gameday {
+  font-family: var(--font-masthead), sans-serif;
+  font-size: 2rem;
+  font-weight: 400;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--cream);
+}
+
 /* ============================================
    SEARCH ENTRANCE ANIMATION
    ============================================ */
