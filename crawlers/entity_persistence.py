@@ -15,6 +15,7 @@ from db import (
     insert_exhibition,
     insert_open_call,
     insert_program,
+    persist_screening_bundle,
     upsert_editorial_mention,
     upsert_volunteer_opportunity,
     upsert_place_vertical_details,
@@ -87,6 +88,7 @@ def persist_typed_entity_envelope(
         else:
             result.bump_skipped("destination_details")
 
+    feature_id_by_slug: dict[str, int] = {}
     for feature in envelope.venue_features:
         feature_record = dict(feature)
         venue_id = _resolve_venue_id(feature_record, venue_ids_by_slug)
@@ -96,6 +98,9 @@ def persist_typed_entity_envelope(
             continue
         persisted = upsert_venue_feature(venue_id, feature_record)
         if persisted:
+            slug = feature_record.get("slug") or feature_record.get("title", "")
+            if isinstance(slug, str) and slug:
+                feature_id_by_slug[slug] = int(persisted)
             result.bump_persisted("venue_features")
         else:
             result.bump_skipped("venue_features")
@@ -170,6 +175,17 @@ def persist_typed_entity_envelope(
         else:
             result.bump_skipped("programs")
 
+    for screening_bundle in envelope.screenings:
+        persisted_summary = persist_screening_bundle(dict(screening_bundle))
+        if persisted_summary.get("unsupported"):
+            result.bump_skipped("screenings")
+            result.unresolved.append("screenings")
+            continue
+        if persisted_summary.get("persisted"):
+            result.bump_persisted("screenings")
+        else:
+            result.bump_skipped("screenings")
+
     for exhibition in envelope.exhibitions:
         exhibition_record = dict(exhibition)
         venue_id = _resolve_venue_id(exhibition_record, venue_ids_by_slug)
@@ -184,6 +200,9 @@ def persist_typed_entity_envelope(
                 if isinstance(slug, str) and slug in venue_names_by_slug:
                     exhibition_record["_venue_name"] = venue_names_by_slug[slug]
                     break
+        related_feature_slug = exhibition_record.pop("related_feature_slug", None)
+        if related_feature_slug and related_feature_slug in feature_id_by_slug:
+            exhibition_record["related_feature_id"] = feature_id_by_slug[related_feature_slug]
         artists = exhibition_record.pop("artists", None)
         persisted = insert_exhibition(exhibition_record, artists=artists)
         if persisted:

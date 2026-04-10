@@ -42,6 +42,10 @@ def test_persist_typed_entity_envelope_resolves_destination_anchors(monkeypatch)
         lambda record: calls.append(("event", record["place_id"], record["title"])) or 12,
     )
     monkeypatch.setattr(
+        "entity_persistence.persist_screening_bundle",
+        lambda bundle: calls.append(("screenings", bundle["source_id"], len(bundle["times"]))) or {"persisted": 3},
+    )
+    monkeypatch.setattr(
         "entity_persistence.insert_exhibition",
         lambda record, artists=None: calls.append(("exhibition", record["place_id"], artists)) or "exh-1",
     )
@@ -120,6 +124,15 @@ def test_persist_typed_entity_envelope_resolves_destination_anchors(monkeypatch)
                 "category": "music",
             }
         ],
+        screenings=[
+            {
+                "source_id": 88,
+                "source_slug": "plaza-theatre",
+                "titles": [{"source_key": "plaza|title|sinners"}],
+                "runs": [{"source_key": "plaza|run|sinners|place:101", "title_source_key": "plaza|title|sinners"}],
+                "times": [{"source_key": "plaza|time|1", "run_source_key": "plaza|run|sinners|place:101"}],
+            }
+        ],
         exhibitions=[
             {
                 "destination_slug": "high-museum",
@@ -156,6 +169,7 @@ def test_persist_typed_entity_envelope_resolves_destination_anchors(monkeypatch)
     assert result.persisted["venue_occasions"] == 1
     assert result.persisted["programs"] == 1
     assert result.persisted["events"] == 1
+    assert result.persisted["screenings"] == 1
     assert result.persisted["exhibitions"] == 1
     assert result.persisted["open_calls"] == 1
     assert result.persisted["volunteer_opportunities"] == 1
@@ -170,6 +184,19 @@ def test_persist_typed_entity_envelope_resolves_destination_anchors(monkeypatch)
         "high-museum-volunteers",
         "Gallery Greeter",
     ) in calls
+    assert ("screenings", 88, 1) in calls
+
+
+def test_persist_typed_entity_envelope_builds_feature_id_map():
+    import inspect
+    from entity_persistence import persist_typed_entity_envelope
+    source = inspect.getsource(persist_typed_entity_envelope)
+    assert "feature_id_by_slug" in source, (
+        "persist_typed_entity_envelope must accumulate feature IDs by slug"
+    )
+    assert "related_feature_slug" in source, (
+        "persist_typed_entity_envelope must resolve related_feature_slug"
+    )
 
 
 def test_persist_typed_entity_envelope_reports_unsupported_and_unresolved_lanes(monkeypatch):
@@ -184,6 +211,7 @@ def test_persist_typed_entity_envelope_reports_unsupported_and_unresolved_lanes(
     monkeypatch.setattr("entity_persistence.upsert_place_occasion", lambda venue_id, details: None)
     monkeypatch.setattr("entity_persistence.upsert_place_vertical_details", lambda venue_id, details: None)
     monkeypatch.setattr("entity_persistence.upsert_volunteer_opportunity", lambda record: None)
+    monkeypatch.setattr("entity_persistence.persist_screening_bundle", lambda bundle: {"unsupported": True})
 
     envelope = TypedEntityEnvelope(
         destination_details=[{"destination_slug": "missing"}],
@@ -191,6 +219,7 @@ def test_persist_typed_entity_envelope_reports_unsupported_and_unresolved_lanes(
         editorial_mentions=[{"article_url": "https://example.com/guide"}],
         venue_occasions=[{"occasion": "date_night"}],
         volunteer_opportunities=[{"title": "Volunteer Day"}],
+        screenings=[{"source_id": 88, "source_slug": "plaza-theatre", "titles": [], "runs": [], "times": []}],
     )
 
     result = persist_typed_entity_envelope(envelope)
@@ -200,8 +229,10 @@ def test_persist_typed_entity_envelope_reports_unsupported_and_unresolved_lanes(
     assert result.skipped["editorial_mentions"] == 1
     assert result.skipped["venue_occasions"] == 1
     assert result.skipped["volunteer_opportunities"] == 1
+    assert result.skipped["screenings"] == 1
     assert "destination_details" in result.unresolved
     assert "venue_specials" in result.unresolved
     assert "editorial_mentions" in result.unresolved
     assert "venue_occasions" in result.unresolved
     assert "volunteer_opportunities" in result.unresolved
+    assert "screenings" in result.unresolved
