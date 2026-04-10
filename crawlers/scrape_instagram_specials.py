@@ -509,18 +509,28 @@ def upsert_specials(
             "place_id", venue_id
         ).like("source_url", "%instagram.com%").execute()
 
+    valid_types = {"happy_hour", "daily_special", "recurring_deal", "event_night", "brunch"}
+
     count = 0
     for special in specials:
         days = parse_days(special.get("days") or []) or None
+        # Normalize empty strings to None for nullable DB columns
+        time_start = special.get("time_start") or None
+        time_end = special.get("time_end") or None
+        description = special.get("description") or None
+        price_note = special.get("price_note") or None
+        special_type = special.get("type", "daily_special")
+        if special_type not in valid_types:
+            special_type = "daily_special"
         row = {
             "place_id": venue_id,
             "title": special.get("title", "Special"),
-            "type": special.get("type", "daily_special"),
-            "description": special.get("description"),
+            "type": special_type,
+            "description": description,
             "days_of_week": days,
-            "time_start": special.get("time_start"),
-            "time_end": special.get("time_end"),
-            "price_note": special.get("price_note"),
+            "time_start": time_start,
+            "time_end": time_end,
+            "price_note": price_note,
             "confidence": "low",
             "source_url": source_url,
             "last_verified_at": now,
