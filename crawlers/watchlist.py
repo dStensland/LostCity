@@ -24,7 +24,7 @@ FLAGSHIP_SOURCES: list[dict] = [
     {"slug": "7-stages", "name": "7 Stages", "category": "theater", "min_events_30d": 3},
     {"slug": "theatrical-outfit", "name": "Theatrical Outfit", "category": "theater", "min_events_30d": 5},
     {"slug": "horizon-theatre", "name": "Horizon Theatre", "category": "theater", "min_events_30d": 3},
-    {"slug": "center-for-puppetry-arts", "name": "Center for Puppetry Arts", "category": "theater", "min_events_30d": 5},
+    {"slug": "puppetry-arts", "name": "Center for Puppetry Arts", "category": "theater", "min_events_30d": 5},
     # Music
     {"slug": "terminal-west", "name": "Terminal West", "category": "music", "min_events_30d": 10},
     {"slug": "variety-playhouse", "name": "Variety Playhouse", "category": "music", "min_events_30d": 10},
@@ -38,19 +38,22 @@ FLAGSHIP_SOURCES: list[dict] = [
     {"slug": "buckhead-theatre", "name": "Buckhead Theatre", "category": "music", "min_events_30d": 5},
     {"slug": "fox-theatre", "name": "Fox Theatre", "category": "music", "min_events_30d": 3},
     {"slug": "coca-cola-roxy", "name": "Coca-Cola Roxy", "category": "music", "min_events_30d": 5},
+    {"slug": "smiths-olde-bar", "name": "Smith's Olde Bar", "category": "music", "min_events_30d": 5},
+    {"slug": "northside-tavern", "name": "Northside Tavern", "category": "music", "min_events_30d": 8},
+    {"slug": "reformation-brewery", "name": "Reformation Brewery", "category": "food_drink", "min_events_30d": 20},
     # Film
     {"slug": "plaza-theatre", "name": "Plaza Theatre", "category": "film", "min_events_30d": 3},
     {"slug": "tara-theatre", "name": "Tara Theatre", "category": "film", "min_events_30d": 3},
     {"slug": "starlight-drive-in", "name": "Starlight Drive-In", "category": "film", "min_events_30d": 3},
     {"slug": "landmark-midtown", "name": "Landmark Midtown Art Cinema", "category": "film", "min_events_30d": 3},
     # Arts
-    {"slug": "high-museum-of-art", "name": "High Museum of Art", "category": "arts", "min_events_30d": 5},
+    {"slug": "high-museum", "name": "High Museum of Art", "category": "arts", "min_events_30d": 5},
     {"slug": "atlanta-contemporary", "name": "Atlanta Contemporary", "category": "arts", "min_events_30d": 3},
     {"slug": "atlanta-botanical-garden", "name": "Atlanta Botanical Garden", "category": "arts", "min_events_30d": 5},
     # Family
     {"slug": "georgia-aquarium", "name": "Georgia Aquarium", "category": "family", "min_events_30d": 3},
-    {"slug": "fernbank-museum", "name": "Fernbank Museum", "category": "family", "min_events_30d": 3},
-    {"slug": "childrens-museum-of-atlanta", "name": "Children's Museum of Atlanta", "category": "family", "min_events_30d": 3},
+    {"slug": "fernbank", "name": "Fernbank Museum", "category": "family", "min_events_30d": 3},
+    {"slug": "childrens-museum", "name": "Children's Museum of Atlanta", "category": "family", "min_events_30d": 3},
     # Sports
     {"slug": "truist-park", "name": "Truist Park", "category": "sports", "min_events_30d": 5},
     {"slug": "state-farm-arena", "name": "State Farm Arena", "category": "sports", "min_events_30d": 3},

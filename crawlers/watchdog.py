@@ -103,12 +103,15 @@ def _get_source_run_history() -> list[dict]:
         active_months: list[int] = source.get("active_months") or []
 
         # Fetch last 10 successful crawl_log entries for this source.
+        source_id = source.get("id")
+        if not source_id:
+            continue
         logs_resp = (
             client.table("crawl_logs")
             .select("events_found")
-            .eq("source_slug", slug)
+            .eq("source_id", source_id)
             .eq("status", "success")
-            .order("created_at", desc=True)
+            .order("started_at", desc=True)
             .limit(10)
             .execute()
         )
