@@ -69,6 +69,12 @@ const FEATURE_HEAVY_TYPES = new Set([
   "historic_site",
   "museum",
   "gallery",
+  "aquarium",
+  "zoo",
+  "garden",
+  "attraction",
+  "theme_park",
+  "science_center",
 ]);
 
 export function isEventHeavyType(

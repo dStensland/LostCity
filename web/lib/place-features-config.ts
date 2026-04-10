@@ -28,6 +28,12 @@ export const FEATURE_SECTION_CONFIG: Record<string, FeatureSectionConfig> = {
   cinema: { title: "Now Playing", Icon: FilmSlate, color: "#FBBF24" },
   theater: { title: "Now Playing", Icon: FilmSlate, color: "#FBBF24" },
   historic_site: { title: "Points of Interest", Icon: Compass, color: "#38BDF8" },
+  aquarium: { title: "Exhibits & Habitats", Icon: Compass, color: "#38BDF8" },
+  zoo: { title: "Animal Habitats", Icon: TreePalm, color: "#4ADE80" },
+  garden: { title: "Gardens & Grounds", Icon: TreePalm, color: "#86EFAC" },
+  attraction: { title: "What's Here", Icon: Star, color: "#FB923C" },
+  theme_park: { title: "Rides & Attractions", Icon: Star, color: "#FB923C" },
+  science_center: { title: "Exhibits & Experiences", Icon: Compass, color: "#38BDF8" },
 };
 
 const DEFAULT_CONFIG: FeatureSectionConfig = {
