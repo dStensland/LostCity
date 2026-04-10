@@ -59,3 +59,10 @@ from db.exhibitions import find_exhibition_by_title_venue
 def test_find_exhibition_by_title_venue_exists():
     """find_exhibition_by_title_venue should be importable and callable."""
     assert callable(find_exhibition_by_title_venue)
+
+
+def test_junk_title_regex_catches_view_fullsize_variations():
+    from db.exhibitions import _JUNK_TITLE_RE
+    junk = ["View Fullsize", "view fullsize", "VIEW FULLSIZE", "View  fullsize"]
+    for title in junk:
+        assert _JUNK_TITLE_RE.match(title.strip()), f"Should catch {title!r}"

@@ -15,6 +15,7 @@ from typing import Optional
 from playwright.sync_api import sync_playwright
 
 from db import get_or_create_place
+from db.exhibitions import _JUNK_TITLE_RE
 from entity_lanes import TypedEntityEnvelope
 from entity_persistence import persist_typed_entity_envelope
 from exhibition_utils import build_exhibition_record
@@ -129,6 +130,12 @@ def crawl(source: dict) -> tuple[int, int, int]:
                                         break
 
                     if not title:
+                        i += 1
+                        continue
+
+                    if _JUNK_TITLE_RE.match(title.strip()):
+                        logger.debug("Skipping junk title: %s", title)
+                        title = None
                         i += 1
                         continue
 
