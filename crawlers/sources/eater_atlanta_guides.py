@@ -32,7 +32,7 @@ from db.client import retry_on_network_error, writes_enabled
 
 logger = logging.getLogger(__name__)
 
-SOURCE_KEY = "eater-atlanta"
+SOURCE_KEY = "eater_atlanta"
 
 BASE_URL = "https://atlanta.eater.com"
 
@@ -51,47 +51,55 @@ GUIDE_URLS: list[dict] = [
     },
     {
         "url": f"{BASE_URL}/maps/best-restaurants-castleberry-hill-vine-city",
-        "mention_type": "guide",
+        "mention_type": "guide_inclusion",
         "guide_name": "Best Places to Eat Around Mercedes-Benz Stadium",
     },
     {
         "url": f"{BASE_URL}/maps/best-atlanta-rooftop-patios",
-        "mention_type": "guide",
+        "mention_type": "guide_inclusion",
         "guide_name": "Best Rooftop Bars and Restaurants in Atlanta",
     },
     {
         "url": f"{BASE_URL}/maps/best-restaurants-bars-midtown-atlanta",
-        "mention_type": "guide",
+        "mention_type": "guide_inclusion",
         "guide_name": "Best Restaurants in Midtown Atlanta",
     },
     {
         "url": f"{BASE_URL}/maps/best-pizza-atlanta",
-        "mention_type": "guide",
+        "mention_type": "guide_inclusion",
         "guide_name": "Best Pizza in Atlanta",
     },
     {
         "url": f"{BASE_URL}/maps/best-restaurants-buford-highway-atlanta",
-        "mention_type": "guide",
+        "mention_type": "guide_inclusion",
         "guide_name": "Best Buford Highway Restaurants",
     },
     {
         "url": f"{BASE_URL}/maps/best-coffee-shops-atlanta-map",
-        "mention_type": "guide",
+        "mention_type": "guide_inclusion",
         "guide_name": "Best Coffee Shops in Atlanta",
     },
     {
         "url": f"{BASE_URL}/maps/best-omakase-restaurants-atlanta",
-        "mention_type": "guide",
+        "mention_type": "guide_inclusion",
         "guide_name": "Best Omakase Restaurants in Atlanta",
     },
     {
         "url": f"{BASE_URL}/maps/best-kosher-restaurants-markets-atlanta",
-        "mention_type": "guide",
+        "mention_type": "guide_inclusion",
         "guide_name": "Best Kosher Restaurants in Atlanta",
     },
 ]
 
 _WHITESPACE_RE = re.compile(r"\s+")
+
+# Eater appends kosher prep-type notes as parenthetical suffixes to venue names
+# (e.g. "Fuego Mundo (meat)", "Formaggio Mio (dairy)"). Strip these before
+# DB lookup so we can find the cleaned place record we seeded.
+_KOSHER_SUFFIX_RE = re.compile(
+    r"\s*\([^)]*\b(meat|dairy)\b[^)]*\)\s*$",
+    re.IGNORECASE,
+)
 
 
 def _clean_text(value: str) -> str:
@@ -112,7 +120,7 @@ def _build_snippet(description_blocks: list[dict]) -> str:
         if len(text) <= 60 and text.startswith(("Open for:", "Price range:", "Best for:")):
             continue
         parts.append(text)
-    return " ".join(parts)[:2000]
+    return " ".join(parts)[:500]
 
 
 def _fetch_map_layout(url: str, session: requests.Session) -> Optional[dict]:
@@ -156,35 +164,119 @@ def _lookup_place_by_name(client, name: str) -> Optional[int]:
     Look up a place by exact name match, then case-insensitive partial match.
     Returns place_id or None if not found.
     Never creates a new place — editorial signal only enriches existing records.
-    """
-    # 1. Exact name match (most reliable)
-    result = (
-        client.table("places")
-        .select("id")
-        .eq("name", name)
-        .limit(1)
-        .execute()
-    )
-    if result.data:
-        return result.data[0]["id"]
 
-    # 2. Case-insensitive exact match (handles capitalisation differences)
+    Also tries a cleaned version of the name with kosher prep-type suffixes
+    stripped (e.g. "Fuego Mundo (meat)" -> "Fuego Mundo") to match place
+    records seeded with the cleaned name.
+    """
+    names_to_try = [name]
+    cleaned = _KOSHER_SUFFIX_RE.sub("", name).strip()
+    if cleaned != name:
+        names_to_try.append(cleaned)
+
+    for candidate in names_to_try:
+        # 1. Exact name match (most reliable)
+        result = (
+            client.table("places")
+            .select("id")
+            .eq("name", candidate)
+            .limit(1)
+            .execute()
+        )
+        if result.data:
+            return result.data[0]["id"]
+
+        # 2. Case-insensitive exact match (handles capitalisation differences)
+        result = (
+            client.table("places")
+            .select("id, name")
+            .ilike("name", candidate)
+            .eq("city", "Atlanta")
+            .limit(1)
+            .execute()
+        )
+        if result.data:
+            logger.debug(
+                "ilike name match: '%s' -> '%s' (id=%s)",
+                candidate,
+                result.data[0]["name"],
+                result.data[0]["id"],
+            )
+            return result.data[0]["id"]
+
+        # 3. Slug-based match — handles names with non-ASCII characters
+        # (e.g. "LanZhou Ramen 兰州拉面" -> slug "lanzhou-ramen")
+        slug = re.sub(r"[^a-z0-9]+", "-", candidate.lower()).strip("-")[:80]
+        if slug:
+            result = (
+                client.table("places")
+                .select("id, name")
+                .eq("slug", slug)
+                .limit(1)
+                .execute()
+            )
+            if result.data:
+                logger.debug(
+                    "slug match: '%s' -> '%s' (id=%s)",
+                    candidate,
+                    result.data[0]["name"],
+                    result.data[0]["id"],
+                )
+                return result.data[0]["id"]
+
+    return None
+
+
+@retry_on_network_error(max_retries=3, base_delay=1.0)
+def _lookup_place_by_coords(
+    client, lat: float, lng: float, radius_deg: float = 0.001
+) -> Optional[int]:
+    """
+    Look up a place by proximity when name lookup fails.
+
+    radius_deg ≈ 0.001 degrees ≈ 111 metres — tight enough to avoid false
+    matches in dense areas.
+    """
     result = (
         client.table("places")
         .select("id, name")
-        .ilike("name", name)
-        .eq("city", "Atlanta")
+        .gte("lat", lat - radius_deg)
+        .lte("lat", lat + radius_deg)
+        .gte("lng", lng - radius_deg)
+        .lte("lng", lng + radius_deg)
         .limit(1)
         .execute()
     )
     if result.data:
         logger.debug(
-            "ilike name match: '%s' -> '%s' (id=%s)",
-            name,
+            "coord match at (%.6f, %.6f) -> '%s' (id=%s)",
+            lat,
+            lng,
             result.data[0]["name"],
             result.data[0]["id"],
         )
         return result.data[0]["id"]
+    return None
+
+
+def _lookup_place(
+    client,
+    name: str,
+    lat: Optional[float] = None,
+    lng: Optional[float] = None,
+) -> Optional[int]:
+    """
+    Find a matching place by name (with kosher-suffix stripping), then by
+    coordinates if name lookup fails and coordinates are available.
+    """
+    place_id = _lookup_place_by_name(client, name)
+    if place_id:
+        return place_id
+
+    if lat is not None and lng is not None:
+        place_id = _lookup_place_by_coords(client, lat, lng)
+        if place_id:
+            return place_id
 
     return None
 
@@ -252,8 +344,12 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             mentions_found += 1
 
-            # Look up existing place — skip if not in our DB
-            place_id = _lookup_place_by_name(client, name)
+            # Look up existing place — try by name, fall back to coordinates
+            loc = point.get("location") or {}
+            lat = loc.get("latitude")
+            lng = loc.get("longitude")
+
+            place_id = _lookup_place(client, name, lat=lat, lng=lng)
             if not place_id:
                 logger.debug("No place match for '%s' — skipping", name)
                 mentions_skipped += 1
