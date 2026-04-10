@@ -20,6 +20,15 @@ import type { ExhibitionWithVenue } from "@/lib/exhibitions-utils";
 import { Ticket } from "@phosphor-icons/react/dist/ssr";
 import { resolveDetailPageRequest } from "../../_surfaces/detail/resolve-detail-page-request";
 
+const ART_EXHIBITION_TYPES = new Set([
+  "solo",
+  "group",
+  "installation",
+  "retrospective",
+  "popup",
+  "permanent",
+]);
+
 export const revalidate = 120;
 
 type Props = {
@@ -167,20 +176,32 @@ export default async function ExhibitionDetailPage({ params }: Props) {
   const activePortalSlug = request?.portal.slug || portalSlug;
   const accentColor = "var(--action-primary)";
 
+  const isArtExhibition = ART_EXHIBITION_TYPES.has(exhibition.exhibition_type ?? "");
+
   const artists = exhibition.artists ?? [];
   const venue = exhibition.venue ?? null;
   const dateRange = formatDateRange(exhibition.opening_date, exhibition.closing_date);
-  const closingSoon = isClosingSoon(exhibition, 7);
+
+  // Closing-soon threshold varies by type:
+  //   seasonal → 14 days, attraction → 7 days, art types + special-exhibit → 30 days
+  const closingSoonThreshold =
+    exhibition.exhibition_type === "seasonal"
+      ? 14
+      : exhibition.exhibition_type === "attraction"
+      ? 7
+      : 30;
+
+  const closingSoon = isClosingSoon(exhibition, closingSoonThreshold);
   const currentlyShowing = isCurrentlyShowing(exhibition);
 
   // Curators — find artists with role = "curator"
   const curators = artists.filter((a) => a.role === "curator");
 
-  // Closing countdown (30-day window)
+  // Closing countdown — threshold matches closingSoonThreshold
   const daysLeft = exhibition.closing_date
     ? getDaysUntil(exhibition.closing_date)
     : null;
-  const showCountdown = daysLeft !== null && daysLeft > 0 && daysLeft <= 30;
+  const showCountdown = daysLeft !== null && daysLeft > 0 && daysLeft <= closingSoonThreshold;
 
   const typeLabel = exhibition.exhibition_type
     ? EXHIBITION_TYPE_LABELS[exhibition.exhibition_type]
@@ -190,7 +211,7 @@ export default async function ExhibitionDetailPage({ params }: Props) {
     ? ADMISSION_TYPE_LABELS[exhibition.admission_type]
     : null;
 
-  // Metadata grid items
+  // Metadata grid items — medium only for art exhibitions
   const metadataItems = [
     ...(typeLabel ? [{ label: "Type", value: typeLabel }] : []),
     ...(currentlyShowing
@@ -214,7 +235,7 @@ export default async function ExhibitionDetailPage({ params }: Props) {
           },
         ]
       : []),
-    ...(exhibition.medium
+    ...(isArtExhibition && exhibition.medium
       ? [{ label: "Medium", value: exhibition.medium }]
       : []),
   ];
@@ -250,19 +271,25 @@ export default async function ExhibitionDetailPage({ params }: Props) {
             }
           />
 
-          {/* Title block (arts-specific) — shown above InfoCard */}
-          {/* Underground Gallery uses Playfair Display italic for exhibition titles */}
+          {/* Title block — shown above InfoCard */}
           <div className="space-y-1">
             <p className="font-[family-name:var(--font-ibm-plex-mono)] text-xs uppercase tracking-[0.14em] text-[var(--action-primary)]">
-              {"// exhibition"}
-              {typeLabel && ` · ${typeLabel.toLowerCase()}`}
+              {isArtExhibition
+                ? `// exhibition${typeLabel ? ` · ${typeLabel.toLowerCase()}` : ""}`
+                : (typeLabel ?? "")}
             </p>
-            <h1 className="font-[family-name:var(--font-playfair-display)] italic text-2xl sm:text-3xl text-[var(--cream)] leading-snug">
+            <h1
+              className={
+                isArtExhibition
+                  ? "font-[family-name:var(--font-playfair-display)] italic text-2xl sm:text-3xl text-[var(--cream)] leading-snug"
+                  : "font-semibold text-2xl sm:text-3xl text-[var(--cream)] leading-snug"
+              }
+            >
               {exhibition.title}
             </h1>
 
-            {/* Curator credit — copper, below title, before artist list */}
-            {curators.length > 0 && (
+            {/* Curator credit — art exhibitions only */}
+            {isArtExhibition && curators.length > 0 && (
               <p className="font-[family-name:var(--font-ibm-plex-mono)] text-sm font-semibold text-[#C9874F] mt-0.5">
                 Curated by{" "}
                 {curators.map((curator, i) => (
@@ -283,8 +310,8 @@ export default async function ExhibitionDetailPage({ params }: Props) {
               </p>
             )}
 
-            {/* Artists (non-curators) */}
-            {artists.length > 0 && (
+            {/* Artists (non-curators) — art exhibitions only */}
+            {isArtExhibition && artists.length > 0 && (
               <div className="flex flex-wrap gap-x-3 gap-y-1 pt-1">
                 {artists.map((artist, i) => (
                   <span key={i} className="inline-flex items-center gap-1.5">
@@ -344,8 +371,8 @@ export default async function ExhibitionDetailPage({ params }: Props) {
               </>
             )}
 
-            {/* Details grid — admission + medium info cards */}
-            {(admissionLabel || exhibition.medium) && (
+            {/* Details grid — admission + medium info cards (medium: art only) */}
+            {(admissionLabel || (isArtExhibition && exhibition.medium)) && (
               <div className="flex gap-3 mb-6">
                 {admissionLabel && (
                   <div className="flex-1 rounded-lg bg-[var(--dusk)] p-3.5">
@@ -363,7 +390,7 @@ export default async function ExhibitionDetailPage({ params }: Props) {
                     </p>
                   </div>
                 )}
-                {exhibition.medium && (
+                {isArtExhibition && exhibition.medium && (
                   <div className="flex-1 rounded-lg bg-[var(--dusk)] p-3.5">
                     <p className="font-[family-name:var(--font-ibm-plex-mono)] text-2xs uppercase tracking-[0.12em] text-[var(--muted)] mb-1">
                       Medium
@@ -502,7 +529,7 @@ export default async function ExhibitionDetailPage({ params }: Props) {
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-2 font-[family-name:var(--font-ibm-plex-mono)] text-sm text-[var(--action-primary)] hover:underline"
                 >
-                  View on gallery website
+                  {isArtExhibition ? "View on gallery website" : "Visit website"}
                   <svg
                     className="w-3.5 h-3.5"
                     fill="none"
