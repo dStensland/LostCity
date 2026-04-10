@@ -88,6 +88,10 @@ const PlacesToGoSection = dynamic<{ portalSlug: string }>(
   () => import("./sections/PlacesToGoSection").then((m) => ({ default: m.PlacesToGoSection })),
   { ssr: false },
 );
+const WhatsOnNowSection = dynamic<{ portalSlug: string; title: string; exhibitionTypes?: string[] }>(
+  () => import("./sections/WhatsOnNowSection").then((m) => ({ default: m.WhatsOnNowSection })),
+  { ssr: false },
+);
 
 /** Section types that LineupSection absorbs */
 const TIMELINE_SECTION_TYPES = new Set<CityPulseSectionType>([
@@ -433,6 +437,28 @@ export default function CityPulseShell({ portalSlug, serverHeroUrl, serverFeedDa
             <div className="pt-6">
               <LazySection minHeight={300}>
                 <VenuesSection portalSlug={portalSlug} />
+              </LazySection>
+            </div>
+          </div>
+        );
+
+      case "exhibitions":
+        return (
+          <div
+            key="city-pulse-exhibitions"
+            id="city-pulse-exhibitions"
+            data-feed-anchor="true"
+            data-index-label="What's On"
+            data-block-id="exhibitions"
+            className="mt-8 scroll-mt-28"
+          >
+            <div className="h-px bg-[var(--twilight)]" />
+            <div className="pt-6">
+              <LazySection minHeight={200}>
+                <WhatsOnNowSection
+                  portalSlug={portalSlug}
+                  title="What's On Now"
+                />
               </LazySection>
             </div>
           </div>
