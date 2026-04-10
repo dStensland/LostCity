@@ -38,6 +38,8 @@ from utils import validate_url
 
 logger = logging.getLogger(__name__)
 
+_VALID_FEATURE_TYPES = {"attraction", "exhibition", "collection", "experience", "amenity"}
+
 # ===== VIRTUAL VENUE =====
 
 VIRTUAL_VENUE_SLUG = "online-virtual"
@@ -656,15 +658,15 @@ def get_or_create_place(venue_data: dict) -> Optional[int]:
         return result.data[0]["id"]
 
     def _touch_verified_at(venue_id: int) -> None:
-        """Update verified_at timestamp — piggybacks on crawler lookups."""
+        """Update last_verified_at timestamp — piggybacks on crawler lookups."""
         if not writes_enabled():
             return
         try:
             client.table("places").update(
-                {"verified_at": datetime.now(timezone.utc).isoformat()}
+                {"last_verified_at": datetime.now(timezone.utc).isoformat()}
             ).eq(
                 "id", venue_id
-            ).execute()  # verified_at column unchanged
+            ).execute()
         except Exception:
             pass  # Non-critical — don't fail the crawl
 
@@ -1018,11 +1020,20 @@ def upsert_venue_feature(venue_id: int, feature_data: dict) -> Optional[int]:
         logger.warning("upsert_venue_feature: empty slug from title '%s'", title)
         return None
 
+    feature_type = feature_data.get("feature_type", "attraction")
+    if feature_type not in _VALID_FEATURE_TYPES:
+        logger.warning(
+            "upsert_venue_feature: unknown feature_type '%s' for '%s', defaulting to 'attraction'",
+            feature_type,
+            title,
+        )
+        feature_type = "attraction"
+
     row = {
         "place_id": venue_id,
         "slug": slug,
         "title": title,
-        "feature_type": feature_data.get("feature_type", "attraction"),
+        "feature_type": feature_type,
         "description": feature_data.get("description"),
         "image_url": feature_data.get("image_url"),
         "url": feature_data.get("url"),
