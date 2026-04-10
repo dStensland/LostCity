@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import {
   type PlaceFeature,
   type FeatureType,
@@ -11,6 +12,8 @@ import ScopedStyles from "@/components/ScopedStyles";
 import { createCssVarClass } from "@/lib/css-utils";
 import Badge from "@/components/ui/Badge";
 import Image from "@/components/SmartImage";
+
+const MAX_VISIBLE_FEATURES = 4;
 
 type PlaceFeaturesSectionProps = {
   features: PlaceFeature[];
@@ -223,12 +226,17 @@ export default function PlaceFeaturesSection({
   const allSameType = sorted.length > 1 && sorted.every(f => f.feature_type === sorted[0].feature_type);
   const hasImages = sorted.some(f => f.image_url);
 
+  const [expanded, setExpanded] = useState(false);
+  const needsCap = sorted.length > MAX_VISIBLE_FEATURES;
+  const visible = needsCap && !expanded ? sorted.slice(0, MAX_VISIBLE_FEATURES) : sorted;
+  const hiddenCount = sorted.length - MAX_VISIBLE_FEATURES;
+
   return (
     <div className="mt-6">
       <ScopedStyles css={colorClass?.css} />
       <SectionHeader title={config.title} count={features.length} />
       <div className={`${hasImages ? "grid grid-cols-1 sm:grid-cols-2 gap-3" : "space-y-3"}`}>
-        {sorted.map((feature) => {
+        {visible.map((feature) => {
           const seasonalLabel = feature.is_seasonal
             ? formatSeasonalRange(feature.start_date, feature.end_date)
             : null;
@@ -254,6 +262,14 @@ export default function PlaceFeaturesSection({
           );
         })}
       </div>
+      {needsCap && !expanded && (
+        <button
+          onClick={() => setExpanded(true)}
+          className="mt-3 w-full py-2.5 rounded-lg border border-[var(--twilight)]/60 bg-[var(--night)] text-sm font-mono text-[var(--feature-accent)] hover:bg-[var(--dusk)] transition-colors"
+        >
+          Show all {sorted.length} features
+        </button>
+      )}
     </div>
   );
 }
