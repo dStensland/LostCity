@@ -197,15 +197,21 @@ def crawl(source: dict) -> tuple[int, int, int]:
                                 description = desc[:500]
                                 break
 
-                    # Get image
+                    # Get image — prefer og:image (most reliable for WP show pages)
                     image_url = None
-                    for selector in [".show-image img", ".event-image img", "article img", ".featured-image img"]:
-                        el = page.query_selector(selector)
-                        if el:
-                            src = el.get_attribute("src") or el.get_attribute("data-src")
-                            if src and "logo" not in src.lower():
-                                image_url = src if src.startswith("http") else BASE_URL + src
-                                break
+                    og_img = page.query_selector('meta[property="og:image"]')
+                    if og_img:
+                        og_src = og_img.get_attribute("content")
+                        if og_src and "logo" not in og_src.lower():
+                            image_url = og_src
+                    if not image_url:
+                        for selector in [".show-image img", ".event-image img", "article img", ".featured-image img"]:
+                            el = page.query_selector(selector)
+                            if el:
+                                src = el.get_attribute("src") or el.get_attribute("data-src")
+                                if src and "logo" not in src.lower():
+                                    image_url = src if src.startswith("http") else BASE_URL + src
+                                    break
 
                     events_found += 1
 

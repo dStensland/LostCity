@@ -16,6 +16,7 @@ ENTITY_LANE_NAMES = (
     "destination_details",
     "events",
     "programs",
+    "screenings",
     "exhibitions",
     "open_calls",
     "volunteer_opportunities",
@@ -42,6 +43,7 @@ class SourceEntityCapabilities:
     destination_details: bool = False
     events: bool = False
     programs: bool = False
+    screenings: bool = False
     exhibitions: bool = False
     open_calls: bool = False
     volunteer_opportunities: bool = False
@@ -69,6 +71,7 @@ class TypedEntityEnvelope:
     destination_details: list[EntityRecord] = field(default_factory=list)
     events: list[EntityRecord] = field(default_factory=list)
     programs: list[EntityRecord] = field(default_factory=list)
+    screenings: list[EntityRecord] = field(default_factory=list)
     exhibitions: list[EntityRecord] = field(default_factory=list)
     open_calls: list[EntityRecord] = field(default_factory=list)
     volunteer_opportunities: list[EntityRecord] = field(default_factory=list)

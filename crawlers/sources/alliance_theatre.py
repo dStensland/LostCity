@@ -337,8 +337,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     in_past = True
                     i += 1
                     continue
-                elif "SPECIAL EVENTS" in line or "GO BEYOND" in line:
-                    # Stop processing when we hit special events or footer
+                elif "COMING UP NEXT SEASON" in line or "SPECIAL EVENTS" in line or "GO BEYOND" in line:
+                    # Stop processing when we hit next season, special events, or footer
                     break
 
                 # Skip if in past section or not in a valid section

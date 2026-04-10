@@ -12,6 +12,8 @@ import re
 from datetime import datetime
 from typing import Any, Optional
 
+from posters import extract_film_info, fetch_film_metadata
+
 from db.client import (
     _log_write_skip,
     get_client,
@@ -53,6 +55,7 @@ _RUN_COLUMNS = {
     "info_url",
     "is_special_event",
     "metadata",
+    "screen_name",
 }
 
 _TIME_COLUMNS = {
@@ -150,6 +153,7 @@ def entries_to_event_like_rows(
             "runtime_minutes": entry.get("runtime_minutes"),
             "year": entry.get("year"),
             "rating": entry.get("rating"),
+            "screen_name": entry.get("screen_name"),
         })
     return rows
 
@@ -177,7 +181,9 @@ def build_screening_bundle_from_event_rows(
         title_key = _normalize_title_key(canonical_title) or _slugify(canonical_title)
         title_source_key = f"{source_slug}|title|{title_key}"
         run_scope = f"place:{event.get('place_id')}" if event.get("place_id") else f"festival:{event.get('festival_id') or 'unknown'}"
-        run_source_key = f"{source_slug}|run|{title_key}|{run_scope}"
+        screen_name = event.get("screen_name")
+        screen_suffix = f"|screen:{screen_name}" if screen_name else ""
+        run_source_key = f"{source_slug}|run|{title_key}|{run_scope}{screen_suffix}"
 
         title_row = titles_by_key.get(title_source_key)
         if not title_row:
@@ -217,6 +223,7 @@ def build_screening_bundle_from_event_rows(
                 "info_url": event.get("source_url"),
                 "is_special_event": is_special_event,
                 "metadata": {"source_slug": source_slug},
+                "screen_name": screen_name,
             }
             runs_by_key[run_source_key] = run_row
         else:
@@ -338,6 +345,39 @@ def _select_event_rows_for_screenings(source_id: int) -> list[dict[str, Any]]:
     return result.data or []
 
 
+def _enrich_title_from_omdb(row: dict[str, Any]) -> dict[str, Any]:
+    """Enrich a screening title row with OMDB metadata if fields are missing."""
+    if row.get("director") and row.get("runtime_minutes") and row.get("year"):
+        return row
+    canonical_title = row.get("canonical_title") or ""
+    if not canonical_title:
+        return row
+    try:
+        film_title, year_str = extract_film_info(canonical_title)
+        if not film_title:
+            film_title = canonical_title
+        metadata = fetch_film_metadata(film_title, year_str)
+        if metadata:
+            if not row.get("director") and metadata.director:
+                row["director"] = metadata.director
+            if not row.get("runtime_minutes") and metadata.runtime_minutes:
+                row["runtime_minutes"] = metadata.runtime_minutes
+            if not row.get("year") and metadata.year:
+                row["year"] = metadata.year
+            if not row.get("rating") and metadata.rating:
+                row["rating"] = metadata.rating
+            if not row.get("genres") and metadata.genres:
+                row["genres"] = metadata.genres
+            if not row.get("poster_image_url") and metadata.poster_url:
+                row["poster_image_url"] = metadata.poster_url
+            if not row.get("synopsis") and metadata.plot:
+                row["synopsis"] = metadata.plot
+            logger.info("OMDB enriched: %s (dir=%s, year=%s)", canonical_title, metadata.director, metadata.year)
+    except Exception as exc:
+        logger.debug("OMDB enrichment failed for %s: %s", canonical_title, exc)
+    return row
+
+
 def upsert_screening_title(record: dict[str, Any]) -> Optional[str]:
     if not screenings_support_tables():
         return None
@@ -346,6 +386,8 @@ def upsert_screening_title(record: dict[str, Any]) -> Optional[str]:
     if not row.get("source_key"):
         logger.warning("upsert_screening_title: missing source_key")
         return None
+
+    row = _enrich_title_from_omdb(row)
 
     if not writes_enabled():
         _log_write_skip(f"upsert screening_titles source_key={row['source_key']}")

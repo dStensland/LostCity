@@ -395,8 +395,10 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     if range_end:
                         event_record["end_date"] = range_end
 
-                    # Detect exhibits: route to exhibitions lane instead of events
-                    exhibit_keywords = ["exhibit", "exhibition", "on view", "collection", "installation"]
+                    # Detect exhibits: route to exhibitions lane instead of events.
+                    # Note: "collection" is intentionally excluded — Fernbank is a natural
+                    # history museum where "animal collection" is common program language.
+                    exhibit_keywords = ["exhibit", "exhibition", "on view", "installation"]
                     combined_text = f"{title} {description or ''}".lower()
                     if any(kw in combined_text for kw in exhibit_keywords):
                         ex_record, ex_artists = build_exhibition_record(

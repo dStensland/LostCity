@@ -194,6 +194,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         total_found += 1
                         ticket_url = f"{BASE_URL}{movie_url}" if movie_url else None
                         event_url = ticket_url or EVENTS_URL
+                        screen_id = movie.get("screen_id")
 
                         all_entries.append({
                             "title": title,
@@ -206,6 +207,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             "tags": ["film", "cinema", "drive-in", "outdoor", "showtime", "starlight-drive-in", "independent"],
                             "source_id": source_id,
                             "place_id": venue_id,
+                            "screen_name": f"Screen {screen_id}" if screen_id else None,
                         })
                         logger.info(f"  Queued: {title} on {date_str} at {start_time}")
 
