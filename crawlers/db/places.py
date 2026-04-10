@@ -1054,6 +1054,11 @@ def upsert_venue_feature(venue_id: int, feature_data: dict) -> Optional[int]:
         "metadata": feature_data.get("metadata") or {},
     }
 
+    # Don't overwrite existing images or source_url with NULL on re-upsert
+    for protect_field in ("image_url", "source_url"):
+        if row.get(protect_field) is None:
+            row.pop(protect_field, None)
+
     if not writes_enabled():
         _log_write_skip(f"upsert venue_features slug={slug} venue_id={venue_id}")
         return _next_temp_id()
