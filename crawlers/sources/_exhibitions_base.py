@@ -74,12 +74,13 @@ class ExhibitionCrawlerBase(ABC):
         today = date.today().isoformat()
 
         for ex in exhibitions:
-            found += 1
             closing = ex.get("closing_date")
 
             # Skip past exhibitions
             if closing and closing < today:
                 continue
+
+            found += 1
 
             artists = ex.pop("artists", None) or []
             exhibition_data = {
