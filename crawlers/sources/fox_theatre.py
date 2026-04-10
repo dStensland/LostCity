@@ -258,6 +258,8 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
         "url": BASE_URL,
         "is_free": False,
         "sort_order": 10,
+        "image_url": "https://www.foxtheatre.org/assets/img/JonathanPhillipsPhotography_InteriorLeftVomCurtains-1-696d41ed67.jpg",
+        "image_source": "crawler",
     })
     # Egyptian Ballroom
     envelope.add("venue_features", {
@@ -274,6 +276,8 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
         "url": BASE_URL,
         "is_free": False,
         "sort_order": 20,
+        "image_url": "https://www.foxtheatre.org/assets/img/Mezzanine-Lobby_Oasis-Court_H-f336669730.jpg",
+        "image_source": "crawler",
     })
     # Historic Architecture
     envelope.add("venue_features", {
@@ -291,6 +295,8 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
         "url": BASE_URL,
         "is_free": False,
         "sort_order": 30,
+        "image_url": "https://www.foxtheatre.org/assets/img/default-image-11feedde8d.png",
+        "image_source": "og_image",
     })
     # Behind-the-scenes tours
     envelope.add("venue_features", {
@@ -303,6 +309,8 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
         "url": f"{BASE_URL}/tours",
         "is_free": False,
         "sort_order": 40,
+        "image_url": "https://www.foxtheatre.org/assets/img/Fox-Ushers_Historic-0d478cfbe4.jpg",
+        "image_source": "crawler",
     })
     # Marquee Club VIP
     envelope.add("venue_features", {
@@ -315,6 +323,8 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
         "url": BASE_URL,
         "is_free": False,
         "sort_order": 50,
+        "image_url": "https://www.foxtheatre.org/assets/img/FOXATL2018_0210_045429-8324_ALIVECOVERAGE-245e9b3c4b.jpg",
+        "image_source": "crawler",
     })
     return envelope
 
