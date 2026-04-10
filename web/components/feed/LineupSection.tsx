@@ -300,8 +300,15 @@ export default function LineupSection({
   }, [trackFilterInteraction]);
 
   const handleTabClick = useCallback(async (tabId: string) => {
-    setActiveTabId(tabId);
-    setTabFetchError(null);
+    if (typeof document !== "undefined" && "startViewTransition" in document) {
+      (document as unknown as { startViewTransition: (cb: () => void) => void }).startViewTransition(() => {
+        setActiveTabId(tabId);
+        setTabFetchError(null);
+      });
+    } else {
+      setActiveTabId(tabId);
+      setTabFetchError(null);
+    }
     // Filter persists across tabs — do NOT reset activeChipId
     if (tabId !== "today" && !lazyData[tabId] && fetchTab) {
       setLoadingTab(tabId);

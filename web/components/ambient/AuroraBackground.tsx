@@ -31,8 +31,8 @@ export default function AuroraBackground({
   const css = useMemo(() => `
     .aurora-${id} .aurora-blob {
       position: absolute;
-      width: 60vmax;
-      height: 60vmax;
+      width: 40vmax;
+      height: 40vmax;
       border-radius: 50%;
       filter: blur(80px);
       opacity: ${opacity};
@@ -59,8 +59,8 @@ export default function AuroraBackground({
       background: ${color3};
       top: 20%;
       right: 30%;
-      width: 40vmax;
-      height: 40vmax;
+      width: 30vmax;
+      height: 30vmax;
       animation: aurora-drift-${id}-3 ${duration * 1.3}s ease-in-out infinite alternate;
       animation-delay: ${-duration / 3}s;
     }
@@ -68,17 +68,17 @@ export default function AuroraBackground({
 
     @keyframes aurora-drift-${id}-1 {
       from { transform: translate(0, 0) rotate(0deg); }
-      to { transform: translate(5vw, 3vh) rotate(15deg); }
+      to { transform: translate(15vw, 10vh) rotate(20deg); }
     }
 
     @keyframes aurora-drift-${id}-2 {
       from { transform: translate(0, 0) rotate(0deg); }
-      to { transform: translate(-4vw, -2vh) rotate(-10deg); }
+      to { transform: translate(-12vw, -8vh) rotate(-15deg); }
     }
 
     @keyframes aurora-drift-${id}-3 {
       from { transform: translate(0, 0) rotate(0deg) scale(1); }
-      to { transform: translate(3vw, -4vh) rotate(20deg) scale(1.1); }
+      to { transform: translate(10vw, -12vh) rotate(20deg) scale(1.15); }
     }
 
     @media (prefers-reduced-motion: reduce) {

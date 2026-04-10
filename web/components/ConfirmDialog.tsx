@@ -74,7 +74,7 @@ export default function ConfirmDialog({
 
   const dialog = (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
       onClick={handleBackdropClick}
       role="dialog"
       aria-modal="true"
@@ -83,7 +83,7 @@ export default function ConfirmDialog({
     >
       <div
         ref={dialogRef}
-        className="w-full max-w-sm bg-[var(--dusk)] border border-[var(--twilight)] rounded-xl shadow-2xl animate-in scale-in"
+        className="w-full max-w-sm bg-[var(--dusk)] border border-[var(--twilight)] rounded-xl shadow-2xl animate-enter-scale"
       >
         <div className="p-6">
           <h2

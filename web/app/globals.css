@@ -2009,7 +2009,7 @@ html {
 .btn-primary {
   @apply inline-flex items-center justify-center font-mono font-medium rounded-xl transition-all duration-150;
   @apply bg-[var(--coral)] text-[var(--void)] shadow-sm;
-  @apply hover:bg-[var(--rose)] hover:shadow-md active:scale-[0.98];
+  @apply hover:bg-[var(--rose)] hover:shadow-md active:scale-[0.96];
   @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--coral)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--void)];
   @apply disabled:cursor-not-allowed disabled:opacity-50;
 }
@@ -2018,7 +2018,7 @@ html {
 .btn-secondary {
   @apply inline-flex items-center justify-center font-mono font-medium rounded-xl transition-all duration-150;
   @apply border border-[var(--twilight)] bg-[var(--dusk)] text-[var(--cream)];
-  @apply hover:border-[var(--muted)] hover:bg-[var(--twilight)] active:scale-[0.98];
+  @apply hover:border-[var(--muted)] hover:bg-[var(--twilight)] active:scale-[0.96];
   @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--coral)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--void)];
   @apply disabled:cursor-not-allowed disabled:opacity-50;
 }
@@ -2027,7 +2027,7 @@ html {
 .btn-danger {
   @apply inline-flex items-center justify-center font-mono font-medium rounded-xl transition-all duration-150;
   @apply bg-[var(--neon-red)]/20 text-[var(--neon-red)] border border-[var(--neon-red)]/30;
-  @apply hover:bg-[var(--neon-red)]/30 active:scale-[0.98];
+  @apply hover:bg-[var(--neon-red)]/30 active:scale-[0.96];
   @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--coral)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--void)];
   @apply disabled:cursor-not-allowed disabled:opacity-50;
 }
@@ -2036,7 +2036,7 @@ html {
 .btn-accent {
   @apply inline-flex items-center justify-center font-mono font-medium rounded-xl transition-all duration-150;
   @apply bg-[var(--coral)] text-[var(--void)] shadow-sm;
-  @apply hover:bg-[var(--rose)] hover:shadow-md active:scale-[0.98];
+  @apply hover:bg-[var(--rose)] hover:shadow-md active:scale-[0.96];
   @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--coral)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--void)];
   @apply disabled:cursor-not-allowed disabled:opacity-50;
 }
@@ -2045,7 +2045,7 @@ html {
 .btn-success {
   @apply inline-flex items-center justify-center font-mono font-medium rounded-xl transition-all duration-150;
   @apply bg-[var(--neon-green)]/20 text-[var(--neon-green)] border border-[var(--neon-green)]/30;
-  @apply hover:bg-[var(--neon-green)]/30 active:scale-[0.98];
+  @apply hover:bg-[var(--neon-green)]/30 active:scale-[0.96];
   @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--coral)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--void)];
   @apply disabled:cursor-not-allowed disabled:opacity-50;
 }
