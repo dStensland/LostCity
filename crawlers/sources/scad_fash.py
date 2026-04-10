@@ -22,18 +22,12 @@ from playwright.sync_api import sync_playwright
 from db import (
     get_client,
     get_or_create_place,
-    insert_event,
-    find_event_by_hash,
-    smart_update_existing_event,
     writes_enabled,
 )
-from dedupe import generate_content_hash
 from entity_lanes import SourceEntityCapabilities, TypedEntityEnvelope
 from entity_persistence import persist_typed_entity_envelope
 from exhibition_utils import build_exhibition_record
-from utils import (
-    extract_images_from_page, enrich_event_record, parse_date_range,
-)
+from utils import extract_images_from_page
 
 try:
     from pypdf import PdfReader
@@ -45,8 +39,7 @@ except Exception:
 
 logger = logging.getLogger(__name__)
 
-BASE_URL = "https://scadfash.org"
-EVENTS_URL = f"{BASE_URL}/events"
+BASE_URL = "https://www.scadfash.org"
 EXHIBITIONS_URL = f"{BASE_URL}/exhibitions"
 CATALOG_URL = "https://www.scad.edu/sites/default/files/PDF/scad-2025-2026-accessible-catalog.pdf"
 CATALOG_SOURCE_NOTE = "Official SCAD 2025-2026 catalog PDF fallback"
@@ -328,43 +321,72 @@ def _apply_catalog_destination_fallback(venue_id: int) -> bool:
     return venue_updated or typed_persisted
 
 
+def _normalize_month_abbrev(text: str) -> str:
+    """Normalize abbreviated months with trailing periods (SEPT. -> Sep, OCT. -> Oct)."""
+    abbrevs = {
+        "JAN.": "Jan", "FEB.": "Feb", "MAR.": "Mar", "APR.": "Apr",
+        "MAY.": "May", "JUN.": "Jun", "JUL.": "Jul", "AUG.": "Aug",
+        "SEPT.": "Sep", "SEP.": "Sep", "OCT.": "Oct", "NOV.": "Nov", "DEC.": "Dec",
+    }
+    for abbrev, replacement in abbrevs.items():
+        text = re.sub(re.escape(abbrev), replacement, text, flags=re.IGNORECASE)
+    return text
+
+
 def parse_date(date_text: str) -> Optional[str]:
     """
-    Parse date from various formats.
-    Examples: 'February 15', 'Feb 15, 2026', 'March 3'
+    Parse date from various formats used by scadfash.org.
+    Examples: 'April 16, 2026', 'OCT. 15, 2025', 'MARCH 14', 'Sept. 7, 2025'
     """
-    date_text = date_text.strip()
+    date_text = _normalize_month_abbrev(date_text.strip())
     now = datetime.now()
     year = now.year
 
-    # Try "February 15, 2026" format
-    try:
-        dt = datetime.strptime(date_text, "%B %d, %Y")
-        return dt.strftime("%Y-%m-%d")
-    except ValueError:
-        pass
+    # Try "Month DD, YYYY" — full or abbreviated month
+    for fmt in ("%B %d, %Y", "%b %d, %Y"):
+        try:
+            dt = datetime.strptime(date_text, fmt)
+            return dt.strftime("%Y-%m-%d")
+        except ValueError:
+            pass
 
-    # Try "February 15" format
-    try:
-        dt = datetime.strptime(date_text, "%B %d")
-        dt = dt.replace(year=year)
-        if dt.date() < now.date():
-            dt = dt.replace(year=year + 1)
-        return dt.strftime("%Y-%m-%d")
-    except ValueError:
-        pass
-
-    # Try "Feb 15" format
-    try:
-        dt = datetime.strptime(date_text, "%b %d")
-        dt = dt.replace(year=year)
-        if dt.date() < now.date():
-            dt = dt.replace(year=year + 1)
-        return dt.strftime("%Y-%m-%d")
-    except ValueError:
-        pass
+    # Try "Month DD" without year — assume current year, advance if past
+    for fmt in ("%B %d", "%b %d"):
+        try:
+            dt = datetime.strptime(date_text, fmt)
+            dt = dt.replace(year=year)
+            if dt.date() < now.date():
+                dt = dt.replace(year=year + 1)
+            return dt.strftime("%Y-%m-%d")
+        except ValueError:
+            pass
 
     return None
+
+
+def parse_exhibition_date_range(range_text: str) -> tuple[Optional[str], Optional[str]]:
+    """
+    Parse a date range string like 'APRIL 16, 2026 - AUG. 23, 2026'
+    or 'MARCH 14 - SEPT. 7, 2025'.
+    Returns (start_date, end_date) as YYYY-MM-DD strings.
+    """
+    normalized = _normalize_month_abbrev(range_text.strip())
+    # Split on dash surrounded by optional spaces; avoid splitting on hyphens in month names
+    parts = re.split(r"\s*[-\u2013\u2014]\s*", normalized, maxsplit=1)
+    if len(parts) != 2:
+        return None, None
+
+    start_raw, end_raw = parts[0].strip(), parts[1].strip()
+
+    # If start has no year but end does, carry the year over to start
+    start_has_year = bool(re.search(r"\d{4}", start_raw))
+    end_has_year = bool(re.search(r"\d{4}", end_raw))
+    if not start_has_year and end_has_year:
+        year_match = re.search(r"\d{4}", end_raw)
+        if year_match:
+            start_raw = f"{start_raw}, {year_match.group()}"
+
+    return parse_date(start_raw), parse_date(end_raw)
 
 
 def parse_time(time_text: str) -> Optional[str]:
@@ -418,14 +440,88 @@ def determine_category(title: str, description: str = "") -> tuple[str, Optional
     return "museums", "exhibition", tags
 
 
+def _parse_exhibition_links(page) -> list[dict]:
+    """
+    Extract exhibition records from scadfash.org/exhibitions by querying
+    anchor elements that link to individual exhibition pages.
+
+    The page structure is: each exhibition is an <a href="/exhibitions/slug">
+    whose text content contains the title and a date range (in either order).
+    Example link texts:
+        "APRIL 16, 2026 - AUG. 23, 2026\n'DIOR: CRAFTING FASHION'"
+        "'ANDRÉ LEON TALLEY: STYLE IS FOREVER'\nOCT. 15, 2025 - MARCH 1, 2026"
+    """
+    date_range_pattern = re.compile(
+        r"^(?:"
+        r"(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|"
+        r"Jul(?:y)?|Aug(?:ust)?|Sept?(?:ember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)"
+        r"\.?\s+\d{1,2}(?:,\s*\d{4})?)"
+        r"\s*[-\u2013\u2014]\s*"
+        r"(?:"
+        r"(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|"
+        r"Jul(?:y)?|Aug(?:ust)?|Sept?(?:ember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)"
+        r"\.?\s+\d{1,2}(?:,\s*\d{4})?)"
+        r"$",
+        re.IGNORECASE,
+    )
+
+    links = page.evaluate("""() => {
+        return Array.from(document.querySelectorAll('a[href*="/exhibitions/"]')).map(a => ({
+            href: a.href,
+            text: a.innerText.trim(),
+        }));
+    }""")
+
+    results = []
+    for link in links:
+        href = link.get("href", "")
+        raw_text = link.get("text", "").strip()
+        if not raw_text or not href:
+            continue
+
+        # Split on newline to separate the two data elements
+        parts = [p.strip() for p in raw_text.split("\n") if p.strip()]
+        if not parts:
+            continue
+
+        title = None
+        date_range_str = None
+
+        for part in parts:
+            if date_range_pattern.match(part):
+                date_range_str = part
+            elif len(part) > 3:
+                title = part.strip("'\"").strip()
+
+        if not title or not date_range_str:
+            # Fallback: if only one part, it might be title-only (no date in link text)
+            continue
+
+        start_date, end_date = parse_exhibition_date_range(date_range_str)
+        if not start_date:
+            logger.debug("SCAD FASH: could not parse date range %r for %r", date_range_str, title)
+            continue
+
+        results.append({
+            "title": title,
+            "start_date": start_date,
+            "end_date": end_date,
+            "source_url": href,
+            "date_range_raw": date_range_str,
+        })
+
+    return results
+
+
 def crawl(source: dict) -> tuple[int, int, int]:
-    """Crawl SCAD FASH Museum events using Playwright."""
+    """Crawl SCAD FASH Museum exhibitions using Playwright."""
     source_id = source["id"]
     portal_id = source.get("portal_id")
     events_found = 0
     events_new = 0
     events_updated = 0
     exhibition_envelope = TypedEntityEnvelope()
+    today = datetime.now().date()
 
     try:
         with sync_playwright() as p:
@@ -437,11 +533,11 @@ def crawl(source: dict) -> tuple[int, int, int]:
             page = context.new_page()
 
             # ----------------------------------------------------------------
-            # 0. Homepage — extract og:image for venue record (best-effort;
-            #    Cloudflare may block, which is fine — we fall back to catalog).
+            # 0. Homepage — extract og:image and meta description for venue.
             # ----------------------------------------------------------------
             try:
                 page.goto(BASE_URL, wait_until="domcontentloaded", timeout=30000)
+                page.wait_for_timeout(2000)
                 home_title = page.title() or ""
                 home_body = page.inner_text("body")
                 if not _is_cloudflare_challenge_text(f"{home_title}\n{home_body}"):
@@ -464,229 +560,109 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 logger.debug("SCAD FASH: could not extract og meta from homepage: %s", _meta_exc)
 
             venue_id = get_or_create_place(PLACE_DATA)
-            blocked_urls: list[str] = []
 
-            # Try both events and exhibitions pages
-            for url in [EVENTS_URL, EXHIBITIONS_URL]:
-                logger.info(f"Fetching SCAD FASH: {url}")
-                try:
-                    page.goto(url, wait_until="domcontentloaded", timeout=45000)
-                    page.wait_for_timeout(5000)
-                except Exception as e:
-                    logger.warning(f"Failed to load {url}: {e}, skipping")
-                    continue
-
-                page_title = page.title() or ""
-                body_text = page.inner_text("body")
-                if _is_cloudflare_challenge_text(f"{page_title}\n{body_text}"):
-                    blocked_urls.append(url)
-                    logger.warning(
-                        "SCAD FASH blocked by Cloudflare challenge at %s; "
-                        "treat as source-access failure, not empty feed",
-                        url,
-                    )
-                    continue
-
-                # Extract images from page
-                image_map = extract_images_from_page(page)
-
-                # Scroll to load all content
-                for _ in range(5):
+            # ----------------------------------------------------------------
+            # 1. Exhibitions page — parse via anchor elements.
+            # ----------------------------------------------------------------
+            logger.info("Fetching SCAD FASH exhibitions: %s", EXHIBITIONS_URL)
+            try:
+                page.goto(EXHIBITIONS_URL, wait_until="domcontentloaded", timeout=45000)
+                page.wait_for_timeout(3000)
+                for _ in range(3):
                     page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
+                    page.wait_for_timeout(800)
+            except Exception as e:
+                logger.warning("SCAD FASH: failed to load exhibitions page: %s", e)
+                browser.close()
+                return events_found, events_new, events_updated
+
+            page_title = page.title() or ""
+            body_text = page.inner_text("body")
+            if _is_cloudflare_challenge_text(f"{page_title}\n{body_text}"):
+                logger.warning(
+                    "SCAD FASH blocked by Cloudflare at %s; applying catalog fallback",
+                    EXHIBITIONS_URL,
+                )
+                _apply_catalog_destination_fallback(venue_id)
+                browser.close()
+                return events_found, events_new, events_updated
+
+            # Extract images from listing page for image_map lookup
+            image_map = extract_images_from_page(page)
+
+            raw_exhibitions = _parse_exhibition_links(page)
+            logger.info("SCAD FASH: found %d exhibition links on listings page", len(raw_exhibitions))
+
+            # ----------------------------------------------------------------
+            # 2. For each exhibition, optionally visit detail page for richer
+            #    description and image, then build exhibition record.
+            # ----------------------------------------------------------------
+            seen_titles: set[str] = set()
+            for ex in raw_exhibitions:
+                title = ex["title"]
+                start_date = ex["start_date"]
+                end_date = ex["end_date"]
+                detail_url = ex["source_url"]
+
+                # Skip past exhibitions — closing date already passed
+                if end_date and end_date < today.strftime("%Y-%m-%d"):
+                    logger.debug("SCAD FASH: skipping past exhibition %r (closed %s)", title, end_date)
+                    continue
+
+                if title in seen_titles:
+                    continue
+                seen_titles.add(title)
+
+                events_found += 1
+
+                # Fetch detail page for description and image
+                description = None
+                detail_image = None
+                try:
+                    page.goto(detail_url, wait_until="domcontentloaded", timeout=30000)
                     page.wait_for_timeout(1500)
-
-                # Get page text
-                lines = [line.strip() for line in body_text.split("\n") if line.strip()]
-
-                # Skip navigation items
-                skip_items = [
-                    "skip to main",
-                    "menu",
-                    "home",
-                    "about",
-                    "exhibitions",
-                    "events",
-                    "visit",
-                    "shop",
-                    "support",
-                    "calendar",
-                    "upcoming",
-                    "current",
-                    "past",
-                    "view all",
-                    "learn more",
-                ]
-
-                i = 0
-                seen_events = set()
-
-                while i < len(lines):
-                    line = lines[i]
-                    line_lower = line.lower()
-
-                    # Skip nav/UI items
-                    if line_lower in skip_items or len(line) < 3:
-                        i += 1
-                        continue
-
-                    # Look for date patterns
-                    date_match = re.match(
-                        r"^(January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{1,2}(?:,?\s+\d{4})?$",
-                        line,
-                        re.IGNORECASE,
+                    detail_body = page.inner_text("body")
+                    detail_image = page.evaluate(
+                        "() => { const m = document.querySelector('meta[property=\"og:image\"]'); return m ? m.content : null; }"
                     )
-
-                    if date_match:
-                        start_date = parse_date(line)
-                        if not start_date:
-                            i += 1
+                    # Extract description: long paragraphs after the title/date block
+                    detail_lines = [l.strip() for l in detail_body.split("\n") if l.strip()]
+                    skip_until = False
+                    for dl in detail_lines:
+                        # Skip navigation and header lines
+                        if dl.upper() in (title.upper(), ex["date_range_raw"].upper()):
+                            skip_until = True
                             continue
+                        if skip_until and len(dl) > 80 and not re.match(
+                            r"^(CONTACT|HOURS|SOCIAL|SUPPORT|LOCATION|SCAD\s)", dl, re.IGNORECASE
+                        ):
+                            description = dl[:800]
+                            break
+                except Exception as _det_exc:
+                    logger.debug("SCAD FASH: detail page fetch failed for %r: %s", title, _det_exc)
 
-                        # Look for title and time in surrounding lines
-                        title = None
-                        start_time = None
-                        description = None
+                image_url = detail_image or image_map.get(title)
+                category, subcategory, tags = determine_category(title, description or "")
 
-                        # Check previous lines for title
-                        for offset in [-2, -1]:
-                            idx = i + offset
-                            if idx >= 0:
-                                potential_title = lines[idx].strip()
-                                if len(potential_title) > 5 and potential_title.lower() not in skip_items:
-                                    if not re.match(r"^(January|February|March)", potential_title, re.IGNORECASE):
-                                        title = potential_title
-                                        break
-
-                        # Check next lines for time and description
-                        for offset in [1, 2, 3, 4]:
-                            idx = i + offset
-                            if idx < len(lines):
-                                check_line = lines[idx].strip()
-
-                                # Check for time
-                                if not start_time:
-                                    time_result = parse_time(check_line)
-                                    if time_result:
-                                        start_time = time_result
-                                        continue
-
-                                # Check for description
-                                if not description and len(check_line) > 30:
-                                    if not re.match(r"^(more info|learn more|register|buy tickets|rsvp)", check_line.lower()):
-                                        description = check_line[:500]
-
-                        if not title:
-                            i += 1
-                            continue
-
-                        # Check for duplicates
-                        event_key = f"{title}|{start_date}"
-                        if event_key in seen_events:
-                            i += 1
-                            continue
-                        seen_events.add(event_key)
-
-                        events_found += 1
-
-                        # Generate content hash
-                        content_hash = generate_content_hash(
-                            title, "SCAD FASH Museum", start_date
-                        )
-
-                        # Check for existing
-
-                        # Determine category
-                        category, subcategory, tags = determine_category(title, description or "")
-
-                        event_record = {
-                            "source_id": source_id,
-                            "place_id": venue_id,
-                            "title": title,
-                            "description": description,
-                            "start_date": start_date,
-                            "start_time": start_time,
-                            "end_date": None,
-                            "end_time": None,
-                            "is_all_day": False,
-                            "category": category,
-                            "subcategory": subcategory,
-                            "tags": tags,
-                            "price_min": None,
-                            "price_max": None,
-                            "price_note": None,
-                            "is_free": None,
-                            "source_url": url,
-                            "ticket_url": url,
-                            "image_url": image_map.get(title),
-                            "raw_text": f"{title} - {start_date}",
-                            "extraction_confidence": 0.83,
-                            "is_recurring": False,
-                            "recurrence_rule": None,
-                            "content_hash": content_hash,
-                        }
-
-                        # Enrich from detail page
-                        enrich_event_record(event_record, source_name="SCAD FASH Museum")
-
-                        # Determine is_free if still unknown
-                        if event_record.get("is_free") is None:
-                            desc_lower = (event_record.get("description") or "").lower()
-                            title_lower = title.lower()
-                            combined = f"{title_lower} {desc_lower}"
-                            if any(kw in combined for kw in ["free", "no cost", "no charge", "complimentary"]):
-                                event_record["is_free"] = True
-                                event_record["price_min"] = event_record.get("price_min") or 0
-                                event_record["price_max"] = event_record.get("price_max") or 0
-                            else:
-                                event_record["is_free"] = False
-
-                        # Extract end_date from date range patterns
-                        range_text = f"{title} {event_record.get('description') or ''}"
-                        _, range_end = parse_date_range(range_text)
-                        if range_end:
-                            event_record["end_date"] = range_end
-
-                        # Detect exhibits: route to exhibitions lane instead of events
-                        _exhibit_kw = ["exhibit", "exhibition", "on view", "collection", "installation"]
-                        _check = f"{title} {event_record.get('description') or ''}".lower()
-                        if any(kw in _check for kw in _exhibit_kw):
-                            ex_record, ex_artists = build_exhibition_record(
-                                title=title,
-                                venue_id=venue_id,
-                                source_id=source_id,
-                                opening_date=start_date,
-                                closing_date=event_record.get("end_date"),
-                                venue_name=PLACE_DATA["name"],
-                                description=event_record.get("description"),
-                                image_url=image_map.get(title),
-                                source_url=url,
-                                portal_id=portal_id,
-                                admission_type="ticketed",
-                                tags=["fashion", "film", "museum", "design", "midtown", "exhibition"],
-                            )
-                            if ex_artists:
-                                ex_record["artists"] = ex_artists
-                            exhibition_envelope.add("exhibitions", ex_record)
-                            events_new += 1
-                            logger.info(f"Queued exhibition: {title} on {start_date}")
-                            i += 1
-                            continue
-
-                        existing = find_event_by_hash(content_hash)
-                        if existing:
-                            smart_update_existing_event(existing, event_record)
-                            events_updated += 1
-                            i += 1
-                            continue
-
-                        try:
-                            insert_event(event_record)
-                            events_new += 1
-                            logger.info(f"Added: {title} on {start_date}")
-                        except Exception as e:
-                            logger.error(f"Failed to insert: {title}: {e}")
-
-                    i += 1
+                ex_record, ex_artists = build_exhibition_record(
+                    title=title,
+                    venue_id=venue_id,
+                    source_id=source_id,
+                    opening_date=start_date,
+                    closing_date=end_date,
+                    venue_name=PLACE_DATA["name"],
+                    description=description,
+                    image_url=image_url,
+                    source_url=detail_url,
+                    portal_id=portal_id,
+                    admission_type="ticketed",
+                    tags=["fashion", "film", "museum", "design", "midtown", "exhibition"],
+                )
+                if ex_artists:
+                    ex_record["artists"] = ex_artists
+                exhibition_envelope.add("exhibitions", ex_record)
+                events_new += 1
+                logger.info("SCAD FASH: queued exhibition %r (%s – %s)", title, start_date, end_date or "?")
 
             browser.close()
 
@@ -696,23 +672,13 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 if skipped:
                     logger.warning("SCAD FASH: skipped %d exhibition rows", skipped)
 
-            if events_found == 0 and blocked_urls:
-                fallback_applied = _apply_catalog_destination_fallback(venue_id)
-                logger.warning(
-                    "SCAD FASH produced no events because source access is blocked for %s",
-                    blocked_urls,
-                )
-                if fallback_applied:
-                    logger.info(
-                        "SCAD FASH used official catalog PDF fallback for destination intelligence"
-                    )
-
         logger.info(
-            f"SCAD FASH Museum crawl complete: {events_found} found, {events_new} new, {events_updated} updated"
+            "SCAD FASH Museum crawl complete: %d found, %d new, %d updated",
+            events_found, events_new, events_updated,
         )
 
     except Exception as e:
-        logger.error(f"Failed to crawl SCAD FASH Museum: {e}")
+        logger.error("Failed to crawl SCAD FASH Museum: %s", e)
         raise
 
     return events_found, events_new, events_updated
