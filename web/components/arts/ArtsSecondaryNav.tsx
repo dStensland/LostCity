@@ -88,40 +88,42 @@ export function ArtsSecondaryNav({ portalSlug }: ArtsSecondaryNavProps) {
 
   return (
     <nav
-      className="hidden sm:flex sticky top-14 z-30 border-b border-[var(--twilight)] bg-[var(--void)]/98 backdrop-blur-sm"
+      className="sticky top-14 z-30 border-b border-[var(--twilight)] bg-[var(--void)]/98 backdrop-blur-sm"
       aria-label="Arts portal navigation"
     >
-      <div className="max-w-4xl mx-auto px-4 w-full flex items-stretch gap-0">
-        {tabs.map((tab) => {
-          const Icon = tab.icon;
-          const active = isArtsTabActive(tab.key, pathname, searchParams, portalSlug);
+      <div className="flex overflow-x-auto scrollbar-hide px-4 sm:px-0 sm:justify-center">
+        <div className="max-w-4xl mx-auto w-full flex items-stretch gap-0">
+          {tabs.map((tab) => {
+            const Icon = tab.icon;
+            const active = isArtsTabActive(tab.key, pathname, searchParams, portalSlug);
 
-          return (
-            <Link
-              key={tab.key}
-              href={tab.href}
-              className="relative flex items-center gap-1.5 py-3 px-3 font-mono text-xs uppercase tracking-wider transition-colors"
-              style={{
-                color: active ? "var(--action-primary)" : "var(--muted)",
-              }}
-              aria-current={active ? "page" : undefined}
-            >
-              <Icon
-                size={13}
-                weight={active ? "fill" : "regular"}
-              />
-              <span>{tab.label}</span>
-              {/* Active indicator — copper bottom border */}
-              {active && (
-                <span
-                  className="absolute bottom-0 inset-x-0 h-[2px]"
-                  style={{ background: "var(--action-primary)" }}
-                  aria-hidden="true"
+            return (
+              <Link
+                key={tab.key}
+                href={tab.href}
+                className="relative flex flex-shrink-0 items-center gap-1.5 py-3 px-3 font-mono text-xs uppercase tracking-wider transition-colors"
+                style={{
+                  color: active ? "var(--action-primary)" : "var(--muted)",
+                }}
+                aria-current={active ? "page" : undefined}
+              >
+                <Icon
+                  size={13}
+                  weight={active ? "fill" : "regular"}
                 />
-              )}
-            </Link>
-          );
-        })}
+                <span>{tab.label}</span>
+                {/* Active indicator — copper bottom border */}
+                {active && (
+                  <span
+                    className="absolute bottom-0 inset-x-0 h-[2px]"
+                    style={{ background: "var(--action-primary)" }}
+                    aria-hidden="true"
+                  />
+                )}
+              </Link>
+            );
+          })}
+        </div>
       </div>
     </nav>
   );
