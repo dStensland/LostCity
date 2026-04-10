@@ -13,7 +13,6 @@ A shareable public page for your watchlist ("The Queue") where visitors can see 
 
 ## What It Doesn't Do
 
-- No rate limiting on recommendations (audience is friends, not the public internet)
 - No notification system (you see recommendations when you open your watchlist)
 - No commenting or threading on recommendations
 - No recommendation history visible to visitors (they don't see if someone else already recommended something)
@@ -29,18 +28,22 @@ A shareable public page for your watchlist ("The Queue") where visitors can see 
 | `id` | serial PK | |
 | `target_user_id` | uuid FK auth.users | Queue owner. ON DELETE CASCADE |
 | `movie_id` | integer FK goblin_movies | The recommended movie |
-| `recommender_user_id` | uuid FK auth.users | Nullable — set if visitor is signed in |
-| `recommender_name` | text NOT NULL | Auto-filled from profile if signed in, typed if anonymous |
-| `note` | text | Optional message |
+| `recommender_user_id` | uuid FK auth.users | Nullable — set server-side from auth session if visitor is signed in. Never accepted from request body. |
+| `recommender_name` | text NOT NULL | Auto-filled from profile if signed in, typed if anonymous. Validated: 1-50 chars, trimmed. |
+| `note` | text | Optional message. Max 500 chars. |
 | `status` | text NOT NULL DEFAULT 'pending' | `pending`, `added`, `dismissed` |
 | `created_at` | timestamptz | DEFAULT now() |
 
-Unique constraint: `(target_user_id, movie_id, recommender_name)` — same person can't recommend the same movie twice.
+**Unique constraints** (two, handling auth vs anon differently):
+- `(target_user_id, movie_id, recommender_user_id)` WHERE `recommender_user_id IS NOT NULL` — authenticated users can't recommend the same movie twice
+- `(target_user_id, movie_id, recommender_name)` WHERE `recommender_user_id IS NULL` — anonymous dedup by name (weak but best available)
 
-RLS:
-- Public INSERT (anyone can recommend)
+These are partial unique indexes, not a single composite constraint.
+
+**RLS:**
+- Public INSERT (anyone can recommend) — but `recommender_user_id` is set server-side, never from the request
 - Owner SELECT/UPDATE on rows where `target_user_id = auth.uid()` (to view and change status)
-- Anon SELECT for the insert conflict check
+- No anon SELECT — conflict/duplicate check happens server-side via service client
 
 ### No Changes to Existing Tables
 
@@ -50,24 +53,30 @@ RLS:
 
 **`GET /api/goblinday/queue/[slug]`** — Fetch a user's public queue
 - Returns watchlist entries with movie data (poster, title, year, director, genres), ordered by sort_order
-- Resolves user via `goblin_user_profiles.slug`
+- Resolves user via `profiles.username` (same resolution path as existing Log public page)
+- Rate limit: `RATE_LIMITS.read`
 - No auth required. 404 if slug not found.
 
 ### Public TMDB Search Proxy
 
 **`GET /api/goblinday/queue/[slug]/search`** — TMDB search for the recommend form
 - Query params: `?q=chinatown`
+- Validation: `q` must be 1-100 chars
+- Rate limit: `RATE_LIMITS.read`
 - Proxies to TMDB search, returns `{ results: TMDBSearchResult[] }`
-- No auth required. Scoped to this page context.
+- No auth required.
 
 ### Submit Recommendation
 
 **`POST /api/goblinday/queue/[slug]/recommend`** — Submit a movie recommendation
 - Body: `{ tmdb_id: number, recommender_name: string, note?: string }`
-- If visitor is authenticated, auto-attaches `recommender_user_id` and overrides `recommender_name` with profile display name
+- Input validation (Zod): `tmdb_id` positive integer, `recommender_name` 1-50 chars trimmed, `note` max 500 chars optional
+- `checkBodySize()` applied
+- `recommender_user_id` set server-side only: check auth via `createClient().auth.getUser()`, if authenticated set from session + override `recommender_name` with profile display name. Never accept `recommender_user_id` from request body.
 - Ensures movie exists in `goblin_movies` via TMDB (`ensureMovie` pattern)
-- Returns 409 if this person already recommended this movie to this user
-- No auth required
+- Duplicate check server-side via service client (query by target_user_id + movie_id + recommender_user_id or recommender_name). Returns 409 if duplicate.
+- Rate limit: `RATE_LIMITS.write`
+- No auth required (but enhanced with auth)
 
 ### Private Recommendation Management
 
@@ -95,7 +104,7 @@ RLS:
 
 - TMDB search input (debounced, uses `/api/goblinday/queue/[slug]/search`)
 - Search results as poster + title + year rows
-- Select a movie → form: name field (pre-filled if signed in, editable), optional note textarea
+- Select a movie -> form: name field (pre-filled if signed in, editable), optional note textarea (max 500 chars)
 - "Recommend" submit button
 - Success state: "Recommendation sent!" inline message, fades after a few seconds
 - Checks auth client-side to pre-fill name
@@ -105,7 +114,7 @@ RLS:
 - New section at top of watchlist view, only shown when pending recommendations exist
 - Header: "Recommendations" + count
 - Each card: poster thumbnail + title + year + "from [name]" + note
-- Two buttons: "+ Add" (adds to queue, marks as `added`) and "×" (dismisses)
+- Two buttons: "+ Add" (adds to queue, marks as `added`) and "x" (dismisses)
 - Section disappears when all recommendations are handled
 - Lighter visual treatment than queue cards — no rank numbers, subtle border
 
@@ -124,10 +133,19 @@ RLS:
 - Add `dismissRecommendation(id)` — calls `/action` with `dismiss`, optimistic removal
 - Add `recommendationCount` — number of pending recommendations
 
+## Security (from expert review)
+
+1. **Rate limiting on all public endpoints** — recommend POST uses `RATE_LIMITS.write`, search proxy and queue GET use `RATE_LIMITS.read`
+2. **`recommender_user_id` server-side only** — never accepted from request body, set exclusively from auth session
+3. **Input validation** — Zod schemas on all inputs, `checkBodySize()` on POST
+4. **No anon SELECT on recommendations table** — duplicate checks and data reads happen server-side via service client
+5. **Sanitize text inputs** — `recommender_name` and `note` trimmed and length-validated before DB write
+
 ## Migration Plan
 
 Single migration file:
 1. Create `goblin_watchlist_recommendations` table
-2. RLS policies: public INSERT, owner SELECT/UPDATE
-3. Index on `(target_user_id, status)` for efficient pending queries
-4. Unique constraint on `(target_user_id, movie_id, recommender_name)`
+2. RLS policies: public INSERT, owner SELECT/UPDATE (no anon SELECT)
+3. Partial unique index: `(target_user_id, movie_id, recommender_user_id)` WHERE `recommender_user_id IS NOT NULL`
+4. Partial unique index: `(target_user_id, movie_id, recommender_name)` WHERE `recommender_user_id IS NULL`
+5. Index on `(target_user_id, status)` for efficient pending queries
