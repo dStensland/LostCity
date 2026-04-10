@@ -23,6 +23,13 @@ export type PlaceFeature = {
   price_note: string | null;
   is_free: boolean;
   sort_order: number;
+  source_id: number | null;
+  portal_id: string | null;
+  admission_type: string | null;
+  admission_url: string | null;
+  source_url: string | null;
+  tags: string[] | null;
+  metadata: Record<string, unknown>;
 };
 
 // Legacy alias for backwards compatibility
