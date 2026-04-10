@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import GoblinRankingItem from "./GoblinRankingItem";
+import SmartImage from "@/components/SmartImage";
 import type { RankingItem, RankingEntry, ParticipantRankings } from "@/lib/ranking-types";
 
 interface Props {
@@ -41,6 +42,15 @@ export default function GoblinRankingCompare({ items, myEntries, participants, c
     return m;
   }, [items]);
 
+  const [animKey, setAnimKey] = useState(0);
+  const prevSelectedRef = useRef(selectedUserId);
+  useEffect(() => {
+    if (prevSelectedRef.current !== selectedUserId) {
+      setAnimKey((k) => k + 1);
+      prevSelectedRef.current = selectedUserId;
+    }
+  }, [selectedUserId]);
+
   if (otherParticipants.length === 0) {
     return (
       <div className="py-12 text-center">
@@ -61,12 +71,25 @@ export default function GoblinRankingCompare({ items, myEntries, participants, c
             className={`flex-shrink-0 flex items-center gap-2 px-3 py-1.5 font-mono text-2xs font-bold
               tracking-[0.1em] uppercase border transition-all
               ${p.user_id === selectedUserId
-                ? "border-cyan-600 text-cyan-300 bg-cyan-950/30"
+                ? "border-cyan-500/40 text-cyan-300 bg-cyan-500/15"
                 : "border-zinc-800 text-zinc-500 hover:text-cyan-400/60 hover:border-cyan-800/40"
               }`}
+            style={p.user_id === selectedUserId ? {
+              boxShadow: "0 0 12px rgba(0,240,255,0.1), inset 0 0 12px rgba(0,240,255,0.05)",
+            } : undefined}
           >
             {p.avatar_url && (
-              <img src={p.avatar_url} alt="" className="w-4 h-4 rounded-full" />
+              <div className="relative">
+                <SmartImage src={p.avatar_url} alt="" width={16} height={16} className="rounded-full" />
+                {p.user_id === selectedUserId && (
+                  <>
+                    <span className="absolute -top-px -left-px w-1.5 h-1.5 border-t border-l border-cyan-500 pointer-events-none" />
+                    <span className="absolute -top-px -right-px w-1.5 h-1.5 border-t border-r border-cyan-500 pointer-events-none" />
+                    <span className="absolute -bottom-px -left-px w-1.5 h-1.5 border-b border-l border-cyan-500 pointer-events-none" />
+                    <span className="absolute -bottom-px -right-px w-1.5 h-1.5 border-b border-r border-cyan-500 pointer-events-none" />
+                  </>
+                )}
+              </div>
             )}
             {p.display_name}
             <span className="text-zinc-700">{p.items_ranked}</span>
@@ -80,21 +103,35 @@ export default function GoblinRankingCompare({ items, myEntries, participants, c
             {selectedParticipant.display_name}&apos;s ranking
           </p>
           <div className="space-y-1">
-            {selectedEntries.map((entry) => {
+            {selectedEntries.map((entry, idx) => {
               const item = itemMap.get(entry.item_id);
               if (!item) return null;
               const myRank = myRankMap.get(entry.item_id) ?? null;
+              const delta = myRank != null ? entry.sort_order - myRank : null;
+              const isDivergent = delta != null && Math.abs(delta) >= 5;
+
               return (
-                <GoblinRankingItem
-                  key={entry.item_id}
-                  name={item.name}
-                  subtitle={item.subtitle}
-                  imageUrl={item.image_url}
-                  rank={entry.sort_order}
-                  tierColor={entry.tier_color}
-                  readOnly
-                  compareRank={myRank}
-                />
+                <div
+                  key={`${entry.item_id}-${animKey}`}
+                  className="motion-safe:animate-[rankItemEntry_300ms_ease-out_backwards] relative"
+                  style={{ animationDelay: idx < 10 ? `${idx * 50}ms` : "0ms" }}
+                >
+                  {isDivergent && (
+                    <span className="absolute top-1 right-2 text-[9px] font-mono text-amber-500/70 tracking-widest uppercase z-10">
+                      DIVERGENT
+                    </span>
+                  )}
+                  <GoblinRankingItem
+                    name={item.name}
+                    subtitle={item.subtitle}
+                    description={item.description}
+                    imageUrl={item.image_url}
+                    rank={entry.sort_order}
+                    tierColor={entry.tier_color}
+                    readOnly
+                    compareRank={myRank}
+                  />
+                </div>
               );
             })}
           </div>

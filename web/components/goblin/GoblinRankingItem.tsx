@@ -201,12 +201,20 @@ export default function GoblinRankingItem({
       {delta !== null && (
         <div className="flex-shrink-0 flex items-center pr-3">
           <span
-            className="font-mono text-xs font-bold"
+            className="font-mono text-xs font-bold relative"
             style={{
               color: delta > 0 ? "#00d9a0" : delta < 0 ? "#ff5a5a" : "#52525b",
             }}
           >
             {delta === 0 ? "=" : delta > 0 ? `+${delta}` : String(delta)}
+            {delta !== 0 && (
+              <span
+                className="absolute inset-0 blur-md pointer-events-none"
+                style={{
+                  background: `radial-gradient(circle, ${delta > 0 ? "rgba(0,217,160,0.4)" : "rgba(255,90,90,0.4)"} 0%, transparent 70%)`,
+                }}
+              />
+            )}
           </span>
         </div>
       )}
