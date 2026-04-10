@@ -104,35 +104,45 @@ PLACE_DATA = {
         {
             "title": "Swan House",
             "feature_type": "attraction",
-            "description": "An elegant 1928 mansion with formal gardens, one of Atlanta's most photographed historic homes.",
+            "description": "An elegant 1928 mansion with formal Italian gardens, one of Atlanta's most photographed historic homes. Tours explore the interiors, costume collections, and the remarkable terraced grounds.",
+            "image_url": "https://www.atlantahistorycenter.com/app/uploads/2020/11/Swan-House_2016-1440x810.jpg",
+            "source_url": "https://www.atlantahistorycenter.com/buildings-and-grounds/swan-house/",
             "is_free": False,
             "sort_order": 10,
         },
         {
             "title": "Smith Family Farm",
             "feature_type": "experience",
-            "description": "An 1860s living history site where interpreters demonstrate 19th-century farm life.",
+            "description": "An 1860s living history site where costumed interpreters demonstrate 19th-century Georgia farm life — blacksmithing, wool spinning, and open-hearth cooking — in an 1845 plantation farmhouse.",
+            "image_url": "https://www.atlantahistorycenter.com/app/uploads/2020/10/hales-photo-atlanta-history-center-08881-1440x810.jpg",
+            "source_url": "https://www.atlantahistorycenter.com/buildings-and-grounds/smith-family-farm/",
             "is_free": False,
             "sort_order": 20,
         },
         {
             "title": "Cyclorama",
             "feature_type": "collection",
-            "description": "The restored 1886 Battle of Atlanta cyclorama painting — the largest oil painting in the world at 42 feet tall and 358 feet in circumference.",
+            "description": "The restored 1886 Battle of Atlanta cyclorama painting — the largest oil painting in the world at 42 feet tall and 358 feet in circumference — depicting the July 22, 1864 Civil War battle with full 360-degree immersion.",
+            "image_url": "https://www.atlantahistorycenter.com/app/uploads/2020/11/AHC_Destinations_Cyclorama_Header-1440x800.jpg",
+            "source_url": "https://www.atlantahistorycenter.com/exhibitions/cyclorama/",
             "is_free": False,
             "sort_order": 30,
         },
         {
-            "title": "Historic gardens and nature trails",
+            "title": "Goizueta Gardens",
             "feature_type": "attraction",
-            "description": "Thirty-three acres of historic gardens, woodland trails, and landscaped grounds connecting the campus buildings.",
+            "description": "Thirty-three acres of historic gardens and woodland trails spanning Swan House Gardens, the Quarry Garden, rhododendron collections, and seasonal plantings connecting the campus buildings.",
+            "image_url": "https://www.atlantahistorycenter.com/app/uploads/2020/11/Goizueta_Gardens_Rhododendron_Garden-1440x810.jpg",
+            "source_url": "https://www.atlantahistorycenter.com/buildings-and-grounds/goizueta-gardens/",
             "is_free": False,
             "sort_order": 40,
         },
         {
             "title": "Rotating history exhibitions",
             "feature_type": "exhibition",
-            "description": "Changing gallery exhibitions exploring Atlanta and American history, alongside permanent collections.",
+            "description": "Changing gallery exhibitions exploring Atlanta and American history, alongside permanent collections in the Atlanta History Museum building.",
+            "image_url": "https://www.atlantahistorycenter.com/app/uploads/2020/11/Cyclorama-Opening-Day-3.jpg-1440x810-1605633266.jpg",
+            "source_url": "https://www.atlantahistorycenter.com/exhibitions/",
             "is_free": False,
             "sort_order": 50,
         },
@@ -184,45 +194,6 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
                 "place_type": "museum",
                 "city": "atlanta",
             },
-        },
-    )
-    envelope.add(
-        "venue_features",
-        {
-            "place_id": venue_id,
-            "slug": "historic-houses-gardens-and-galleries",
-            "title": "Historic houses, gardens, and galleries",
-            "feature_type": "amenity",
-            "description": "Atlanta History Center works as a fuller family history campus because it combines galleries, historic houses, and gardens in one visit.",
-            "url": BASE_URL,
-            "is_free": False,
-            "sort_order": 10,
-        },
-    )
-    envelope.add(
-        "venue_features",
-        {
-            "place_id": venue_id,
-            "slug": "buckhead-history-campus-day",
-            "title": "Buckhead history campus day",
-            "feature_type": "amenity",
-            "description": "Its Buckhead campus format makes Atlanta History Center more than a single exhibition stop and supports longer family history days.",
-            "url": BASE_URL,
-            "is_free": False,
-            "sort_order": 20,
-        },
-    )
-    envelope.add(
-        "venue_features",
-        {
-            "place_id": venue_id,
-            "slug": "longer-walking-campus-with-indoor-reset-points",
-            "title": "Longer walking campus with indoor reset points",
-            "feature_type": "amenity",
-            "description": "Atlanta History Center asks more walking than a compact museum, but its indoor galleries and campus rhythm make it easier to break the day into manageable pieces.",
-            "url": BASE_URL,
-            "is_free": False,
-            "sort_order": 30,
         },
     )
     return envelope
@@ -708,6 +679,35 @@ def _deactivate_redundant_rows(source_id: int, venue_id: int) -> int:
     return len(duplicate_ids)
 
 
+_STALE_FEATURE_SLUGS = [
+    # Renamed: Tullie Smith Farm → Smith Family Farm (matches AHC's current branding)
+    "tullie-smith-farm",
+    # Renamed: Historic gardens and nature trails → Goizueta Gardens (matches AHC's actual branding)
+    "historic-gardens-and-nature-trails",
+    # Removed from envelope: generic amenity descriptors replaced by real feature entries
+    "historic-houses-gardens-and-galleries",
+    "buckhead-history-campus-day",
+    "longer-walking-campus-with-indoor-reset-points",
+]
+
+
+def _retire_stale_features(venue_id: int) -> None:
+    """Deactivate legacy venue_feature rows that are no longer canonical."""
+    client = get_client()
+    for slug in _STALE_FEATURE_SLUGS:
+        result = (
+            client.table("venue_features")
+            .select("id")
+            .eq("place_id", venue_id)
+            .eq("slug", slug)
+            .eq("is_active", True)
+            .execute()
+        )
+        if result.data:
+            client.table("venue_features").update({"is_active": False}).eq("id", result.data[0]["id"]).execute()
+            logger.info("Atlanta History Center: retired stale feature slug=%s", slug)
+
+
 def crawl(source: dict) -> tuple[int, int, int]:
     """
     Crawl Atlanta History Center timed programs, exhibitions, and camp sessions.
@@ -716,6 +716,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
     venue_id = get_or_create_place(PLACE_DATA)
     persist_typed_entity_envelope(_build_destination_envelope(venue_id))
+    _retire_stale_features(venue_id)
 
     exhibit_found, exhibit_new, exhibit_updated = _crawl_exhibitions(source["id"], venue_id, source.get("portal_id"))
     camp_found, camp_new, camp_updated = _crawl_summer_camps(source["id"], venue_id)
