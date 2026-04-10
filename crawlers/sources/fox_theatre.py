@@ -2,8 +2,9 @@
 Crawler for Fox Theatre (foxtheatre.org/events).
 Atlanta's historic theater hosting Broadway shows, concerts, and special events.
 
-Site uses JavaScript rendering - must use Playwright.
-Format: DATE RANGE, CATEGORY, TITLE, "Buy Tickets", "Learn More"
+Site uses JavaScript rendering — must use Playwright.
+Event cards use class="eventItem" with structured date elements and "Load More"
+pagination triggered by a button with id="loadMoreEvents".
 """
 
 from __future__ import annotations
@@ -13,11 +14,12 @@ import logging
 from datetime import datetime, timezone
 from typing import Optional
 
-from playwright.sync_api import sync_playwright
+from bs4 import BeautifulSoup
+from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeoutError
 
 from db import get_or_create_place, get_client, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
-from utils import extract_images_from_page, extract_event_links, find_event_url, enrich_event_record
+from utils import enrich_event_record
 from entity_lanes import SourceEntityCapabilities, TypedEntityEnvelope
 from entity_persistence import persist_typed_entity_envelope
 
@@ -73,47 +75,148 @@ SOURCE_ENTITY_CAPABILITIES = SourceEntityCapabilities(
     venue_specials=True,
 )
 
+# Fox site category class → our category/subcategory
+CATEGORY_MAP = {
+    "broadway": ("theater", "broadway"),
+    "concerts": ("music", "concert"),
+    "comedy": ("comedy", None),
+    "special_engagements": ("theater", "special_engagement"),
+    "holiday": ("theater", "holiday"),
+    "family": ("family", None),
+}
 
-def parse_date_range(date_text: str) -> tuple[Optional[str], Optional[str]]:
+# Month abbreviations the Fox site uses (full names like "June" in addition to abbrevs)
+MONTH_MAP = {
+    "jan": "01", "feb": "02", "mar": "03", "apr": "04",
+    "may": "05", "jun": "06", "june": "06",
+    "jul": "07", "aug": "08", "sep": "09", "oct": "10",
+    "nov": "11", "dec": "12",
+}
+
+
+def _parse_fox_date(month_text: str, day_text: str, year_text: str) -> Optional[str]:
     """
-    Parse date range like 'JAN 24 - 25, 2026' or 'FEB 28 - MAR 15, 2026'.
-    Returns (start_date, end_date) tuple.
+    Parse a date from Fox Theatre's DOM elements.
+    month_text: "Apr", "May", "June"
+    day_text:   "10", "3"
+    year_text:  ", 2026"  (leading comma/space stripped)
+    Returns YYYY-MM-DD or None.
     """
-    date_text = date_text.strip().upper()
+    month_key = month_text.strip().lower()[:4].rstrip("e")  # "june" → "jun"
+    month_num = MONTH_MAP.get(month_key) or MONTH_MAP.get(month_text.strip().lower()[:3])
+    if not month_num:
+        return None
+    year_str = re.sub(r"[^0-9]", "", year_text)
+    day_str = day_text.strip().zfill(2)
+    if not year_str or not day_str:
+        return None
+    return f"{year_str}-{month_num}-{day_str}"
 
-    # Pattern: "JAN 24 - 25, 2026" (same month)
-    match = re.match(r"([A-Z]{3})\s+(\d{1,2})\s*-\s*(\d{1,2}),?\s*(\d{4})", date_text)
-    if match:
-        month, start_day, end_day, year = match.groups()
-        try:
-            start_dt = datetime.strptime(f"{month} {start_day} {year}", "%b %d %Y")
-            end_dt = datetime.strptime(f"{month} {end_day} {year}", "%b %d %Y")
-            return start_dt.strftime("%Y-%m-%d"), end_dt.strftime("%Y-%m-%d")
-        except ValueError:
-            pass
 
-    # Pattern: "FEB 28 - MAR 15, 2026" (different months)
-    match = re.match(r"([A-Z]{3})\s+(\d{1,2})\s*-\s*([A-Z]{3})\s+(\d{1,2}),?\s*(\d{4})", date_text)
-    if match:
-        start_month, start_day, end_month, end_day, year = match.groups()
-        try:
-            start_dt = datetime.strptime(f"{start_month} {start_day} {year}", "%b %d %Y")
-            end_dt = datetime.strptime(f"{end_month} {end_day} {year}", "%b %d %Y")
-            return start_dt.strftime("%Y-%m-%d"), end_dt.strftime("%Y-%m-%d")
-        except ValueError:
-            pass
+def _parse_event_item(item: "BeautifulSoup") -> Optional[dict]:
+    """
+    Parse a single eventItem div into a raw event dict.
+    Returns None if required fields are missing.
+    """
+    # --- Title ---
+    h3 = item.find("h3")
+    if not h3:
+        return None
+    title = h3.get_text(strip=True)
+    if not title or len(title) < 3:
+        return None
 
-    # Pattern: Single date "FEB 21, 2026"
-    match = re.match(r"([A-Z]{3})\s+(\d{1,2}),?\s*(\d{4})", date_text)
-    if match:
-        month, day, year = match.groups()
-        try:
-            dt = datetime.strptime(f"{month} {day} {year}", "%b %d %Y")
-            return dt.strftime("%Y-%m-%d"), None
-        except ValueError:
-            pass
+    # --- URL ---
+    detail_link = item.find("a", href=lambda h: h and "/events/detail/" in h)
+    event_url = detail_link["href"] if detail_link else EVENTS_URL
+    if event_url and not event_url.startswith("http"):
+        event_url = BASE_URL + event_url
 
-    return None, None
+    # --- Date parsing ---
+    # The DOM splits dates across: m-date__month, m-date__day (one or two), m-date__year
+    month_el = item.find(class_="m-date__month")
+    year_el = item.find(class_="m-date__year")
+    day_els = item.find_all(class_="m-date__day")
+
+    if not month_el or not year_el or not day_els:
+        # Fallback: try the raw date element text e.g. "Apr10-12, 2026"
+        date_el = item.find(class_="date")
+        if not date_el:
+            return None
+        raw = date_el.get_text(strip=True)
+        # Try to parse "Apr10-12, 2026" or "May5, 2026"
+        m = re.match(
+            r"([A-Za-z]+)(\d{1,2})(?:-([A-Za-z]*)(\d{1,2}))?,?\s*(\d{4})", raw
+        )
+        if not m:
+            return None
+        start_month, start_day, end_month_str, end_day, year_str = m.groups()
+        start_date = _parse_fox_date(start_month, start_day, year_str)
+        if not start_date:
+            return None
+        if end_day:
+            end_month_for_parse = end_month_str if end_month_str else start_month
+            end_date = _parse_fox_date(end_month_for_parse, end_day, year_str)
+        else:
+            end_date = None
+    else:
+        month_text = month_el.get_text(strip=True)
+        year_text = year_el.get_text(strip=True)
+
+        # Determine if this is a range (two m-date__day elements) or single
+        # For cross-month ranges, the second date block has its own m-date__month
+        if len(day_els) == 2:
+            # Check if there's a second month element (cross-month range)
+            range_last = item.find(class_="m-date__rangeLast")
+            second_month_el = range_last.find(class_="m-date__month") if range_last else None
+            end_month_text = second_month_el.get_text(strip=True) if second_month_el else month_text
+
+            start_date = _parse_fox_date(month_text, day_els[0].get_text(strip=True), year_text)
+            end_date = _parse_fox_date(end_month_text, day_els[1].get_text(strip=True), year_text)
+        else:
+            start_date = _parse_fox_date(month_text, day_els[0].get_text(strip=True), year_text)
+            end_date = None
+
+    if not start_date:
+        return None
+
+    # --- Category from CSS classes ---
+    item_classes = item.get("class", [])
+    category = "theater"
+    subcategory = None
+    for cls in item_classes:
+        if cls in CATEGORY_MAP:
+            category, subcategory = CATEGORY_MAP[cls]
+            break
+
+    tags = ["fox-theatre", "midtown"]
+    if subcategory:
+        tags.append(subcategory)
+    elif category != "theater":
+        tags.append(category)
+
+    # --- Category label (e.g. "Regions Bank Broadway in Atlanta") ---
+    cat_label_el = item.find(class_="category")
+    category_label = cat_label_el.get_text(strip=True) if cat_label_el else None
+
+    # --- Subtitle / supporting act ---
+    subtitle_el = item.find("h4") or item.find(class_="subtitle") or item.find("p", class_="m-eventList__subtitle")
+    subtitle = subtitle_el.get_text(strip=True) if subtitle_el else None
+
+    # Build description from category label + subtitle
+    desc_parts = [p for p in [category_label, subtitle] if p]
+    description = " — ".join(desc_parts) if desc_parts else None
+
+    return {
+        "title": title,
+        "start_date": start_date,
+        "end_date": end_date,
+        "category": category,
+        "subcategory": subcategory,
+        "tags": tags,
+        "description": description,
+        "event_url": event_url,
+    }
 
 
 def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
@@ -140,51 +243,84 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
         "source_url": BASE_URL,
         "metadata": {"source_type": "venue_enrichment", "place_type": "theater", "city": "atlanta"},
     })
+    # Main Auditorium
     envelope.add("venue_features", {
         "place_id": venue_id,
-        "slug": "moorish-egyptian-architecture",
-        "title": "Moorish-Egyptian architecture",
+        "slug": "fox-main-auditorium",
+        "title": "Main Auditorium",
         "feature_type": "attraction",
-        "description": "A National Historic Landmark and one of the most magnificent examples of Moorish-Egyptian architecture in the world, built in 1929.",
+        "admission_type": "ticketed",
+        "description": (
+            "The 4,665-seat Moorish/Egyptian Revival main theater, one of Atlanta's most iconic "
+            "performance spaces. Hosts Broadway in Atlanta, major concerts, and headline events "
+            "under its famous night-sky ceiling with twinkling stars and a cloud projection system."
+        ),
         "url": BASE_URL,
         "is_free": False,
         "sort_order": 10,
     })
+    # Egyptian Ballroom
     envelope.add("venue_features", {
         "place_id": venue_id,
-        "slug": "behind-the-scenes-tours",
-        "title": "Behind-the-scenes tours",
-        "feature_type": "experience",
-        "description": "60-minute guided tours exploring the Fox Theatre's history, architecture, and backstage areas.",
-        "url": f"{BASE_URL}/tours",
+        "slug": "fox-egyptian-ballroom",
+        "title": "The Egyptian Ballroom",
+        "feature_type": "attraction",
+        "admission_type": "ticketed",
+        "description": (
+            "An ornate event space decorated in authentic Egyptian Revival style, used for "
+            "smaller performances, standing-room concerts, private events, and receptions. "
+            "Seats up to 700 in theater configuration."
+        ),
+        "url": BASE_URL,
         "is_free": False,
         "sort_order": 20,
     })
+    # Historic Architecture
     envelope.add("venue_features", {
         "place_id": venue_id,
-        "slug": "egyptian-ballroom-grand-salon",
-        "title": "Egyptian Ballroom and Grand Salon",
-        "feature_type": "amenity",
-        "description": "Historic event spaces available for private events, adding to the building's versatility beyond performances.",
+        "slug": "fox-historic-architecture",
+        "title": "Historic Architecture",
+        "feature_type": "attraction",
+        "admission_type": "included",
+        "description": (
+            "1929 movie palace featuring Moorish and Egyptian Revival design: a night-sky ceiling "
+            "with 96 twinkling stars and cloud projections, ornate minarets, hand-painted murals, "
+            "and a courtyard-style lobby. A National Historic Landmark and one of the most "
+            "visually spectacular buildings in the American South."
+        ),
         "url": BASE_URL,
         "is_free": False,
         "sort_order": 30,
     })
+    # Behind-the-scenes tours
+    envelope.add("venue_features", {
+        "place_id": venue_id,
+        "slug": "behind-the-scenes-tours",
+        "title": "Behind-the-Scenes Tours",
+        "feature_type": "experience",
+        "admission_type": "ticketed",
+        "description": "60-minute guided tours exploring the Fox Theatre's history, architecture, and backstage areas.",
+        "url": f"{BASE_URL}/tours",
+        "is_free": False,
+        "sort_order": 40,
+    })
+    # Marquee Club VIP
     envelope.add("venue_features", {
         "place_id": venue_id,
         "slug": "marquee-club-vip",
-        "title": "Marquee Club VIP experience",
+        "title": "Marquee Club VIP Experience",
         "feature_type": "amenity",
+        "admission_type": "ticketed",
         "description": "Premium VIP lounge with exclusive access, craft cocktails, and pre-show dining for select performances.",
         "url": BASE_URL,
         "is_free": False,
-        "sort_order": 40,
+        "sort_order": 50,
     })
     return envelope
 
 
 def crawl(source: dict) -> tuple[int, int, int]:
-    """Crawl Fox Theatre events using Playwright."""
+    """Crawl Fox Theatre events using Playwright with Load More pagination."""
     source_id = source["id"]
     events_found = 0
     events_new = 0
@@ -222,7 +358,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             venue_id = get_or_create_place(PLACE_DATA)
 
-            # Persist any og: enrichment to the venue record
+            # Persist og: enrichment to the venue record
             try:
                 venue_update: dict = {}
                 if PLACE_DATA.get("image_url"):
@@ -237,267 +373,140 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             persist_typed_entity_envelope(_build_destination_envelope(venue_id))
 
-            logger.info(f"Fetching Fox Theatre: {EVENTS_URL}")
+            # ----------------------------------------------------------------
+            # 1. Events page — load all events via "Load More" clicks
+            # ----------------------------------------------------------------
+            logger.info("Fox Theatre: fetching %s", EVENTS_URL)
             page.goto(EVENTS_URL, wait_until="domcontentloaded", timeout=30000)
-            page.wait_for_timeout(3000)
+            page.wait_for_timeout(2000)
 
-            # Extract images from page
-            image_map = extract_images_from_page(page)
+            # Click "Load More" until the button disappears or we hit a cap
+            load_more_clicks = 0
+            max_clicks = 20  # safety cap (~240 events at 12/click)
+            while load_more_clicks < max_clicks:
+                try:
+                    btn = page.query_selector("#loadMoreEvents")
+                    if not btn or not btn.is_visible():
+                        logger.debug("Fox Theatre: Load More button gone after %d clicks", load_more_clicks)
+                        break
+                    btn.scroll_into_view_if_needed()
+                    btn.click()
+                    page.wait_for_timeout(1500)
+                    load_more_clicks += 1
+                    logger.debug("Fox Theatre: Load More click #%d", load_more_clicks)
+                except PlaywrightTimeoutError:
+                    logger.debug("Fox Theatre: Load More timeout, stopping pagination")
+                    break
+                except Exception as _lm_exc:
+                    logger.debug("Fox Theatre: Load More error: %s", _lm_exc)
+                    break
 
-            # Extract event links for specific URLs
-            event_links = extract_event_links(page, BASE_URL)
+            logger.info("Fox Theatre: %d Load More clicks performed", load_more_clicks)
 
-            # Scroll to load all content
-            for _ in range(5):
-                page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
-                page.wait_for_timeout(1000)
-
-            # Extract per-event ticket status from DOM badges before body text parsing.
-            # The listing page renders "SOLD OUT" and "On Sale [date]" badges alongside
-            # each event card. We capture them here keyed by lowercased title so the
-            # body-text parsing loop can apply them without touching skip_items.
-            ticket_status_map: dict[str, str] = {}
-            on_sale_date_map: dict[str, str] = {}
-            try:
-                raw_status_entries = page.evaluate("""
-                    () => {
-                        const results = [];
-                        // Fox Theatre event cards have a common ancestor containing the
-                        // title link and a status badge. Walk every card-like container.
-                        document.querySelectorAll('[class*="event"], [class*="show"], article, li').forEach(card => {
-                            const titleEl = card.querySelector('h2, h3, h4, [class*="title"], [class*="name"]');
-                            if (!titleEl) return;
-                            const title = titleEl.textContent.trim();
-                            if (!title || title.length < 3) return;
-                            const cardText = card.textContent || '';
-                            let status = null;
-                            let onSaleDate = null;
-                            if (/sold\\s*out/i.test(cardText)) {
-                                status = 'sold-out';
-                            } else {
-                                const onSaleMatch = cardText.match(/on\\s+sale\\s+([A-Za-z]+\\s+\\d{1,2}(?:,?\\s*\\d{4})?)/i);
-                                if (onSaleMatch) {
-                                    status = 'tickets-available';
-                                    onSaleDate = onSaleMatch[1].trim();
-                                }
-                            }
-                            if (status) {
-                                results.push({title: title.toLowerCase(), status, onSaleDate});
-                            }
-                        });
-                        return results;
-                    }
-                """)
-                for entry in (raw_status_entries or []):
-                    key = entry.get("title", "").lower()
-                    if key and entry.get("status"):
-                        ticket_status_map[key] = entry["status"]
-                    if key and entry.get("onSaleDate"):
-                        on_sale_date_map[key] = entry["onSaleDate"]
-            except Exception as _ts_exc:
-                logger.debug("Fox Theatre: ticket status DOM extraction failed: %s", _ts_exc)
-
-            # Get page text
-            body_text = page.inner_text("body")
-            lines = [l.strip() for l in body_text.split("\n") if l.strip()]
-
-            # Skip navigation items
-            skip_items = ["skip to content", "accessibility", "buy tickets", "search",
-                         "my account", "e-club", "donate", "english", "fox theatre",
-                         "tickets", "visit us", "private events", "premium experiences",
-                         "community partnerships", "about us", "upcoming events",
-                         "category", "tours", "learn more"]
-
-            i = 0
-            seen_events = set()
-
-            while i < len(lines):
-                line = lines[i]
-
-                # Skip nav/UI items
-                if line.lower() in skip_items or len(line) < 3:
-                    i += 1
-                    continue
-
-                # Look for date pattern at start of line
-                # Format: "JAN 24 - 25, 2026" or "FEB 21, 2026"
-                date_match = re.match(
-                    r"([A-Z]{3})\s+(\d{1,2})(?:\s*-\s*(?:[A-Z]{3}\s+)?(\d{1,2}))?,?\s*(\d{4})",
-                    line,
-                    re.IGNORECASE
-                )
-
-                if date_match:
-                    # Found a date line
-                    start_date, end_date = parse_date_range(line)
-
-                    if not start_date:
-                        i += 1
-                        continue
-
-                    # Look ahead for category and title
-                    category_line = None
-                    title = None
-
-                    # Next line might be category (REGIONS BANK BROADWAY IN ATLANTA)
-                    if i + 1 < len(lines):
-                        next_line = lines[i + 1]
-                        if "broadway" in next_line.lower() or next_line.isupper():
-                            category_line = next_line
-                            # Title should be line after that
-                            if i + 2 < len(lines):
-                                title = lines[i + 2]
-                                i += 2
-                        else:
-                            # No category line, next line is title
-                            title = next_line
-                            i += 1
-
-                    if not title:
-                        i += 1
-                        continue
-
-                    # Skip if title is "Buy Tickets" or similar
-                    if title.lower() in ["buy tickets", "learn more", "sold out"]:
-                        i += 1
-                        continue
-
-                    # Check for duplicates
-                    # Keep per-listing instances; downstream hash handles true dedupe.
-                    event_key = f"{title}|{start_date}|{i}"
-                    if event_key in seen_events:
-                        i += 1
-                        continue
-                    seen_events.add(event_key)
-
-                    events_found += 1
-
-                    # Provisional hash; recomputed after enrichment if start_time is recovered.
-                    content_hash = generate_content_hash(title, "Fox Theatre", start_date)
-
-                    # Check for existing
-
-                    # Determine category based on content
-                    event_category = "theater"
-                    subcategory = None
-                    tags = ["fox-theatre", "midtown"]
-
-                    title_lower = title.lower()
-                    if category_line and "broadway" in category_line.lower():
-                        subcategory = "broadway"
-                        tags.append("broadway")
-                    elif any(w in title_lower for w in ["musical", "hamilton", "wicked", "phantom"]):
-                        subcategory = "musical"
-                        tags.append("broadway")
-                    elif any(w in title_lower for w in ["concert", "tour", "live", "band"]):
-                        event_category = "music"
-                        subcategory = "concert"
-                        tags.append("concert")
-                    elif any(w in title_lower for w in ["comedy", "comedian", "stand-up"]):
-                        event_category = "comedy"
-                        tags.append("comedy")
-                    elif any(w in title_lower for w in ["dance", "ballet", "riverdance", "ailey"]):
-                        subcategory = "dance"
-                        tags.append("dance")
-
-                    # Get specific event URL
-                    event_url = find_event_url(title, event_links, EVENTS_URL)
-
-                    image_url = image_map.get(title)
-
-                    # Build series_hint for multi-night shows
-                    series_hint = None
-                    if end_date is not None:
-                        series_hint = {
-                            "series_type": "recurring_show",
-                            "series_title": title,
-                            "description": category_line,
-                        }
-                        if image_url:
-                            series_hint["image_url"] = image_url
-
-                    # Look up ticket status from DOM extraction
-                    title_key = title.lower()
-                    dom_ticket_status = ticket_status_map.get(title_key)
-                    dom_on_sale_date = on_sale_date_map.get(title_key)
-
-                    event_record = {
-                        "source_id": source_id,
-                        "place_id": venue_id,
-                        "title": title,
-                        "description": category_line,
-                        "start_date": start_date,
-                        "start_time": None,
-                        "end_date": end_date,
-                        "end_time": None,
-                        "is_all_day": False,
-                        "category": event_category,
-                        "subcategory": subcategory,
-                        "tags": tags,
-                        "price_min": None,
-                        "price_max": None,
-                        "price_note": None,
-                        "is_free": None,
-                        "source_url": event_url,
-                        "ticket_url": event_url,
-                        "image_url": image_url,
-                        "raw_text": f"{line} {title}",
-                        "extraction_confidence": 0.90,
-                        "is_recurring": end_date is not None,
-                        "recurrence_rule": None,
-                        "content_hash": content_hash,
-                    }
-
-                    if dom_ticket_status:
-                        event_record["ticket_status"] = dom_ticket_status
-                        event_record["ticket_status_checked_at"] = datetime.now(timezone.utc).isoformat()
-                    if dom_on_sale_date:
-                        event_record["on_sale_date"] = dom_on_sale_date
-
-                    # Enrich from detail page
-                    enrich_event_record(event_record, source_name="Fox Theatre")
-
-                    # Determine is_free if still unknown after enrichment
-                    if event_record.get("is_free") is None:
-                        desc_lower = (event_record.get("description") or "").lower()
-                        title_lower = event_record.get("title", "").lower()
-                        combined = f"{title_lower} {desc_lower}"
-                        if any(kw in combined for kw in ["free", "no cost", "no charge", "complimentary"]):
-                            event_record["is_free"] = True
-                            event_record["price_min"] = event_record.get("price_min") or 0
-                            event_record["price_max"] = event_record.get("price_max") or 0
-                        else:
-                            event_record["is_free"] = False
-
-                    event_start_time = event_record.get("start_time")
-                    hash_key = f"{start_date}|{event_start_time}" if event_start_time else start_date
-                    content_hash = generate_content_hash(title, "Fox Theatre", hash_key)
-                    event_record["content_hash"] = content_hash
-
-                    existing = find_event_by_hash(content_hash)
-                    if existing:
-                        smart_update_existing_event(existing, event_record)
-                        events_updated += 1
-                        i += 1
-                        continue
-
-                    try:
-                        insert_event(event_record, series_hint=series_hint)
-                        events_new += 1
-                        logger.info(f"Added: {title} on {start_date}")
-                    except Exception as e:
-                        logger.error(f"Failed to insert: {title}: {e}")
-
-                i += 1
-
+            # ----------------------------------------------------------------
+            # 2. Parse all eventItem cards from the fully-loaded page
+            # ----------------------------------------------------------------
+            html = page.content()
             browser.close()
 
+        soup = BeautifulSoup(html, "html.parser")
+        items = soup.find_all(class_="eventItem")
+        logger.info("Fox Theatre: found %d eventItem elements", len(items))
+
+        seen_events: set[str] = set()
+
+        for item in items:
+            parsed = _parse_event_item(item)
+            if not parsed:
+                continue
+
+            title = parsed["title"]
+            start_date = parsed["start_date"]
+            end_date = parsed["end_date"]
+            event_url = parsed["event_url"]
+
+            # Dedup within this crawl run (same title + date)
+            dedup_key = f"{title}|{start_date}"
+            if dedup_key in seen_events:
+                continue
+            seen_events.add(dedup_key)
+
+            events_found += 1
+
+            # Build series_hint for multi-night runs
+            series_hint = None
+            if end_date is not None:
+                series_hint = {
+                    "series_type": "recurring_show",
+                    "series_title": title,
+                    "description": parsed.get("description"),
+                }
+
+            event_record = {
+                "source_id": source_id,
+                "place_id": venue_id,
+                "title": title,
+                "description": parsed.get("description"),
+                "start_date": start_date,
+                "start_time": None,
+                "end_date": end_date,
+                "end_time": None,
+                "is_all_day": False,
+                "category": parsed["category"],
+                "subcategory": parsed.get("subcategory"),
+                "tags": parsed["tags"],
+                "price_min": None,
+                "price_max": None,
+                "price_note": None,
+                "is_free": None,
+                "source_url": event_url,
+                "ticket_url": event_url,
+                "image_url": None,
+                "raw_text": f"{start_date} {title}",
+                "extraction_confidence": 0.92,
+                "is_recurring": end_date is not None,
+                "recurrence_rule": None,
+            }
+
+            # Enrich from detail page (picks up start_time, image_url, description, etc.)
+            enrich_event_record(event_record, source_name="Fox Theatre")
+
+            # Resolve is_free if still unknown after enrichment
+            if event_record.get("is_free") is None:
+                combined = f"{(event_record.get('title') or '')} {(event_record.get('description') or '')}".lower()
+                if any(kw in combined for kw in ["free", "no cost", "no charge", "complimentary"]):
+                    event_record["is_free"] = True
+                    event_record.setdefault("price_min", 0)
+                    event_record.setdefault("price_max", 0)
+                else:
+                    event_record["is_free"] = False
+
+            # Recompute hash after enrichment (may have resolved start_time)
+            event_start_time = event_record.get("start_time")
+            hash_key = f"{start_date}|{event_start_time}" if event_start_time else start_date
+            content_hash = generate_content_hash(title, "Fox Theatre", hash_key)
+            event_record["content_hash"] = content_hash
+
+            existing = find_event_by_hash(content_hash)
+            if existing:
+                smart_update_existing_event(existing, event_record)
+                events_updated += 1
+                continue
+
+            try:
+                insert_event(event_record, series_hint=series_hint)
+                events_new += 1
+                logger.info("Fox Theatre: added '%s' on %s", title, start_date)
+            except Exception as insert_exc:
+                logger.error("Fox Theatre: failed to insert '%s': %s", title, insert_exc)
+
         logger.info(
-            f"Fox Theatre crawl complete: {events_found} found, {events_new} new, {events_updated} updated"
+            "Fox Theatre crawl complete: %d found, %d new, %d updated",
+            events_found, events_new, events_updated,
         )
 
     except Exception as e:
-        logger.error(f"Failed to crawl Fox Theatre: {e}")
+        logger.error("Fox Theatre: crawl failed: %s", e)
         raise
 
     return events_found, events_new, events_updated
