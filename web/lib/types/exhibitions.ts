@@ -6,9 +6,12 @@ export type ExhibitionType =
   | "installation"
   | "retrospective"
   | "popup"
-  | "permanent";
+  | "permanent"
+  | "seasonal"
+  | "special-exhibit"
+  | "attraction";
 
-export type AdmissionType = "free" | "ticketed" | "donation" | "suggested";
+export type AdmissionType = "free" | "ticketed" | "donation" | "suggested" | "included";
 
 export type ArtistRole = "artist" | "curator" | "collaborator";
 
@@ -29,6 +32,7 @@ export interface Exhibition {
   admission_url: string | null;
   source_url: string | null;
   tags: string[] | null;
+  related_feature_id: number | null;
   is_active: boolean;
   metadata: Record<string, unknown>;
   created_at: string;
@@ -67,6 +71,9 @@ export const EXHIBITION_TYPE_LABELS: Record<ExhibitionType, string> = {
   retrospective: "Retrospective",
   popup: "Pop-Up",
   permanent: "Permanent Collection",
+  seasonal: "Seasonal Event",
+  "special-exhibit": "Special Exhibit",
+  attraction: "Limited-Time Attraction",
 };
 
 export const ADMISSION_TYPE_LABELS: Record<AdmissionType, string> = {
@@ -74,6 +81,7 @@ export const ADMISSION_TYPE_LABELS: Record<AdmissionType, string> = {
   ticketed: "Ticketed",
   donation: "Donation",
   suggested: "Suggested Donation",
+  included: "Included with Admission",
 };
 
 export const ARTIST_ROLE_LABELS: Record<ArtistRole, string> = {
