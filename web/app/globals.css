@@ -1392,8 +1392,8 @@ body {
   /* Performance optimizations for smooth scrolling */
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  /* Prevent horizontal scroll on mobile — clip preserves sticky positioning */
-  overflow-x: clip;
+  /* Prevent horizontal scroll on mobile — hidden not clip (clip breaks IntersectionObserver on body) */
+  overflow-x: hidden;
 }
 
 h1, h2, h3 {
@@ -1404,8 +1404,8 @@ h1, h2, h3 {
 html {
   scroll-behavior: auto;
   background-color: #09090B;
-  /* Prevent horizontal scroll on mobile — clip instead of hidden to preserve sticky positioning */
-  overflow-x: clip;
+  /* Prevent horizontal scroll on mobile — hidden not clip (clip breaks IntersectionObserver on html) */
+  overflow-x: hidden;
 }
 
 @media (prefers-reduced-motion: reduce) {
