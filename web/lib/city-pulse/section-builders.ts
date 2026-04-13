@@ -18,6 +18,7 @@ import type {
   UserSignals,
   TimeSlot,
   EditorialMention,
+  HorizonBucket,
 } from "./types";
 import { getCardTier } from "./tier-assignment";
 
@@ -1042,15 +1043,67 @@ export function buildTheSceneSection(
 
 
 // ---------------------------------------------------------------------------
-// Planning Horizon section (7+ days out, tentpoles / festivals / multi-day events only)
+// Planning Horizon section (28+ days out, tentpoles / festivals / multi-day events only)
 // ---------------------------------------------------------------------------
 
+function bucketRelativeLabel(monthKey: string, now: Date): string {
+  const [yearStr, monthStr] = monthKey.split("-");
+  const bucketStart = new Date(Number(yearStr), Number(monthStr) - 1, 1);
+  const diffMs = bucketStart.getTime() - now.getTime();
+  const diffDays = Math.max(0, Math.round(diffMs / (24 * 60 * 60 * 1000)));
+  if (diffDays <= 7) return "this week";
+  if (diffDays <= 14) return "next week";
+  const weeks = Math.round(diffDays / 7);
+  if (weeks <= 8) return `${weeks} weeks away`;
+  const months = Math.round(diffDays / 30);
+  return months === 1 ? "1 month away" : `${months} months away`;
+}
+
+function selectHeadliner(events: FeedEventData[]): FeedEventData | null {
+  const importanceRank = (imp: string | undefined): number => {
+    if (imp === "flagship") return 0;
+    if (imp === "major") return 1;
+    return 2;
+  };
+  const dataQualityScore = (e: FeedEventData): number => {
+    let score = 0;
+    const blurb = (e.featured_blurb ?? "").trim();
+    const desc = (e.description ?? "").trim();
+    if (blurb.length >= 20) score += 2;
+    else if (desc.length >= 20) score += 1;
+    if (getEffectiveEventImageUrl(e)) score += 1;
+    return score;
+  };
+  const candidates = events.filter((e) => {
+    const raw = e as Record<string, unknown>;
+    const status = raw.ticket_status as string | undefined;
+    return status !== "sold-out" && status !== "cancelled";
+  });
+  if (candidates.length === 0) return null;
+  candidates.sort((a, b) => {
+    const rawA = a as Record<string, unknown>;
+    const rawB = b as Record<string, unknown>;
+    const impDiff = importanceRank(rawA.importance as string | undefined) -
+                    importanceRank(rawB.importance as string | undefined);
+    if (impDiff !== 0) return impDiff;
+    const qualDiff = dataQualityScore(b) - dataQualityScore(a);
+    if (qualDiff !== 0) return qualDiff;
+    return a.start_date.localeCompare(b.start_date);
+  });
+  return candidates[0];
+}
+
+const MONTH_NAMES = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+];
+
 /**
- * Build a "On the Horizon" section for events more than 7 days away.
+ * Build a "On the Horizon" section for events more than 28 days away.
  * Quality-gated to genuinely plan-ahead, showcase-worthy events:
  *
  *   Structural requirements (all events):
- *   - Must have image_url — it's a carousel, imageless cards look broken
+ *   - Must have image_url — imageless cards look broken
  *   - Far-future events (90+ days out) must also have a real description
  *
  *   At least one of:
@@ -1063,6 +1116,9 @@ export function buildTheSceneSection(
  * Single-day recurring events and recurring multi-day series are excluded.
  * Returns null when fewer than 2 qualifying events remain after filtering.
  *
+ * Output is bucketed by month with headliner selection per bucket.
+ * Beyond 3 months, only flagship/tentpole events survive a tapering filter.
+ *
  * This builder reads from the same events pool already fetched for the feed,
  * so no extra DB round-trip is needed. The `importance` field is included in
  * the events table but not currently in the EVENT_LIST_SELECT — if it isn't
@@ -1073,8 +1129,8 @@ export function buildPlanningHorizonSection(
   editorialMap?: EditorialMap,
 ): CityPulseSection | null {
   const now = new Date();
-  const weekFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
-  const weekFromNowStr = weekFromNow.toISOString().split("T")[0];
+  const fourWeeksFromNow = new Date(now.getTime() + 28 * 24 * 60 * 60 * 1000);
+  const fourWeeksFromNowStr = fourWeeksFromNow.toISOString().split("T")[0];
 
   const horizonEvents = events.filter((e) => {
     const raw = e as Record<string, unknown>;
@@ -1090,7 +1146,7 @@ export function buildPlanningHorizonSection(
       importance === "flagship" ||
       importance === "major" ||
       (e.end_date && e.end_date !== e.start_date);
-    return qualifies && e.start_date >= weekFromNowStr;
+    return qualifies && e.start_date >= fourWeeksFromNowStr;
   });
 
   if (horizonEvents.length < 2) return null;
@@ -1259,15 +1315,27 @@ export function buildPlanningHorizonSection(
   );
   const capped = [...flagships, ...majors].slice(0, 40);
 
-  // Compute per-month counts for the month selector
-  const monthCounts: Record<string, number> = {};
-  for (const e of capped) {
+  // --- Tapering rule: beyond 3 months, only flagship/tentpole ---
+  const threeMonthsOut = new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000)
+    .toISOString().split("T")[0];
+
+  const tapered = capped.filter((e) => {
+    if (e.start_date <= threeMonthsOut) return true;
+    const raw = e as Record<string, unknown>;
+    return raw.importance === "flagship" || raw.is_tentpole;
+  });
+
+  // --- Group events by month ---
+  const monthGroups = new Map<string, FeedEventData[]>();
+  for (const e of tapered) {
     const monthKey = e.start_date.slice(0, 7);
-    monthCounts[monthKey] = (monthCounts[monthKey] || 0) + 1;
+    const group = monthGroups.get(monthKey) ?? [];
+    group.push(e);
+    monthGroups.set(monthKey, group);
   }
 
-  // Enrich with urgency + freshness so the client doesn't need to recompute
-  const items: CityPulseItem[] = capped.map((e) => {
+  // --- Enrich a single event with urgency + freshness, produce CityPulseItem ---
+  const enrichEvent = (e: FeedEventData): CityPulseEventItem => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const raw = e as any;
     const enriched = {
@@ -1276,7 +1344,62 @@ export function buildPlanningHorizonSection(
       ticket_freshness: ticketStatusFreshness(raw.ticket_status_checked_at),
     };
     return makeEventItem(enriched as FeedEventData, undefined, editorialMap);
-  });
+  };
+
+  // --- Build buckets ---
+  // How many supporting rows the client shows before "N more" disclosure
+  const CLIENT_VISIBLE_CAP = 3;
+  const sortedMonthKeys = [...monthGroups.keys()].sort();
+  const buckets: HorizonBucket[] = [];
+
+  for (const monthKey of sortedMonthKeys) {
+    const monthEvents = monthGroups.get(monthKey)!;
+    const monthNum = Number(monthKey.split("-")[1]) - 1;
+    const label = MONTH_NAMES[monthNum];
+    const relativeLabel = bucketRelativeLabel(monthKey, now);
+    const totalCount = monthEvents.length;
+    const isSmallBucket = totalCount <= 2;
+
+    let headliner: CityPulseEventItem | null = null;
+    let supporting: CityPulseEventItem[];
+
+    if (isSmallBucket) {
+      headliner = null;
+      supporting = monthEvents.map(enrichEvent);
+    } else {
+      const headlinerEvent = selectHeadliner(monthEvents);
+      if (headlinerEvent) {
+        headliner = enrichEvent(headlinerEvent);
+        const rest = monthEvents.filter((e) => e.id !== headlinerEvent.id);
+        supporting = rest.map(enrichEvent);
+      } else {
+        supporting = monthEvents.map(enrichEvent);
+      }
+    }
+
+    const visibleSupporting = Math.min(supporting.length, CLIENT_VISIBLE_CAP);
+    const overflowCount = Math.max(0, supporting.length - visibleSupporting);
+
+    buckets.push({
+      key: monthKey,
+      label,
+      relativeLabel,
+      headliner,
+      supporting,
+      totalCount,
+      overflowCount,
+      isSmallBucket,
+    });
+  }
+
+  if (buckets.length === 0) return null;
+
+  // Flatten all bucket events into items for backward compatibility
+  const allItems: CityPulseItem[] = [];
+  for (const bucket of buckets) {
+    if (bucket.headliner) allItems.push(bucket.headliner);
+    allItems.push(...bucket.supporting);
+  }
 
   return {
     id: "planning-horizon",
@@ -1285,9 +1408,9 @@ export function buildPlanningHorizonSection(
     subtitle: "Big events worth planning around",
     priority: "secondary",
     accent_color: "var(--gold)",
-    items,
-    layout: "carousel",
-    meta: { month_counts: monthCounts },
+    items: allItems,
+    layout: "list",
+    meta: { buckets },
   };
 }
 
