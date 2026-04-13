@@ -5,6 +5,7 @@ import Link from "next/link";
 import { MapPin } from "@phosphor-icons/react";
 import FeedSectionHeader from "@/components/feed/FeedSectionHeader";
 import NowShowingSection from "./NowShowingSection";
+import MusicTabContent from "./MusicTabContent";
 import { VenueShowCard } from "@/components/feed/venues/VenueShowCard";
 import { VenueExhibitionCard } from "@/components/feed/venues/VenueExhibitionCard";
 import {
@@ -350,6 +351,7 @@ export default function VenuesSection({ portalSlug }: { portalSlug: string }) {
       <FeedSectionHeader
         title="Venues"
         priority="secondary"
+        variant="destinations"
         accentColor="var(--vibe)"
         icon={<MapPin weight="duotone" className="w-5 h-5" />}
         seeAllHref={buildExploreUrl({ portalSlug, lane: "shows" })}
@@ -387,13 +389,7 @@ export default function VenuesSection({ portalSlug }: { portalSlug: string }) {
       {/* Music */}
       <div className={activeTab === "music" ? "block" : "hidden"}>
         {visited.has("music") && (
-          <ProgrammingTabContent
-            portalSlug={portalSlug}
-            categories="music"
-            accentColor="#E855A0"
-            label="music"
-            requireShow
-          />
+          <MusicTabContent portalSlug={portalSlug} />
         )}
       </div>
 
