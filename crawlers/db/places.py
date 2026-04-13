@@ -469,21 +469,33 @@ def _maybe_update_existing_venue(venue_id: int, venue_data: dict) -> None:
 
     # place_type: crawler VENUE_DATA is a higher-trust signal than early LLM
     # classification — allow override even when current is non-NULL.
+    # Exception: curated types set by migration (e.g. music_venue) must not
+    # be downgraded to generic types by crawler inference.
     incoming_type = venue_data.get("place_type")
     current_type = current.get("place_type")
+    _CURATED_TYPES = {"music_venue", "comedy_club", "concert_hall"}
+    _GENERIC_TYPES = {"venue", "bar", "restaurant", "brewery", "event_space"}
     if (
         incoming_type
         and current_type
         and incoming_type != current_type
         and incoming_type in VALID_VENUE_TYPES
     ):
-        updates["place_type"] = incoming_type
-        logger.info(
-            "Correcting place_type for '%s': %s -> %s (crawler override)",
-            current.get("name") or "unknown",
-            current_type,
-            incoming_type,
-        )
+        if current_type in _CURATED_TYPES and incoming_type in _GENERIC_TYPES:
+            logger.debug(
+                "Preserving curated place_type for '%s': %s (ignoring crawler %s)",
+                current.get("name") or "unknown",
+                current_type,
+                incoming_type,
+            )
+        else:
+            updates["place_type"] = incoming_type
+            logger.info(
+                "Correcting place_type for '%s': %s -> %s (crawler override)",
+                current.get("name") or "unknown",
+                current_type,
+                incoming_type,
+            )
 
     if not updates:
         return
