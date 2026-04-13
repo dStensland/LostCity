@@ -188,7 +188,7 @@ export async function resolvePortalContext(
   const weekAhead = getLocalDateString(addDays(effectiveNow, 7));
   const twoWeeksAhead = getLocalDateString(addDays(effectiveNow, 14));
   const fourWeeksAhead = getLocalDateString(addDays(effectiveNow, 28));
-  const horizonStart = getLocalDateString(addDays(effectiveNow, 7));
+  const horizonStart = getLocalDateString(addDays(effectiveNow, 28));
   const horizonEnd = getLocalDateString(addDays(effectiveNow, 180));
 
   // Federation + manifest (parallel — independent)
