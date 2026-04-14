@@ -71,18 +71,36 @@ export type SearchFilterInput = Pick<
 /**
  * Parse URLSearchParams into a validated, normalized SearchInput.
  *
- * Array params arrive comma-separated (e.g., `categories=music,comedy`) and
- * are split before Zod validation. The query field gets NFKC normalization +
- * control-char stripping applied AFTER the initial Zod parse.
+ * ORDER OF OPERATIONS (load-bearing — do not reorder without reading this):
+ *
+ *   1. Split comma-separated array params (types, categories, etc.) — this
+ *      is structural, not value-level, so it runs before Zod.
+ *   2. VALIDATE — Zod sees the raw query string and enforces min/max length,
+ *      enum membership, and facet-slug regexes. A 200-char query is rejected
+ *      here regardless of what normalization would do to it later.
+ *   3. NORMALIZE — NFKC + control-char strip + whitespace collapse only
+ *      happens AFTER Zod has accepted the input. Normalization cannot mask
+ *      a bad input: if the raw query failed Zod, we never reach this step.
+ *   4. POST-NORMALIZE GUARD — if normalization reduced q below the min
+ *      length (e.g., the raw was "\u0000" which passes z.string().min(1)
+ *      but normalizes to ""), we raise a ZodError for parity with step 2.
+ *
+ * The invariant: **validate first, then normalize.** Rejection of malformed
+ * input is deterministic and independent of the normalization function's
+ * behavior. Changing the order would let normalization mask DoS / injection
+ * input — a control-char bomb could expand past 120 chars AFTER the check,
+ * defeating the length guard.
  *
  * Throws a ZodError on validation failure. The route handler is expected to
  * catch and return 400.
  */
 export function parseSearchInput(searchParams: URLSearchParams): SearchInput {
+  // Step 1: structural transform — array param splitting (no value changes).
   const raw = Object.fromEntries(searchParams.entries());
   const arrayify = (v: string | undefined) =>
     v ? v.split(",").map((s) => s.trim()).filter(Boolean) : undefined;
 
+  // Step 2: VALIDATE — Zod runs against the untouched raw q.
   const parsed = SearchInputSchema.parse({
     ...raw,
     types: arrayify(raw.types),
@@ -91,9 +109,11 @@ export function parseSearchInput(searchParams: URLSearchParams): SearchInput {
     tags: arrayify(raw.tags),
   });
 
-  // Re-normalize q after Zod — NFKC + control chars + whitespace collapse.
-  // If normalization reduces q below the min length (1 char), re-validate.
+  // Step 3: NORMALIZE — only after Zod has accepted the raw input.
   const normalized_q = normalizeSearchQuery(parsed.q);
+
+  // Step 4: POST-NORMALIZE GUARD — zero-width / control-only queries would
+  // pass z.string().min(1) but collapse to empty during normalization.
   if (normalized_q.length < 1) {
     throw new z.ZodError([
       {

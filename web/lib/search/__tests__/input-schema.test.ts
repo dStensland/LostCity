@@ -116,4 +116,38 @@ describe("parseSearchInput", () => {
     // The Zod schema will reject before normalization
     expect(() => parseSearchInput(sp)).toThrow();
   });
+
+  // E-3.4 order-of-operations guard. The invariant is: validate first,
+  // normalize second. These tests pin that order so future refactors can't
+  // silently let normalization mask malformed input.
+  describe("validate-then-normalize order", () => {
+    it("rejects raw oversized input BEFORE normalization could trim it", () => {
+      // 121 chars of 'a' — Zod max is 120. If normalization ran first and
+      // collapsed whitespace, the value would still be 121 and rejected,
+      // but this test specifically pins the raw-input path.
+      const sp = new URLSearchParams();
+      sp.set("q", "a".repeat(121));
+      expect(() => parseSearchInput(sp)).toThrow();
+    });
+
+    it("rejects post-normalization empty input via ZodError", () => {
+      // "\u0000" passes z.string().min(1) but normalizes to "". The post-
+      // normalize guard catches this and raises a ZodError matching the
+      // custom 'query is empty after normalization' message.
+      const sp = new URLSearchParams();
+      sp.set("q", "\u0000");
+      expect(() => parseSearchInput(sp)).toThrow(/empty after normalization/);
+    });
+
+    it("does NOT reject whitespace-padded raw input below the max boundary", () => {
+      // "jazz" + 100 spaces = 104 chars — Zod accepts (104 ≤ 120).
+      // Normalization collapses whitespace to "jazz". This works because
+      // validate-first accepts 104 chars of whitespace as long as the
+      // total is under 120.
+      const sp = new URLSearchParams();
+      sp.set("q", "jazz" + " ".repeat(100));
+      const input = parseSearchInput(sp);
+      expect(input.q).toBe("jazz");
+    });
+  });
 });
