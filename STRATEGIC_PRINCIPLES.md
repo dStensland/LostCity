@@ -1,5 +1,7 @@
 # LostCity Strategic Principles
 
+> **Status as of 2026-04-14:** Surgical update — schema references corrected for the `venues` → `places` rename, `venue_specials` → `place_specials` co-rename, and `search_unified()` RPC replacement. Four-entity model (events/places/programs/exhibitions) updated for internal consistency with `.claude/north-star.md`. Strategic principles and hypotheses below remain unchanged. A full strategic review against current product state is a separate follow-up.
+
 This document defines the core hypotheses and strategic principles that should guide every product, architecture, and feature decision. Before building anything, check it against these principles. If a feature doesn't support or align with them, challenge it.
 
 ---
@@ -50,7 +52,7 @@ Discovery without coordination is a content site. The hardest part of going out 
 ## Strategic Principles
 
 ### 1. The Data Layer Is the Product
-Frontends come and go. The comprehensive, enriched, federated data layer is the durable asset. Every decision should ask: "Does this make the data layer richer, more accurate, or more comprehensive?" This now includes three entity types — events, destinations, and programs — plus editorial signals, occasion intelligence, and social proof data.
+Frontends come and go. The comprehensive, enriched, federated data layer is the durable asset. Every decision should ask: "Does this make the data layer richer, more accurate, or more comprehensive?" This now includes four first-class entity types — events, places (formerly `venues`), programs, and exhibitions — plus editorial signals, occasion intelligence, and social proof data.
 
 **Do**: Build features that improve data quality (validation, enrichment, venue claiming).
 **Don't**: Build frontend features that bypass the data layer or create data in frontend-only state.
