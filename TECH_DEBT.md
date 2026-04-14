@@ -1,5 +1,7 @@
 # Tech Debt
 
+> **Status as of 2026-04-14:** This document was last fully audited on 2026-03-05. Many items may have been fixed since then (places refactor, search rebuild, entity-urls consolidation, exhibitions system have all landed). **Before treating any item below as current, verify it against the actual codebase.** A re-audit is queued as a follow-up in `docs/superpowers/plans/2026-04-14-doc-consolidation-pass.md` — until that lands, treat this list as a starting point, not a punch list.
+
 Tracked items to address post-launch.
 
 ## 1. ~40 `(supabase as any)` casts suppress TypeScript type safety

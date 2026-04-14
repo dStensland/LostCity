@@ -1,3 +1,7 @@
+> **ARCHIVED 2026-04-14.** This document is no longer authoritative. The active roadmap lives in `DEV_PLAN.md` (operational status), `STRATEGIC_PRINCIPLES.md` (principles), and `.claude/north-star.md` (mission). Do not use this document as a source of truth for current priorities. Kept for historical reference only.
+
+---
+
 # LostCity Product Roadmap (Historical)
 
 > **Note:** This file is historical. The active roadmap is `DEV_PLAN.md`. Strategic principles in `STRATEGIC_PRINCIPLES.md`. North star in `.claude/north-star.md`.

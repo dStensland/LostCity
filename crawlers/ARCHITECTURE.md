@@ -7,8 +7,8 @@ ranking, portal isolation, and downstream presentation.
 
 ## Goals
 - Maximize future-facing coverage and correctness, not lifetime row counts.
-- Move data into the correct entity lane: `events`, `series`, `venues`,
-  `venue_specials`, `programs`, `exhibitions`, opportunity lanes, and festival
+- Move data into the correct entity lane: `events`, `series`, `places`,
+  `place_specials`, `programs`, `exhibitions`, opportunity lanes, and festival
   structures.
 - Treat destinations as first-class product data. A venue can be healthy and
   valuable even when it has zero upcoming events if it helps people decide
@@ -31,10 +31,10 @@ The crawler system is constrained by the current live schema and write path:
   `category` remains an input alias only.
 - `events.content_kind` distinguishes `event` from `exhibit`.
   Permanent attractions are not events.
-- `venue_specials` is the correct home for operating offers, happy hours, and
+- `place_specials` (formerly `venue_specials`) is the correct home for operating offers, happy hours, and
   recurring deals. Do not model them as `content_kind='special'` events.
-- `venues` carry destination metadata such as `hours`, `image_url`,
-  `location_designator`, and `planning_notes`.
+- `places` (the table renamed from `venues` in 2026-03) carry destination metadata such as `hours`, `image_url`,
+  `location_designator`, and `planning_notes`. The `place_type` field replaces `venue_type`. A PostGIS `location` geography column is auto-populated from `lat`/`lng`.
 - Destination usefulness is broader than event calendars. Parking notes,
   transit/walkability context, reservation friction, accessibility details, and
   allergy-sensitive planning guidance are all part of product quality when the
@@ -74,7 +74,7 @@ what earlier phases did not provide unless explicitly allowed.
 
 5. Entity Linking
    - Input: NormalizedEvent
-   - Output: Persistable payloads for `events`, `series`, `venues`, `event_artists`,
+   - Output: Persistable payloads for `events`, `series`, `places`, `event_artists`,
      `event_images`, `event_links`, and any additional typed entity lanes emitted
      by the source
    - Tasks: link artists, venues, organizations, series, and portal/source attribution.
@@ -104,8 +104,8 @@ Use the storage lane that matches the user-visible contract:
   time, commitment, conditions fit, and practical planning.
 - concrete opportunity tables: deadline- or commitment-driven actionables such
   as `open_calls` and `volunteer_opportunities`.
-- `venue_specials`: happy hours, recurring food/drink deals, operational promos.
-- `venues`: destination metadata, planning metadata, and map/discovery completeness.
+- `place_specials`: happy hours, recurring food/drink deals, operational promos.
+- `places`: destination metadata, planning metadata, and map/discovery completeness. (Table renamed from `venues` in 2026-03; `place_type` replaces `venue_type`.)
 - destination-attached features: durable things you can do, see, or experience at
   a place that should not be flattened into feed events.
 
@@ -169,20 +169,22 @@ Event links:
 - `event_links(event_id, type, url, source, confidence, created_at)`
 - `type`: `event`, `ticket`, `organizer`, `other`
 
-Venues:
+Places (the table formerly known as `venues`):
 - Treat `website`, `image_url`, `hours`, `location_designator`, and
   `planning_notes` as part of destination quality, not optional nice-to-haves.
+- `place_type` replaces `venue_type` (both field and taxonomy).
+- `location` is a PostGIS `geography(Point, 4326)` column auto-populated by trigger from `lat`/`lng`. Use it for spatial queries instead of recomputing distance from raw coordinates.
 
-Venue specials:
-- Use `venue_specials` for deals and operational recurring offers.
+Place specials (formerly `venue_specials`):
+- Use `place_specials` for deals and operational recurring offers. The table was renamed from `venue_specials` in the same 2026-03 refactor that renamed `venues` → `places`; its `venue_id` column became `place_id`.
 - Coverage quality for hotel/concierge surfaces depends on this table as much as
   the event feed.
 
 Typed entity outputs:
 - The crawler contract should increasingly classify extracted records into
   explicit typed payload lanes instead of assuming every row becomes an event.
-- Near-term target lanes: `events`, `programs`, `exhibitions`,
-  `destination_details`, concrete opportunity tables, `venue_specials`, and
+- Near-term target lanes: `events`, `programs`, `exhibitions`, `places`,
+  `destination_details`, concrete opportunity tables, `place_specials`, and
   destination-attached feature/enrichment lanes.
 
 ## Source Profiles
@@ -292,8 +294,8 @@ High-quality coverage should follow this order:
 
 1. Fix source acquisition and write-path failures.
 2. Fix entity classification (`category_id`, `content_kind`, series, portal attribution).
-3. Hydrate destination metadata on `venues`.
-4. Hydrate `venue_specials` where the portal surface benefits from them.
+3. Hydrate destination metadata on `places`.
+4. Hydrate `place_specials` where the portal surface benefits from them.
 5. Run quality audits against future active inventory and source health.
 
 ## Scheduling
