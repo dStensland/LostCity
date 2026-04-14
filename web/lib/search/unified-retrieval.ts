@@ -123,7 +123,7 @@ export async function runUnifiedRetrieval(
   // Honor ctx.types when present; default to ["event","venue"] when absent.
   // This is the retrieval scope — distinct from row-level filters.
   const typesToSearch =
-    ctx.types && ctx.types.length > 0 ? ctx.types : ["event", "venue"];
+    ctx.types && ctx.types.length > 0 ? ctx.types : ["event", "venue", "exhibition"];
 
   // Note: database.types.ts still has the OLD search_unified signature typed.
   // Task 47 (legacy cleanup) will regenerate types. Until then, cast args

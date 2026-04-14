@@ -93,7 +93,7 @@ describe("filter wiring", () => {
     );
   });
 
-  it("defaults to [event,venue] when types not provided", async () => {
+  it("defaults to [event,venue,exhibition] when types not provided", async () => {
     await search("jazz", {
       portal_id: "p1",
       portal_slug: "atlanta",
@@ -101,7 +101,7 @@ describe("filter wiring", () => {
     });
     expect(rpcSpy).toHaveBeenCalledWith(
       "search_unified",
-      expect.objectContaining({ p_types: ["event", "venue"] })
+      expect.objectContaining({ p_types: ["event", "venue", "exhibition"] })
     );
   });
 
