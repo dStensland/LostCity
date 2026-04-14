@@ -484,7 +484,7 @@ export async function GET(request: NextRequest, { params }: Props) {
         is_open: openResult.isOpen,
         callouts,
         event_count: ctx.eventsThisWeek,
-        href: `/${canonicalSlug}/places/${place.slug}`,
+        href: `/${canonicalSlug}/spots/${place.slug}`,
       };
     });
 

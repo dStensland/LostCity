@@ -203,12 +203,12 @@ export async function GET(request: NextRequest) {
     .from("place_claims")
     .select(`
       id,
-      venue_id,
+      place_id,
       status,
       proof_url,
       claimed_at,
       reviewed_at,
-      venues (
+      places (
         id,
         name,
         slug,
