@@ -17,10 +17,10 @@ export const POST = withAuthAndParams<{ id: string }>(
       return NextResponse.json({ error: "action must be 'add' or 'dismiss'" }, { status: 400 });
     }
 
-    // Verify ownership and get movie_id
+    // Verify ownership and get movie_id + recommender name
     const { data: rec } = await serviceClient
       .from("goblin_watchlist_recommendations")
-      .select("id, movie_id, status")
+      .select("id, movie_id, status, recommender_name")
       .eq("id", recId)
       .eq("target_user_id", user.id)
       .maybeSingle();
@@ -29,33 +29,70 @@ export const POST = withAuthAndParams<{ id: string }>(
       return NextResponse.json({ error: "Recommendation not found" }, { status: 404 });
     }
 
-    if ((rec as { status: string }).status !== "pending") {
+    const typedRec = rec as { movie_id: number; status: string; recommender_name: string };
+
+    if (typedRec.status !== "pending") {
       return NextResponse.json({ error: "Recommendation already handled" }, { status: 409 });
     }
 
-    const movieId = (rec as { movie_id: number }).movie_id;
-
     if (action === "add") {
-      // Add to watchlist at bottom
-      const { data: maxRow } = await serviceClient
-        .from("goblin_watchlist_entries")
-        .select("sort_order")
-        .eq("user_id", user.id)
-        .order("sort_order", { ascending: false, nullsFirst: false })
-        .limit(1)
-        .maybeSingle();
-
-      const nextOrder = ((maxRow as { sort_order: number } | null)?.sort_order ?? 0) + 1;
-
-      await serviceClient
-        .from("goblin_watchlist_entries")
-        .insert({
-          user_id: user.id,
-          movie_id: movieId,
-          sort_order: nextOrder,
-        } as never)
+      // Find or create the recommendations group
+      let { data: recsGroup } = await serviceClient
+        .from("goblin_lists")
         .select("id")
+        .eq("user_id", user.id)
+        .eq("is_recommendations", true)
         .maybeSingle();
+
+      if (!recsGroup) {
+        // Auto-assign sort_order
+        const { data: maxRow } = await serviceClient
+          .from("goblin_lists")
+          .select("sort_order")
+          .eq("user_id", user.id)
+          .order("sort_order", { ascending: false, nullsFirst: false })
+          .limit(1)
+          .maybeSingle();
+
+        const nextSortOrder = ((maxRow as any)?.sort_order ?? 0) + 1;
+
+        const { data: created } = await serviceClient
+          .from("goblin_lists")
+          .insert({
+            user_id: user.id,
+            name: "Recommendations",
+            is_recommendations: true,
+            sort_order: nextSortOrder,
+          } as never)
+          .select("id")
+          .single();
+
+        recsGroup = created;
+      }
+
+      if (recsGroup) {
+        const groupId = (recsGroup as { id: number }).id;
+
+        // Auto-assign sort_order within group
+        const { data: maxMovie } = await serviceClient
+          .from("goblin_list_movies")
+          .select("sort_order")
+          .eq("list_id", groupId)
+          .order("sort_order", { ascending: false, nullsFirst: false })
+          .limit(1)
+          .maybeSingle();
+
+        const nextMovieOrder = ((maxMovie as any)?.sort_order ?? 0) + 1;
+
+        await serviceClient
+          .from("goblin_list_movies")
+          .insert({
+            list_id: groupId,
+            movie_id: typedRec.movie_id,
+            sort_order: nextMovieOrder,
+            note: `Recommended by ${typedRec.recommender_name}`,
+          } as never);
+      }
     }
 
     // Update recommendation status
