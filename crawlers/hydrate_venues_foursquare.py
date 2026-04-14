@@ -192,7 +192,7 @@ def get_venues_needing_hydration(
     client = get_client()
 
     query = client.table("places").select(
-        "id, name, slug, address, city, state, lat, lng, venue_type, hours, image_url, foursquare_id, website"
+        "id, name, slug, address, city, state, lat, lng, place_type, hours, image_url, foursquare_id, website"
     ).eq("is_active", True).eq("city", "Atlanta")
 
     if venue_type:

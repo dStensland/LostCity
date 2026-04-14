@@ -1,0 +1,172 @@
+<h2>Direction: Cinematic Spy HUD</h2>
+<p class="subtitle">Mission dossier meets surveillance interface. Every element earns its drama.</p>
+
+<div class="cards">
+
+  <div class="card" data-choice="hero-treatment" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:#0a0a0f;padding:20px;min-height:280px;position:relative;overflow:hidden;">
+      <!-- Scan line overlay -->
+      <div style="position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,240,255,0.03) 2px,rgba(0,240,255,0.03) 4px);pointer-events:none;z-index:2;"></div>
+      <!-- Glitch bar -->
+      <div style="position:absolute;top:12px;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent 0%,rgba(0,240,255,0.6) 20%,transparent 40%,rgba(255,0,170,0.4) 60%,transparent 80%);z-index:3;"></div>
+
+      <!-- Top 3 item mockup -->
+      <div style="display:flex;gap:12px;align-items:stretch;margin-top:20px;">
+        <!-- Rank -->
+        <div style="width:48px;display:flex;align-items:center;justify-content:center;">
+          <span style="font-family:monospace;font-size:32px;font-weight:900;color:#00f0ff;text-shadow:0 0 20px rgba(0,240,255,0.6),0 0 40px rgba(0,240,255,0.2);letter-spacing:-2px;">01</span>
+        </div>
+        <!-- Image with HUD frame -->
+        <div style="width:80px;height:80px;position:relative;flex-shrink:0;">
+          <div style="width:100%;height:100%;background:linear-gradient(135deg,#1a1a2e,#0f0f1a);border:1px solid rgba(0,240,255,0.3);"></div>
+          <!-- Corner brackets -->
+          <div style="position:absolute;top:-1px;left:-1px;width:8px;height:8px;border-top:2px solid #00f0ff;border-left:2px solid #00f0ff;"></div>
+          <div style="position:absolute;top:-1px;right:-1px;width:8px;height:8px;border-top:2px solid #00f0ff;border-right:2px solid #00f0ff;"></div>
+          <div style="position:absolute;bottom:-1px;left:-1px;width:8px;height:8px;border-bottom:2px solid #00f0ff;border-left:2px solid #00f0ff;"></div>
+          <div style="position:absolute;bottom:-1px;right:-1px;width:8px;height:8px;border-bottom:2px solid #00f0ff;border-right:2px solid #00f0ff;"></div>
+        </div>
+        <!-- Content -->
+        <div style="flex:1;min-width:0;">
+          <div style="font-family:monospace;font-size:9px;color:rgba(0,240,255,0.5);letter-spacing:3px;text-transform:uppercase;">CLASSIFIED // STUNT</div>
+          <div style="font-size:15px;font-weight:700;color:#f5f5f3;margin-top:4px;text-shadow:0 0 10px rgba(255,255,255,0.1);">HALO Jump</div>
+          <div style="font-family:monospace;font-size:10px;color:#a1a1aa;margin-top:2px;">Fallout (2018)</div>
+          <div style="font-size:10px;color:#71717a;margin-top:4px;line-height:1.4;">25,000 feet over Paris. 100+ takes.</div>
+        </div>
+        <!-- Threat level bar -->
+        <div style="width:4px;align-self:stretch;background:linear-gradient(180deg,#00f0ff,#00f0ff 60%,rgba(0,240,255,0.1));border-radius:2px;"></div>
+      </div>
+
+      <!-- Regular item mockup -->
+      <div style="display:flex;gap:12px;align-items:stretch;margin-top:8px;opacity:0.7;">
+        <div style="width:48px;display:flex;align-items:center;justify-content:center;">
+          <span style="font-family:monospace;font-size:20px;font-weight:900;color:#ff00aa;text-shadow:0 0 12px rgba(255,0,170,0.4);">07</span>
+        </div>
+        <div style="width:56px;height:56px;background:#1a1a2e;border:1px solid rgba(255,0,170,0.2);flex-shrink:0;"></div>
+        <div style="flex:1;">
+          <div style="font-size:13px;font-weight:600;color:#d4d4d8;">Burj Khalifa Climb</div>
+          <div style="font-family:monospace;font-size:10px;color:#71717a;margin-top:2px;">Ghost Protocol</div>
+        </div>
+      </div>
+
+      <!-- Lower rank item -->
+      <div style="display:flex;gap:12px;align-items:stretch;margin-top:8px;opacity:0.4;">
+        <div style="width:48px;display:flex;align-items:center;justify-content:center;">
+          <span style="font-family:monospace;font-size:18px;font-weight:900;color:#52525b;">14</span>
+        </div>
+        <div style="width:48px;height:48px;background:#18181f;border:1px solid rgba(82,82,91,0.3);flex-shrink:0;"></div>
+        <div style="flex:1;">
+          <div style="font-size:12px;color:#71717a;">Vatican Infiltration</div>
+          <div style="font-family:monospace;font-size:9px;color:#52525b;margin-top:2px;">MI:III</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>Ranking Items</h3>
+      <p>Top 3 get the full HUD treatment — corner brackets on images, glowing rank numbers, scan lines. Items scale down in visual intensity as rank drops. Dossier classification labels. Subtle threat-level sidebar.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="header-treatment" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:#0a0a0f;padding:20px;min-height:280px;position:relative;overflow:hidden;">
+      <!-- Animated grid bg -->
+      <div style="position:absolute;inset:0;background-image:linear-gradient(rgba(0,240,255,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(0,240,255,0.03) 1px,transparent 1px);background-size:40px 40px;"></div>
+
+      <!-- Title block -->
+      <div style="position:relative;z-index:1;">
+        <div style="font-family:monospace;font-size:9px;color:rgba(0,240,255,0.4);letter-spacing:4px;text-transform:uppercase;">OPERATION ACTIVE // RANKING PROTOCOL</div>
+        <div style="margin-top:8px;font-size:28px;font-weight:900;color:#f5f5f3;text-transform:uppercase;letter-spacing:8px;text-shadow:0 0 30px rgba(0,240,255,0.2),0 0 60px rgba(0,240,255,0.05);">
+          MISSION:<br>IMPOSSIBLE
+        </div>
+        <div style="margin-top:6px;font-family:monospace;font-size:10px;color:#71717a;letter-spacing:3px;">RANK THE FRANCHISE // ALL CATEGORIES</div>
+        <!-- Divider with pulse dot -->
+        <div style="margin-top:16px;display:flex;align-items:center;gap:8px;">
+          <div style="width:6px;height:6px;border-radius:50%;background:#00f0ff;box-shadow:0 0 8px #00f0ff,0 0 16px rgba(0,240,255,0.4);"></div>
+          <div style="flex:1;height:1px;background:linear-gradient(90deg,rgba(0,240,255,0.4),transparent);"></div>
+        </div>
+      </div>
+
+      <!-- Category tabs -->
+      <div style="display:flex;gap:8px;margin-top:16px;position:relative;z-index:1;">
+        <div style="padding:6px 14px;font-family:monospace;font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#fff;background:rgba(0,240,255,0.15);border:1px solid rgba(0,240,255,0.4);box-shadow:0 0 12px rgba(0,240,255,0.1),inset 0 0 12px rgba(0,240,255,0.05);">MOVIES</div>
+        <div style="padding:6px 14px;font-family:monospace;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#71717a;border:1px solid rgba(82,82,91,0.3);">STUNTS</div>
+        <div style="padding:6px 14px;font-family:monospace;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#71717a;border:1px solid rgba(82,82,91,0.3);">SEQUENCES</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>Page Header</h3>
+      <p>Grid background, glitch scan lines, pulsing status dot. Title gets the full cinematic treatment with dramatic letter spacing and cyan text shadow. Category tabs glow when active. "OPERATION ACTIVE" classification header.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="animations" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:#0a0a0f;padding:20px;min-height:280px;position:relative;overflow:hidden;">
+      <div style="font-family:monospace;font-size:9px;color:rgba(0,240,255,0.4);letter-spacing:3px;margin-bottom:16px;">ANIMATION INVENTORY</div>
+
+      <!-- Animation list -->
+      <div style="space-y:12px;">
+        <div style="display:flex;gap:12px;align-items:center;margin-bottom:14px;">
+          <div style="width:40px;height:40px;border:1px solid rgba(0,240,255,0.3);display:flex;align-items:center;justify-content:center;font-family:monospace;font-size:18px;font-weight:900;color:#00f0ff;">01</div>
+          <div>
+            <div style="font-size:13px;font-weight:600;color:#f5f5f3;">Staggered Entry</div>
+            <div style="font-size:10px;color:#71717a;margin-top:2px;">Items slide in from right with 50ms stagger. Top 3 get a brief glitch/flicker effect on arrival.</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:12px;align-items:center;margin-bottom:14px;">
+          <div style="width:40px;height:40px;border:1px solid rgba(255,0,170,0.3);display:flex;align-items:center;justify-content:center;font-family:monospace;font-size:18px;font-weight:900;color:#ff00aa;">02</div>
+          <div>
+            <div style="font-size:13px;font-weight:600;color:#f5f5f3;">Rank Number Glow Pulse</div>
+            <div style="font-size:10px;color:#71717a;margin-top:2px;">Top 3 ranks breathe with a subtle glow pulse animation. Rank changes trigger a flash + counter roll.</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:12px;align-items:center;margin-bottom:14px;">
+          <div style="width:40px;height:40px;border:1px solid rgba(82,82,91,0.3);display:flex;align-items:center;justify-content:center;font-family:monospace;font-size:18px;font-weight:900;color:#a78bfa;">03</div>
+          <div>
+            <div style="font-size:13px;font-weight:600;color:#f5f5f3;">Drag Reorder Effects</div>
+            <div style="font-size:10px;color:#71717a;margin-top:2px;">Dragged item gets a "lifted" shadow + slight scale. Drop zone shows a cyan insertion line that pulses.</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:12px;align-items:center;margin-bottom:14px;">
+          <div style="width:40px;height:40px;border:1px solid rgba(82,82,91,0.3);display:flex;align-items:center;justify-content:center;font-family:monospace;font-size:18px;font-weight:900;color:#ffd93d;">04</div>
+          <div>
+            <div style="font-size:13px;font-weight:600;color:#f5f5f3;">Category Switch Transition</div>
+            <div style="font-size:10px;color:#71717a;margin-top:2px;">Glitch wipe when switching tabs — brief horizontal distortion band sweeps across, new content fades in.</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:12px;align-items:center;">
+          <div style="width:40px;height:40px;border:1px solid rgba(82,82,91,0.3);display:flex;align-items:center;justify-content:center;font-family:monospace;font-size:18px;font-weight:900;color:#00d9a0;">05</div>
+          <div>
+            <div style="font-size:13px;font-weight:600;color:#f5f5f3;">Save Confirmation</div>
+            <div style="font-size:10px;color:#71717a;margin-top:2px;">Brief scan-line sweep top to bottom on save. "SAVED" text types itself out character by character.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>Animation System</h3>
+      <p>Every interaction gets its moment. CSS-only where possible (keyframes, transitions), JS for the glitch effects and counter rolls. Performance-first — no janky repaints.</p>
+    </div>
+  </div>
+
+</div>
+
+<div class="section" style="margin-top:24px;">
+  <h3>Key Design Elements</h3>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px;">
+    <div style="background:rgba(0,240,255,0.05);border:1px solid rgba(0,240,255,0.15);border-radius:6px;padding:12px;">
+      <div class="label" style="color:#00f0ff;">Corner Brackets</div>
+      <p style="font-size:12px;color:#a1a1aa;margin-top:4px;">HUD targeting reticle on top-ranked images. Scales with rank importance.</p>
+    </div>
+    <div style="background:rgba(255,0,170,0.05);border:1px solid rgba(255,0,170,0.15);border-radius:6px;padding:12px;">
+      <div class="label" style="color:#ff00aa;">Classification Labels</div>
+      <p style="font-size:12px;color:#a1a1aa;margin-top:4px;">"CLASSIFIED // STUNT" headers. Typewriter font. Spy dossier energy.</p>
+    </div>
+    <div style="background:rgba(167,139,250,0.05);border:1px solid rgba(167,139,250,0.15);border-radius:6px;padding:12px;">
+      <div class="label" style="color:#a78bfa;">Grid Background</div>
+      <p style="font-size:12px;color:#a1a1aa;margin-top:4px;">Subtle tactical grid overlay on the page. Moves slowly. Surveillance camera feel.</p>
+    </div>
+    <div style="background:rgba(255,217,61,0.05);border:1px solid rgba(255,217,61,0.15);border-radius:6px;padding:12px;">
+      <div class="label" style="color:#ffd93d;">Glitch Effects</div>
+      <p style="font-size:12px;color:#a1a1aa;margin-top:4px;">Brief chromatic aberration + horizontal tear on transitions. Tasteful, not obnoxious.</p>
+    </div>
+  </div>
+</div>

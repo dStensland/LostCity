@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import { getCityPhoto } from "@/lib/city-pulse/header-defaults";
-import { getDayOfWeek, getTimeSlot } from "@/lib/city-pulse/time-slots";
+import { getDayOfWeek, getTimeSlot, getPortalHour } from "@/lib/city-pulse/time-slots";
 import { getServerFeedData } from "@/lib/city-pulse/server-feed";
 import { getServerRegularsData } from "@/lib/server-regulars";
 import { normalizeMarketplacePersona } from "@/lib/marketplace-art";
@@ -262,7 +262,7 @@ export async function FeedSurface({
 
   const serverHeroUrl = (() => {
     const now = new Date();
-    return getCityPhoto(getTimeSlot(now.getHours()), undefined, getDayOfWeek(now));
+    return getCityPhoto(getTimeSlot(getPortalHour(now)), undefined, getDayOfWeek(now));
   })();
 
   const mainClassName = request.isFilm

@@ -107,6 +107,7 @@ export function WhatsOnNowSection({
         <FeedSectionHeader
           title={title}
           priority="secondary"
+          variant="cinema"
           seeAllHref={seeAllHref}
           seeAllLabel="See all"
         />

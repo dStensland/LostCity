@@ -17,8 +17,9 @@
  *  3. LineupSection — tabbed timeline: Today / This Week / Coming Up (events only)
  *  4. RegularHangsSection — recurring weekly events (trivia, run clubs, etc.)
  *  5. PlacesToGoSection — category-based venue discovery
- *  6. VenuesSection — Film/Music/Comedy/Theater/Nightlife/Arts/Attractions
- *  7. GameDaySection — sports schedules
+ *  6. NowShowingSection — film showtimes by theater (carousel)
+ *  7. LiveMusicSection — tonight's shows + venue directory with genre filter
+ *  8. GameDaySection — sports schedules
  *
  * Section visibility and order are controlled by FeedLayout preferences.
  *

@@ -4,9 +4,38 @@
  * Time slots drive contextual section selection — "Right Now" shows
  * different content during morning vs late night. The feed refreshes
  * when the user crosses a slot boundary.
+ *
+ * IMPORTANT: All time calculations use America/New_York explicitly.
+ * The feed's sense of time is always Atlanta time, regardless of
+ * where the server (Vercel = UTC) or client browser is located.
  */
 
 import type { TimeSlot } from "./types";
+
+// ── Portal timezone — single source of truth ─────────────────────────────────
+
+const PORTAL_TZ = "America/New_York";
+
+/**
+ * Get the current hour (0-23) in Atlanta time.
+ * Works correctly on both server (UTC/Vercel) and client (any timezone).
+ */
+export function getPortalHour(now: Date = new Date()): number {
+  return Number(
+    new Intl.DateTimeFormat("en-US", {
+      timeZone: PORTAL_TZ,
+      hour: "numeric",
+      hour12: false,
+    }).format(now),
+  );
+}
+
+/**
+ * Get the current date string (YYYY-MM-DD) in Atlanta time.
+ */
+export function getPortalDateString(now: Date = new Date()): string {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: PORTAL_TZ }).format(now);
+}
 
 /** Time slot boundaries (inclusive start hour) */
 const SLOT_BOUNDARIES: { slot: TimeSlot; startHour: number }[] = [
@@ -62,36 +91,64 @@ export function getNextSlotBoundaryHour(currentHour: number): number {
 }
 
 /**
- * Calculate milliseconds until the next time slot boundary.
+ * Calculate milliseconds until the next time slot boundary (Atlanta time).
  */
 export function msUntilNextSlot(now: Date = new Date()): number {
-  const nextHour = getNextSlotBoundaryHour(now.getHours());
-  const next = new Date(now);
-  next.setMinutes(0, 0, 0);
+  const currentHour = getPortalHour(now);
+  const nextHour = getNextSlotBoundaryHour(currentHour);
 
-  if (nextHour <= now.getHours()) {
-    // Wraps to next day (e.g., late_night -> morning at 5am)
-    next.setDate(next.getDate() + 1);
-  }
-  next.setHours(nextHour);
+  // Compute minutes/seconds into the current hour (portal-tz aware)
+  const portalMinute = Number(
+    new Intl.DateTimeFormat("en-US", {
+      timeZone: PORTAL_TZ,
+      minute: "numeric",
+    }).format(now),
+  );
+  const portalSecond = Number(
+    new Intl.DateTimeFormat("en-US", {
+      timeZone: PORTAL_TZ,
+      second: "numeric",
+    }).format(now),
+  );
 
-  return Math.max(0, next.getTime() - now.getTime());
+  // Hours until next boundary
+  let hoursUntil = nextHour - currentHour;
+  if (hoursUntil <= 0) hoursUntil += 24; // wraps to next day
+
+  const msUntil =
+    hoursUntil * 3_600_000 -
+    portalMinute * 60_000 -
+    portalSecond * 1_000;
+
+  return Math.max(0, msUntil);
 }
 
 /**
- * Get the day of the week as a lowercase string.
+ * Get the day of the week as a lowercase string in Atlanta time.
  *
  * Late-night continuity: if it's between midnight and 5am, people still
  * think of it as the previous night. "Sunday night" doesn't end at midnight.
  * So we return the previous day's name during those hours.
  */
 export function getDayOfWeek(date: Date = new Date()): string {
-  const effective = new Date(date);
-  if (effective.getHours() < 5) {
-    effective.setDate(effective.getDate() - 1);
+  const portalHour = getPortalHour(date);
+
+  if (portalHour < 5) {
+    // Roll back one day — "late night Sunday" is still Sunday
+    const prev = new Date(date.getTime() - 86_400_000);
+    return new Intl.DateTimeFormat("en-US", {
+      timeZone: PORTAL_TZ,
+      weekday: "long",
+    })
+      .format(prev)
+      .toLowerCase();
   }
-  return effective
-    .toLocaleDateString("en-US", { weekday: "long" })
+
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone: PORTAL_TZ,
+    weekday: "long",
+  })
+    .format(date)
     .toLowerCase();
 }
 

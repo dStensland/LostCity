@@ -230,6 +230,17 @@ export default function LineupSection({
     }
   }, [activeInterests]);
 
+  // Track chip strip overflow so the right-edge fade only shows when useful
+  useEffect(() => {
+    const el = chipScrollRef.current;
+    if (!el) return;
+    const check = () => setChipOverflow(el.scrollWidth > el.clientWidth + 1);
+    check();
+    const ro = new ResizeObserver(check);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [localInterests.length]);
+
   // Build the visible interest chips
   const visibleChips = useMemo(() => {
     return localInterests
@@ -245,6 +256,10 @@ export default function LineupSection({
     const sortedSaved = [...saved].sort();
     return sortedLocal.some((id, i) => id !== sortedSaved[i]);
   }, [localInterests, savedInterests]);
+
+  // Right-edge fade — only show when the chip strip actually overflows
+  const chipScrollRef = useRef<HTMLDivElement>(null);
+  const [chipOverflow, setChipOverflow] = useState(false);
 
   const [isSaving, setIsSaving] = useState(false);
   const handleSave = useCallback(async () => {
@@ -535,7 +550,7 @@ export default function LineupSection({
       />
 
       {/* Date tabs — counts are lineup-filtered */}
-      <div className="flex items-center gap-4 mb-3 border-b border-[var(--twilight)]/30 overflow-x-auto scrollbar-hide -mx-1 px-1">
+      <div className="flex items-center gap-4 mb-3 overflow-x-auto scrollbar-hide -mx-1 px-1">
         {TABS.map((tab) => {
           const isActive = tab.id === activeTabId;
           const TabIcon = tab.icon;
@@ -589,7 +604,7 @@ export default function LineupSection({
               </span>
             </div>
           )}
-          <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide -mx-1 px-1 py-1 pr-8">
+          <div ref={chipScrollRef} className="flex items-center gap-2 overflow-x-auto scrollbar-hide -mx-1 px-1 py-1 pr-8">
             {/* "All" chip */}
             <ChipButton
               label="All"
@@ -632,8 +647,10 @@ export default function LineupSection({
               )}
             </button>
           </div>
-          {/* Right fade — signals more chips are scrollable */}
-          <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-10 bg-gradient-to-l from-[var(--void)] to-transparent" />
+          {/* Right fade — only when chips actually overflow */}
+          {chipOverflow && (
+            <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-10 bg-gradient-to-l from-[var(--void)] to-transparent" />
+          )}
         </div>
 
       {/* Unsaved lineup changes — prominent save bar */}
@@ -814,7 +831,7 @@ function ChipButton({
       {count != null && count > 0 && (
         <span
           className="font-mono text-2xs tabular-nums min-w-5 text-center"
-          style={{ opacity: isActive ? 0.8 : 0.5 }}
+          style={{ opacity: isActive ? 0.85 : 0.7 }}
         >
           {count}
         </span>

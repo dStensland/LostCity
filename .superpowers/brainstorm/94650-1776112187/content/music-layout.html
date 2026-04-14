@@ -1,0 +1,273 @@
+<h2>Music Tab: Hybrid Layout</h2>
+<p class="subtitle">Tonight-first hero + venue directory below. Genre filter strip across both zones.</p>
+
+<div class="cards" style="gap: 24px;">
+
+  <!-- Option A -->
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-body" style="padding: 0;">
+      <!-- Mockup -->
+      <div style="background: #0F0F14; border-radius: 12px; overflow: hidden; font-family: 'JetBrains Mono', monospace;">
+
+        <!-- Genre filter strip -->
+        <div style="padding: 12px 16px 8px; display: flex; gap: 8px; overflow-x: auto;">
+          <span style="padding: 6px 14px; border-radius: 20px; font-size: 11px; background: rgba(232,85,160,0.15); color: #E855A0; border: 1px solid rgba(232,85,160,0.3);">All</span>
+          <span style="padding: 6px 14px; border-radius: 20px; font-size: 11px; background: rgba(255,255,255,0.05); color: #A1A1AA; border: 1px solid rgba(255,255,255,0.1);">Rock</span>
+          <span style="padding: 6px 14px; border-radius: 20px; font-size: 11px; background: rgba(255,255,255,0.05); color: #A1A1AA; border: 1px solid rgba(255,255,255,0.1);">Hip-Hop</span>
+          <span style="padding: 6px 14px; border-radius: 20px; font-size: 11px; background: rgba(255,255,255,0.05); color: #A1A1AA; border: 1px solid rgba(255,255,255,0.1);">Jazz</span>
+          <span style="padding: 6px 14px; border-radius: 20px; font-size: 11px; background: rgba(255,255,255,0.05); color: #A1A1AA; border: 1px solid rgba(255,255,255,0.1);">Electronic</span>
+          <span style="padding: 6px 14px; border-radius: 20px; font-size: 11px; background: rgba(255,255,255,0.05); color: #A1A1AA; border: 1px solid rgba(255,255,255,0.1);">Country</span>
+        </div>
+
+        <!-- TONIGHT section -->
+        <div style="padding: 8px 16px 4px;">
+          <div style="font-size: 10px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #E855A0; margin-bottom: 10px;">TONIGHT</div>
+        </div>
+
+        <!-- Tonight cards — horizontal scroll mockup -->
+        <div style="padding: 0 16px 16px; display: flex; gap: 10px; overflow-x: auto;">
+          <!-- Card 1 - hero style -->
+          <div style="flex-shrink: 0; width: 260px; border-radius: 10px; overflow: hidden; background: #18181F; border: 1px solid rgba(37,37,48,0.6);">
+            <div style="height: 100px; background: linear-gradient(135deg, #2a1a2e, #1a1a2e); display: flex; align-items: flex-end; padding: 10px; position: relative;">
+              <div style="position: absolute; top: 8px; right: 8px; padding: 3px 8px; border-radius: 4px; font-size: 9px; background: rgba(232,85,160,0.2); color: #E855A0;">Doors 7pm</div>
+              <div>
+                <div style="font-size: 14px; font-weight: 600; color: #F5F5F3;">Khruangbin</div>
+                <div style="font-size: 10px; color: #A1A1AA; margin-top: 2px;">indie rock, psychedelic</div>
+              </div>
+            </div>
+            <div style="padding: 8px 10px; display: flex; justify-content: space-between; align-items: center;">
+              <div>
+                <div style="font-size: 11px; color: #A1A1AA;">The Eastern</div>
+                <div style="font-size: 10px; color: #8B8B94;">Old Fourth Ward</div>
+              </div>
+              <div style="font-size: 11px; color: #E855A0;">8:00 PM</div>
+            </div>
+          </div>
+
+          <!-- Card 2 -->
+          <div style="flex-shrink: 0; width: 260px; border-radius: 10px; overflow: hidden; background: #18181F; border: 1px solid rgba(37,37,48,0.6);">
+            <div style="height: 100px; background: linear-gradient(135deg, #1a2a1e, #1a1a2e); display: flex; align-items: flex-end; padding: 10px; position: relative;">
+              <div style="position: absolute; top: 8px; right: 8px; padding: 3px 8px; border-radius: 4px; font-size: 9px; background: rgba(232,85,160,0.2); color: #E855A0;">Doors 8pm</div>
+              <div>
+                <div style="font-size: 14px; font-weight: 600; color: #F5F5F3;">Manchester Orchestra</div>
+                <div style="font-size: 10px; color: #A1A1AA; margin-top: 2px;">indie rock, alt rock</div>
+              </div>
+            </div>
+            <div style="padding: 8px 10px; display: flex; justify-content: space-between; align-items: center;">
+              <div>
+                <div style="font-size: 11px; color: #A1A1AA;">Tabernacle</div>
+                <div style="font-size: 10px; color: #8B8B94;">Downtown</div>
+              </div>
+              <div style="font-size: 11px; color: #E855A0;">9:00 PM</div>
+            </div>
+          </div>
+
+          <!-- Card 3 -->
+          <div style="flex-shrink: 0; width: 260px; border-radius: 10px; overflow: hidden; background: #18181F; border: 1px solid rgba(37,37,48,0.6);">
+            <div style="height: 100px; background: linear-gradient(135deg, #2a2a1e, #1a1a2e); display: flex; align-items: flex-end; padding: 10px; position: relative;">
+              <div style="position: absolute; top: 8px; right: 8px; padding: 3px 8px; border-radius: 4px; font-size: 9px; background: rgba(0,217,160,0.2); color: #00D9A0;">FREE</div>
+              <div>
+                <div style="font-size: 14px; font-weight: 600; color: #F5F5F3;">Jazz on the Patio</div>
+                <div style="font-size: 10px; color: #A1A1AA; margin-top: 2px;">jazz, soul</div>
+              </div>
+            </div>
+            <div style="padding: 8px 10px; display: flex; justify-content: space-between; align-items: center;">
+              <div>
+                <div style="font-size: 11px; color: #A1A1AA;">City Winery</div>
+                <div style="font-size: 10px; color: #8B8B94;">Ponce City Market</div>
+              </div>
+              <div style="font-size: 11px; color: #E855A0;">7:30 PM</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- VENUE DIRECTORY -->
+        <div style="padding: 4px 16px 4px;">
+          <div style="font-size: 10px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #8B8B94; margin-bottom: 10px;">THIS WEEK AT ATLANTA VENUES</div>
+        </div>
+
+        <!-- Venue rows -->
+        <div style="padding: 0 16px 16px; display: flex; flex-direction: column; gap: 6px;">
+          <!-- Venue 1 -->
+          <div style="display: flex; gap: 10px; padding: 10px; background: #18181F; border-radius: 8px; border-left: 2px solid rgba(232,85,160,0.5);">
+            <div style="width: 52px; height: 52px; border-radius: 8px; background: linear-gradient(135deg, rgba(232,85,160,0.15), rgba(232,85,160,0.05)); flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 18px;">&#9835;</div>
+            <div style="flex: 1; min-width: 0;">
+              <div style="display: flex; justify-content: space-between; align-items: baseline;">
+                <div style="font-size: 13px; font-weight: 600; color: #F5F5F3;">Terminal West</div>
+                <span style="font-size: 9px; color: #8B8B94; padding: 2px 6px; background: rgba(37,37,48,0.6); border-radius: 4px;">4 shows</span>
+              </div>
+              <div style="font-size: 10px; color: #8B8B94; margin-bottom: 6px;">West Midtown</div>
+              <div style="display: flex; flex-direction: column; gap: 3px;">
+                <div style="display: flex; justify-content: space-between; font-size: 11px;">
+                  <span style="color: #A1A1AA; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Big Thief</span>
+                  <span style="color: #E855A0; flex-shrink: 0; margin-left: 8px;">Tue 8pm</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 11px;">
+                  <span style="color: #A1A1AA; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Sylvan Esso</span>
+                  <span style="color: #E855A0; flex-shrink: 0; margin-left: 8px;">Thu 9pm</span>
+                </div>
+                <div style="font-size: 10px; color: #E855A0;">+2 more this week</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Venue 2 -->
+          <div style="display: flex; gap: 10px; padding: 10px; background: #18181F; border-radius: 8px; border-left: 2px solid rgba(232,85,160,0.5);">
+            <div style="width: 52px; height: 52px; border-radius: 8px; background: linear-gradient(135deg, rgba(232,85,160,0.15), rgba(232,85,160,0.05)); flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 18px;">&#9835;</div>
+            <div style="flex: 1; min-width: 0;">
+              <div style="display: flex; justify-content: space-between; align-items: baseline;">
+                <div style="font-size: 13px; font-weight: 600; color: #F5F5F3;">The Earl</div>
+                <span style="font-size: 9px; color: #8B8B94; padding: 2px 6px; background: rgba(37,37,48,0.6); border-radius: 4px;">3 shows</span>
+              </div>
+              <div style="font-size: 10px; color: #8B8B94; margin-bottom: 6px;">East Atlanta</div>
+              <div style="display: flex; flex-direction: column; gap: 3px;">
+                <div style="display: flex; justify-content: space-between; font-size: 11px;">
+                  <span style="color: #A1A1AA;">Deerhunter</span>
+                  <span style="color: #E855A0; flex-shrink: 0; margin-left: 8px;">Wed 9pm</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 11px;">
+                  <span style="color: #A1A1AA;">Faye Webster</span>
+                  <span style="color: #E855A0; flex-shrink: 0; margin-left: 8px;">Fri 8pm</span>
+                </div>
+                <div style="font-size: 10px; color: #E855A0;">+1 more this week</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Venue 3 -->
+          <div style="display: flex; gap: 10px; padding: 10px; background: #18181F; border-radius: 8px; border-left: 2px solid rgba(232,85,160,0.5);">
+            <div style="width: 52px; height: 52px; border-radius: 8px; background: linear-gradient(135deg, rgba(232,85,160,0.15), rgba(232,85,160,0.05)); flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 18px;">&#9835;</div>
+            <div style="flex: 1; min-width: 0;">
+              <div style="display: flex; justify-content: space-between; align-items: baseline;">
+                <div style="font-size: 13px; font-weight: 600; color: #F5F5F3;">Variety Playhouse</div>
+                <span style="font-size: 9px; color: #8B8B94; padding: 2px 6px; background: rgba(37,37,48,0.6); border-radius: 4px;">2 shows</span>
+              </div>
+              <div style="font-size: 10px; color: #8B8B94; margin-bottom: 6px;">Little Five Points</div>
+              <div style="display: flex; flex-direction: column; gap: 3px;">
+                <div style="display: flex; justify-content: space-between; font-size: 11px;">
+                  <span style="color: #A1A1AA;">Toro y Moi</span>
+                  <span style="color: #E855A0; flex-shrink: 0; margin-left: 8px;">Sat 8pm</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 11px;">
+                  <span style="color: #A1A1AA;">Japanese Breakfast</span>
+                  <span style="color: #E855A0; flex-shrink: 0; margin-left: 8px;">Sun 7pm</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <h3 style="margin-top: 16px;">A: Carousel Tonight + Compact Directory</h3>
+      <p>Tonight's shows get visual treatment as horizontal carousel cards with artist images, genre tags, doors time. Below: established venues as compact rows with upcoming lineup.</p>
+      <div class="pros-cons">
+        <div class="pros"><h4>Pros</h4><ul><li>Tonight feels urgent and exciting</li><li>Venue directory is scannable</li><li>Clear separation of time-sensitive vs. browse</li></ul></div>
+        <div class="cons"><h4>Cons</h4><ul><li>Two visual zones may feel like two separate sections</li><li>More vertical space than current grid</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Option B -->
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-body" style="padding: 0;">
+      <div style="background: #0F0F14; border-radius: 12px; overflow: hidden; font-family: 'JetBrains Mono', monospace;">
+
+        <!-- Genre filter strip -->
+        <div style="padding: 12px 16px 8px; display: flex; gap: 8px; overflow-x: auto;">
+          <span style="padding: 6px 14px; border-radius: 20px; font-size: 11px; background: rgba(232,85,160,0.15); color: #E855A0; border: 1px solid rgba(232,85,160,0.3);">All</span>
+          <span style="padding: 6px 14px; border-radius: 20px; font-size: 11px; background: rgba(255,255,255,0.05); color: #A1A1AA; border: 1px solid rgba(255,255,255,0.1);">Rock</span>
+          <span style="padding: 6px 14px; border-radius: 20px; font-size: 11px; background: rgba(255,255,255,0.05); color: #A1A1AA; border: 1px solid rgba(255,255,255,0.1);">Hip-Hop</span>
+          <span style="padding: 6px 14px; border-radius: 20px; font-size: 11px; background: rgba(255,255,255,0.05); color: #A1A1AA; border: 1px solid rgba(255,255,255,0.1);">Jazz</span>
+          <span style="padding: 6px 14px; border-radius: 20px; font-size: 11px; background: rgba(255,255,255,0.05); color: #A1A1AA; border: 1px solid rgba(255,255,255,0.1);">Electronic</span>
+        </div>
+
+        <!-- Unified timeline -->
+        <div style="padding: 8px 16px 4px;">
+          <div style="font-size: 10px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #E855A0; margin-bottom: 10px;">TONIGHT</div>
+        </div>
+
+        <div style="padding: 0 16px 12px; display: flex; flex-direction: column; gap: 6px;">
+          <!-- Tonight show 1 - elevated -->
+          <div style="display: flex; gap: 10px; padding: 10px; background: #18181F; border-radius: 8px; border: 1px solid rgba(232,85,160,0.2);">
+            <div style="width: 64px; height: 64px; border-radius: 8px; background: linear-gradient(135deg, #2a1a2e, #1a1a2e); flex-shrink: 0; display: flex; align-items: flex-end; padding: 4px;">
+              <div style="font-size: 9px; color: #E855A0;">8pm</div>
+            </div>
+            <div style="flex: 1; min-width: 0;">
+              <div style="font-size: 14px; font-weight: 600; color: #F5F5F3;">Khruangbin</div>
+              <div style="font-size: 11px; color: #A1A1AA; margin-top: 1px;">The Eastern &middot; Old Fourth Ward</div>
+              <div style="display: flex; gap: 6px; margin-top: 5px;">
+                <span style="padding: 2px 7px; border-radius: 4px; font-size: 9px; background: rgba(37,37,48,0.8); color: #8B8B94;">psychedelic</span>
+                <span style="padding: 2px 7px; border-radius: 4px; font-size: 9px; background: rgba(37,37,48,0.8); color: #8B8B94;">indie rock</span>
+                <span style="padding: 2px 7px; border-radius: 4px; font-size: 9px; background: rgba(232,85,160,0.15); color: #E855A0;">Doors 7pm</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tonight show 2 -->
+          <div style="display: flex; gap: 10px; padding: 10px; background: #18181F; border-radius: 8px; border: 1px solid rgba(232,85,160,0.2);">
+            <div style="width: 64px; height: 64px; border-radius: 8px; background: linear-gradient(135deg, #1a2a1e, #1a1a2e); flex-shrink: 0; display: flex; align-items: flex-end; padding: 4px;">
+              <div style="font-size: 9px; color: #E855A0;">9pm</div>
+            </div>
+            <div style="flex: 1; min-width: 0;">
+              <div style="font-size: 14px; font-weight: 600; color: #F5F5F3;">Manchester Orchestra</div>
+              <div style="font-size: 11px; color: #A1A1AA; margin-top: 1px;">Tabernacle &middot; Downtown</div>
+              <div style="display: flex; gap: 6px; margin-top: 5px;">
+                <span style="padding: 2px 7px; border-radius: 4px; font-size: 9px; background: rgba(37,37,48,0.8); color: #8B8B94;">alt rock</span>
+                <span style="padding: 2px 7px; border-radius: 4px; font-size: 9px; background: rgba(232,85,160,0.15); color: #E855A0;">Doors 8pm</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- This week -->
+        <div style="padding: 4px 16px 4px;">
+          <div style="font-size: 10px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #8B8B94; margin-bottom: 10px;">THIS WEEK</div>
+        </div>
+
+        <div style="padding: 0 16px 16px; display: flex; flex-direction: column; gap: 4px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; background: #18181F; border-radius: 6px;">
+            <div style="flex: 1; min-width: 0;">
+              <div style="font-size: 12px; font-weight: 500; color: #F5F5F3;">Big Thief</div>
+              <div style="font-size: 10px; color: #8B8B94;">Terminal West</div>
+            </div>
+            <div style="text-align: right;">
+              <div style="font-size: 11px; color: #E855A0;">Tue</div>
+              <div style="font-size: 10px; color: #8B8B94;">8pm</div>
+            </div>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; background: #18181F; border-radius: 6px;">
+            <div style="flex: 1; min-width: 0;">
+              <div style="font-size: 12px; font-weight: 500; color: #F5F5F3;">Deerhunter</div>
+              <div style="font-size: 10px; color: #8B8B94;">The Earl</div>
+            </div>
+            <div style="text-align: right;">
+              <div style="font-size: 11px; color: #E855A0;">Wed</div>
+              <div style="font-size: 10px; color: #8B8B94;">9pm</div>
+            </div>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; background: #18181F; border-radius: 6px;">
+            <div style="flex: 1; min-width: 0;">
+              <div style="font-size: 12px; font-weight: 500; color: #F5F5F3;">Sylvan Esso</div>
+              <div style="font-size: 10px; color: #8B8B94;">Terminal West</div>
+            </div>
+            <div style="text-align: right;">
+              <div style="font-size: 11px; color: #E855A0;">Thu</div>
+              <div style="font-size: 10px; color: #8B8B94;">9pm</div>
+            </div>
+          </div>
+          <div style="font-size: 10px; color: #E855A0; padding: 4px 10px;">+8 more shows this week &rarr;</div>
+        </div>
+
+      </div>
+
+      <h3 style="margin-top: 16px;">B: Unified Timeline (Show-First)</h3>
+      <p>Everything organized chronologically. Tonight's shows are elevated with images and full detail, this week's shows are compact rows. Venue is secondary metadata on each show.</p>
+      <div class="pros-cons">
+        <div class="pros"><h4>Pros</h4><ul><li>Simple mental model — scroll = time</li><li>Easy to scan "what's next"</li><li>No two-zone complexity</li></ul></div>
+        <div class="cons"><h4>Cons</h4><ul><li>Venues lose their identity as anchors</li><li>Bars-with-a-band creep back in (no venue tier separation)</li><li>Loses browse value for non-time-sensitive use</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+</div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { getSunMoonData } from "@/lib/sun-moon";
 import type { FeedContext } from "@/lib/city-pulse/types";
@@ -116,13 +116,27 @@ function LinkPill({ href, children, className = "" }: LinkPillProps) {
 // ---------------------------------------------------------------------------
 
 export function SignalStrip({ context, sportsTentpole, portalSlug = "atlanta" }: SignalStripProps) {
-  const { moonPhase, sunset } = useMemo(() => getSunMoonData(), []);
+  const { moonPhase, sunset, sunrise } = useMemo(() => getSunMoonData(), []);
+  const [weatherOpen, setWeatherOpen] = useState(false);
+  const weatherRef = useRef<HTMLDivElement>(null);
 
   const showSunset = ["happy_hour", "evening", "late_night"].includes(context.time_slot);
   const rain = isRaining(context.weather?.condition);
   const holiday = context.active_holidays?.[0] ?? null;
 
   const happeningHref = buildExploreUrl({ portalSlug, lane: "events" });
+
+  // Close weather bubble on outside click
+  useEffect(() => {
+    if (!weatherOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (weatherRef.current && !weatherRef.current.contains(e.target as Node)) {
+        setWeatherOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [weatherOpen]);
 
   // Sports time label — compute once
   const sportsLabel = useMemo(() => {
@@ -135,16 +149,43 @@ export function SignalStrip({ context, sportsTentpole, portalSlug = "atlanta" }:
   return (
     <div className="flex gap-1.5 flex-wrap" role="region" aria-label="City context">
 
-      {/* 1. Weather — placeholder when loading, real data when ready */}
+      {/* 1. Weather — tap to expand detail bubble */}
       {context.weather ? (
-        <LinkPill
-          href={happeningHref}
-          className={rain ? "!bg-[var(--neon-cyan)]/15 !text-[var(--neon-cyan)]" : ""}
-        >
-          {weatherEmoji(context.weather.condition, context.weather.icon)}{" "}
-          {Math.round(context.weather.temperature_f)}°{" "}
-          {context.weather.condition}
-        </LinkPill>
+        <div className="relative" ref={weatherRef}>
+          <button
+            onClick={() => setWeatherOpen((o) => !o)}
+            className={`font-mono text-2xs px-2 py-0.5 rounded-md bg-black/30 backdrop-blur-sm text-[var(--cream)] whitespace-nowrap transition-opacity hover:opacity-75 ${
+              rain ? "!bg-[var(--neon-cyan)]/15 !text-[var(--neon-cyan)]" : ""
+            }`}
+          >
+            {weatherEmoji(context.weather.condition, context.weather.icon)}{" "}
+            {Math.round(context.weather.temperature_f)}°{" "}
+            {context.weather.condition}
+          </button>
+          {weatherOpen && (
+            <div className="absolute top-full left-0 mt-2 z-50 min-w-[200px] rounded-xl bg-[var(--night)] border border-[var(--twilight)] shadow-card-lg p-3 space-y-2 animate-fade-in">
+              <div className="flex items-center justify-between">
+                <span className="font-mono text-xs font-bold text-[var(--cream)]">
+                  {weatherEmoji(context.weather.condition, context.weather.icon)} {Math.round(context.weather.temperature_f)}°F
+                </span>
+                <span className="text-2xs text-[var(--soft)]">{context.weather.condition}</span>
+              </div>
+              <div className="h-px bg-[var(--twilight)]" />
+              <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-2xs">
+                <span className="text-[var(--muted)]">Sunrise</span>
+                <span className="text-[var(--cream)] text-right font-mono">{sunrise}</span>
+                <span className="text-[var(--muted)]">Sunset</span>
+                <span className="text-[var(--cream)] text-right font-mono">{sunset}</span>
+                {moonPhase.isNotable && (
+                  <>
+                    <span className="text-[var(--muted)]">Moon</span>
+                    <span className="text-[var(--cream)] text-right">{moonPhase.emoji} {moonPhase.label}</span>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
       ) : (
         <span className="inline-flex h-[26px] w-32 rounded-full skeleton-shimmer" style={{ opacity: 0.12 }} />
       )}

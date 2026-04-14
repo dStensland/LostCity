@@ -15,7 +15,8 @@ export type SectionVariant =
   | "regulars"
   | "meta"
   | "featured"
-  | "gameday";
+  | "gameday"
+  | "news";
 
 export interface SectionHeaderProps {
   title: string;
@@ -229,6 +230,21 @@ export default function FeedSectionHeader({
               <div className="flex items-center gap-2.5">
                 <div className="w-1 h-7 rounded-full bg-[var(--section-accent)]" />
                 <h3 className="section-header-gameday">{title}</h3>
+              </div>
+              {seeAll}
+            </div>
+          );
+
+        case "news":
+          return (
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5">
+                {displayIcon && (
+                  <span className="text-[var(--section-accent)] [&>svg]:w-3.5 [&>svg]:h-3.5">{displayIcon}</span>
+                )}
+                <h3 className="font-mono text-xs font-bold uppercase tracking-wider text-[var(--section-accent)]">
+                  {title}
+                </h3>
               </div>
               {seeAll}
             </div>

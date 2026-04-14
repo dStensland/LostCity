@@ -12,14 +12,9 @@
 
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import Link from "next/link";
-import {
-  ArrowRight,
-  Broadcast,
-} from "@phosphor-icons/react";
+import { Broadcast } from "@phosphor-icons/react";
 import Dot from "@/components/ui/Dot";
 import FeedSectionHeader from "@/components/feed/FeedSectionHeader";
-import SmartImage from "@/components/SmartImage";
 import type { NetworkPost } from "./NetworkFeedSection";
 import {
   getCategoryColor,
@@ -161,27 +156,52 @@ export function TodayInAtlantaSection({ portalSlug }: TodayInAtlantaSectionProps
 
   // ── Guards ─────────────────────────────────────────────────────────────────
 
-  if (loading) return null;
+  if (loading) {
+    return (
+      <div className="mt-6" role="status">
+        {/* Header skeleton */}
+        <div className="flex items-center justify-between mb-2.5">
+          <div className="flex items-center gap-1.5">
+            <div className="w-3.5 h-3.5 rounded skeleton-shimmer" style={{ opacity: 0.15 }} />
+            <div className="h-3 rounded-full skeleton-shimmer" style={{ width: 120, opacity: 0.18 }} />
+          </div>
+          <div className="h-2.5 rounded-full skeleton-shimmer" style={{ width: 50, opacity: 0.15 }} />
+        </div>
+        {/* Tab pills skeleton */}
+        <div className="flex items-center gap-1.5 mb-3">
+          {[56, 64, 80, 60, 72].map((w, i) => (
+            <div key={i} className="h-7 rounded-full skeleton-shimmer flex-shrink-0" style={{ width: w, opacity: 0.12 }} />
+          ))}
+        </div>
+        {/* Card skeleton — 3 rows */}
+        <div className="rounded-card bg-[var(--night)] border border-[var(--twilight)]/30 px-3 py-0.5">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className={`py-2.5 space-y-2 ${i < 2 ? "border-b border-[var(--twilight)]/20" : ""}`}>
+              <div className="h-3.5 rounded-full skeleton-shimmer" style={{ width: `${70 + i * 8}%`, opacity: 0.18 }} />
+              <div className="h-2.5 rounded-full skeleton-shimmer" style={{ width: `${35 + i * 5}%`, opacity: 0.12 }} />
+            </div>
+          ))}
+        </div>
+        <span className="sr-only">Loading news...</span>
+      </div>
+    );
+  }
+
   if (tabs.length === 0) return null;
 
   return (
     <div className="mt-6 feed-section-enter">
       {/* Section header */}
-      <div className="flex items-center justify-between mb-2.5">
-        <div className="flex items-center gap-1.5">
-          <Broadcast weight="duotone" className="w-3.5 h-3.5 text-[var(--neon-cyan)]" />
-          <span className="font-mono text-xs font-bold uppercase tracking-wider text-[var(--neon-cyan)]">
-            Today in Atlanta
-          </span>
-        </div>
-        <Link
-          href={`/${portalSlug}/network`}
-          className="flex items-center gap-0.5 text-xs font-mono text-[var(--neon-cyan)] opacity-70 hover:opacity-100 transition-opacity"
-        >
-          All news
-          <ArrowRight weight="bold" className="w-2.5 h-2.5" />
-        </Link>
-      </div>
+      <FeedSectionHeader
+        title="Today in Atlanta"
+        priority="secondary"
+        variant="news"
+        accentColor="var(--neon-cyan)"
+        icon={<Broadcast weight="duotone" />}
+        seeAllHref={`/${portalSlug}/network`}
+        seeAllLabel="All news"
+        className="mb-2.5"
+      />
 
       {/* Category tabs */}
       <div className="flex items-center gap-1.5 mb-3 overflow-x-auto scrollbar-none -mx-1 px-1">

@@ -27,16 +27,16 @@ export interface SunMoonData {
 // ---------------------------------------------------------------------------
 
 /**
- * Formats a Date into 12-hour time with no leading zero on the hour.
+ * Formats a Date into 12-hour time in Atlanta timezone.
  * Examples: "7:41 PM", "12:00 PM", "12:30 AM"
  */
 export function formatTime12h(date: Date): string {
-  const h = date.getHours();
-  const m = date.getMinutes();
-  const period = h >= 12 ? "PM" : "AM";
-  const hour12 = h % 12 === 0 ? 12 : h % 12;
-  if (m === 0) return `${hour12}:00 ${period}`;
-  return `${hour12}:${m.toString().padStart(2, "0")} ${period}`;
+  return date.toLocaleTimeString("en-US", {
+    timeZone: "America/New_York",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
 }
 
 // ---------------------------------------------------------------------------

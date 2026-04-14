@@ -13,7 +13,7 @@
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { useEffect, useState, useCallback, useRef } from "react";
 import type { CityPulseResponse, TimeSlot } from "@/lib/city-pulse/types";
-import { getTimeSlot, msUntilNextSlot } from "@/lib/city-pulse/time-slots";
+import { getTimeSlot, msUntilNextSlot, getPortalHour, getPortalDateString } from "@/lib/city-pulse/time-slots";
 
 /** Normal polling: 5 minutes */
 const POLL_INTERVAL_MS = 5 * 60 * 1000;
@@ -38,8 +38,9 @@ interface UseCityPulseFeedOptions {
 export function useCityPulseFeed(options: UseCityPulseFeedOptions) {
   const { portalSlug, enabled = true, timeSlotOverride, dayOverride, interests, initialData } = options;
   const [timeSlot, setTimeSlot] = useState(() =>
-    getTimeSlot(new Date().getHours()),
+    getTimeSlot(getPortalHour()),
   );
+  const [today, setToday] = useState(getPortalDateString);
 
   // Immediate refetch on time-slot boundary (only when no override active)
   useEffect(() => {
@@ -48,7 +49,8 @@ export function useCityPulseFeed(options: UseCityPulseFeedOptions) {
     const scheduleNext = () => {
       const ms = msUntilNextSlot();
       const timer = setTimeout(() => {
-        setTimeSlot(getTimeSlot(new Date().getHours()));
+        setTimeSlot(getTimeSlot(getPortalHour()));
+        setToday(getPortalDateString());
         scheduleNext();
       }, ms);
       return timer;
@@ -74,7 +76,7 @@ export function useCityPulseFeed(options: UseCityPulseFeedOptions) {
   };
 
   const query = useQuery<CityPulseResponse>({
-    queryKey: ["city-pulse", portalSlug, effectiveTimeSlot, dayOverride || "", interestsKey],
+    queryKey: ["city-pulse", portalSlug, effectiveTimeSlot, dayOverride || today, interestsKey],
     queryFn: async () => {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 10_000);

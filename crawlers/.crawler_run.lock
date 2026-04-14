@@ -1,1 +1,1 @@
-{"pid": 10969, "started_at": "2026-04-01T19:29:30.797405+00:00", "command": "main.py --source gwinnett-library --allow-production-writes", "db_target": "production", "cwd": "/Users/coach/Projects/LostCity/crawlers"}
+{"pid": 86932, "started_at": "2026-04-13T04:00:04.397827+00:00", "command": "main.py --db-target production --allow-production-writes --skip-launch-maintenance", "db_target": "production", "cwd": "/Users/coach/Projects/LostCity/crawlers"}

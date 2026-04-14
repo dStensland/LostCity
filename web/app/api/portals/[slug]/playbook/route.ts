@@ -28,7 +28,7 @@ import {
   suppressEventImagesIfVenueFlagged,
 } from "@/lib/image-quality-suppression";
 import { applyFeedGate } from "@/lib/feed-gate";
-import { getTimeSlot } from "@/lib/city-pulse/time-slots";
+import { getTimeSlot, getPortalHour } from "@/lib/city-pulse/time-slots";
 import type { TimeSlot } from "@/lib/city-pulse/types";
 
 export const dynamic = "force-dynamic";
@@ -242,7 +242,7 @@ export async function GET(request: NextRequest, { params }: Props) {
   const activeNowParam = searchParams.get("active_now") === "true";
 
   const now = new Date();
-  const timeSlot = getTimeSlot(now.getHours());
+  const timeSlot = getTimeSlot(getPortalHour(now));
   const today = getLocalDateString(now);
   const tomorrow = getLocalDateString(addDays(now, 1));
   const targetDate = dateParam || today;

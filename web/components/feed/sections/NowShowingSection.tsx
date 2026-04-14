@@ -324,7 +324,7 @@ export default function NowShowingSection({ portalSlug, embedded = false }: NowS
 
   return (
     <Wrapper className={embedded ? "" : "pb-2 feed-section-enter"}>
-      {/* Section header — hidden when embedded inside VenuesSection tab */}
+      {/* Section header — hidden when embedded inside a parent tab shell */}
       {!embedded && (
         <FeedSectionHeader
           title="Now Showing"

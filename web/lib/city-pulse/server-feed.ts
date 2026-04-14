@@ -1,7 +1,6 @@
 import type { CityPulseResponse } from "@/lib/city-pulse/types";
 import { getSharedCacheJson } from "@/lib/shared-cache";
-import { getTimeSlot } from "@/lib/city-pulse/time-slots";
-import { getLocalDateString } from "@/lib/formats";
+import { getTimeSlot, getPortalHour, getPortalDateString } from "@/lib/city-pulse/time-slots";
 import { normalizePortalSlug, resolvePortalSlugAlias } from "@/lib/portal-aliases";
 
 const CACHE_NAMESPACE = "api:city-pulse";
@@ -26,21 +25,12 @@ export async function getServerFeedData(
 ): Promise<CityPulseResponse | null> {
   try {
     // Compute the same cache key the API route uses for anonymous requests.
-    // Logic is a direct copy of the route's pre-cache-check block (lines 99–111).
     const now = new Date();
-    const portalHour = Number(
-      new Intl.DateTimeFormat("en-US", {
-        timeZone: "America/New_York",
-        hour: "numeric",
-        hour12: false,
-      }).format(now),
-    );
-    const timeSlot = getTimeSlot(portalHour);
-    const effectiveNow = new Date(now);
-    if (timeSlot === "late_night" && portalHour < 5) {
-      effectiveNow.setDate(effectiveNow.getDate() - 1);
-    }
-    const today = getLocalDateString(effectiveNow);
+    const portalH = getPortalHour(now);
+    const timeSlot = getTimeSlot(portalH);
+    // Late-night before 5 AM counts as the previous day
+    const effectiveNow = portalH < 5 ? new Date(now.getTime() - 86_400_000) : now;
+    const today = getPortalDateString(effectiveNow);
     const canonicalSlug = resolvePortalSlugAlias(normalizePortalSlug(portalSlug));
     const cacheKey = `${canonicalSlug}|${timeSlot}|${today}`;
 

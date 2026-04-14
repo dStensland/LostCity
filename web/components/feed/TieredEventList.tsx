@@ -70,9 +70,9 @@ export function TieredEventList({
   const hiddenCount = events.length - maxVisible;
 
   return (
-    <div className="space-y-1.5">
+    <div className="space-y-2">
       {/* Event rows — 2-col grid on desktop */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 card-stagger">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-2.5 card-stagger">
         {visibleEvents.map((event, idx) => (
           <StandardRow
             key={`event-${event.id}`}
@@ -88,7 +88,7 @@ export function TieredEventList({
         <button
           type="button"
           onClick={() => setExpanded(true)}
-          className="w-full py-2.5 text-center font-mono text-xs font-medium text-[var(--soft)] hover:text-[var(--cream)] transition-colors border border-[var(--twilight)]/40 rounded-lg hover:border-[var(--twilight)]/70 hover:bg-white/[0.02] active:scale-[0.99]"
+          className="w-full py-2.5 text-center font-mono text-xs font-medium text-[var(--soft)] hover:text-[var(--coral)] transition-colors border border-[var(--twilight)]/40 rounded-lg hover:border-[var(--coral)]/30 hover:bg-[var(--coral)]/[0.04] active:scale-[0.99]"
         >
           Show {hiddenCount} more event{hiddenCount !== 1 ? "s" : ""}
         </button>

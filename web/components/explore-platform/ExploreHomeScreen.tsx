@@ -2,7 +2,6 @@
 
 import { useMemo } from "react";
 import Link from "next/link";
-import FindSearchInput from "@/components/find/FindSearchInput";
 import { getEnabledExploreLanes } from "@/lib/explore-platform/registry";
 import { usePortal } from "@/lib/portal-context";
 import { useExploreUrlState } from "@/lib/explore-platform/url-state";
@@ -10,26 +9,26 @@ import type { ExploreHomePayload } from "@/lib/explore-platform/types";
 
 interface ExploreHomeScreenProps {
   portalSlug: string;
-  portalId: string;
   data: ExploreHomePayload | null;
   loading: boolean;
   onRetry?: () => void;
 }
 
-function formatPortalLabel(slug: string): string {
-  return slug.charAt(0).toUpperCase() + slug.slice(1);
-}
-
+/**
+ * Body of the Explore home (quick intents + pick-a-lane grid).
+ *
+ * Rendered below <ExploreSearchHero> when no search query is active. The hero
+ * lives in the parent shell so it stays mounted across the home ↔ results
+ * swap; keeping it inside this component causes the input to unmount mid-type.
+ */
 export function ExploreHomeScreen({
   portalSlug,
-  portalId,
   data,
   loading,
   onRetry,
 }: ExploreHomeScreenProps) {
   const state = useExploreUrlState();
   const { portal } = usePortal();
-  const shouldFocusSearch = state.params.get("focus") === "search";
   const enabledLanes = useMemo(() => getEnabledExploreLanes(portal), [portal]);
 
   const laneEntries = useMemo(
@@ -42,31 +41,7 @@ export function ExploreHomeScreen({
   );
 
   return (
-    <div className="flex flex-col gap-5 max-w-5xl mx-auto px-4 py-5 sm:py-6 min-h-[calc(100vh-5rem)]">
-      <div className="rounded-[24px] border border-[var(--twilight)]/30 bg-[linear-gradient(140deg,rgba(10,14,24,0.96),rgba(14,19,30,0.82))] p-5">
-        <p className="text-xs font-mono uppercase tracking-[0.14em] text-[var(--muted)]">
-          Explore {formatPortalLabel(portalSlug)}
-        </p>
-        <h1 className="mt-2 text-2xl sm:text-3xl font-semibold tracking-[-0.03em] text-[var(--cream)]">
-          Search events, places, and classes.
-        </h1>
-        <p className="mt-2 max-w-2xl text-sm sm:text-base text-[var(--soft)]">
-          Start with search, or jump straight into a lane.
-        </p>
-
-        <div className="mt-5">
-          <FindSearchInput
-            portalSlug={portalSlug}
-            portalId={portalId}
-            basePath={`/${portalSlug}/explore`}
-            placeholder="Search events, places, classes, teams..."
-            autoFocus={shouldFocusSearch}
-            queryParam="q"
-            onSubmitQuery={(query) => state.setSearchQuery(query)}
-          />
-        </div>
-      </div>
-
+    <>
       {data?.quickIntents && data.quickIntents.length > 0 && (
         <section>
           <p className="font-mono text-2xs uppercase tracking-[0.14em] text-[var(--muted)]">
@@ -173,7 +148,6 @@ export function ExploreHomeScreen({
           })}
         </div>
       </section>
-
-    </div>
+    </>
   );
 }

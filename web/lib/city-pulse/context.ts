@@ -10,7 +10,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getPortalWeather } from "@/lib/weather";
 import { getWeatherSignal } from "@/lib/weather-utils";
 import { getLocalDateString } from "@/lib/formats";
-import { getTimeSlot, getDayOfWeek, getDayTheme } from "./time-slots";
+import { getTimeSlot, getDayOfWeek, getDayTheme, getPortalHour } from "./time-slots";
 import { getContextualQuickLinks } from "./quick-links";
 import type { FeedContext, HolidayInfo, FestivalInfo, TimeSlot } from "./types";
 
@@ -210,7 +210,7 @@ export async function buildFeedContext(
   const now = options.now ?? new Date();
   const today = getLocalDateString(now);
 
-  const timeSlot = timeSlotOverride ?? getTimeSlot(now.getHours());
+  const timeSlot = timeSlotOverride ?? getTimeSlot(getPortalHour(now));
   const dayOfWeek = dayOverride || getDayOfWeek(now);
 
   // Parallel: weather + festivals + school calendar

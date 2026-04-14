@@ -51,18 +51,19 @@ export const StandardRow = memo(function StandardRow({
     <Link
       href={`/${portalSlug}/events/${event.id}`}
       prefetch={false}
-      className="group block w-full rounded-xl overflow-hidden bg-[var(--night)] border border-[var(--twilight)]/30 hover:bg-[var(--dusk)]/50 hover:border-[var(--twilight)]/50 transition-colors"
+      className="group block w-full rounded-lg overflow-hidden bg-[var(--night)] border border-[var(--twilight)]/30 border-l-[2px] hover:bg-[var(--dusk)]/50 hover:border-[var(--twilight)]/50 transition-colors"
+      style={{ borderLeftColor: catColor }}
       aria-label={event.title}
     >
       <div className="flex items-center gap-0">
         {/* Thumbnail — full-bleed left edge */}
-        <div className="relative w-16 self-stretch flex-shrink-0 overflow-hidden bg-[var(--twilight)]/40">
+        <div className="relative w-16 sm:w-20 self-stretch flex-shrink-0 overflow-hidden bg-[var(--twilight)]/40">
           {imageUrl ? (
             <SmartImage
               src={imageUrl}
               alt=""
               fill
-              sizes="64px"
+              sizes="(min-width: 640px) 80px, 64px"
               className="object-cover"
               fallback={
                 <div
@@ -119,7 +120,7 @@ export const StandardRow = memo(function StandardRow({
         </div>
 
         {/* Right: badges */}
-        <div className="flex flex-col items-end gap-1 flex-shrink-0 pr-2.5">
+        <div className="flex flex-col items-end gap-1 flex-shrink-0 self-start pt-2.5 pr-2.5">
           {event.is_free ? (
             <FreeBadge />
           ) : event.price_min !== null && event.price_min !== undefined ? (

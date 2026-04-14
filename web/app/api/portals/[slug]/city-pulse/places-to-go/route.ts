@@ -147,7 +147,13 @@ export async function GET(request: NextRequest, { params }: Props) {
   const canonicalSlug = resolvePortalSlugAlias(normalizePortalSlug(slug));
 
   const now = new Date();
-  const currentHour = now.getHours();
+  const currentHour = Number(
+    new Intl.DateTimeFormat("en-US", {
+      timeZone: "America/New_York",
+      hour: "numeric",
+      hour12: false,
+    }).format(now),
+  );
   const timeSlot = getTimeSlot(currentHour);
   const today = getLocalDateString(now);
 
@@ -602,10 +608,16 @@ async function fetchActiveSpecials(
 
   if (!rows) return map;
 
-  // JS getDay(): 0=Sun..6=Sat → ISO 8601: 1=Mon..7=Sun
-  const jsDay = now.getDay();
-  const isoDay = jsDay === 0 ? 7 : jsDay;
-  const currentMinutes = now.getHours() * 60 + now.getMinutes();
+  // Use Atlanta time for day-of-week and current minutes
+  const portalDayName = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/New_York",
+    weekday: "short",
+  }).format(now);
+  const DAY_MAP: Record<string, number> = { Sun: 7, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+  const isoDay = DAY_MAP[portalDayName] ?? 1;
+  const portalH = Number(new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", hour: "numeric", hour12: false }).format(now));
+  const portalM = Number(new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", minute: "numeric" }).format(now));
+  const currentMinutes = portalH * 60 + portalM;
 
   for (const row of rows as SpecialRow[]) {
     // Check day of week

@@ -10,6 +10,7 @@ import type { ExploreLaneInitialDataMap } from "@/lib/explore-platform/lane-data
 import { ExploreSidebar } from "./ExploreSidebar";
 import { ExploreMobileBar } from "./ExploreMobileBar";
 import { ExploreHomeScreen } from "./ExploreHomeScreen";
+import { ExploreSearchHero } from "./ExploreSearchHero";
 
 function ExploreLaneBranchSkeleton() {
   return (
@@ -144,22 +145,22 @@ function ExploreShellInner({
       <ExploreMobileBar lanes={lanes} portalSlug={portalSlug} portalChromeVisible={portalChromeVisible} />
 
       <div className="lg:ml-[240px] min-w-0">
-        {!state.lane && !state.q && (
-          <ExploreHomeScreen
-            portalSlug={portalSlug}
-            portalId={portalId}
-            data={homeData}
-            loading={homeLoading}
-            onRetry={() => {
-              setHomeLoading(true);
-              setHomeRetryKey((value) => value + 1);
-            }}
-          />
-        )}
-
-        {!state.lane && !!state.q && (
-          <div className="max-w-5xl mx-auto px-4 py-6">
-            <DeferredExploreSearchResults portalSlug={portalSlug} />
+        {!state.lane && (
+          <div className="flex flex-col gap-5 max-w-5xl mx-auto px-4 py-5 sm:py-6 min-h-[calc(100vh-5rem)]">
+            <ExploreSearchHero portalSlug={portalSlug} portalId={portalId} />
+            {!state.q ? (
+              <ExploreHomeScreen
+                portalSlug={portalSlug}
+                data={homeData}
+                loading={homeLoading}
+                onRetry={() => {
+                  setHomeLoading(true);
+                  setHomeRetryKey((value) => value + 1);
+                }}
+              />
+            ) : (
+              <DeferredExploreSearchResults portalSlug={portalSlug} />
+            )}
           </div>
         )}
 

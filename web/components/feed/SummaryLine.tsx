@@ -83,8 +83,13 @@ function buildSummary(
   // Part 1: total event count
   const total = tabCounts?.today ?? 0;
   if (total > 0) {
-    const now = new Date();
-    const hour = now.getHours();
+    const hour = Number(
+      new Intl.DateTimeFormat("en-US", {
+        timeZone: "America/New_York",
+        hour: "numeric",
+        hour12: false,
+      }).format(new Date()),
+    );
     const timeLabel = hour >= 12 ? "tonight" : "today";
     parts.push(`${total} events ${timeLabel}`);
   }
