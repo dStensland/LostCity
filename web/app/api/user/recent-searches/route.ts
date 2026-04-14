@@ -111,15 +111,31 @@ export const DELETE = withAuth(async (request: NextRequest, { user, serviceClien
     );
   }
 
+  // Destructure { error } off the Supabase response and fail loudly on
+  // any DB error. Previously this handler ignored the response entirely —
+  // a failed DELETE would return 200/ok:true and the client would
+  // optimistically remove the row from its local state, leaving the DB
+  // out of sync. E-3.6 fixes that.
+  let error: { message: string } | null = null;
   if (body.clearAll) {
-    await serviceClient.from("user_recent_searches").delete().eq("user_id", user.id);
+    ({ error } = await serviceClient
+      .from("user_recent_searches")
+      .delete()
+      .eq("user_id", user.id));
   } else if (body.id) {
-    await serviceClient
+    ({ error } = await serviceClient
       .from("user_recent_searches")
       .delete()
       .eq("user_id", user.id)
-      .eq("id", body.id);
+      .eq("id", body.id));
   }
 
-  return NextResponse.json({ ok: true });
+  if (error) {
+    return NextResponse.json(
+      { error: "delete_failed", detail: error.message },
+      { status: 500 }
+    );
+  }
+
+  return new NextResponse(null, { status: 204 });
 });
