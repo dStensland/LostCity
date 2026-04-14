@@ -105,6 +105,7 @@ export type Event = {
   significance?: string | null;
   significance_signals?: string[] | null;
   audience_tags?: string[] | null;
+  canonical_event_id?: number | null;
 };
 
 export type Venue = {

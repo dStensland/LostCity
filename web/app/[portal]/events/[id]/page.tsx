@@ -1,7 +1,7 @@
 import ScrollToTop from "@/components/ScrollToTop";
 import { getEventById, getRelatedEvents } from "@/lib/supabase";
 import { format, parseISO } from "date-fns";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { safeJsonLd } from "@/lib/formats";
 import { cache } from "react";
@@ -265,6 +265,11 @@ export default async function PortalEventPage({ params }: Props) {
 
   const activePortalSlug = request?.portal.slug || portalSlug;
   const activePortalName = request?.portal.name || portalSlug.charAt(0).toUpperCase() + portalSlug.slice(1);
+
+  // Redirect duplicate events to their canonical version (308 permanent)
+  if (event.canonical_event_id && event.canonical_event_id !== event.id) {
+    redirect(`/${activePortalSlug}/events/${event.canonical_event_id}`);
+  }
 
   // Fetch related data in parallel
   const [{ venueEvents, sameDateEvents }, eventArtists, nearbyDestinations] = await Promise.all([
