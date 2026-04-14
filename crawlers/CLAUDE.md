@@ -65,7 +65,7 @@ Before submitting a new crawler, verify it captures everything available:
 ```
 crawlers/
 ├── main.py                # Orchestration — source registry, parallel execution
-├── db.py                  # All Supabase operations (places, events, sources, logs)
+├── db/                    # Supabase operations package (places, events, exhibitions, place_specials, programs, sources, etc.)
 ├── dedupe.py              # Content hash deduplication
 ├── config.py              # Environment config (Supabase keys, API keys)
 ├── tag_inference.py       # Auto-tagging from event/venue data
@@ -98,7 +98,7 @@ LOG_LEVEL=DEBUG python3 main.py --source marys-bar --dry-run
 python3 main.py --allow-production-writes
 ```
 
-## Key Database Operations (db.py)
+## Key Database Operations (`crawlers/db/` package)
 
 - `get_or_create_place(venue_data)` — Finds by slug or name, creates if missing. Returns place ID.
 - `insert_event(event_data, series_hint=None)` — Inserts event with auto-tagging, poster fetching, genre inference. Pass `series_hint` dict to link into a series (see Series Grouping section).
@@ -226,7 +226,7 @@ insert_event(event_record, series_hint=series_hint)
 - **Never use the event title as series_title for festival programs** — that creates one series per event. Use the festival/program name.
 - **Each unique shift/show at each unique venue = its own series.** "Morning Sort at East Point" and "Morning Sort at Marietta" are separate series.
 - **Set `is_recurring: True`** on the event record when it's part of a series with a predictable schedule.
-- **Auto-detection fallback:** If `is_recurring=True` but no `series_hint` is passed, `db.py` auto-creates a series using the event title. Explicit hints are better.
+- **Auto-detection fallback:** If `is_recurring=True` but no `series_hint` is passed, `db.insert_event` auto-creates a series using the event title. Explicit hints are better.
 
 ### VolunteerHub Pattern
 
@@ -263,7 +263,8 @@ Priority neighborhoods for coverage:
 
 When building or updating crawlers, be aware these landed recently:
 
-- **`venues` → `places` rename.** The destination table is now `places`. `venue_type` → `place_type`. `active` → `is_active`. Use `db.get_or_create_place(place_data)` (the function name was already correct). New crawlers should use `PLACE_DATA` as the dict variable name, but `VENUE_DATA` still works. **Note:** `venue_specials` was renamed to `place_specials` in the same 2026-03 refactor (migration `20260328200001_places_final_rename.sql`), and its `venue_id` column became `place_id`. All crawler code is already on the new name.
+- **`venues` → `places` rename.** The destination table is now `places`. `venue_type` → `place_type`. `active` → `is_active`. Use `db.get_or_create_place(venue_data)` — the function name was renamed but its parameter is still named `venue_data` internally for backward compatibility. Other helpers in `crawlers/db/places.py` also retain `venue_` prefixes (e.g., `_normalize_venue_name`, `get_venue_by_id`, `upsert_venue_feature`). **Do not refactor these as drive-by work** — they are intentionally preserved to keep the internal callsite churn small. Only use the new names in new call sites. New crawlers should use `PLACE_DATA` as the dict variable name, but `VENUE_DATA` still works. **Note:** `venue_specials` was renamed to `place_specials` in the same 2026-03 refactor (migration `20260328200001_places_final_rename.sql`), and its `venue_id` column became `place_id`. All crawler code is already on the new name.
+  - **FK renames on related tables.** All FKs on events and related tables were also renamed: `events.venue_id` → `events.place_id`, `series.venue_id` → `series.place_id`, `venue_specials.venue_id` → `place_specials.place_id`. New crawler code that writes events must use `place_id`, not `venue_id`.
 - **Exhibitions are first-class and cross-vertical — create them in the `exhibitions` table, never as events.** If you crawl a museum, gallery, aquarium, zoo, historic site, interpretive center, or any other destination with persistent or run-dated experiences, use `exhibition_utils.py` to create exhibitions. This is NOT an Arts-portal-only pattern — the Family portal crawling the Georgia Aquarium should be creating exhibition records for `Cold Water Quest`, the Adventure portal crawling a state park should be creating exhibition records for interpretive center displays, and so on. Events related to an exhibition (opening nights, artist talks, guided tours, feedings, walkthroughs) should set `events.exhibition_id` to link back to the parent exhibition — the FK landed in commit `838b9052` and is live. **Do not set `content_kind='exhibit'` on new events** — it's deprecated (see `crawlers/ARCHITECTURE.md` and commit `89026d9b`); the feed filter on it remains only for legacy rows pending migration.
 - **First-pass capture rule still applies.** Capture specials, hours, programs, and venue metadata in the same pass. The places refactor did not change this — every enrichment script is still a crawler failure.
 - **Portal attribution is mandatory.** `sources.owner_portal_id` must be set; events inherit `portal_id` via trigger. Don't bypass this when seeding test data.
