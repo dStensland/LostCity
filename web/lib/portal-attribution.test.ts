@@ -160,18 +160,11 @@ describe("Portal attribution coverage", () => {
     expect(missing).toEqual([]);
   });
 
-  it("ensures search venue RPC callers pass city parameter", () => {
-    const libRoot = path.resolve(
-      path.dirname(fileURLToPath(import.meta.url)),
-      ".."
-    );
-    const searchFile = path.join(libRoot, "lib", "unified-search.ts");
-    const content = fs.readFileSync(searchFile, "utf-8");
-
-    // Every call to search_places_ranked should include p_city
-    const rpcCalls = content.match(/search_places_ranked.*?\}\)/gs) || [];
-    for (const call of rpcCalls) {
-      expect(call).toContain("p_city");
-    }
-  });
+  // NOTE: The disk sentinel that previously read lib/unified-search.ts for
+  // search_places_ranked / p_city assertions was removed in the Phase 0.5
+  // cleanup. The legacy unified-search stack no longer exists; the new
+  // three-layer retrievers in lib/search/** call search_unified via RPC and
+  // enforce portal isolation in SQL. Portal-isolation regression is now
+  // covered by the stronger pgTAP test at
+  // database/tests/search_unified.pgtap.sql.
 });
