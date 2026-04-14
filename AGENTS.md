@@ -1,10 +1,12 @@
 # Repository Guidelines
 
+> **Status as of 2026-04-14:** Surgical update for schema drift — `venues` → `places`, `venue_specials` → `place_specials`, `search_unified()` replaces legacy unified-search stack, four-entity model (events/places/programs/exhibitions) replaces the older three-entity framing, `content_kind='exhibit'` deprecated in favor of `events.exhibition_id` FK. Strategic/operational content below is preserved unchanged. For active execution status see `DEV_PLAN.md`. For mission see `.claude/north-star.md`. For current architecture reference see `.claude/agents/_shared-architecture-context.md`.
+
 **Read `.claude/north-star.md` before every task.** It defines the mission, core bets, decision filters, and working style. If your work doesn't serve those priorities, stop and ask why.
 
 ## What We Are
 
-LostCity is a **local discovery data infrastructure** company. Three first-class entity types: **Events** (temporal), **Destinations** (persistent), **Programs** (structured activities). The data layer is the product — portals are generated surfaces.
+LostCity is a **local discovery data infrastructure** company. Four first-class entity types: **Events** (temporal), **Places** (persistent destinations — formerly `venues`), **Programs** (structured activities), **Exhibitions** (time-bounded, cross-vertical: arts/family/adventure/civic-historic). The data layer is the product — portals are generated surfaces.
 
 We build a constellation of **first-party content pillar portals** (Citizen, Family, Adventure, Arts, Sports) that each produce unique entity types, plus **distribution portals** (hotels, hospitals) for B2B customers. Each content pillar enriches the shared data layer. A portal that's just a filtered view isn't a content pillar.
 
@@ -109,7 +111,7 @@ Never build a UI section before its data layer is confirmed working. The correct
 1. Events
 2. Programs (classes, camps, lessons — with age ranges)
 3. Recurring programming (trivia, DJ nights, open mic → series)
-4. Specials & deals (→ `venue_specials`, NOT events)
+4. Specials & deals (→ `place_specials`, NOT events)
 5. Hours of operation
 6. Venue metadata (description, og:image, vibes, cuisine, price range)
 

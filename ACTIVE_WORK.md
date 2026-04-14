@@ -1,5 +1,7 @@
 # Active Work — Current Sessions Only
 
+> **Status as of 2026-04-14:** Surgical update for schema drift — `venues` → `places`, `venue_specials` → `place_specials`, `search_unified()` replaces legacy unified-search stack, four-entity model (events/places/programs/exhibitions) replaces the older three-entity framing, `content_kind='exhibit'` deprecated in favor of `events.exhibition_id` FK. Session notes below are preserved unchanged; `unified-search.ts` references in Session 3 are historical — that file is the legacy module scheduled for deletion as part of the search rebuild. For active execution status see `DEV_PLAN.md`. For mission see `.claude/north-star.md`. For current architecture reference see `.claude/agents/_shared-architecture-context.md`.
+
 This file tracks the live Codex sessions in the workspace. Old planning splits
 and stale claims were removed because they no longer reflect the actual active
 workstreams.

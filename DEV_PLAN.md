@@ -1,5 +1,7 @@
 # LostCity Agentic Dev Plan
 
+> **Status as of 2026-04-14:** Surgical update for schema drift — `venues` → `places`, `venue_specials` → `place_specials`, `search_unified()` replaces legacy unified-search stack, four-entity model (events/places/programs/exhibitions) replaces the older three-entity framing, `content_kind='exhibit'` deprecated in favor of `events.exhibition_id` FK. Strategic/operational content below is preserved unchanged. Active execution status is tracked in this document. For mission see `.claude/north-star.md`. For current architecture reference see `.claude/agents/_shared-architecture-context.md`.
+
 The playbook for what to build next and how. Written for AI agents.
 
 Each phase is a self-contained block of work an agent can pick up cold. Phases within a tier can often run in parallel. Each phase lists: goal, files changed, concrete steps, and verification criteria.
