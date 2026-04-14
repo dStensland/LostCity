@@ -69,13 +69,15 @@ export function PresearchBody({
         </section>
       )}
 
-      {config.quickIntents.length > 0 && (
+      {/* Quick Intents: overlay-only. Inline mode sits on top of surfaces
+          (/atlanta/explore) that already render their own home content with
+          overlapping pills — duplicating them here produced the redundant
+          double-row flagged in pre-merge QA. The overlay stays curated. */}
+      {mode === "overlay" && config.quickIntents.length > 0 && (
         <section className="space-y-2">
-          {mode === "overlay" && (
-            <p className="font-mono text-2xs uppercase tracking-[0.14em] text-[var(--muted)]">
-              Quick Intents
-            </p>
-          )}
+          <p className="font-mono text-2xs uppercase tracking-[0.14em] text-[var(--muted)]">
+            Quick Intents
+          </p>
           <div className="flex flex-wrap gap-1.5">
             {config.quickIntents.map((pill) => (
               <Link
