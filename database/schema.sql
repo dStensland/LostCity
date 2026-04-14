@@ -235,6 +235,13 @@ CREATE INDEX idx_event_links_type ON event_links(type);
 CREATE UNIQUE INDEX idx_event_links_event_type_url ON event_links(event_id, type, url);
 CREATE INDEX idx_crawl_logs_source_id ON crawl_logs(source_id);
 CREATE INDEX idx_crawl_logs_started_at ON crawl_logs(started_at);
+CREATE INDEX IF NOT EXISTS idx_events_spot_counts_portal_start_venue
+ON events(portal_id, start_date, venue_id)
+WHERE venue_id IS NOT NULL
+  AND is_active = true
+  AND canonical_event_id IS NULL
+  AND COALESCE(is_sensitive, false) = false
+  AND (is_feed_ready IS NULL OR is_feed_ready = true);
 CREATE INDEX idx_venues_city_id_for_spots ON venues(city, id);
 CREATE INDEX IF NOT EXISTS idx_venues_library_pass_eligible ON venues ((library_pass->>'eligible')) WHERE library_pass IS NOT NULL;
 
