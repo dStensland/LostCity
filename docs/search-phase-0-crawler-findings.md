@@ -43,6 +43,55 @@ Add an `fts_places` CTE to `search_unified` using `ts_rank_cd(p.search_vector, v
 
 ---
 
+## Finding 3 — Supabase pre-provisions `anon` grant on functions that survives `REVOKE ALL FROM PUBLIC`
+
+**Discovered:** 2026-04-14, Sprint A (search_unified hardening)
+**Severity:** Medium — platform gotcha, not a data issue
+**Gating:** NO
+**Affects:** Any future migration that defines a function intended to be non-public
+
+### Issue
+When a function is created in a Supabase Postgres instance, Supabase platform tooling pre-provisions an explicit `EXECUTE` grant to the `anon` role. This grant is **not** removed by `REVOKE ALL ON FUNCTION ... FROM PUBLIC`. It must be explicitly revoked with:
+
+```sql
+REVOKE EXECUTE ON FUNCTION public.fn_name(arg_types) FROM anon;
+```
+
+If omitted, the function is publicly callable via PostgREST at `/rest/v1/rpc/fn_name`, bypassing any Next.js route-level validation, rate limiting, or origin checks.
+
+### Why it matters for search
+The `search_unified` function was initially granted only to `authenticated, service_role` via `GRANT EXECUTE ... TO authenticated, service_role`, with `REVOKE ALL FROM PUBLIC` as the sole revocation. Security reviewer flagged that `anon` could still invoke it; the Sprint A implementer reproduced the behavior and added the explicit `REVOKE EXECUTE ... FROM anon` line. Final migration 20260413000008 has both revocations.
+
+### Recommended pattern for future functions
+Every new RPC migration that handles sensitive data or must enforce route-level validation should include BOTH lines:
+
+```sql
+REVOKE ALL ON FUNCTION public.fn_name(arg_types) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.fn_name(arg_types) FROM anon;
+GRANT EXECUTE ON FUNCTION public.fn_name(arg_types) TO authenticated, service_role;
+```
+
+Add to the team's migration checklist and consider a CI lint rule that flags `CREATE FUNCTION` without a corresponding `REVOKE EXECUTE ... FROM anon` when the function is in the `public` schema and takes sensitive parameters.
+
+### Recommended owners
+- **search-dev** / **data-specialist** — add to migration review checklist
+- **devops** — consider a lint rule or DB audit query that enumerates all `public` functions grantable to `anon`
+
+### Suggested next step
+Run a one-time audit query against the dev + prod DBs:
+
+```sql
+SELECT p.proname, pg_get_function_arguments(p.oid) AS args
+FROM pg_proc p
+JOIN pg_namespace n ON n.oid = p.pronamespace
+WHERE n.nspname = 'public'
+  AND has_function_privilege('anon', p.oid, 'execute');
+```
+
+Review any unexpected entries. Functions that should NOT be anon-callable get an explicit `REVOKE EXECUTE ... FROM anon` migration.
+
+---
+
 ## Template for future findings
 
 ```markdown
