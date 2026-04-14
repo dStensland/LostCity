@@ -44,31 +44,6 @@ PLACE_DATA = {
     "website": BASE_URL + "/atlanta",
 }
 
-# Map City Winery genre tags to our genre taxonomy
-GENRE_MAP = {
-    "JAZZ": "jazz",
-    "BLUES": "blues",
-    "R&B": "r-and-b",
-    "HIP HOP": "hip-hop",
-    "NEO SOUL": "neo-soul",
-    "SOUL": "soul",
-    "POP": "pop",
-    "ROCK": "rock",
-    "COUNTRY": "country",
-    "FOLK": "folk",
-    "LATIN": "latin",
-    "COMEDY": "comedy",
-    "GOSPEL": "gospel",
-    "FUNK": "funk",
-    "REGGAE": "reggae",
-    "CLASSICAL": "classical",
-    "SINGER-SONGWRITER": "singer-songwriter",
-    "TRIBUTE": "tribute",
-    "ELECTRONIC": "electronic",
-    "INDIE": "indie",
-    "ALTERNATIVE": "alternative",
-}
-
 # Eastern Time offset (UTC-5 standard, UTC-4 daylight)
 ET = timezone(timedelta(hours=-5))
 
@@ -86,16 +61,6 @@ def parse_utc_datetime(iso_str: str) -> tuple[Optional[str], Optional[str]]:
         return dt_et.strftime("%Y-%m-%d"), dt_et.strftime("%H:%M")
     except (ValueError, TypeError):
         return None, None
-
-
-def map_genres(api_tags: list) -> list[str]:
-    """Map City Winery genre tags to our taxonomy."""
-    genres = []
-    for tag in (api_tags or []):
-        mapped = GENRE_MAP.get(tag.upper())
-        if mapped:
-            genres.append(mapped)
-    return genres or ["live-music"]
 
 
 _FOOD_DRINK_KEYWORDS = frozenset(
@@ -116,23 +81,25 @@ _FOOD_DRINK_KEYWORDS = frozenset(
 )
 
 
-def derive_category(genres: list[str], title: str) -> str:
-    """Derive event category from genres and title.
+def derive_category(title: str) -> str:
+    """Derive event category from title keywords.
+
+    Genre-based classification is handled downstream by _step_infer_genres().
+    This function covers the structural cases we can detect from the title alone.
 
     Priority order:
-    1. comedy/stand-up genre (when live-music is absent) → "comedy"
-    2. drag genre → "nightlife"
+    1. comedy/stand-up keywords in title → "comedy"
+    2. drag keywords in title → "nightlife"
     3. food/drink keywords in title → "food_drink"
     4. default → "music"
     """
-    genre_set = set(genres)
     title_lower = title.lower()
     title_words = set(title_lower.split())
 
-    if ("comedy" in genre_set or "stand-up" in genre_set) and "live-music" not in genre_set:
+    if "comedy" in title_lower or "stand-up" in title_lower or "standup" in title_lower:
         return "comedy"
 
-    if "drag" in genre_set:
+    if "drag" in title_lower:
         return "nightlife"
 
     if _FOOD_DRINK_KEYWORDS & title_words:
@@ -213,8 +180,11 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 if description:
                     description = description[:500]
 
-                api_tags = seo.get("tags", [])
-                genres = map_genres(api_tags)
+                # Note: seo.get("tags") contains VENUE-level genre tags (e.g., ["R&B", "JAZZ",
+                # "COMEDY"]) that describe what the venue hosts generally — not this specific
+                # event. Passing them as genres contaminates every event with all venue types.
+                # Genre inference is handled downstream by _step_infer_genres() using the
+                # event's own title, description, and artist data.
 
                 image_url = event.get("image")
 
@@ -239,7 +209,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     "end_date": end_date,
                     "end_time": end_time,
                     "is_all_day": False,
-                    "category": derive_category(genres, title),
+                    "category": derive_category(title),
                     "tags": ["city-winery", "live-music", "dinner-show", "ponce-city-market"],
                     "price_min": price,
                     "price_max": price,
@@ -262,7 +232,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     continue
 
                 try:
-                    insert_event(event_record, genres=genres)
+                    insert_event(event_record)
                     events_new += 1
                     logger.info(f"Added: {title} on {start_date} at {start_time}")
                 except Exception as e:
