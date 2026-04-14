@@ -1310,15 +1310,15 @@ def _step_set_flags(event_data: dict, ctx: InsertContext) -> dict:
     if ctx.music_info and ctx.music_info.bio and desc_is_weak:
         event_data["description"] = ctx.music_info.bio[:2000]
 
+    # Nullify junk/boilerplate descriptions at insert time.
+    # classify_description() is the single source of truth for description quality —
+    # catches "Event at ...", "is a local event", Eventbrite assembly strings, etc.
     desc = event_data.get("description") or ""
-    if re.match(
-        r"^(Event at |Live music at .+ featuring|Comedy show at |"
-        r"Theater performance at |Film screening at |Sporting event at |"
-        r"Arts event at |Food & drink event at |Fitness class at |"
-        r"Creative workshop at |Performance at |Show at |Paint and sip class at )",
-        desc,
-    ):
-        event_data["description"] = None
+    if desc:
+        from description_quality import classify_description
+        desc_quality = classify_description(desc)
+        if desc_quality in ("junk", "boilerplate"):
+            event_data["description"] = None
 
     if (
         not event_data.get("portal_id")
@@ -1679,7 +1679,10 @@ def _maybe_infer_importance(event_id: int, event_data: dict) -> None:
     if any(p.search(title) for p in _IMPORTANCE_SKIP_TITLE_RES):
         return
 
-    category = event_data.get("category", "")
+    # Support both pre-finalize ("category") and post-finalize / DB-fetched ("category_id") dicts.
+    category = str(
+        event_data.get("category") or event_data.get("category_id") or ""
+    ).strip().lower()
     should_upgrade = False
 
     # Path 1: sellout risk
@@ -1913,6 +1916,14 @@ def smart_update_existing_event(existing: dict, incoming: dict) -> bool:
     incoming_img = _normalize_image_url(incoming.get("image_url")) or ""
     if _should_use_incoming_image(existing_img, incoming_img):
         updates["image_url"] = incoming_img
+
+    # Fill place_id when existing is NULL and incoming has a resolved venue.
+    # This fixes events first inserted by aggregators (Eventbrite/Ticketmaster)
+    # without venue resolution, then re-crawled by a dedicated source crawler.
+    incoming_place_id = incoming.get("place_id")
+    existing_place_id = existing.get("place_id")
+    if incoming_place_id and not existing_place_id:
+        updates["place_id"] = incoming_place_id
 
     incoming_start_time = incoming.get("start_time")
     existing_start_time = existing.get("start_time")
