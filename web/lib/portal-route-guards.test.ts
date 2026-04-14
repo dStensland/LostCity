@@ -15,8 +15,10 @@ describe("portal route guardrails", () => {
   it("core discovery routes reject portal param mismatches", () => {
     const routes = [
       "app/api/feed/route.ts",
-      "app/api/search/route.ts",
-      "app/api/search/instant/route.ts",
+      // Phase 0.5: legacy /api/search and /api/search/instant routes were
+      // deleted. The new three-layer stack calls search_unified via RPC and
+      // its portal param enforcement is covered by unit tests in lib/search/**
+      // plus the pgTAP test at database/tests/search_unified.pgtap.sql.
       "app/api/timeline/route.ts",
       "app/api/trending/route.ts",
       "app/api/tonight/route.ts",

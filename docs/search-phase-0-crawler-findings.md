@@ -149,6 +149,7 @@ not worth engineering time.
 
 ## Finding 5 — Legacy search stack has broader surface than Tasks 41/42/43 assumed
 
+**Status:** ✅ **CLOSED by PR #16 on 2026-04-14** (`search-elevation-phase-0-5`)
 **Discovered:** 2026-04-14, Task 47 attempt
 **Severity:** Medium — non-portal surfaces still run the old search experience
 **Gating:** NO — Phase 0 still ships; this is Phase 0.5 cleanup
@@ -188,16 +189,63 @@ UI consumers that Tasks 41/42/43 did not migrate:
   AND the old `ExploreSearchHero` inside `ExploreHomeScreen` below it.
   Whether this is visually broken in the browser is untested — worth a QA pass.
 
-### Deferred scope (Phase 0.5)
-Tasks 47 and 48 are deferred from Phase 0. A follow-up sprint should:
-1. Move shared types out of `unified-search.ts` into `lib/search/types.ts`
-2. Replace `HeaderSearchButton` usages inside `GlassHeader` with `LaunchButton`
-3. Strip `FindSearchInput` / `ExploreSearchResults` mounts out of
-   `ExploreHomeScreen`, `ExploreSearchHero`, and `find/ExploreHome`
-4. Delete `lib/unified-search.ts`, the `/api/search/*` routes, and the
-   orphaned helpers (`instant-search-service`, `search-preview`,
-   `search-suggestions`, possibly `useInstantSearch`)
-5. Delete or rewrite `lib/portal-attribution.test.ts:163-176`
+### Deferred scope (Phase 0.5) — now CLOSED by PR #16
+Tasks 47 and 48 were deferred from Phase 0 and executed in the
+`search-elevation-phase-0-5` branch:
+1. ✅ Shared types lifted into `lib/search/legacy-result-types.ts` as a
+   temporary bridge, 14 consumers repointed, bridge deleted once the
+   cascade eliminated every consumer. Commits `4f325813`, `dd399aa2`,
+   `782a5395`.
+2. ✅ `GlassHeader.tsx` migrated from `HeaderSearchButton` to
+   `LaunchButton`. Commit `9bfb986a`.
+3. ✅ Explore home-screen sub-tree — `ExploreSearchHero`,
+   `ExploreSearchResults`, `find/ExploreHome`, `FindSearchInput` —
+   all deleted. `ExploreHomeScreen` confirmed live but no longer
+   renders any of the legacy search components. Commit `38fdc561`.
+4. ✅ `lib/unified-search.ts` + the four `/api/search/*` routes
+   (`route`, `preview`, `suggestions`, `instant`) deleted alongside
+   `instant-search-service`, `search-preview`, `search-suggestions`,
+   `search-navigation`, `search-ranking`, `search-suggestion-results`,
+   `useInstantSearch`, and `search-presearch`. Commit `38fdc561`.
+5. ✅ `lib/portal-attribution.test.ts:163-176` disk sentinel updated
+   to drop the deleted-file references. pgTAP portal-isolation test
+   (`database/tests/search_unified.pgtap.sql`) is now the authoritative
+   regression gate. Commit `04ddea2f`.
+
+**Net cleanup:** 31 legacy files deleted, 10,221 LoC removed, 201 LoC
+added (the `RootSearchOverlay` component + the personalize portal-scope
+fix + supporting bridge code).
+
+**Bonus fix (not in original scope):** pre-merge QA caught a regression
+where `LaunchButton` on `/community` + `/happening-now` became a silent
+no-op after GlassHeader migration, because no `UnifiedSearchShell`
+overlay was mounted outside `[portal]/layout.tsx`. Commit `f07e695b`
+promoted the overlay to the root layout via a new `RootSearchOverlay`
+client component that derives the portal slug reactively from
+`usePathname()` and falls back to "atlanta" for non-portal routes.
+Commit `c2a82a25` added a useEffect that resets the store on
+cross-portal navigation to prevent stale-result flash on reopen.
+
+**Also fixed in Phase 0.5:**
+- Architect Important #1 (Phase 0): `personalize` route now portal-scopes
+  both events AND venues (using the same `portal_venues` rule
+  `search_unified` enforces) before querying `saved_items`. Commits
+  `58db3203`, `c2a82a25`. Cross-portal `savedByMe` probe closed.
+- Architect Important #2: `search-service.ts` returns a fresh
+  `PresentedResults` via shallow spread instead of mutating the
+  presenter's output. Commit `58db3203`.
+- Security H1 follow-up: `createServiceClient()` throw path now wrapped
+  in try/catch returning a sanitized 503 instead of leaking a stack.
+  Commit `c2a82a25`.
+- Security delete-cascade straggler: `web/scripts/perf-audit.ts` and
+  `prewarm-cache.ts` retargeted from deleted `/api/search/instant`
+  routes to the new `/{portal}/api/search/unified` stack.
+  `web/scripts/search-audit.ts` deleted entirely — it depended on
+  Phase 1 capabilities (alias canonicalization, venue-first ranking)
+  that the Phase 0 architecture intentionally defers. Fresh search
+  quality harness ships with Phase 1. Commit `ff6ab801`.
+- Spec Appendix A drift: commented out Phase-1 entries (`lib/search/cache.ts`,
+  `presenting/mmr.ts`). Commit `58db3203`.
 
 ### Phase 0 acceptance
 The Phase 0 ship goal was "rebuild search on the portal surface." That's

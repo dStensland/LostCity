@@ -70,15 +70,12 @@ jobs:
           PERF_AUDIT_TIMEOUT_MS: "12000"
         run: npm run perf:audit
 
-      - name: Run search quality audit
-        env:
-          BASE_URL: ${{ steps.resolve-url.outputs.base_url }}
-          SEARCH_AUDIT_OUTPUT: /tmp/search_audit.md
-          SEARCH_AUDIT_TIMEOUT_MS: "12000"
-          SEARCH_AUDIT_MAX_ATTEMPTS: "3"
-          SEARCH_AUDIT_RETRY_DELAY_MS: "1000"
-          SEARCH_AUDIT_WARMUP_REQUESTS: "1"
-        run: npm run search:audit
+      # Phase 0.5: search quality audit removed. The old search-audit.ts
+      # was built around the legacy /api/search/instant stack with alias
+      # canonicalization and venue-first ranking. Those features are Phase 1
+      # (entity linking, synonym expansion, ranking quality). Perf-audit
+      # covers HTTP latency for the new /{portal}/api/search/unified stack;
+      # a fresh search-quality harness ships with Phase 1.
 
       - name: Publish summary
         if: always()
@@ -88,12 +85,6 @@ jobs:
           else
             echo "No performance report generated." >> "$GITHUB_STEP_SUMMARY"
           fi
-          echo "" >> "$GITHUB_STEP_SUMMARY"
-          if [ -f /tmp/search_audit.md ]; then
-            cat /tmp/search_audit.md >> "$GITHUB_STEP_SUMMARY"
-          else
-            echo "No search audit report generated." >> "$GITHUB_STEP_SUMMARY"
-          fi
 
       - name: Upload report artifact
         if: always()
@@ -102,5 +93,4 @@ jobs:
           name: web-perf-audit
           path: |
             /tmp/web_perf_audit.md
-            /tmp/search_audit.md
           if-no-files-found: ignore

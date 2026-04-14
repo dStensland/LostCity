@@ -15,8 +15,10 @@ describe("portal isolation guardrails", () => {
   it("core portal routes use shared scope/context helpers", () => {
     const routes = [
       "app/api/feed/route.ts",
-      "app/api/search/route.ts",
-      "app/api/search/instant/route.ts",
+      // Phase 0.5: legacy /api/search and /api/search/instant routes were
+      // deleted. Portal scoping for the new search stack is enforced inside
+      // lib/search/** retrievers and covered by
+      // database/tests/search_unified.pgtap.sql.
       "app/api/timeline/route.ts",
       "app/api/trending/route.ts",
       "app/api/tonight/route.ts",

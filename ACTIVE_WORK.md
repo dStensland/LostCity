@@ -80,10 +80,16 @@ workstreams.
 
 ---
 
-### Session 3 — Search Elevation (Phase 0)
+### Session 3 — Search Elevation (Phase 0 + Phase 0.5)
+**Status:** Phase 0 merged → PR #15. Phase 0.5 cleanup in review → PR #16.
+
 **Scope:** unified search rebuild — three-layer architecture (Retrieval / Ranking / Presentation), single `search_unified` SQL function, `UnifiedSearchShell` component, `search_events` observability, delete legacy `lib/unified-search.ts`.
 
-**Worktree:** `../LostCity-search-phase-0` on branch `search-elevation-phase-0`
+**Phase 0.5 adds:** delete cascade of 31 legacy files, `GlassHeader` → `LaunchButton` migration, `personalize` route portal-scoping for both events AND venues (using `search_unified`'s `portal_venues` rule), diagnostics immutability in `search-service.ts`, `RootSearchOverlay` promoting the overlay to the root layout with URL-derived portal slug, Finding 5 fully closed.
+
+**Worktrees:**
+- `../LostCity-search-phase-0` on branch `search-elevation-phase-0` (PR #15, merged)
+- `../LostCity-search-phase-0-5` on branch `search-elevation-phase-0-5` (PR #16, in review)
 
 **Plan:** `docs/superpowers/plans/2026-04-13-search-elevation-phase-0.md`
 

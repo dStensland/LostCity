@@ -17,8 +17,6 @@
     "seed:playbooks": "tsx scripts/seed-playbooks.ts",
     "seed:emory-venues": "tsx scripts/backfill-emory-nearby-venues.ts",
     "perf:audit": "tsx scripts/perf-audit.ts",
-    "search:audit": "tsx scripts/search-audit.ts",
-    "search:check": "npm run perf:prewarm && SEARCH_AUDIT_TIMEOUT_MS=12000 SEARCH_AUDIT_MAX_ATTEMPTS=3 SEARCH_AUDIT_RETRY_DELAY_MS=1000 SEARCH_AUDIT_WARMUP_REQUESTS=1 tsx scripts/search-audit.ts",
     "perf:prewarm": "tsx scripts/prewarm-cache.ts",
     "perf:check": "npm run perf:prewarm && PERF_MAX_COLD_MS=1500 PERF_MAX_WARM_MS=500 PERF_REQUIRE_2XX=true tsx scripts/perf-audit.ts",
     "perf:check:strict": "npm run perf:prewarm && PERF_MAX_COLD_MS=1200 PERF_MAX_WARM_MS=350 PERF_REQUIRE_2XX=true tsx scripts/perf-audit.ts",

@@ -1,7 +1,4 @@
-export { default as SuggestionGroup } from "./SuggestionGroup";
-export { default as QuickActionsList, QuickAction } from "./QuickAction";
-export { PreSearchState } from "./PreSearchState";
-
-export type { SuggestionGroupProps } from "./SuggestionGroup";
-export type { QuickActionProps, QuickActionsListProps } from "./QuickAction";
-export type { PreSearchStateProps } from "./PreSearchState";
+// Legacy barrel exports (SuggestionGroup, QuickAction, PreSearchState) were
+// removed in the Phase 0.5 deletion cascade. Import the new search surface
+// directly from @/components/search/LaunchButton and related files.
+export { LaunchButton } from "./LaunchButton";

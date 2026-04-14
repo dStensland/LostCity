@@ -21,36 +21,20 @@ const endpoints: PrewarmEndpoint[] = [
   { name: "portal_feed", path: "/api/portals/atlanta/feed", critical: true },
   { name: "showtimes", path: "/api/showtimes?portal=atlanta", critical: true },
   { name: "happening_now", path: "/api/portals/atlanta/happening-now", critical: true },
-  { name: "search_instant", path: "/api/search/instant?q=music&portal=atlanta", critical: true },
-  { name: "search_instant_short", path: "/api/search/instant?q=mu&portal=atlanta" },
+  // Phase 0.5: migrated from the deleted /api/search/instant and /api/search
+  // endpoints to the new portal-scoped /{portal}/api/search/unified stack.
+  // The unified endpoint accepts q + limit + optional filter params.
+  { name: "search_unified_music", path: "/atlanta/api/search/unified?q=music&limit=5", critical: true },
+  { name: "search_unified_short", path: "/atlanta/api/search/unified?q=mu&limit=5" },
+  { name: "search_unified_afrobeat", path: "/atlanta/api/search/unified?q=afrobeat&limit=7", critical: true },
+  { name: "search_unified_l5p", path: "/atlanta/api/search/unified?q=l5p&limit=5" },
+  { name: "search_unified_o4w", path: "/atlanta/api/search/unified?q=o4w&limit=5" },
+  { name: "search_unified_live_music_tonight", path: "/atlanta/api/search/unified?q=live%20music%20tonight&limit=5" },
+  { name: "search_unified_pottery", path: "/atlanta/api/search/unified?q=pottery&limit=5" },
+  { name: "search_unified_callanwolde", path: "/atlanta/api/search/unified?q=callanwolde&limit=5" },
   {
-    name: "search_instant_afrobeat",
-    path: "/api/search/instant?q=afrobeat&portal=atlanta&portal_id=74c2f211-ee11-453d-8386-ac2861705695&portalSlug=atlanta&viewMode=find&findType=events&limit=7",
-    critical: true,
-  },
-  {
-    name: "search_instant_l5p",
-    path: "/api/search/instant?q=l5p&portal=atlanta&findType=events&limit=5",
-  },
-  {
-    name: "search_instant_o4w",
-    path: "/api/search/instant?q=o4w&portal=atlanta&findType=events&limit=5",
-  },
-  {
-    name: "search_instant_live_music_tonight",
-    path: "/api/search/instant?q=live%20music%20tonight&portal=atlanta&findType=events&limit=5",
-  },
-  {
-    name: "search_instant_pottery",
-    path: "/api/search/instant?q=pottery&portal=atlanta&findType=classes&limit=5",
-  },
-  {
-    name: "search_instant_callanwolde",
-    path: "/api/search/instant?q=callanwolde&portal=atlanta&findType=destinations&limit=5",
-  },
-  {
-    name: "search_full_overlay",
-    path: "/api/search?q=live%20music%20tonight&types=event,venue,organizer&portal=atlanta&portal_id=74c2f211-ee11-453d-8386-ac2861705695&limit=12&include_facets=false&include_did_you_mean=false&include_event_popularity=false",
+    name: "search_unified_full",
+    path: "/atlanta/api/search/unified?q=live%20music%20tonight&types=event,venue&limit=12",
   },
   { name: "trending", path: "/api/trending?portal=atlanta" },
   { name: "classes", path: "/api/classes?portal=atlanta" },
