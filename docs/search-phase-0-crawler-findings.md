@@ -33,27 +33,13 @@ Run a "top 10 sources by missing price" query similar to the audit's place_id ga
 
 ---
 
-## Finding 2 — Venues may not have `search_vector`
+## Finding 2 — ~~Venues may not have `search_vector`~~ **RESOLVED — places already has it**
 
 **Discovered:** 2026-04-13, Task 7 plan correction
-**Severity:** Low
-**Gating:** NO
-**Affects:** Venue FTS quality; Phase 0 ships trigram-only for venues
+**Resolved:** 2026-04-13, Task 7 implementation — implementer verified during schema inspection that the table is actually `places` (renamed from `venues`) and `places.search_vector tsvector` is populated at 100% (6,785/6,785 rows). Phase 0 still ships trigram-only for places to match the committed migration, but **Phase 1 can add an `fts_places` CTE trivially** — the underlying data is ready. This is not a gap; it's an opportunity.
 
-### Issue
-The `venues` table may not have a `search_vector tsvector` column (migration 045 added search_vector to `events` but I haven't confirmed a venues equivalent). Phase 0 Task 7's `search_unified` RPC compensates by using trigram similarity for venue search, which works for "jazz club" → "The Jazz Corner" but misses term-frequency/inverse-document-frequency ranking benefits.
-
-### Impact on search
-- Venue search relevance is shallower than event search
-- "coffee shop midtown" search returns venues by title match only, no weighting by description frequency
-- Acceptable for Phase 0 per spec §1.6 (venues are a secondary result type)
-
-### Recommended owners
-- **data-specialist** — add a migration that creates `venues.search_vector tsvector` populated from `name || ' ' || COALESCE(description, '')` with a trigger to maintain it
-- **search-dev** — after the column lands, add a `fts_venues` CTE to `search_unified` that uses `ts_rank_cd` against the new vector
-
-### Suggested next step
-Verify column existence first with `psql -c "\d venues" | grep search_vector`. If missing, file as a Phase 1 migration task.
+### Phase 1 follow-up (not blocking anything)
+Add an `fts_places` CTE to `search_unified` using `ts_rank_cd(p.search_vector, v_tsq)`. Same structure as `fts_events`. One small migration, no crawler work, no data fix.
 
 ---
 

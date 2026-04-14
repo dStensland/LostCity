@@ -497,19 +497,21 @@ git commit -m "feat(db): add user_recent_searches table with atomic insert+rotat
 
 **CRITICAL SCHEMA NOTES (from the Task 1 audit — these corrections supersede the original plan's schema assumptions):**
 
-- Events uses `place_id INTEGER REFERENCES venues(id)`. Column was renamed `venue_id` → `place_id` but the table is still `venues` (not `places`).
+- Events uses `place_id INTEGER REFERENCES places(id)`. Column was renamed `venue_id` → `place_id` AND **the table itself was renamed `venues` → `places`**. There is no `venues` table — everywhere the plan says "venues", read it as `places`.
 - Events has `portal_id UUID REFERENCES portals(id)` — **NULLABLE** (added in migration 019). Events without `portal_id` naturally get excluded by `WHERE portal_id = p_portal_id`.
 - Events uses `category_id TEXT` (not an FK). The old `category` column was dropped in migration 259.
 - Events has `is_active BOOLEAN` and `search_vector tsvector` (migration 045).
 - Events date column is `start_date DATE` (not `starts_at timestamptz`).
-- **Venues has NO `portal_id`.** Venues are shared across portals. Portal isolation for venue search is enforced via a subquery: `WHERE venues.id IN (SELECT DISTINCT place_id FROM events WHERE portal_id = p_portal_id AND is_active = true AND place_id IS NOT NULL)`. This preserves portal-isolation while matching the real schema.
-- Venues may not have `search_vector` yet — fall back to `similarity(name, p_query)` for FTS-like behavior and keep the trigram retriever as the primary venue matcher. Check with `psql "$DATABASE_URL" -c "\d venues"` in Step 1.
+- **`places` has NO `portal_id`.** Places are shared across portals. Portal isolation for place search is enforced via a subquery: `WHERE places.id IN (SELECT DISTINCT place_id FROM events WHERE portal_id = p_portal_id AND is_active = true AND place_id IS NOT NULL)`. This preserves portal-isolation while matching the real schema.
+- **`places` already has `search_vector tsvector` populated (100%, 6,785/6,785 rows).** Phase 0 still uses trigram-only for places to match the implementer's actual Task 7 migration, but Phase 1 can trivially add an `fts_places` CTE against `places.search_vector`.
+- **Pre-existing `search_unified` function in the DB:** an older function with signature `(text, text[], int, uuid, text)` exists, with `p_portal_id DEFAULT NULL` — a security gap. It has **zero callers** across `web/`, `scripts/`, or `crawlers/`. My new function coexists via PostgreSQL signature overloading; callers using my signature get the new function. Task 47 (legacy cleanup) will DROP the old one.
+- **`database.types.ts` regeneration:** the Supabase-generated types file currently contains the OLD `search_unified` signature. Task 19 (TypeScript wrapper) will need to cast args with `as never` (project convention — see `web/CLAUDE.md`) until Task 47 drops the old function and regenerates types.
 
 - [ ] **Step 1: Verify schema + `pg_trgm` extension**
 
 ```bash
 psql "$DATABASE_URL" -c "\d events" | grep -E "place_id|portal_id|category_id|search_vector|is_active|start_date"
-psql "$DATABASE_URL" -c "\d venues" | grep -E "id|name|neighborhood|slug|image_url|search_vector"
+psql "$DATABASE_URL" -c "\d places" | grep -E "id|name|neighborhood|slug|image_url|search_vector"
 psql "$DATABASE_URL" -c "SELECT * FROM pg_extension WHERE extname = 'pg_trgm';"
 ```
 
@@ -754,8 +756,8 @@ Create `database/tests/search_unified.pgtap.sql`:
 ```sql
 -- Regression test: search_unified MUST enforce portal isolation.
 -- Any failure means cross-portal data is leaking in search results.
--- Schema notes: events.portal_id (UUID), events.place_id (INTEGER → venues.id),
--- events.category_id (TEXT), venues has no portal_id. See plan Task 7.
+-- Schema notes: events.portal_id (UUID), events.place_id (INTEGER → places.id),
+-- events.category_id (TEXT), places has no portal_id. See plan Task 7.
 
 BEGIN;
 SELECT plan(4);
