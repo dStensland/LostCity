@@ -1,5 +1,17 @@
 # Architecture Plan: Portal Federation & Bespoke Frontends
 
+> **Status as of 2026-04-14:** Last full refresh was 2026-03-21. Since then: `venues` table renamed to `places` (PostGIS spatial column added); `venue_specials` co-renamed to `place_specials`; `web/lib/entity-urls.ts` centralized URL building; `search_unified()` RPC replaced the legacy search stack; exhibitions added as first-class, cross-vertical entity (not Arts-specific). Strategic gap analysis below remains valid; some terminology has been updated inline. For active execution status see `DEV_PLAN.md`. For mission see `.claude/north-star.md`.
+
+## Architecture Decisions Since 2026-03-21 (Inline Refresh)
+
+These are the architectural decisions that have shipped since this document's last full refresh. They are reflected in code but the gap analysis below still uses the older framing in some places.
+
+- **Centralized URL building.** `web/lib/entity-urls.ts` is now the single source of entity URLs. Overlay vs canonical is controlled by a `'feed' | 'page'` context arg on `buildEventUrl` and `buildSpotUrl`; other builders are canonical-only. The legacy hand-built URL pattern is deprecated.
+- **Single search RPC.** `search_unified()` replaces the legacy unified-search stack. Portal isolation is enforced inside the RPC via mandatory `p_portal_id`. The frontend wraps this via the server-loader pattern.
+- **`places`, not `venues`.** Table renamed, FKs renamed, `place_type` taxonomy. PostGIS `location` column auto-populated by trigger. `venue_specials` co-renamed to `place_specials`.
+- **Exhibitions as first-class, cross-vertical entity.** New table, own search vector, own URL builder, own CTEs in `search_unified()`. Cross-vertical — produced by Arts (gallery/museum), Family (aquarium/zoo), Adventure (park attractions), and civic/historic portals. The transitional `content_kind='exhibit'` filter exists only as protection for legacy rows; the `exhibition_id` FK on events is live.
+- **Portal isolation hardening.** `owner_portal_id NOT NULL` + CHECK constraint on sources. Events inherit `portal_id` via trigger. The "no NULL portal_id" rule from `2026-02-14-portal-data-isolation.md` is now mechanically enforced, not just convention.
+
 ## Portal Surfaces Contract (Hard Boundary)
 
 This architecture supports two separate products that share infrastructure but must not share UX intent:
@@ -48,13 +60,13 @@ This architecture remains directionally correct, but execution order is now cons
 - Session refresh in middleware, cookie-based
 
 **Data Layer** — rich and comprehensive:
-- 100+ tables covering events, venues, orgs, series, festivals, artists
+- 100+ tables covering events, places, orgs, series, festivals, artists, exhibitions
 - Submissions workflow with portal-scoped moderation
 - Venue claiming (`entity_claim_requests` → `entity_claims` with roles)
 - Community venue tagging with voting and suggestions
 - Lists with portal scoping and contribution controls
 - Social features (follows, friends, activities, notifications, invites)
-- Full-text search (tsvector on events, venues, orgs)
+- Full-text search via `search_unified()` RPC (tsvector on events, places, orgs, exhibitions) — replaces the legacy unified-search stack
 - Deduplication via content_hash
 
 **API** — solid foundation:
@@ -94,7 +106,7 @@ This architecture remains directionally correct, but execution order is now cons
 
 **Fix**: Create a distinction between:
 - **Portal-local overrides** (pinned order, display preferences) — stay in `portal_content`
-- **Global enrichments** (venue quality signals, accessibility tags, corrections) — flow to shared tables (`venue_tags`, `venues`, etc.)
+- **Global enrichments** (venue quality signals, accessibility tags, corrections) — flow to shared tables (`venue_tags`, `places`, etc.)
 
 When a portal admin tags a venue as "wheelchair accessible," that should go to `venue_tags` (global), not `portal_content` (scoped). The key principle: facts are global, preferences are local.
 
@@ -310,10 +322,10 @@ Admin Portal Action             → Where It Goes
 Pin venue to top of feed         → portal_content (local)
 Set display order of sections    → portal_sections (local)
 Tag venue as "wheelchair access" → venue_tags (global) + contributed_by_portal_id
-Correct venue address            → venues table (global) + edit_source attribution
-Add venue hours                  → venues table (global)
+Correct venue address            → places table (global) + edit_source attribution
+Add venue hours                  → places table (global)
 Rate/review a venue              → venue_ratings (global, new table)
-Flag venue as permanently closed → venues table (global)
+Flag venue as permanently closed → places table (global)
 Feature an event                 → portal_content (local)
 Submit a new event               → events table (global) via submissions workflow
 Hide an event from their portal  → portal_content exclusion (local)
