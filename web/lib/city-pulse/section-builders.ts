@@ -18,7 +18,6 @@ import type {
   UserSignals,
   TimeSlot,
   EditorialMention,
-  HorizonBucket,
 } from "./types";
 import { getCardTier } from "./tier-assignment";
 
@@ -1124,6 +1123,27 @@ const MONTH_NAMES = [
  * the events table but not currently in the EVENT_LIST_SELECT — if it isn't
  * present, the filter degrades gracefully to an empty result (returns null).
  */
+
+/** A time bucket for the "On the Horizon" section. Built server-side. */
+interface HorizonBucket {
+  /** Month key, e.g. "2026-05" */
+  key: string;
+  /** Display label, e.g. "May" */
+  label: string;
+  /** Relative time, e.g. "6 weeks away" */
+  relativeLabel: string;
+  /** The highest-importance event for this bucket, or null if small bucket */
+  headliner: CityPulseEventItem | null;
+  /** Non-headliner events (capped at 3 for initial render) */
+  supporting: CityPulseEventItem[];
+  /** Total qualifying events in this month (before cap) */
+  totalCount: number;
+  /** Events hidden behind "N more" disclosure */
+  overflowCount: number;
+  /** True when totalCount <= 2 — skip headliner/supporting split */
+  isSmallBucket: boolean;
+}
+
 export function buildPlanningHorizonSection(
   events: FeedEventData[],
   editorialMap?: EditorialMap,

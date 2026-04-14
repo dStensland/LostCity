@@ -19,7 +19,6 @@
  *  5. PlacesToGoSection — category-based venue discovery
  *  6. VenuesSection — Film/Music/Comedy/Theater/Nightlife/Arts/Attractions
  *  7. GameDaySection — sports schedules
- *  8. PlanningHorizonSection — big future events
  *
  * Section visibility and order are controlled by FeedLayout preferences.
  *
@@ -77,7 +76,6 @@ import { getContextualQuickLinks } from "@/lib/city-pulse/quick-links";
 const VenuesSection = dynamic(() => import("./sections/VenuesSection"), { ssr: false });
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const GameDaySection = dynamic<{ portalSlug: string }>(() => import("./sections/GameDaySection") as any, { ssr: false });
-const PlanningHorizonSection = dynamic(() => import("./sections/PlanningHorizonSection"), { ssr: false });
 const FeedTimeMachine = dynamic(() => import("./FeedTimeMachine"), { ssr: false });
 const YonderRegionalEscapesSection = dynamic(() => import("./sections/YonderRegionalEscapesSection"), { ssr: false });
 const YonderDestinationNodeQuestsSection = dynamic(
@@ -86,10 +84,6 @@ const YonderDestinationNodeQuestsSection = dynamic(
 );
 const PlacesToGoSection = dynamic<{ portalSlug: string }>(
   () => import("./sections/PlacesToGoSection").then((m) => ({ default: m.PlacesToGoSection })),
-  { ssr: false },
-);
-const WhatsOnNowSection = dynamic<{ portalSlug: string; title: string; exhibitionTypes?: string[] }>(
-  () => import("./sections/WhatsOnNowSection").then((m) => ({ default: m.WhatsOnNowSection })),
   { ssr: false },
 );
 
@@ -101,22 +95,6 @@ const TIMELINE_SECTION_TYPES = new Set<CityPulseSectionType>([
   "this_week",
   "coming_up",
 ]);
-
-/** The non-timeline sections we render, in order */
-const DEFAULT_SECTION_ORDER: CityPulseSectionType[] = [
-  "browse",
-];
-
-/** Estimated heights per section type to reduce CLS when lazy loading */
-const SECTION_HEIGHT_ESTIMATES: Record<string, number> = {
-  browse: 400,
-};
-
-/** Map FeedBlockId → CityPulseSectionType for layout application */
-const BLOCK_TO_SECTION: Record<string, CityPulseSectionType> = {
-  horizon: "planning_horizon",
-  browse: "browse",
-};
 
 /** Middle blocks = everything except always-first and always-last */
 const MIDDLE_BLOCK_IDS: FeedBlockId[] = DEFAULT_FEED_ORDER.filter(
@@ -351,39 +329,10 @@ export default function CityPulseShell({ portalSlug, serverHeroUrl, serverFeedDa
     );
   }, [feedLayout]);
 
-  // Split sections: lineup (timeline) vs non-timeline
-  const { lineupSections, planningHorizonSection, orderedSections } = useMemo(() => {
-    const lineup = sections.filter(
-      (s) => TIMELINE_SECTION_TYPES.has(s.type),
-    );
-    const horizon = sections.find((s) => s.type === "planning_horizon") ?? null;
-
-    // Build ordered non-timeline sections, applying user layout
-    const sectionMap = new Map(sections.map((s) => [s.type, s]));
-    const hiddenSet = new Set(
-      feedLayout?.hidden_blocks?.map((b) => BLOCK_TO_SECTION[b]).filter(Boolean) || [],
-    );
-
-    let sectionOrder: CityPulseSectionType[];
-    if (feedLayout?.visible_blocks) {
-      sectionOrder = feedLayout.visible_blocks
-        .filter((b) => b !== "events")
-        .map((b) => BLOCK_TO_SECTION[b])
-        .filter((t): t is CityPulseSectionType => !!t);
-      if (!sectionOrder.includes("browse")) {
-        sectionOrder.push("browse");
-      }
-    } else {
-      sectionOrder = DEFAULT_SECTION_ORDER;
-    }
-
-    const ordered = sectionOrder
-      .filter((type) => !hiddenSet.has(type))
-      .map((type) => sectionMap.get(type))
-      .filter(Boolean) as typeof sections;
-
-    return { lineupSections: lineup, planningHorizonSection: horizon, orderedSections: ordered };
-  }, [sections, feedLayout]);
+  // Split sections: timeline sections for LineupSection
+  const lineupSections = useMemo(() => {
+    return sections.filter((s) => TIMELINE_SECTION_TYPES.has(s.type));
+  }, [sections]);
 
   // Theme vars from context
   const isLightTheme = useMemo(() => {
@@ -437,28 +386,6 @@ export default function CityPulseShell({ portalSlug, serverHeroUrl, serverFeedDa
             <div className="pt-6">
               <LazySection minHeight={300}>
                 <VenuesSection portalSlug={portalSlug} />
-              </LazySection>
-            </div>
-          </div>
-        );
-
-      case "exhibitions":
-        return (
-          <div
-            key="city-pulse-exhibitions"
-            id="city-pulse-exhibitions"
-            data-feed-anchor="true"
-            data-index-label="What's On"
-            data-block-id="exhibitions"
-            className="mt-8 scroll-mt-28"
-          >
-            <div className="h-px bg-[var(--twilight)]" />
-            <div className="pt-6">
-              <LazySection minHeight={200}>
-                <WhatsOnNowSection
-                  portalSlug={portalSlug}
-                  title="What's On Now"
-                />
               </LazySection>
             </div>
           </div>
@@ -627,25 +554,6 @@ export default function CityPulseShell({ portalSlug, serverHeroUrl, serverFeedDa
       })}
 
       {/* Portal teasers — hidden until sibling portals are more built out */}
-
-      {/* Planning Horizon — big future events with urgency signals */}
-      {planningHorizonSection && !hiddenBlockSet.has("horizon") && (
-        <div
-          id="city-pulse-horizon"
-          data-feed-anchor="true"
-          data-index-label="On the Horizon"
-          data-block-id="horizon"
-          className="mt-8 scroll-mt-28"
-        >
-          <div className="h-px bg-[var(--twilight)]" />
-          <div className="pt-6">
-            <PlanningHorizonSection
-              section={planningHorizonSection}
-              portalSlug={portalSlug}
-            />
-          </div>
-        </div>
-      )}
 
       {/* Admin: Feed Time Machine */}
       {showTimeMachine && (

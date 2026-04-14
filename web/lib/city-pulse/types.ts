@@ -225,26 +225,6 @@ export interface CityPulseSection {
   block_id?: string;
 }
 
-/** A time bucket for the "On the Horizon" section. Built server-side. */
-export interface HorizonBucket {
-  /** Month key, e.g. "2026-05" */
-  key: string;
-  /** Display label, e.g. "May" */
-  label: string;
-  /** Relative time, e.g. "6 weeks away" */
-  relativeLabel: string;
-  /** The highest-importance event for this bucket, or null if small bucket */
-  headliner: CityPulseEventItem | null;
-  /** Non-headliner events (capped at 3 for initial render) */
-  supporting: CityPulseEventItem[];
-  /** Total qualifying events in this month (before cap) */
-  totalCount: number;
-  /** Events hidden behind "N more" disclosure */
-  overflowCount: number;
-  /** True when totalCount <= 2 — skip headliner/supporting split */
-  isSmallBucket: boolean;
-}
-
 // ---------------------------------------------------------------------------
 // Feed Header CMS types
 // ---------------------------------------------------------------------------
