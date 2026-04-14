@@ -495,15 +495,33 @@ git commit -m "feat(db): add user_recent_searches table with atomic insert+rotat
 
 **Why:** The load-bearing retrieval function. All three retrievers run as CTEs inside this single function, collapsing 9 connections per search request to 1. Portal isolation is enforced here.
 
-- [ ] **Step 1: Verify `pg_trgm` extension is available**
+**CRITICAL SCHEMA NOTES (from the Task 1 audit — these corrections supersede the original plan's schema assumptions):**
+
+- Events uses `place_id INTEGER REFERENCES venues(id)`. Column was renamed `venue_id` → `place_id` but the table is still `venues` (not `places`).
+- Events has `portal_id UUID REFERENCES portals(id)` — **NULLABLE** (added in migration 019). Events without `portal_id` naturally get excluded by `WHERE portal_id = p_portal_id`.
+- Events uses `category_id TEXT` (not an FK). The old `category` column was dropped in migration 259.
+- Events has `is_active BOOLEAN` and `search_vector tsvector` (migration 045).
+- Events date column is `start_date DATE` (not `starts_at timestamptz`).
+- **Venues has NO `portal_id`.** Venues are shared across portals. Portal isolation for venue search is enforced via a subquery: `WHERE venues.id IN (SELECT DISTINCT place_id FROM events WHERE portal_id = p_portal_id AND is_active = true AND place_id IS NOT NULL)`. This preserves portal-isolation while matching the real schema.
+- Venues may not have `search_vector` yet — fall back to `similarity(name, p_query)` for FTS-like behavior and keep the trigram retriever as the primary venue matcher. Check with `psql "$DATABASE_URL" -c "\d venues"` in Step 1.
+
+- [ ] **Step 1: Verify schema + `pg_trgm` extension**
 
 ```bash
+psql "$DATABASE_URL" -c "\d events" | grep -E "place_id|portal_id|category_id|search_vector|is_active|start_date"
+psql "$DATABASE_URL" -c "\d venues" | grep -E "id|name|neighborhood|slug|image_url|search_vector"
 psql "$DATABASE_URL" -c "SELECT * FROM pg_extension WHERE extname = 'pg_trgm';"
 ```
 
-If not installed:
+Confirm:
+- `events` has `place_id`, `portal_id`, `category_id TEXT`, `search_vector tsvector`, `is_active boolean`, `start_date date`
+- `venues` has `id`, `name`, `neighborhood`, `slug`, `image_url`, and note whether `search_vector` exists
+- `pg_trgm` is installed. If not: `psql "$DATABASE_URL" -c "CREATE EXTENSION IF NOT EXISTS pg_trgm;"`
+
+If venues has `search_vector`, keep the `fts_venues` CTE below as-is. If it doesn't, replace it with `similarity(v.name, p_query)::real` (same as trigram) — and note in the migration comment that FTS venue matching is deferred to a future migration that adds `search_vector` to venues.
+
 ```bash
-psql "$DATABASE_URL" -c "CREATE EXTENSION IF NOT EXISTS pg_trgm;"
+psql "$DATABASE_URL" -c "SELECT * FROM pg_extension WHERE extname = 'pg_trgm';"
 ```
 
 - [ ] **Step 2: Scaffold the migration pair**
@@ -525,16 +543,25 @@ CREATE INDEX IF NOT EXISTS events_title_trgm_idx
 CREATE INDEX IF NOT EXISTS venues_name_trgm_idx
   ON public.venues USING gin (name gin_trgm_ops);
 
-CREATE INDEX IF NOT EXISTS organizations_name_trgm_idx
-  ON public.organizations USING gin (name gin_trgm_ops);
+-- Performance: speed up the venue portal-scoping subquery
+CREATE INDEX IF NOT EXISTS events_portal_place_active_idx
+  ON public.events (portal_id, place_id)
+  WHERE is_active = true AND place_id IS NOT NULL;
 
--- The unified search RPC: runs all retrievers (FTS, trigram, structured) for
--- all supported entity types inside a SINGLE connection via CTEs. Returns
+-- The unified search RPC: runs all retrievers (FTS, trigram) for
+-- event + venue entity types inside a SINGLE connection via CTEs. Returns
 -- tagged rows for Node-side demultiplexing into per-retriever candidate sets.
 --
 -- CRITICAL: p_portal_id is REQUIRED and enforced inside every CTE. This is
 -- the single point of portal isolation. Regression-tested via pgTAP in the
 -- next task.
+--
+-- Schema notes (see plan Task 7 "CRITICAL SCHEMA NOTES"):
+--   events.place_id (not venue_id), events.portal_id (nullable), events.category_id TEXT
+--   venues has NO portal_id — venue scoping uses a subquery through events
+--
+-- Organizers, series, festivals, programs, neighborhoods can be added as
+-- additional CTEs in Phase 0 follow-up commits. The structure is uniform.
 
 CREATE OR REPLACE FUNCTION public.search_unified(
   p_portal_id            uuid,        -- REQUIRED, NOT NULL
@@ -542,8 +569,8 @@ CREATE OR REPLACE FUNCTION public.search_unified(
   p_types                text[],
   p_categories           text[] DEFAULT NULL,
   p_neighborhoods        text[] DEFAULT NULL,
-  p_date_from            timestamptz DEFAULT NULL,
-  p_date_to              timestamptz DEFAULT NULL,
+  p_date_from            date DEFAULT NULL,
+  p_date_to              date DEFAULT NULL,
   p_free_only            boolean DEFAULT false,
   p_limit_per_retriever  int     DEFAULT 30
 )
@@ -564,16 +591,17 @@ LANGUAGE plpgsql
 STABLE
 SECURITY INVOKER
 SET search_path = public, pg_temp
-AS $$
+AS $func$
 DECLARE
   v_tsq tsquery;
+  v_effective_limit int;
 BEGIN
   IF p_portal_id IS NULL THEN
     RAISE EXCEPTION 'search_unified: p_portal_id required';
   END IF;
 
   -- Guard: clamp limit to protect against DoS
-  p_limit_per_retriever := LEAST(GREATEST(p_limit_per_retriever, 1), 80);
+  v_effective_limit := LEAST(GREATEST(COALESCE(p_limit_per_retriever, 30), 1), 80);
 
   v_tsq := websearch_to_tsquery('simple', COALESCE(p_query, ''));
 
@@ -592,50 +620,61 @@ BEGIN
       e.id::text AS href_slug,
       e.start_date::timestamptz AS starts_at
     FROM public.events e
-    LEFT JOIN public.venues v ON v.id = e.venue_id
-    WHERE e.owner_portal_id = p_portal_id
+    LEFT JOIN public.venues v ON v.id = e.place_id
+    WHERE e.portal_id = p_portal_id
       AND 'event' = ANY(p_types)
       AND e.is_active = true
       AND (p_query = '' OR e.search_vector @@ v_tsq)
-      AND (p_date_from IS NULL OR e.start_date >= p_date_from::date)
-      AND (p_date_to   IS NULL OR e.start_date <  p_date_to::date)
+      AND (p_date_from IS NULL OR e.start_date >= p_date_from)
+      AND (p_date_to   IS NULL OR e.start_date <  p_date_to)
       AND (p_categories IS NULL OR e.category_id = ANY(p_categories))
       AND (NOT p_free_only OR e.is_free IS TRUE)
-    ORDER BY raw_score DESC
-    LIMIT p_limit_per_retriever
+    ORDER BY ts_rank_cd(e.search_vector, v_tsq) DESC
+    LIMIT v_effective_limit
   ),
   trgm_events AS (
     SELECT
-      'trigram'::text,
-      'event'::text,
-      e.id::text,
+      'trigram'::text AS retriever_id,
+      'event'::text AS entity_type,
+      e.id::text AS entity_id,
       similarity(e.title, p_query)::real AS raw_score,
-      COALESCE(e.data_quality::real, 0.5),
-      GREATEST(0, EXTRACT(EPOCH FROM (e.start_date::timestamptz - now())) / 86400)::int,
+      COALESCE(e.data_quality::real, 0.5) AS quality,
+      GREATEST(0, EXTRACT(EPOCH FROM (e.start_date::timestamptz - now())) / 86400)::int AS days_out,
       e.title,
-      v.name,
+      v.name AS subtitle,
       e.image_url,
-      e.id::text,
-      e.start_date::timestamptz
+      e.id::text AS href_slug,
+      e.start_date::timestamptz AS starts_at
     FROM public.events e
-    LEFT JOIN public.venues v ON v.id = e.venue_id
-    WHERE e.owner_portal_id = p_portal_id
+    LEFT JOIN public.venues v ON v.id = e.place_id
+    WHERE e.portal_id = p_portal_id
       AND 'event' = ANY(p_types)
       AND e.is_active = true
       AND p_query <> ''
       AND e.title % p_query
-      AND (p_date_from IS NULL OR e.start_date >= p_date_from::date)
-      AND (p_date_to   IS NULL OR e.start_date <  p_date_to::date)
-    ORDER BY raw_score DESC
-    LIMIT p_limit_per_retriever
+      AND (p_date_from IS NULL OR e.start_date >= p_date_from)
+      AND (p_date_to   IS NULL OR e.start_date <  p_date_to)
+      AND (p_categories IS NULL OR e.category_id = ANY(p_categories))
+    ORDER BY similarity(e.title, p_query) DESC
+    LIMIT v_effective_limit
   ),
-  fts_venues AS (
+  -- Portal-scoped venue universe: venues referenced by at least one active
+  -- event in this portal. This is how we enforce portal isolation without
+  -- a venues.portal_id column.
+  portal_venues AS (
+    SELECT DISTINCT e.place_id AS venue_id
+    FROM public.events e
+    WHERE e.portal_id = p_portal_id
+      AND e.is_active = true
+      AND e.place_id IS NOT NULL
+  ),
+  trgm_venues AS (
     SELECT
-      'fts'::text,
-      'venue'::text,
-      v.id::text,
-      ts_rank_cd(v.search_vector, v_tsq)::real,
-      COALESCE(v.data_quality::real, 0.5),
+      'trigram'::text AS retriever_id,
+      'venue'::text AS entity_type,
+      v.id::text AS entity_id,
+      similarity(v.name, p_query)::real AS raw_score,
+      0.5::real AS quality,  -- venues don't have data_quality; use neutral default
       0::int AS days_out,
       v.name AS title,
       v.neighborhood AS subtitle,
@@ -643,47 +682,28 @@ BEGIN
       v.slug AS href_slug,
       NULL::timestamptz AS starts_at
     FROM public.venues v
-    WHERE v.owner_portal_id = p_portal_id
-      AND 'venue' = ANY(p_types)
-      AND (p_query = '' OR v.search_vector @@ v_tsq)
-    ORDER BY raw_score DESC
-    LIMIT p_limit_per_retriever
-  ),
-  trgm_venues AS (
-    SELECT
-      'trigram'::text,
-      'venue'::text,
-      v.id::text,
-      similarity(v.name, p_query)::real,
-      COALESCE(v.data_quality::real, 0.5),
-      0::int,
-      v.name,
-      v.neighborhood,
-      v.image_url,
-      v.slug,
-      NULL::timestamptz
-    FROM public.venues v
-    WHERE v.owner_portal_id = p_portal_id
+    WHERE v.id IN (SELECT venue_id FROM portal_venues)
       AND 'venue' = ANY(p_types)
       AND p_query <> ''
       AND v.name % p_query
-    ORDER BY raw_score DESC
-    LIMIT p_limit_per_retriever
+    ORDER BY similarity(v.name, p_query) DESC
+    LIMIT v_effective_limit
   )
   SELECT * FROM fts_events
   UNION ALL SELECT * FROM trgm_events
-  UNION ALL SELECT * FROM fts_venues
   UNION ALL SELECT * FROM trgm_venues;
-END $$;
+END $func$;
 
-REVOKE ALL ON FUNCTION public.search_unified(uuid, text, text[], text[], text[], timestamptz, timestamptz, boolean, int) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public.search_unified(uuid, text, text[], text[], text[], timestamptz, timestamptz, boolean, int) TO authenticated, anon, service_role;
+REVOKE ALL ON FUNCTION public.search_unified(uuid, text, text[], text[], text[], date, date, boolean, int) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.search_unified(uuid, text, text[], text[], text[], date, date, boolean, int) TO authenticated, anon, service_role;
 
 COMMENT ON FUNCTION public.search_unified IS
-  'Unified search retrieval. Runs all retrievers (FTS, trigram) × entity types (event, venue) as CTEs in one connection. Portal-isolated via p_portal_id NOT NULL. Extend by adding CTEs + UNION ALL clauses.';
+  'Unified search retrieval. Runs FTS + trigram across events + venues as CTEs in one connection. Portal-isolated: events via e.portal_id, venues via portal_venues CTE (distinct place_ids from portal events). Extend by adding CTEs + UNION ALL clauses.';
 ```
 
-> **Note on organizer and program:** this Phase 0 version covers `event` and `venue`. Organizers, series, festivals, programs, and neighborhoods can be added as additional CTEs in Phase 0 follow-up commits after the baseline is proven. The structure is uniform — copy any existing CTE pair and substitute the source table.
+> **Note on venue FTS:** this migration uses trigram-only for venues because `venues` may not have a `search_vector` column yet. If an `fts_venues` CTE is needed later, add it once venues has `search_vector`.
+>
+> **Note on organizer and program:** this Phase 0 version covers `event` and `venue`. Organizers, series, festivals, programs, and neighborhoods can be added as additional CTEs in Phase 0 follow-up commits after the baseline is proven.
 
 - [ ] **Step 4: Apply and verify**
 
@@ -695,10 +715,15 @@ psql "$DATABASE_URL" -c "\df public.search_unified"
 - [ ] **Step 5: Smoke test**
 
 ```bash
-psql "$DATABASE_URL" -c "SELECT retriever_id, entity_type, title FROM search_unified((SELECT id FROM portals WHERE slug = 'atlanta'), 'jazz', ARRAY['event', 'venue'], NULL, NULL, NULL, NULL, false, 5);"
+psql "$DATABASE_URL" -c "SELECT retriever_id, entity_type, title FROM search_unified((SELECT id FROM portals WHERE slug = 'atlanta'), 'jazz', ARRAY['event','venue'], NULL, NULL, NULL, NULL, false, 5);"
 ```
 
-Expected: rows returned for "jazz" query, mix of FTS and trigram retrievers, mix of event and venue entity types. Should NOT be zero.
+Expected: rows returned for "jazz" query, mix of `fts` and `trigram` retriever_ids, mix of `event` and `venue` entity_types. Should NOT be zero (audit confirmed Atlanta has jazz events and venues).
+
+If zero rows, check:
+1. `SELECT COUNT(*) FROM events WHERE portal_id = (SELECT id FROM portals WHERE slug='atlanta') AND is_active = true` — should be ~32k per audit
+2. `SELECT name FROM venues WHERE name ILIKE '%jazz%' LIMIT 5` — should surface at least one jazz-named venue
+3. Confirm `search_vector` is populated on events: `SELECT COUNT(*) FROM events WHERE search_vector IS NOT NULL`
 
 - [ ] **Step 6: Parity audit**
 
@@ -729,33 +754,57 @@ Create `database/tests/search_unified.pgtap.sql`:
 ```sql
 -- Regression test: search_unified MUST enforce portal isolation.
 -- Any failure means cross-portal data is leaking in search results.
+-- Schema notes: events.portal_id (UUID), events.place_id (INTEGER → venues.id),
+-- events.category_id (TEXT), venues has no portal_id. See plan Task 7.
 
 BEGIN;
 SELECT plan(4);
 
--- Set up two portals with one jazz event each
+-- Set up two portals
 INSERT INTO portals (id, slug, name) VALUES
   ('11111111-1111-1111-1111-111111111111', 'pgtap-atl', 'ATL Test'),
   ('22222222-2222-2222-2222-222222222222', 'pgtap-nyc', 'NYC Test')
 ON CONFLICT (id) DO NOTHING;
 
-INSERT INTO events (id, owner_portal_id, title, start_date, is_active, search_vector)
+-- One jazz event per portal. events.id is SERIAL so we let it auto-generate.
+-- Note: search_vector is a tsvector populated via trigger on insert in
+-- production; here we set it explicitly so the test doesn't depend on the
+-- trigger. Use simple text search config.
+INSERT INTO events (
+  source_id, portal_id, title, start_date, is_active,
+  search_vector, category_id, source_url
+)
 VALUES
-  (gen_random_uuid(), '11111111-1111-1111-1111-111111111111',
-   'Atlanta Jazz Night', (now() + interval '1 day')::date, true,
-   to_tsvector('simple', 'atlanta jazz night')),
-  (gen_random_uuid(), '22222222-2222-2222-2222-222222222222',
-   'NYC Jazz Night', (now() + interval '1 day')::date, true,
-   to_tsvector('simple', 'nyc jazz night'));
+  (
+    (SELECT id FROM sources LIMIT 1),
+    '11111111-1111-1111-1111-111111111111',
+    'Atlanta Jazz Night',
+    (now() + interval '1 day')::date,
+    true,
+    to_tsvector('simple', 'atlanta jazz night'),
+    'music',
+    'https://example.test/pgtap-atl-jazz'
+  ),
+  (
+    (SELECT id FROM sources LIMIT 1),
+    '22222222-2222-2222-2222-222222222222',
+    'NYC Jazz Night',
+    (now() + interval '1 day')::date,
+    true,
+    to_tsvector('simple', 'nyc jazz night'),
+    'music',
+    'https://example.test/pgtap-nyc-jazz'
+  );
 
 -- Assertion 1: Atlanta search returns the Atlanta event
 SELECT ok(
   (SELECT count(*) FROM search_unified(
     '11111111-1111-1111-1111-111111111111'::uuid,
     'jazz',
-    ARRAY['event']
-  ) WHERE retriever_id = 'fts') >= 1,
-  'atlanta search returns atlanta event'
+    ARRAY['event'],
+    NULL, NULL, NULL, NULL, false, 10
+  ) WHERE retriever_id = 'fts' AND title = 'Atlanta Jazz Night') >= 1,
+  'atlanta search returns atlanta jazz event'
 );
 
 -- Assertion 2: Atlanta search does NOT return the NYC event
@@ -763,7 +812,8 @@ SELECT ok(
   (SELECT count(*) FROM search_unified(
     '11111111-1111-1111-1111-111111111111'::uuid,
     'jazz',
-    ARRAY['event']
+    ARRAY['event'],
+    NULL, NULL, NULL, NULL, false, 10
   ) WHERE title LIKE 'NYC%') = 0,
   'atlanta search does not leak NYC rows'
 );
@@ -773,14 +823,15 @@ SELECT ok(
   (SELECT count(*) FROM search_unified(
     '00000000-0000-0000-0000-000000000000'::uuid,
     'jazz',
-    ARRAY['event']
+    ARRAY['event'],
+    NULL, NULL, NULL, NULL, false, 10
   )) = 0,
   'unknown portal returns 0 rows'
 );
 
 -- Assertion 4: NULL portal id raises an exception
 SELECT throws_ok(
-  $$ SELECT * FROM search_unified(NULL::uuid, 'jazz', ARRAY['event']) $$,
+  $$ SELECT * FROM search_unified(NULL::uuid, 'jazz', ARRAY['event'], NULL, NULL, NULL, NULL, false, 10) $$,
   NULL,
   'null portal id is rejected'
 );
@@ -788,6 +839,8 @@ SELECT throws_ok(
 SELECT * FROM finish();
 ROLLBACK;
 ```
+
+> **Note on the fixture:** the test uses `(SELECT id FROM sources LIMIT 1)` to satisfy the `source_id` NOT NULL constraint without creating a test source. This assumes at least one source exists in the DB. If the test DB is empty, insert a minimal test source first inside the transaction.
 
 - [ ] **Step 2: Run the test (expected to PASS if Task 7 was correct)**
 
