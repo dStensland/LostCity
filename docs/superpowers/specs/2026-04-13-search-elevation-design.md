@@ -1643,7 +1643,7 @@ database/tests/search_unified.pgtap.sql
 web/lib/search/index.ts
 web/lib/search/search-service.ts
 web/lib/search/types.ts
-web/lib/search/cache.ts
+# web/lib/search/cache.ts                 — Phase 1 (Phase 0 uses lib/shared-cache.ts directly)
 web/lib/search/observability.ts
 web/lib/search/unified-retrieval.ts
 web/lib/search/input-schema.ts
@@ -1669,7 +1669,7 @@ web/lib/search/ranking/types.ts
 
 web/lib/search/presenting/index.ts
 web/lib/search/presenting/grouped.ts
-web/lib/search/presenting/mmr.ts
+# web/lib/search/presenting/mmr.ts       — Phase 1 (diversity reranker)
 web/lib/search/presenting/types.ts
 
 web/lib/search/__tests__/retriever-contract.test.ts

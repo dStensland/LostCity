@@ -122,17 +122,29 @@ export async function search(
   const presented = GroupedPresenter.present(ranked, DEFAULT_POLICY);
   const presentMs = Date.now() - presentStart;
 
-  // Fill diagnostics. Phase 0 uses cache_hit: "miss" for every call —
-  // Phase 1 adds the actual Redis cache wrapper which will set this field.
-  presented.diagnostics.total_ms = Date.now() - started;
-  presented.diagnostics.annotate_ms = annotateMs;
-  presented.diagnostics.rank_ms = rankMs;
-  presented.diagnostics.present_ms = presentMs;
-  presented.diagnostics.retrieve_total_ms = retrieveTotalMs;
-  // retriever_ms is reserved for future per-retriever measurements. Phase 0
-  // only tracks the aggregate via retrieve_total_ms.
-  presented.diagnostics.retriever_ms = {};
-  presented.diagnostics.cache_hit = "miss";
+  // Return a fresh PresentedResults with computed diagnostics merged in,
+  // rather than mutating the presenter's output in place. The presenter
+  // emits a zeroed diagnostics stub; the orchestrator is the only layer
+  // that knows the real timings, so it owns the final object. Keeping
+  // `presented` immutable lets GroupedPresenter be memoized/cached in
+  // Phase 1 without the orchestrator poisoning cached values.
+  // Phase 0 uses cache_hit: "miss" for every call — Phase 1 adds the
+  // actual Redis cache wrapper which will set this field per lookup.
+  const enrichedPresented: PresentedResults = {
+    ...presented,
+    diagnostics: {
+      ...presented.diagnostics,
+      total_ms: Date.now() - started,
+      annotate_ms: annotateMs,
+      rank_ms: rankMs,
+      present_ms: presentMs,
+      retrieve_total_ms: retrieveTotalMs,
+      // retriever_ms is reserved for future per-retriever measurements.
+      // Phase 0 only tracks the aggregate via retrieve_total_ms.
+      retriever_ms: {},
+      cache_hit: "miss",
+    },
+  };
 
-  return { annotated, presented };
+  return { annotated, presented: enrichedPresented };
 }
