@@ -1,6 +1,5 @@
 import type { ComponentType } from "react";
 import type { Icon as PhosphorIcon } from "@phosphor-icons/react";
-import type { SearchFacet, SearchResult } from "@/lib/search/legacy-result-types";
 import type { LanePreview, LaneState } from "@/lib/types/explore-home";
 import type { Portal } from "@/lib/portal-context";
 import type { ExploreLaneInitialDataMap } from "./lane-data";
@@ -44,16 +43,9 @@ export interface ExploreSearchQuickAction {
   description?: string;
 }
 
-export interface ExploreSearchResponse {
-  query: string;
-  results: SearchResult[];
-  facets: SearchFacet[];
-  total: number;
-  didYouMean?: string[];
-  entityCounts: Partial<Record<SearchResult["type"], number>>;
-  laneSuggestions: ExploreLaneSuggestion[];
-  quickActions: ExploreSearchQuickAction[];
-}
+// ExploreSearchResponse was removed in the Phase 0.5 cleanup along with the
+// legacy unified-search stack that produced it. The new search surface
+// consumes lib/search/types.ts directly.
 
 export interface ExploreHomePayload {
   lanes: Partial<Record<ExploreLaneId, LanePreview>>;
@@ -98,4 +90,4 @@ export interface ExploreLaneDefinition {
   navigationHref?: (portalSlug: string) => string;
 }
 
-export type { LanePreview, LaneState, SearchResult };
+export type { LanePreview, LaneState };
