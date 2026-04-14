@@ -23,7 +23,12 @@ export const GET = withAuthAndParams<{ id: string }>(
     const timeoutId = setTimeout(() => controller.abort(), 8000);
 
     try {
-      const res = await fetch(url, { signal: controller.signal });
+      // Fetch credits and person name in parallel
+      const personUrl = `${TMDB_BASE}/person/${personId}?api_key=${tmdbKey}&language=en-US`;
+      const [res, personRes] = await Promise.all([
+        fetch(url, { signal: controller.signal }),
+        fetch(personUrl, { signal: controller.signal }),
+      ]);
       clearTimeout(timeoutId);
 
       if (!res.ok) {
@@ -31,12 +36,6 @@ export const GET = withAuthAndParams<{ id: string }>(
       }
 
       const data = await res.json();
-
-      // Get person name from a separate call
-      const personUrl = `${TMDB_BASE}/person/${personId}?api_key=${tmdbKey}&language=en-US`;
-      const personRes = await fetch(personUrl, {
-        signal: AbortSignal.timeout(5000),
-      });
       const personData = personRes.ok ? await personRes.json() : null;
 
       // Combine crew (directed) and cast, deduplicate, prefer directing credits

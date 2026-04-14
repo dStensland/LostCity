@@ -16,7 +16,7 @@ export const PATCH = withAuthAndParams<{ id: string }>(
       .select("id")
       .eq("id", listId)
       .eq("user_id", user.id)
-      .single();
+      .maybeSingle();
 
     if (!existing) {
       return NextResponse.json({ error: "List not found" }, { status: 404 });

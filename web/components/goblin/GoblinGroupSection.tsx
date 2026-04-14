@@ -20,7 +20,6 @@ interface Props {
       log_tag_ids?: number[];
     }
   ) => Promise<{ log_entry_id: number } | null>;
-  onEditGroup: (group: GoblinGroup) => void;
   onDeleteGroup: (groupId: number) => void;
   onReorderMovies: (
     groupId: number,
@@ -47,7 +46,6 @@ export default function GoblinGroupSection({
   onAddMovie,
   onRemoveMovie,
   onMarkWatched,
-  onEditGroup,
   onDeleteGroup,
   onReorderMovies,
   logTags,
@@ -151,16 +149,6 @@ export default function GoblinGroupSection({
                   hover:bg-[var(--dusk)] transition-colors"
               >
                 Add Movie
-              </button>
-              <button
-                onClick={() => {
-                  setShowMenu(false);
-                  onEditGroup(group);
-                }}
-                className="w-full px-3 py-2 text-left text-xs font-mono text-[var(--cream)]
-                  hover:bg-[var(--dusk)] transition-colors"
-              >
-                Edit Group
               </button>
               <button
                 onClick={() => {

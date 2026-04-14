@@ -433,7 +433,6 @@ export default function GoblinWatchlistView({ isAuthenticated }: Props) {
               onAddMovie={() => setAddToGroupId(group.id)}
               onRemoveMovie={groupsHook.removeMovie}
               onMarkWatched={groupsHook.markWatched}
-              onEditGroup={() => {}}
               onDeleteGroup={groupsHook.deleteGroup}
               onReorderMovies={handleGroupReorderMovies}
               logTags={logHook.tags}

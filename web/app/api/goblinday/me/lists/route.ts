@@ -92,8 +92,11 @@ export const POST = withAuth(async (request: NextRequest, { user, serviceClient 
 
   const listId = (list as { id: number }).id;
 
-  // Seed movies from TMDB IDs if provided
+  // Seed movies from TMDB IDs if provided (cap at 100)
   if (Array.isArray(movie_tmdb_ids) && movie_tmdb_ids.length > 0) {
+    if (movie_tmdb_ids.length > 100) {
+      return NextResponse.json({ error: "Maximum 100 seed movies" }, { status: 400 });
+    }
     const movieRows: { list_id: number; movie_id: number; sort_order: number }[] = [];
 
     for (let i = 0; i < movie_tmdb_ids.length; i++) {
