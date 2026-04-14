@@ -80,6 +80,49 @@ workstreams.
 
 ---
 
+### Session 3 — Search Elevation (Phase 0)
+**Scope:** unified search rebuild — three-layer architecture (Retrieval / Ranking / Presentation), single `search_unified` SQL function, `UnifiedSearchShell` component, `search_events` observability, delete legacy `lib/unified-search.ts`.
+
+**Worktree:** `../LostCity-search-phase-0` on branch `search-elevation-phase-0`
+
+**Plan:** `docs/superpowers/plans/2026-04-13-search-elevation-phase-0.md`
+
+**Claimed paths:**
+- `web/lib/search/` (new)
+- `web/lib/unified-search.ts` (scheduled for deletion)
+- `web/lib/shared-cache.ts` (read-only, verified only)
+- `web/lib/rate-limit.ts` (read-only in Phase 0)
+- `web/app/[portal]/api/search/unified/` (new)
+- `web/app/api/user/recent-searches/` (new)
+- `web/app/api/search/` (scheduled for deletion)
+- `web/components/search/` (new + scheduled deletions)
+- `web/components/HeaderSearchButton.tsx` (scheduled for deletion)
+- `web/components/find/FindSearchInput.tsx` (scheduled for deletion)
+- `web/components/find/LaneFilterInput.tsx` (new)
+- `web/components/find/ExploreHome.tsx` (scheduled for deletion)
+- `web/components/explore-platform/ExploreShellClient.tsx` (modify)
+- `web/components/explore-platform/ExploreSearchHero.tsx` (scheduled for deletion)
+- `web/components/explore-platform/ExploreSearchResults.tsx` (scheduled for deletion)
+- `web/components/headers/*.tsx` (modify — HeaderSearchButton → LaunchButton)
+- `web/components/find/EventsFinder.tsx` (modify — FindSearchInput → LaneFilterInput)
+- `web/components/find/PlaceFilterBar.tsx` (modify — FindSearchInput → LaneFilterInput)
+- `web/app/[portal]/layout.tsx` (modify — mount overlay shell)
+- `web/lib/hooks/useVisualViewportHeight.ts` (new)
+- `web/next.config.ts` (modify — add Referrer-Policy header)
+- `web/eslint.config.mjs` (modify — register custom rule)
+- `web/tools/eslint-rules/` (new)
+- `database/migrations/604_search_log_salt.sql` (new)
+- `database/migrations/605_search_events.sql` (new)
+- `database/migrations/606_user_recent_searches.sql` (new)
+- `database/migrations/607_search_unified.sql` (new)
+- `database/tests/` (new — pgTAP infrastructure)
+- `supabase/migrations/*search_log_salt*.sql` (new)
+- `supabase/migrations/*search_events*.sql` (new)
+- `supabase/migrations/*user_recent_searches*.sql` (new)
+- `supabase/migrations/*search_unified*.sql` (new)
+
+---
+
 ## Shared Conflict Zones
 
 Coordinate before touching these shared areas:
