@@ -457,6 +457,11 @@ function buildFilmMap(events: ShowtimeEvent[]) {
       series_id: string | null;
       series_slug: string | null;
       image_url: string | null;
+      genres: string[];
+      director: string | null;
+      runtime_minutes: number | null;
+      rating: string | null;
+      year: number | null;
       theaters: Map<
         string,
         {
@@ -487,6 +492,11 @@ function buildFilmMap(events: ShowtimeEvent[]) {
         series_id: event.series_id,
         series_slug: series?.slug || null,
         image_url: series?.image_url || event.image_url,
+        genres: series?.genres || [],
+        director: series?.director ?? null,
+        runtime_minutes: series?.runtime_minutes ?? null,
+        rating: series?.rating ?? null,
+        year: series?.year ?? null,
         theaters: new Map(),
       };
       filmMap.set(groupKey, film);
@@ -590,6 +600,11 @@ function toTheatersResponse(
         series_id: film.series_id,
         series_slug: film.series_slug,
         image_url: film.image_url,
+        genres: film.genres,
+        director: film.director,
+        runtime_minutes: film.runtime_minutes,
+        rating: film.rating,
+        year: film.year,
         screen_name: theater.screen_name ?? null,
         remaining_count: urgency?.remaining_count ?? null,
         first_date: urgency?.first_date ?? null,

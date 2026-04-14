@@ -41,6 +41,10 @@ export type ScreeningTitle = {
   tmdb_id: number | null;
   imdb_id: string | null;
   festival_work_key: string | null;
+  director: string | null;
+  runtime_minutes: number | null;
+  year: number | null;
+  rating: string | null;
 };
 
 export type ScreeningBundle = {
@@ -181,6 +185,10 @@ export function buildScreeningBundle(
         tmdb_id: null,
         imdb_id: null,
         festival_work_key: event.series?.festival?.id || null,
+        director: null,
+        runtime_minutes: null,
+        year: null,
+        rating: null,
       });
     }
 
@@ -307,7 +315,7 @@ export async function fetchScreeningBundleFromTables(
   const titlesQuery: any = supabase
     .from("screening_titles")
     .select(
-      "id, canonical_title, slug, kind, poster_image_url, synopsis, genres, tmdb_id, imdb_id, festival_work_key",
+      "id, canonical_title, slug, kind, poster_image_url, synopsis, genres, tmdb_id, imdb_id, festival_work_key, director, runtime_minutes, year, rating",
     );
   const titlesResult = typeof titlesQuery.in === "function"
     ? ((await titlesQuery.in("id", titleIds)) as {

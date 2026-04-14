@@ -106,6 +106,11 @@ export interface ShowtimesTheaterGroup {
     series_id: string | null;
     series_slug: string | null;
     image_url: string | null;
+    genres?: string[];
+    director?: string | null;
+    runtime_minutes?: number | null;
+    rating?: string | null;
+    year?: number | null;
     screen_name?: string | null;
     times: ShowtimeEntry[];
   }>;
