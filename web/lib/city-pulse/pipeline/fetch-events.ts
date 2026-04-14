@@ -432,7 +432,8 @@ export function buildInterestQueries(
       .is("canonical_event_id", null)
       .or("is_class.eq.false,is_class.is.null")
       .or("is_sensitive.eq.false,is_sensitive.is.null")
-      .not("category_id", "in", "(recreation,unknown,support_group,religious,support,community,family,wellness,exercise,learning)");
+      .not("category_id", "in", "(recreation,unknown,support_group,religious,support,community,family,wellness,exercise,learning)")
+      .neq("content_kind", "exhibit");
     if (excludeSourceIds.length > 0) {
       q = q.not("source_id", "in", `(${excludeSourceIds.join(",")})`);
     }
@@ -544,7 +545,8 @@ export async function fetchEventPools(
           .is("canonical_event_id", null)
           .or("is_class.eq.false,is_class.is.null")
           .or("is_sensitive.eq.false,is_sensitive.is.null")
-          .not("category_id", "in", "(recreation,unknown,support_group,religious,support,community,family,wellness,exercise,learning)");
+          .not("category_id", "in", "(recreation,unknown,support_group,religious,support,community,family,wellness,exercise,learning)")
+          .neq("content_kind", "exhibit");
         if (ymcaSourceIds.length > 0) {
           q = q.not("source_id", "in", `(${ymcaSourceIds.join(",")})`);
         }
@@ -565,7 +567,8 @@ export async function fetchEventPools(
           .is("canonical_event_id", null)
           .or("is_class.eq.false,is_class.is.null")
           .or("is_sensitive.eq.false,is_sensitive.is.null")
-          .not("category_id", "in", "(recreation,unknown,support_group,religious,support,community,family,wellness,exercise,learning)");
+          .not("category_id", "in", "(recreation,unknown,support_group,religious,support,community,family,wellness,exercise,learning)")
+          .neq("content_kind", "exhibit");
         if (ymcaSourceIds.length > 0) {
           q = q.not("source_id", "in", `(${ymcaSourceIds.join(",")})`);
         }
@@ -593,7 +596,8 @@ export async function fetchEventPools(
           .neq("category_id", "tours")
           .not("category_id", "in", "(sports,recreation,support_group,religious)")
           .neq("category_id", "unknown")
-          .neq("is_class", true);
+          .neq("is_class", true)
+          .neq("content_kind", "exhibit");
         return q
           .order("importance", { ascending: true })
           .order("start_date", { ascending: true })
@@ -743,6 +747,7 @@ export async function fetchNewFromSpots(
     .or("is_class.eq.false,is_class.is.null")
     .or("is_sensitive.eq.false,is_sensitive.is.null")
     .not("category_id", "in", "(recreation,unknown,support_group,religious,support,community,family,wellness,exercise,learning)")
+    .neq("content_kind", "exhibit")
     .order("start_date", { ascending: true })
     .order("data_quality", { ascending: false, nullsFirst: false })
     .limit(10);

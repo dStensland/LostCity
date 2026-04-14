@@ -794,7 +794,8 @@ export async function getFilteredEventsWithSearch(
     .or(`start_date.gt.${today},end_date.gt.${today},end_time.gte.${currentTime},and(end_time.is.null,start_time.gte.${currentTime}),is_all_day.eq.true`)
     // Hide TBA events (no start_time, not all-day) — they don't present well
     .or("start_time.not.is.null,is_all_day.eq.true")
-    .is("canonical_event_id", null); // Only show canonical events, not duplicates
+    .is("canonical_event_id", null) // Only show canonical events, not duplicates
+    .neq("content_kind", "exhibit");
 
   query = applyFeedGate(query);
 
@@ -921,7 +922,8 @@ export async function getFilteredEventsWithCursor(
     .or(`start_date.gt.${today},end_date.gt.${today},end_time.gte.${currentTime},and(end_time.is.null,start_time.gte.${currentTime}),is_all_day.eq.true`)
     // Hide TBA events (no start_time, not all-day)
     .or("start_time.not.is.null,is_all_day.eq.true")
-    .is("canonical_event_id", null); // Only show canonical events, not duplicates
+    .is("canonical_event_id", null) // Only show canonical events, not duplicates
+    .neq("content_kind", "exhibit");
 
   query = applyFeedGate(query);
 

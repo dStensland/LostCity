@@ -549,6 +549,7 @@ export async function getSpotDetail(slug: string): Promise<SpotDetailPayload | n
       `)
       .eq("place_id", spot.id)
       .is("canonical_event_id", null)
+      .neq("content_kind", "exhibit")
       .or(`start_date.gte.${today},end_date.gte.${today}`)
       .order("start_date", { ascending: true })
       .order("start_time", { ascending: true })
