@@ -33,7 +33,7 @@ The portal app is split into four surfaces with independent ownership:
 3. **Use portal runtime for route resolution.** Portal/surface detection belongs in `lib/portal-runtime/*`, not inline in pages or layouts.
 4. **Keep `[portal]/layout.tsx` thin.** It may own providers, theme, and truly global runtime only. No surface-specific chrome or loading behavior.
 5. **Surface-owned chrome only.** Headers, footers, civic bars, Explore bars, and detail overlay behavior must live in the owning surface files.
-6. **No new shared query-overlay routing.** If an overlay experience exists, it must be detail-surface code, not feed/explore/community code.
+6. **Entity URLs use `lib/entity-urls.ts` builders.** Overlay context (`'feed'`) is only valid inside feed/explore/calendar surface components. Standalone detail pages must use `'page'` context. Civic events use `getCivicEventHref()` from `lib/civic-routing.ts` as a pre-check (pattern: `getCivicEventHref(event, portal, vertical) ?? buildEventUrl(id, portal, context)`).
 7. **Shared server-loader pattern is mandatory.** Pages and RSCs import server loaders directly; API routes wrap the same loaders; never fetch your own API from the server.
 8. **Delete compatibility aggressively.** If you replace a route bridge or legacy emitter, remove the old emission path in the same workstream or the immediately following one.
 9. **Every route family needs a runtime policy.** Surface ownership is not enough; each route family must have an explicit cache/runtime posture.
