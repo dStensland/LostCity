@@ -208,6 +208,11 @@ export default function LiveMusicSection({
                   />
                 ))}
               </div>
+              {tonightShows.length > 2 && (
+                <p className="text-2xs font-mono text-[var(--muted)] text-center mt-2">
+                  {tonightShows.length} shows tonight
+                </p>
+              )}
             </div>
           )}
 
