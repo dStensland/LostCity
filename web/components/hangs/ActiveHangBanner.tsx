@@ -126,7 +126,7 @@ export const ActiveHangBanner = memo(function ActiveHangBanner({
 
   const visConfig = VISIBILITY_CONFIG[hang.visibility];
   const VisIcon = visConfig.icon;
-  const venueHref = hang.venue.slug ? `/spots/${hang.venue.slug}` : `/venues/${hang.venue.id}`;
+  const venueHref = hang.venue.slug ? `/spots/${hang.venue.slug}` : null;
 
   return (
     <div
@@ -137,42 +137,74 @@ export const ActiveHangBanner = memo(function ActiveHangBanner({
       `}
     >
       {/* Venue thumbnail with pulsing ring */}
-      <Link href={venueHref} className="flex-shrink-0 relative" aria-label={`View ${hang.venue.name}`}>
-        <div className="w-10 h-10 rounded-lg overflow-hidden relative">
-          {hang.venue.image_url ? (
-            <SmartImage
-              src={hang.venue.image_url}
-              alt={hang.venue.name}
-              width={40}
-              height={40}
-              sizes="40px"
-              className="w-full h-full object-cover"
-            />
-          ) : (
-            <div className="w-full h-full bg-[var(--twilight)] flex items-center justify-center">
-              <span className="text-[var(--muted)] text-xs font-bold">
-                {hang.venue.name.charAt(0).toUpperCase()}
-              </span>
-            </div>
+      {venueHref ? (
+        <Link href={venueHref} className="flex-shrink-0 relative" aria-label={`View ${hang.venue.name}`}>
+          <div className="w-10 h-10 rounded-lg overflow-hidden relative">
+            {hang.venue.image_url ? (
+              <SmartImage
+                src={hang.venue.image_url}
+                alt={hang.venue.name}
+                width={40}
+                height={40}
+                sizes="40px"
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="w-full h-full bg-[var(--twilight)] flex items-center justify-center">
+                <span className="text-[var(--muted)] text-xs font-bold">
+                  {hang.venue.name.charAt(0).toUpperCase()}
+                </span>
+              </div>
+            )}
+          </div>
+          {/* Pulsing green ring for active status */}
+          {hang.status === "active" && (
+            <span className="absolute inset-0 rounded-lg ring-2 ring-[var(--neon-green)]/60 animate-ping pointer-events-none" />
           )}
+          <span className="absolute inset-0 rounded-lg ring-1 ring-[var(--neon-green)]/40 pointer-events-none" />
+        </Link>
+      ) : (
+        <div className="flex-shrink-0 relative">
+          <div className="w-10 h-10 rounded-lg overflow-hidden relative">
+            {hang.venue.image_url ? (
+              <SmartImage
+                src={hang.venue.image_url}
+                alt={hang.venue.name}
+                width={40}
+                height={40}
+                sizes="40px"
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="w-full h-full bg-[var(--twilight)] flex items-center justify-center">
+                <span className="text-[var(--muted)] text-xs font-bold">
+                  {hang.venue.name.charAt(0).toUpperCase()}
+                </span>
+              </div>
+            )}
+          </div>
+          {/* Pulsing green ring for active status */}
+          {hang.status === "active" && (
+            <span className="absolute inset-0 rounded-lg ring-2 ring-[var(--neon-green)]/60 animate-ping pointer-events-none" />
+          )}
+          <span className="absolute inset-0 rounded-lg ring-1 ring-[var(--neon-green)]/40 pointer-events-none" />
         </div>
-        {/* Pulsing green ring for active status */}
-        {hang.status === "active" && (
-          <span className="absolute inset-0 rounded-lg ring-2 ring-[var(--neon-green)]/60 animate-ping pointer-events-none" />
-        )}
-        <span className="absolute inset-0 rounded-lg ring-1 ring-[var(--neon-green)]/40 pointer-events-none" />
-      </Link>
+      )}
 
       {/* Center: venue name + time/visibility */}
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium text-[var(--cream)] leading-snug truncate">
           You&apos;re at{" "}
-          <Link
-            href={venueHref}
-            className="font-semibold hover:text-[var(--neon-green)] transition-colors"
-          >
-            {hang.venue.name}
-          </Link>
+          {venueHref ? (
+            <Link
+              href={venueHref}
+              className="font-semibold hover:text-[var(--neon-green)] transition-colors"
+            >
+              {hang.venue.name}
+            </Link>
+          ) : (
+            <span className="font-semibold">{hang.venue.name}</span>
+          )}
         </p>
         <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
           <span

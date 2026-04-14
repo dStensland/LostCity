@@ -25,8 +25,8 @@ const ACCENT = "var(--neon-green)";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function venueHref(slug: string | null, id: number): string {
-  return slug ? `/spots/${slug}` : `/venues/${id}`;
+function venueHref(slug: string | null): string | null {
+  return slug ? `/spots/${slug}` : null;
 }
 
 function friendHref(username: string | null, id: string): string {
@@ -49,7 +49,7 @@ const FriendHangRow = memo(function FriendHangRow({
   const { hang, profile } = item;
   const name = profile.display_name ?? profile.username ?? "Someone";
   const noteExcerpt = truncateNote(hang.note);
-  const href = venueHref(hang.venue.slug, hang.venue.id);
+  const href = venueHref(hang.venue.slug);
   const profileHref = friendHref(profile.username, profile.id);
 
   return (
@@ -84,12 +84,16 @@ const FriendHangRow = memo(function FriendHangRow({
             {name}
           </Link>
           <span className="text-xs text-[var(--soft)] flex-shrink-0">at</span>
-          <Link
-            href={href}
-            className="text-xs text-[var(--soft)] hover:text-[var(--cream)] transition-colors truncate"
-          >
-            {hang.venue.name}
-          </Link>
+          {href ? (
+            <Link
+              href={href}
+              className="text-xs text-[var(--soft)] hover:text-[var(--cream)] transition-colors truncate"
+            >
+              {hang.venue.name}
+            </Link>
+          ) : (
+            <span className="text-xs text-[var(--soft)] truncate">{hang.venue.name}</span>
+          )}
         </div>
         {noteExcerpt && (
           <p className="text-xs text-[var(--muted)] truncate mt-0.5">{noteExcerpt}</p>
@@ -107,15 +111,13 @@ const FriendHangRow = memo(function FriendHangRow({
 
 /** Small card for a hot venue in the horizontal scroll. */
 const HotVenueCard = memo(function HotVenueCard({ venue }: { venue: HotVenue }) {
-  const href = venueHref(venue.venue_slug, venue.venue_id);
+  const href = venueHref(venue.venue_slug);
   const count = venue.active_count;
+  const cardClass = "flex-shrink-0 w-40 snap-start rounded-xl overflow-hidden bg-[var(--night)] border border-[var(--twilight)]/40 hover-lift shadow-card-sm block";
+  const ariaLabel = `${venue.venue_name} — ${count} ${count === 1 ? "person" : "people"} here`;
 
-  return (
-    <Link
-      href={href}
-      className="flex-shrink-0 w-40 snap-start rounded-xl overflow-hidden bg-[var(--night)] border border-[var(--twilight)]/40 hover-lift shadow-card-sm block"
-      aria-label={`${venue.venue_name} — ${count} ${count === 1 ? "person" : "people"} here`}
-    >
+  const inner = (
+    <>
       {/* Image */}
       <div className="relative h-24 bg-[var(--twilight)] overflow-hidden">
         {venue.venue_image_url ? (
@@ -153,7 +155,20 @@ const HotVenueCard = memo(function HotVenueCard({ venue }: { venue: HotVenue }) 
           </p>
         )}
       </div>
-    </Link>
+    </>
+  );
+
+  if (href) {
+    return (
+      <Link href={href} className={cardClass} aria-label={ariaLabel}>
+        {inner}
+      </Link>
+    );
+  }
+  return (
+    <div className={cardClass} aria-label={ariaLabel}>
+      {inner}
+    </div>
   );
 });
 

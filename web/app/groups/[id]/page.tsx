@@ -50,8 +50,8 @@ function timeBucket(ts: string): "now" | "today" | "week" {
   return "week";
 }
 
-function venueHref(slug: string | null, id: number): string {
-  return slug ? `/spots/${slug}` : `/venues/${id}`;
+function venueHref(slug: string | null): string | null {
+  return slug ? `/spots/${slug}` : null;
 }
 
 // ─── Tab Bar ──────────────────────────────────────────────────────────────────
@@ -174,16 +174,22 @@ function ActivityTab({ groupId }: { groupId: string }) {
                   )}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-[var(--cream)] truncate">
-                    {hang.profile.display_name ?? hang.profile.username ?? "Someone"}
-                    <span className="text-[var(--soft)] font-normal"> at </span>
-                    <Link
-                      href={venueHref(hang.venue.slug, hang.venue.id)}
-                      className="hover:text-[var(--neon-green)] transition-colors"
-                    >
-                      {hang.venue.name}
-                    </Link>
-                  </p>
+                  {(() => {
+                    const vhref = venueHref(hang.venue.slug);
+                    return (
+                      <p className="text-sm font-medium text-[var(--cream)] truncate">
+                        {hang.profile.display_name ?? hang.profile.username ?? "Someone"}
+                        <span className="text-[var(--soft)] font-normal"> at </span>
+                        {vhref ? (
+                          <Link href={vhref} className="hover:text-[var(--neon-green)] transition-colors">
+                            {hang.venue.name}
+                          </Link>
+                        ) : (
+                          <span>{hang.venue.name}</span>
+                        )}
+                      </p>
+                    );
+                  })()}
                   {hang.note && (
                     <p className="text-xs text-[var(--muted)] truncate mt-0.5">{hang.note}</p>
                   )}
@@ -288,13 +294,9 @@ function SpotsTab({ groupId }: { groupId: string }) {
       <div className="space-y-2">
         {spots.map((spot) => {
           if (!spot.venue) return null;
-          const href = venueHref(spot.venue.slug, spot.venue.id);
-          return (
-            <Link
-              key={spot.id}
-              href={href}
-              className="flex items-center gap-3 p-3 rounded-xl bg-[var(--night)] border border-[var(--twilight)]/40 hover:border-[var(--soft)]/30 transition-colors group"
-            >
+          const href = venueHref(spot.venue.slug);
+          const cardInner = (
+            <>
               {/* Venue thumbnail */}
               <div className="flex-shrink-0 w-11 h-11 rounded-lg overflow-hidden bg-[var(--twilight)]">
                 {spot.venue.image_url ? (
@@ -327,7 +329,23 @@ function SpotsTab({ groupId }: { groupId: string }) {
                 weight="bold"
                 className="w-3.5 h-3.5 text-[var(--muted)] flex-shrink-0 rotate-180"
               />
+            </>
+          );
+          return href ? (
+            <Link
+              key={spot.id}
+              href={href}
+              className="flex items-center gap-3 p-3 rounded-xl bg-[var(--night)] border border-[var(--twilight)]/40 hover:border-[var(--soft)]/30 transition-colors group"
+            >
+              {cardInner}
             </Link>
+          ) : (
+            <div
+              key={spot.id}
+              className="flex items-center gap-3 p-3 rounded-xl bg-[var(--night)] border border-[var(--twilight)]/40"
+            >
+              {cardInner}
+            </div>
           );
         })}
       </div>

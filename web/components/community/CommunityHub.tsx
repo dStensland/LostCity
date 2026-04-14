@@ -40,8 +40,8 @@ interface CommunityHubProps {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function venueHref(slug: string | null, id: number): string {
-  return slug ? `/spots/${slug}` : `/venues/${id}`;
+function venueHref(slug: string | null): string | null {
+  return slug ? `/spots/${slug}` : null;
 }
 
 function formatPlanDate(dateStr: string): string {
@@ -312,7 +312,7 @@ const FriendHangRow = memo(function FriendHangRow({ item }: { item: FriendHang }
   const { hang, profile } = item;
   const name = profile.display_name ?? profile.username ?? "Someone";
   const note = hang.note && hang.note.length > 60 ? `${hang.note.slice(0, 60).trimEnd()}…` : hang.note;
-  const href = venueHref(hang.venue.slug, hang.venue.id);
+  const href = venueHref(hang.venue.slug);
   const profileHref = profile.username ? `/profile/${profile.username}` : `/user/${profile.id}`;
 
   return (
@@ -334,33 +334,44 @@ const FriendHangRow = memo(function FriendHangRow({ item }: { item: FriendHang }
             {name}
           </Link>
           <span className="text-xs text-[var(--soft)] flex-shrink-0">at</span>
-          <Link href={href} className="text-xs text-[var(--soft)] hover:text-[var(--cream)] transition-colors truncate">
-            {hang.venue.name}
-          </Link>
+          {href ? (
+            <Link href={href} className="text-xs text-[var(--soft)] hover:text-[var(--cream)] transition-colors truncate">
+              {hang.venue.name}
+            </Link>
+          ) : (
+            <span className="text-xs text-[var(--soft)] truncate">{hang.venue.name}</span>
+          )}
         </div>
         {note && <p className="text-xs text-[var(--muted)] truncate mt-0.5">{note}</p>}
       </div>
-      <Link
-        href={`${href}?hang=true`}
-        className="flex-shrink-0 px-2 py-1 rounded-md bg-[var(--neon-green)]/10 border border-[var(--neon-green)]/20 text-2xs font-mono font-medium text-[var(--neon-green)] hover:bg-[var(--neon-green)]/20 transition-colors active:scale-95 whitespace-nowrap"
-        title={`Check in at ${hang.venue.name}`}
-      >
-        I&apos;m Here Too
-      </Link>
+      {href ? (
+        <Link
+          href={`${href}?hang=true`}
+          className="flex-shrink-0 px-2 py-1 rounded-md bg-[var(--neon-green)]/10 border border-[var(--neon-green)]/20 text-2xs font-mono font-medium text-[var(--neon-green)] hover:bg-[var(--neon-green)]/20 transition-colors active:scale-95 whitespace-nowrap"
+          title={`Check in at ${hang.venue.name}`}
+        >
+          I&apos;m Here Too
+        </Link>
+      ) : (
+        <span
+          className="flex-shrink-0 px-2 py-1 rounded-md bg-[var(--neon-green)]/10 border border-[var(--neon-green)]/20 text-2xs font-mono font-medium text-[var(--neon-green)] whitespace-nowrap"
+          title={`Check in at ${hang.venue.name}`}
+        >
+          I&apos;m Here Too
+        </span>
+      )}
     </div>
   );
 });
 
 /** Hot venue card for horizontal carousel. */
 const HotVenueCard = memo(function HotVenueCard({ venue }: { venue: HotVenue }) {
-  const href = venueHref(venue.venue_slug, venue.venue_id);
+  const href = venueHref(venue.venue_slug);
   const count = venue.active_count;
+  const cardClass = "flex-shrink-0 w-40 snap-start rounded-xl overflow-hidden bg-[var(--night)] border border-[var(--twilight)]/40 hover-lift shadow-card-sm block";
 
-  return (
-    <Link
-      href={href}
-      className="flex-shrink-0 w-40 snap-start rounded-xl overflow-hidden bg-[var(--night)] border border-[var(--twilight)]/40 hover-lift shadow-card-sm block"
-    >
+  const inner = (
+    <>
       <div className="relative h-24 bg-[var(--twilight)] overflow-hidden">
         {venue.venue_image_url ? (
           <SmartImage src={venue.venue_image_url} alt={venue.venue_name} fill sizes="160px" className="object-cover" />
@@ -378,8 +389,13 @@ const HotVenueCard = memo(function HotVenueCard({ venue }: { venue: HotVenue }) 
         <p className="text-xs font-semibold text-[var(--cream)] leading-snug truncate">{venue.venue_name}</p>
         {venue.neighborhood && <p className="text-2xs text-[var(--muted)] truncate mt-0.5">{venue.neighborhood}</p>}
       </div>
-    </Link>
+    </>
   );
+
+  if (href) {
+    return <Link href={href} className={cardClass}>{inner}</Link>;
+  }
+  return <div className={cardClass}>{inner}</div>;
 });
 
 // ─── Hot Spots Section ───────────────────────────────────────────────────────
