@@ -122,10 +122,13 @@ SELECT ok(
   'place search does not leak places referenced only by other portals'
 );
 
--- Assertion 7: Limit clamping. Requesting 9999 per retriever should return ≤80 events
+-- Assertion 7: Limit clamping. Requesting 9999 per retriever should return ≤80 events.
+-- Use the deterministic test portal inserted above (pgtap-atl) so this passes
+-- on a clean CI database where no 'atlanta' portal exists. The seed at the
+-- top of the file gave pgtap-atl a fixed UUID we reference directly.
 SELECT ok(
   (SELECT count(*) FROM search_unified(
-    (SELECT id FROM portals WHERE slug = 'atlanta'),
+    '11111111-1111-1111-1111-111111111111'::uuid,
     'the',
     ARRAY['event'],
     NULL, NULL, NULL, NULL, false, 9999
