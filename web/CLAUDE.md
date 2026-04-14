@@ -54,7 +54,7 @@ npm run lint     # ESLint
 
 When multiple Claude Code sessions work in parallel, check `ACTIVE_WORK.md` in the repo root before starting. It tracks which agent is working on what and which files/directories are claimed. Don't modify files claimed by another agent — tell the user if you need to.
 
-See `BACKLOG.md` for the full prioritized roadmap with implementation status.
+See `DEV_PLAN.md` for the active execution status. (Historical roadmap archived to `docs/archive/root-strategy-2026-Q1/BACKLOG.md`.)
 
 ---
 
@@ -903,3 +903,16 @@ When using Pencil MCP tools (`batch_design`), these property names are NOT what 
 | Layout direction | `layout: "vertical"` | `layoutMode` |
 | Padding | `[top, right, bottom, left]` or `[v, h]` or number | Object `{top, right, ...}` |
 | Clip content | `clip: true` | `clipsContent` |
+
+---
+
+## Recent Architectural Shifts (as of 2026-04-14)
+
+When working in `web/`, be aware these landed recently and older patterns are stale:
+
+- **`web/lib/entity-urls.ts` is the canonical URL builder.** Never hand-build entity URLs. Public API: `buildEventUrl(id, portal, context)`, `buildSpotUrl(slug, portal, context)`, `buildSeriesUrl(slug, portal, seriesType?)`, `buildFestivalUrl(slug, portal)`, `buildExhibitionUrl(slug, portal)`, `buildArtistUrl(slug, portal)`, `buildOrgUrl(slug, portal)`. Only `buildEventUrl` and `buildSpotUrl` take a `LinkContext` arg (`'feed' | 'page'`) — `'feed'` returns an overlay URL (e.g., `?event=123`, `?spot=high-museum`), `'page'` returns the canonical detail page URL. **Standalone detail pages must always pass `'page'`.** Other entity URLs (series, festival, exhibition, artist) are always canonical — no overlay mode. `buildOrgUrl` is an exception: it always returns an overlay URL (`?org=slug`). Civic events use `getCivicEventHref()` from `lib/civic-routing.ts` as a pre-check before `buildEventUrl` (pattern: `getCivicEventHref(event, portal, vertical) ?? buildEventUrl(id, portal, context)`).
+- **`places`, not `venues`.** The DB table is `places`. The frontend type is `Place`. Joins use `place_id`, not `venue_id`. The user-facing route is `/{portal}/spots/[id]`, not `/{portal}/venues/[id]`. If you find a stale `venues` table reference in code, fix it; if it's in a comment, update it.
+- **`search_unified()` RPC for all search.** The legacy unified-search stack was deleted (commit `b5a3344e` era cleanup). New search code calls `search_unified()` via the server loader pattern — never write a client-side query that bypasses it. Portal isolation is enforced inside the RPC; you must pass `p_portal_id`.
+- **Exhibitions are a first-class entity.** Has its own `ExhibitionResultCard`, `buildExhibitionUrl()`, `exhibitions.search_vector`, and exhibition CTEs in `search_unified()` (commit `bd9cd223`). Treat exhibitions as a noun on the same level as events and places, especially in the Arts portal. The `events.exhibition_id` FK is live (commit `838b9052`) — use it to link opening nights, artist talks, etc. to their parent exhibition.
+- **Overlay vs canonical link rule.** Inside feed/explore/calendar surfaces (the `'feed'` context), entity links open as overlay (modal) for in-place browsing. On standalone detail pages and in shared/permalink contexts, links must be canonical (`'page'` context). The wrong context here causes infinite overlay nesting on detail pages.
+- **`content_kind='exhibit'` is deprecated.** Do not create new events with this flag. The filter on feed and event queries (commits `b5a3344e`, `0bb667ab`) remains as protection for legacy rows; new code should never need to set or unset this flag. If you're linking an event to an exhibition, set `events.exhibition_id` instead.
