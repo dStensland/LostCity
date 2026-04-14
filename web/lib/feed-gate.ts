@@ -15,9 +15,10 @@
  */
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function applyFeedGate<T extends { or: (...args: any[]) => any }>(query: T): T {
+export function applyFeedGate<T extends { or: (...args: any[]) => any; neq: (...args: any[]) => any }>(query: T): T {
   return query
-    .or("is_feed_ready.eq.true,is_feed_ready.is.null");
+    .or("is_feed_ready.eq.true,is_feed_ready.is.null")
+    .neq("content_kind", "exhibit");
 }
 
 /**
