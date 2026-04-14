@@ -5,7 +5,7 @@ import Link from "next/link";
 import Image from "@/components/SmartImage";
 import Logo from "./Logo";
 import UserMenu from "./UserMenu";
-import HeaderSearchButton from "./HeaderSearchButton";
+import { LaunchButton } from "@/components/search/LaunchButton";
 import { DEFAULT_PORTAL_SLUG, DEFAULT_PORTAL_NAME } from "@/lib/portal-context";
 
 interface PortalBranding {
@@ -65,7 +65,7 @@ export default function GlassHeader({ portalSlug = DEFAULT_PORTAL_SLUG, portalNa
       {/* Right side */}
       <nav className="flex items-center gap-2">
         <div className="sm:hidden">
-          <HeaderSearchButton />
+          <LaunchButton />
         </div>
         <UserMenu />
       </nav>
