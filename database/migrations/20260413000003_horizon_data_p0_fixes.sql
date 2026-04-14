@@ -6,9 +6,9 @@
 -- P0-4: Category corrections for misassigned flagship events
 -- ============================================================================
 
--- Inman Park Festival: food_drink → festivals
+-- Inman Park Festival: food_drink → community (neighborhood arts/parade festival)
 UPDATE events
-SET category_id = 'festivals'
+SET category_id = 'community'
 WHERE title ILIKE '%inman park festival%'
   AND category_id = 'food_drink'
   AND is_active = true
