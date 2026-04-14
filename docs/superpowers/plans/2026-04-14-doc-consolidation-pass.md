@@ -1413,3 +1413,72 @@ EOF
 - [ ] The `2026-04-14-exhibition-system-completion.md` plan is explicitly NOT moved in Phase 4.
 - [ ] Phase 6 verification grep covers all the load-bearing terms (places, entity-urls, search_unified, legacy stacks).
 - [ ] Follow-ups are surfaced explicitly so the user knows what's been deferred.
+
+---
+
+## Execution Log
+
+**Completed 2026-04-14.** 17 commits on branch `chore/doc-consolidation-pass`:
+
+```
+Phase 1 (CLAUDE.md surgical fixes):
+  3091523f docs(database): update CLAUDE.md for places refactor and search_unified
+  f531e2fe docs(crawlers): update CLAUDE.md for places refactor and exhibitions
+  8120add8 docs(web): add recent architectural shifts appendix to CLAUDE.md
+  9b2060f0 docs(crawlers): update ARCHITECTURE.md for places refactor
+
+Phase 1 Remediation (from expert review):
+  d0d45177 docs: correct venue_specials → place_specials in CLAUDE.md + ARCHITECTURE.md
+  333a6021 docs: fix search_unified args, BACKLOG pointer, cross-vertical exhibitions framing
+  9966fb1b docs(crawlers): fix tree diagram, parameter naming, FK rename in CLAUDE.md
+  5d2b4d8c docs(plans): correct Phase 2 exhibitions framing to cross-vertical
+  4226ec4b docs(plans): add Task 3.4 for STRATEGIC_PRINCIPLES.md spot-check
+
+Phase 2 (north-star refresh):
+  cae0974a docs(north-star): refresh for places, exhibitions (cross-vertical), search_unified
+
+Phase 3 (top-level doc triage):
+  c5c5bb52 docs: archive BACKLOG.md and NEXT_MOVES.md to docs/archive/
+  073a129d docs: refresh ARCHITECTURE_PLAN.md for 2026-Q2 architecture state
+  3bb5cb84 docs: add status-as-of header to TECH_DEBT.md
+  381468f7 docs: surgical refresh of STRATEGIC_PRINCIPLES.md for current schema
+
+Phase 4 (shipped plans archive):
+  6996b7d8 docs(plans): commit shipped plan files for exhibition system and detail page repair
+  7d89d104 docs: archive 26 shipped plans to docs/superpowers/plans/shipped/
+
+Phase 5 (agent definition refresh):
+  8ba7171e docs(agents): add shared architecture context reference
+```
+
+Plus the initial plan commit `dca7e809` and Phase 6 follow-up commit (this one).
+
+**Expert review caught 9 bugs** (1 critical, 4 major, 4 minor). All fixed in the remediation phase before Phase 2 ran. See the remediation commits for details.
+
+**Subagent-driven execution worked well.** Each implementer caught 1-2 bonus drift items beyond its explicit edit list. The expert review phase (architect-review + pr-reviewer + business-strategist in parallel) caught the `venue_specials` rename I had fabricated into the context brief — that would have shipped as agent-misdirecting content without review.
+
+---
+
+## Follow-Ups Surfaced (Not Done in This Plan)
+
+These items were identified during the consolidation pass but intentionally left out of scope. Surface them to the user; do not silently start them.
+
+1. **TECH_DEBT.md re-audit.** Phase 3.3 added a Status header but did not audit individual items. Many may have been fixed since 2026-03-05 (places refactor, search rebuild, entity-urls, exhibitions all landed). A proper re-score is its own ~1-session task.
+
+2. **Full STRATEGIC_PRINCIPLES.md / DEV_PLAN.md / WORKSTREAM.md / AGENTS.md / ACTIVE_WORK.md review.** Phase 3.4 did a surgical schema-reference fix on STRATEGIC_PRINCIPLES.md. The other four "Authoritative" strategy docs were not touched — a line-by-line verification pass against current code would catch any drifted concrete claims (file paths, function signatures, table names) that weren't obvious schema references.
+
+3. **`exhibition_type` enum expansion.** Currently `('solo','group','installation','retrospective','popup','permanent')` — arts-biased. Needs values like `attraction`, `habitat`, `interactive`, `historical_display` so non-arts portals (Family crawling the Georgia Aquarium, Adventure crawling state parks, civic portals crawling historic sites) can produce exhibitions natively without squatting on arts vocabulary. This is a migration + crawler update, not a doc change. Escalated by the user correction on cross-vertical exhibitions framing.
+
+4. **Decision-archive convention.** Business-strategist escalation: `docs/decisions/` has 10 entries, all still relevant, but no archive policy exists. When a decision gets superseded, does it get a header note, a move to archive, or something else? Needs a 10-minute decision before the next decision record lands. Not a doc pass — a one-time convention call.
+
+5. **130+ PRDs in `prds/`.** Roughly 70% are exploratory or completed per the inventory subagent. None were touched in this pass. A consolidation pass on PRDs is its own project.
+
+6. **9 root-level operational guides** (`SOURCES.md`, `GLOBAL_ATLANTA_README.md`, `PORTAL_FOUNDATION_HARDENING_PLAN.md`, `CONTENT_QUALITY_AUDIT.md`, `CRAWLER_FIXES_NEEDED.md`, `MONETIZATION_PLAYBOOK.md`, `SALES_ENABLEMENT.md`, `COMPETITIVE_INTEL.md`, `README.md`) were not triaged. Some are likely stale; some are still operational. Worth a quick pass.
+
+7. **Remaining ~70 plans in `docs/superpowers/plans/`** that are NOT-STARTED or HISTORICAL/REFERENCE per the triage. Phase 4 moved the 26 clearly-shipped ones. Consider a backlog cleanup pass to organize the remainder by priority/domain.
+
+8. **`crawlers/CLAUDE.md` source-list of files** (e.g., `marys_bar.py` in the project structure tree) — not verified file-by-file. Some may have been deleted or renamed. Worth a one-shot validation grep.
+
+9. **`web/CLAUDE.md` Pencil component IDs** (the large mapping table near the end of the file) — not verified against the actual `.pen` file. The Pencil MCP would be needed to verify; out of scope for this pass.
+
+If any of these matter to ship now, ask the user to prioritize them as a follow-up plan. Otherwise, file them as backlog.
