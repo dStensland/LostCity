@@ -73,7 +73,8 @@ import { getContextualQuickLinks } from "@/lib/city-pulse/quick-links";
 
 // Below-fold sections: dynamically imported so their JS is in separate chunks
 // loaded on demand when LazySection triggers (not bundled in the main feed chunk).
-const VenuesSection = dynamic(() => import("./sections/VenuesSection"), { ssr: false });
+const NowShowingSection = dynamic(() => import("./sections/NowShowingSection"), { ssr: false });
+const LiveMusicSection = dynamic(() => import("./sections/MusicTabContent"), { ssr: false });
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const GameDaySection = dynamic<{ portalSlug: string }>(() => import("./sections/GameDaySection") as any, { ssr: false });
 const FeedTimeMachine = dynamic(() => import("./FeedTimeMachine"), { ssr: false });
@@ -378,14 +379,33 @@ export default function CityPulseShell({ portalSlug, serverHeroUrl, serverFeedDa
             key="city-pulse-cinema"
             id="city-pulse-cinema"
             data-feed-anchor="true"
-            data-index-label="Venues"
+            data-index-label="Now Showing"
             data-block-id="cinema"
             className="mt-8 scroll-mt-28"
           >
             <div className="h-px bg-[var(--twilight)]" />
             <div className="pt-6">
               <LazySection minHeight={300}>
-                <VenuesSection portalSlug={portalSlug} />
+                <NowShowingSection portalSlug={portalSlug} />
+              </LazySection>
+            </div>
+          </div>
+        );
+
+      case "live_music":
+        return (
+          <div
+            key="city-pulse-live-music"
+            id="city-pulse-live-music"
+            data-feed-anchor="true"
+            data-index-label="Live Music"
+            data-block-id="live_music"
+            className="mt-8 scroll-mt-28"
+          >
+            <div className="h-px bg-[var(--twilight)]" />
+            <div className="pt-6">
+              <LazySection minHeight={300}>
+                <LiveMusicSection portalSlug={portalSlug} />
               </LazySection>
             </div>
           </div>
