@@ -2110,7 +2110,13 @@ def infer_genres(
             allowed = genres_for_category(category_key)
             if allowed:
                 scoped = [g for g in normalized_venue if g in allowed]
-                genres.update(scoped)
+                # Only inherit venue genre when venue has a single genre (strong signal).
+                # Multi-genre venues (bars with dj + karaoke + rock) would contaminate
+                # all events with a venue-template spray — every show gets tagged with
+                # every genre the venue has ever hosted. A single-genre venue (dedicated
+                # jazz club, bluegrass bar) is a reliable signal; 2+ genres are not.
+                if len(scoped) == 1:
+                    genres.update(scoped)
             else:
                 # No defined genre set for this category — don't blindly
                 # inherit all venue genres (a multi-purpose venue like a
