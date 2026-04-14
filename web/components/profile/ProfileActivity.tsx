@@ -10,7 +10,7 @@ type Activity = {
   venue?: { id: number; name: string; slug: string } | null;
 };
 
-export default function ProfileActivity({ activities }: { activities: Activity[] }) {
+export default function ProfileActivity({ activities, portalSlug }: { activities: Activity[]; portalSlug: string }) {
   if (activities.length === 0) {
     return (
       <div className="py-12 text-center">
@@ -27,13 +27,13 @@ export default function ProfileActivity({ activities }: { activities: Activity[]
   return (
     <div className="space-y-3">
       {activities.map((activity) => (
-        <ActivityItem key={activity.id} activity={activity} />
+        <ActivityItem key={activity.id} activity={activity} portalSlug={portalSlug} />
       ))}
     </div>
   );
 }
 
-function ActivityItem({ activity }: { activity: Activity }) {
+function ActivityItem({ activity, portalSlug }: { activity: Activity; portalSlug: string }) {
   const metadata = activity.metadata as { status?: string; note?: string } | null;
 
   const getActivityIcon = () => {
@@ -91,7 +91,7 @@ function ActivityItem({ activity }: { activity: Activity }) {
           <>
             {status === "going" ? "Going to" : status === "interested" ? "Interested in" : "Went to"}{" "}
             {activity.event && (
-              <Link href={`/events/${activity.event.id}`} className="text-[var(--coral)] hover:text-[var(--rose)] font-medium">
+              <Link href={`/${portalSlug}/events/${activity.event.id}`} className="text-[var(--coral)] hover:text-[var(--rose)] font-medium">
                 {activity.event.title}
               </Link>
             )}
@@ -103,12 +103,12 @@ function ActivityItem({ activity }: { activity: Activity }) {
           <>
             Recommends{" "}
             {activity.event && (
-              <Link href={`/events/${activity.event.id}`} className="text-[var(--coral)] hover:text-[var(--rose)] font-medium">
+              <Link href={`/${portalSlug}/events/${activity.event.id}`} className="text-[var(--coral)] hover:text-[var(--rose)] font-medium">
                 {activity.event.title}
               </Link>
             )}
             {activity.venue && (
-              <Link href={`/spots/${activity.venue.slug}`} className="text-[var(--coral)] hover:text-[var(--rose)] font-medium">
+              <Link href={`/${portalSlug}/spots/${activity.venue.slug}`} className="text-[var(--coral)] hover:text-[var(--rose)] font-medium">
                 {activity.venue.name}
               </Link>
             )}
@@ -124,7 +124,7 @@ function ActivityItem({ activity }: { activity: Activity }) {
           <>
             Started following{" "}
             {activity.venue && (
-              <Link href={`/spots/${activity.venue.slug}`} className="text-[var(--coral)] hover:text-[var(--rose)] font-medium">
+              <Link href={`/${portalSlug}/spots/${activity.venue.slug}`} className="text-[var(--coral)] hover:text-[var(--rose)] font-medium">
                 {activity.venue.name}
               </Link>
             )}

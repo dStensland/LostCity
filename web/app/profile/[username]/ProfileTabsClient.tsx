@@ -21,6 +21,7 @@ interface ProfileTabsClientProps {
   userId: string;
   isOwnProfile: boolean;
   initialActivities: Activity[];
+  portalSlug: string;
 }
 
 export default function ProfileTabsClient({
@@ -28,23 +29,24 @@ export default function ProfileTabsClient({
   userId,
   isOwnProfile,
   initialActivities,
+  portalSlug,
 }: ProfileTabsClientProps) {
   return (
     <ProfileTabs username={username}>
       {(activeSection: ProfileSection) => {
         switch (activeSection) {
           case "activity":
-            return <ProfileActivity activities={initialActivities} />;
+            return <ProfileActivity activities={initialActivities} portalSlug={portalSlug} />;
           case "upcoming":
             return <ProfileUpcoming username={username} />;
           case "venues":
-            return <ProfilePlaces username={username} />;
+            return <ProfilePlaces username={username} portalSlug={portalSlug} />;
           case "curations":
             return <ProfileCurations userId={userId} isOwnProfile={isOwnProfile} />;
           case "taste":
             return <ProfileTaste username={username} />;
           default:
-            return <ProfileActivity activities={initialActivities} />;
+            return <ProfileActivity activities={initialActivities} portalSlug={portalSlug} />;
         }
       }}
     </ProfileTabs>

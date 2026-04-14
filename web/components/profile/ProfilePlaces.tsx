@@ -11,7 +11,7 @@ type Venue = {
   image_url?: string;
 };
 
-export default function ProfilePlaces({ username }: { username: string }) {
+export default function ProfilePlaces({ username, portalSlug }: { username: string; portalSlug: string }) {
   const [venues, setVenues] = useState<Venue[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -61,7 +61,7 @@ export default function ProfilePlaces({ username }: { username: string }) {
       {venues.map((venue) => (
         <Link
           key={venue.id}
-          href={`/spots/${venue.slug}`}
+          href={`/${portalSlug}/spots/${venue.slug}`}
           className="p-4 rounded-lg border border-[var(--twilight)] bg-[var(--card-bg)] hover:border-[var(--coral)]/50 transition-colors"
         >
           <h3 className="text-sm font-medium text-[var(--cream)] truncate">{venue.name}</h3>
