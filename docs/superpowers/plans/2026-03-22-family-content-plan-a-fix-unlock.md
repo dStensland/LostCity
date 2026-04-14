@@ -83,9 +83,9 @@ git commit -m "feat(data): subscribe 17 program sources to family portal — +3,
 - Modify: `web/app/api/timeline/route.ts` (add exclude_categories passthrough)
 - Modify: `web/app/api/events/route.ts` (add exclude_categories passthrough)
 - Reference: `web/lib/portal-query-context.ts:78-81` (parses exclude_categories)
-- Reference: `web/lib/search.ts:659-663` (applies .neq filter)
+- Reference: `web/lib/event-search.ts` (applies .neq filter; formerly `web/lib/search.ts`)
 
-**Context:** Portal config has `exclude_categories: ['nightlife']` but the timeline and events API routes don't pass this through to the SearchFilters object. The exclusion logic exists in `search.ts:659-663` but never fires because the field isn't populated.
+**Context:** Portal config has `exclude_categories: ['nightlife']` but the timeline and events API routes don't pass this through to the SearchFilters object. The exclusion logic exists in `event-search.ts` but never fires because the field isn't populated.
 
 - [ ] **Step 1: Read timeline/route.ts to find where SearchFilters are built**
 

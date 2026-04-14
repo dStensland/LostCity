@@ -28,7 +28,7 @@ Current user-facing filters:
 
 API/data supports (and UI mostly uses):
 - `search`, `categories`, `subcategories`, `genres`, `tags`, `vibes`, `neighborhoods`, `price/free`, `date`, `mood`
-- Implemented in `web/app/api/events/route.ts` and `web/lib/search.ts`
+- Implemented in `web/app/api/events/route.ts` and `web/lib/event-search.ts` (formerly `web/lib/search.ts`, renamed 2026-04 when the unified search stack took over the `lib/search/` path)
 
 Notes:
 - API supports `subcategories` and more date variants (`now`, `month`) but primary UI does not expose them.
