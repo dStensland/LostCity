@@ -10,7 +10,7 @@ type RawSeriesEvent = {
   end_time: string | null;
   source_url: string | null;
   ticket_url: string | null;
-  venues: {
+  places: {
     id: number;
     name: string;
     slug: string;
@@ -112,7 +112,7 @@ export async function getSeriesEvents(
       end_time,
       source_url,
       ticket_url,
-      venues (
+      places (
         id,
         name,
         slug,
@@ -141,7 +141,7 @@ export async function getSeriesEvents(
     start_date: event.start_date,
     start_time: event.start_time,
     end_time: event.end_time,
-    venue: event.venues,
+    venue: event.places,
     source_url: event.source_url || "",
     ticket_url: event.ticket_url,
   }));

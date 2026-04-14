@@ -49,7 +49,7 @@ type RawArtistEvent = {
     category: string | null;
     image_url: string | null;
     is_sensitive: boolean | null;
-    venues: {
+    places: {
       id: number;
       name: string;
       slug: string;
@@ -210,7 +210,7 @@ export async function getArtistEvents(
         category,
         image_url,
         is_sensitive,
-        venues (
+        places (
           id, name, slug, neighborhood
         )
       )
@@ -237,7 +237,7 @@ export async function getArtistEvents(
       start_time: row.events!.start_time,
       category: row.events!.category,
       image_url: row.events!.image_url,
-      venue: row.events!.venues,
+      venue: row.events!.places,
       role: row.role,
       is_headliner: row.is_headliner,
     }))
