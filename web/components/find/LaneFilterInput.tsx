@@ -24,9 +24,15 @@ export function LaneFilterInput({
   className = "",
 }: LaneFilterInputProps) {
   const [local, setLocal] = useState(value);
+  const [prevValue, setPrevValue] = useState(value);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  useEffect(() => setLocal(value), [value]);
+  // Sync external value changes without a setState-in-effect.
+  // Pattern from https://react.dev/learn/you-might-not-need-an-effect
+  if (value !== prevValue) {
+    setPrevValue(value);
+    setLocal(value);
+  }
 
   useEffect(() => {
     if (local === value) return;

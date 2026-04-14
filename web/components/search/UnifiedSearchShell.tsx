@@ -44,7 +44,14 @@ export function UnifiedSearchShell({ portalSlug, mode }: UnifiedSearchShellProps
   const vpOffset = useVisualViewportHeight();
   const [mounted, setMounted] = useState(false);
 
+  // Hydration-safe client-only flag: setState-in-effect is the canonical
+  // React pattern for gating createPortal on post-mount, so the server
+  // renders null and the client upgrades after hydration.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => setMounted(true), []);
+  // localStorage is only available client-side, so the read has to happen
+  // after mount.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => setRecents(loadRecents()), []);
 
   // Inline mode only: seed store from URL on mount
