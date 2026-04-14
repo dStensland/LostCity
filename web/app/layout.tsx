@@ -15,6 +15,7 @@ import { NavigationProgress } from "@/components/ui/NavigationProgress";
 import SkipLink from "@/components/SkipLink";
 import ClientEffects from "@/components/ClientEffects";
 import ScrollReset from "@/components/ScrollReset";
+import { RootSearchOverlay } from "@/components/search/RootSearchOverlay";
 import "./globals.css";
 
 const SITE_URL = getSiteUrl();
@@ -153,7 +154,13 @@ export default async function RootLayout({
             <AuthProvider>
               <DarkHoursTheme />
               <PostHogProvider>
-                <ToastProvider>{children}</ToastProvider>
+                <ToastProvider>
+                  {/* Root-level search overlay — replaces the per-portal mount
+                      so non-portal pages (/community, /happening-now) also
+                      have an overlay to open when LaunchButton fires. */}
+                  <RootSearchOverlay />
+                  {children}
+                </ToastProvider>
               </PostHogProvider>
             </AuthProvider>
           </QueryProvider>
