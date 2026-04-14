@@ -1,22 +1,22 @@
 # Lost City
 
-AI-powered event discovery for Atlanta. We crawl, extract, and deduplicate event data from 20+ sources to produce a comprehensive, accurate event feed.
+Local discovery data infrastructure. Lost City crawls, extracts, and deduplicates data from 1000+ sources to produce comprehensive feeds of **events**, **places**, **programs**, and **exhibitions** across multiple portals (Atlanta is the primary consumer portal; Nashville and other cities are incremental). The data layer is the product — portals, APIs, widgets, and AI integrations are distribution surfaces. See `.claude/north-star.md` for the mission and `STRATEGIC_PRINCIPLES.md` for the principles.
 
 ## Quick Start
 
 ### Prerequisites
 
 - Python 3.11+
-- Node.js 18+
+- Node.js 20+ (Next.js 16 / React 19)
 - Supabase account (for database)
-- OpenAI or Anthropic API key (for LLM extraction)
+- Anthropic API key (Claude is the default LLM for extraction; OpenAI is optional)
 
 ### Setup
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/yourusername/lostcity.git
-cd lostcity
+git clone https://github.com/dStensland/LostCity.git
+cd LostCity
 ```
 
 2. Copy environment variables:
@@ -89,21 +89,28 @@ Adding new venues/sources/crawlers:
 ## Project Structure
 
 ```
-lostcity/
-├── crawlers/           # Python event crawlers
-│   ├── sources/        # Individual source crawlers
+LostCity/
+├── crawlers/           # Python event/place/exhibition crawlers (1000+)
+│   ├── sources/        # Individual source crawlers (~1200 files)
+│   ├── db/             # Supabase operations package (places, events, exhibitions, place_specials, programs, …)
 │   ├── config.py       # Configuration management
-│   ├── extract.py      # LLM-based event extraction
+│   ├── extract.py      # LLM-based extraction (Claude)
 │   ├── dedupe.py       # Deduplication logic
-│   ├── db.py           # Database operations
+│   ├── ARCHITECTURE.md # Crawler data-model contract (authoritative)
 │   └── main.py         # CLI entry point
-├── web/                # Next.js frontend
+├── web/                # Next.js 16 / React 19 frontend
 │   ├── app/            # App router pages
 │   ├── components/     # React components
-│   └── lib/            # Utilities
-├── database/           # SQL schemas
+│   ├── lib/            # Utilities (entity-urls.ts, civic-routing.ts, …)
+│   └── CLAUDE.md       # Frontend conventions and shipping standards
+├── database/           # SQL schemas + migrations (repo track)
+├── supabase/migrations/ # Supabase deploy track (mirror of database/migrations/)
+├── docs/decisions/     # ADRs — see README in that folder for superseding convention
+├── .claude/            # Agent definitions, shared architecture context, north star
 └── .github/workflows/  # GitHub Actions
 ```
+
+See the relevant `CLAUDE.md` file in each subdirectory (`web/`, `crawlers/`, `database/`) for domain-specific conventions. Agents should also load `.claude/north-star.md` and `.claude/agents/_shared-architecture-context.md` before any task.
 
 ## Migration Parity
 
@@ -122,27 +129,23 @@ The current cleanup status is documented in [reports/migration-front-cleanup-202
 
 ## Data Flow
 
-1. **Crawl**: Fetch event listings from source websites/APIs
-2. **Extract**: Use the configured LLM provider to extract structured event data from raw HTML/text
-3. **Normalize**: Standardize venues, dates, categories
-4. **Dedupe**: Identify and merge duplicate events
-5. **Store**: Save to Postgres via Supabase
-6. **Display**: Serve via Next.js frontend
+1. **Crawl**: Fetch event/place/exhibition listings from source websites/APIs
+2. **Extract**: Use Claude to extract structured data from raw HTML/text
+3. **Normalize**: Standardize places (formerly `venues`), dates, categories, taxonomy
+4. **Dedupe**: Identify and merge duplicate events via content hashing
+5. **Store**: Save to Postgres via Supabase, with portal attribution enforced at the DB layer
+6. **Display**: Serve via Next.js frontend using the `search_unified()` RPC as the single search entry point
 
-## Event Categories
+## Entity Types
 
-- `music` - Concerts, live performances
-- `art` - Gallery openings, exhibitions
-- `comedy` - Stand-up, improv
-- `theater` - Plays, musicals
-- `film` - Screenings, festivals
-- `sports` - Games, matches
-- `food_drink` - Tastings, pop-ups
-- `nightlife` - Club events, DJ sets
-- `community` - Meetups, markets
-- `fitness` - Classes, runs
-- `family` - Kid-friendly events
-- `other` - Everything else
+Lost City models four first-class entities:
+
+- **Events** — temporal happenings (concerts, screenings, meetups). Stored in `events`.
+- **Places** — persistent destinations (restaurants, bars, parks, museums, trails). Stored in `places` (renamed from `venues` in March 2026; PostGIS `location` column).
+- **Programs** — structured activities with sessions and registration (swim lessons, summer camps, rec leagues).
+- **Exhibitions** — persistent experiences at a place (gallery shows, museum exhibitions, aquarium habitats, historic site displays, park attractions). Cross-vertical, not Arts-specific. Stored in `exhibitions`.
+
+Event taxonomy lives in `web/lib/` constants; see `.claude/north-star.md` and `docs/decisions/` for the categorization rationale.
 
 ## Contributing
 
