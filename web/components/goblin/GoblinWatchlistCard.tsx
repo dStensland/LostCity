@@ -8,6 +8,7 @@ import { type WatchlistEntry } from "@/lib/goblin-watchlist-utils";
 interface Props {
   entry: WatchlistEntry;
   rank: number;
+  hideRank?: boolean;
   onEdit: (entry: WatchlistEntry) => void;
   onWatched: (entry: WatchlistEntry) => void;
   onRemove: (entryId: number) => void;
@@ -31,7 +32,7 @@ const RANK_NEON = {
 };
 
 export default function GoblinWatchlistCard({
-  entry, rank, onEdit, onWatched, onRemove,
+  entry, rank, hideRank, onEdit, onWatched, onRemove,
   onMoveUp, onMoveDown, onMoveToRank,
   isFirst, isLast,
   onDragStart, onDragOver, onDrop, isDragTarget, isDragging,
@@ -41,8 +42,8 @@ export default function GoblinWatchlistCard({
   const [rankInput, setRankInput] = useState("");
   const movie = entry.movie;
 
-  const isHero = rank <= 3;
-  const isMid = rank > 3 && rank <= 10;
+  const isHero = !hideRank && rank <= 3;
+  const isMid = !hideRank && rank > 3 && rank <= 10;
   const tier = isHero ? RANK_NEON.hero : isMid ? RANK_NEON.mid : RANK_NEON.rest;
   const posterSrc = movie.poster_path
     ? `${isHero ? TMDB_POSTER_W342 : TMDB_POSTER_W185}${movie.poster_path}`
@@ -73,49 +74,51 @@ export default function GoblinWatchlistCard({
       } as React.CSSProperties}
     >
       {/* Rank column */}
-      <div className={`relative flex flex-col items-center justify-center flex-shrink-0
-        ${isHero ? "w-14 sm:w-16" : "w-11 sm:w-14"}`}>
-        {onMoveUp && !isFirst && (
-          <button onClick={onMoveUp}
-            className="text-zinc-700 hover:text-amber-400 text-xs sm:text-2xs transition-colors
-              sm:opacity-0 sm:group-hover:opacity-100 absolute top-0 w-full py-1">
-            &#x25B2;
-          </button>
-        )}
-        {editingRank ? (
-          <input type="number" min={1} autoFocus value={rankInput}
-            onChange={(e) => setRankInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") { const v = parseInt(rankInput); if (!isNaN(v) && v >= 1) onMoveToRank?.(v); setEditingRank(false); }
-              else if (e.key === "Escape") setEditingRank(false);
-            }}
-            onBlur={() => setEditingRank(false)}
-            className="w-10 text-center bg-transparent border-b-2 border-amber-500
-              text-amber-300 font-mono text-lg font-black
-              focus:outline-none
-              [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-          />
-        ) : (
-          <button
-            onClick={() => { setRankInput(String(rank)); setEditingRank(true); }}
-            className="font-mono font-black leading-none transition-all"
-            style={{
-              fontSize: isHero ? "2rem" : isMid ? "1.25rem" : "0.875rem",
-              color: tier.color,
-              textShadow: tier.glow,
-            }}
-          >
-            {rank}
-          </button>
-        )}
-        {onMoveDown && !isLast && (
-          <button onClick={onMoveDown}
-            className="text-zinc-700 hover:text-amber-400 text-xs sm:text-2xs transition-colors
-              sm:opacity-0 sm:group-hover:opacity-100 absolute bottom-0 w-full py-1">
-            &#x25BC;
-          </button>
-        )}
-      </div>
+      {!hideRank && (
+        <div className={`relative flex flex-col items-center justify-center flex-shrink-0
+          ${isHero ? "w-14 sm:w-16" : "w-11 sm:w-14"}`}>
+          {onMoveUp && !isFirst && (
+            <button onClick={onMoveUp}
+              className="text-zinc-700 hover:text-amber-400 text-xs sm:text-2xs transition-colors
+                sm:opacity-0 sm:group-hover:opacity-100 absolute top-0 w-full py-1">
+              &#x25B2;
+            </button>
+          )}
+          {editingRank ? (
+            <input type="number" min={1} autoFocus value={rankInput}
+              onChange={(e) => setRankInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") { const v = parseInt(rankInput); if (!isNaN(v) && v >= 1) onMoveToRank?.(v); setEditingRank(false); }
+                else if (e.key === "Escape") setEditingRank(false);
+              }}
+              onBlur={() => setEditingRank(false)}
+              className="w-10 text-center bg-transparent border-b-2 border-amber-500
+                text-amber-300 font-mono text-lg font-black
+                focus:outline-none
+                [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+            />
+          ) : (
+            <button
+              onClick={() => { setRankInput(String(rank)); setEditingRank(true); }}
+              className="font-mono font-black leading-none transition-all"
+              style={{
+                fontSize: isHero ? "2rem" : isMid ? "1.25rem" : "0.875rem",
+                color: tier.color,
+                textShadow: tier.glow,
+              }}
+            >
+              {rank}
+            </button>
+          )}
+          {onMoveDown && !isLast && (
+            <button onClick={onMoveDown}
+              className="text-zinc-700 hover:text-amber-400 text-xs sm:text-2xs transition-colors
+                sm:opacity-0 sm:group-hover:opacity-100 absolute bottom-0 w-full py-1">
+              &#x25BC;
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Poster */}
       <div className={`relative flex-shrink-0 overflow-hidden
