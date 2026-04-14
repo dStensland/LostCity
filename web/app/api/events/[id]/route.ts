@@ -54,7 +54,7 @@ type RawEventArtist = {
 };
 
 type EventDataShape = {
-  venue_id?: number;
+  place_id?: number;
   description?: string | null;
   venue?: {
     id: number;
@@ -102,7 +102,7 @@ async function fetchVenueEvents(
   portalExclusive: boolean,
   today: string
 ): Promise<unknown[]> {
-  if (!eventData.venue_id) return [];
+  if (!eventData.place_id) return [];
 
   let venueEventsQuery = supabase
     .from("events")
@@ -112,7 +112,7 @@ async function fetchVenueEvents(
       series:series!events_series_id_fkey(id, slug, title, series_type, image_url),
       venue:places(id, name, slug, city, neighborhood, location_designator, place_type)
     `)
-    .eq("place_id", eventData.venue_id)
+    .eq("place_id", eventData.place_id)
     .neq("id", eventId)
     .is("canonical_event_id", null)
     .or(`start_date.gte.${today},end_date.gte.${today}`)
