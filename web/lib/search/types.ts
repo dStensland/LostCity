@@ -39,6 +39,7 @@ export interface Candidate {
 export interface RetrieverContext {
   portal_id: string;                // REQUIRED — data isolation boundary
   limit: number;                    // per-retriever cap; ranker does final truncation
+  types?: EntityType[];             // Optional entity-type scope; defaults to ["event","venue"] in unified-retrieval
   signal: AbortSignal;              // cooperative cancellation
 }
 

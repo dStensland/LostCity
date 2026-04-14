@@ -78,13 +78,18 @@ export async function runUnifiedRetrieval(
 
   const client = createServiceClient();
 
+  // Honor ctx.types when present; default to ["event","venue"] when absent.
+  // This is the retrieval scope — distinct from row-level filters.
+  const typesToSearch =
+    ctx.types && ctx.types.length > 0 ? ctx.types : ["event", "venue"];
+
   // Note: database.types.ts still has the OLD search_unified signature typed.
   // Task 47 (legacy cleanup) will regenerate types. Until then, cast args
   // as `never` per project convention.
   const { data, error } = await client.rpc("search_unified", {
     p_portal_id: ctx.portal_id,
     p_query: q.normalized,
-    p_types: ["event", "venue"],
+    p_types: typesToSearch,
     p_categories: q.structured_filters.categories ?? null,
     p_neighborhoods: q.structured_filters.neighborhoods ?? null,
     p_date_from: q.temporal?.start ?? null,

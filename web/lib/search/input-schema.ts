@@ -56,6 +56,19 @@ export const SearchInputSchema = z.object({
 export type SearchInput = z.infer<typeof SearchInputSchema>;
 
 /**
+ * The filter-only slice of SearchInput. Passed from the route handler through
+ * SearchOptions.filters → annotate() → AnnotatedQuery.structured_filters +
+ * .temporal → runUnifiedRetrieval → search_unified RPC params.
+ *
+ * `types` is included here for API symmetry but is treated as a retrieval
+ * scope (not a row filter) in RetrieverContext.
+ */
+export type SearchFilterInput = Pick<
+  SearchInput,
+  "categories" | "neighborhoods" | "tags" | "date" | "free" | "price" | "types"
+>;
+
+/**
  * Parse URLSearchParams into a validated, normalized SearchInput.
  *
  * Array params arrive comma-separated (e.g., `categories=music,comedy`) and

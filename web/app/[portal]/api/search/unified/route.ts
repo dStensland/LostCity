@@ -67,12 +67,23 @@ export const GET = withOptionalAuth(
       );
     }
 
-    // Run search
+    // Run search — pass all filter fields so they reach the SQL function.
+    // Prior to this fix, only q + limit were forwarded; categories/neighborhoods/
+    // date/free/types were parsed by Zod then silently dropped.
     try {
       const result = await search(input.q, {
         portal_id: portal.id,
         portal_slug: portal.slug,
         limit: input.limit,
+        filters: {
+          categories: input.categories,
+          neighborhoods: input.neighborhoods,
+          tags: input.tags,
+          date: input.date ?? undefined,
+          free: input.free,
+          price: input.price ?? undefined,
+          types: input.types,
+        },
         user_id: user?.id,
       });
 

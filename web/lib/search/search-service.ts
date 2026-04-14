@@ -6,6 +6,7 @@ import { RrfRanker } from "@/lib/search/ranking";
 import { GroupedPresenter } from "@/lib/search/presenting";
 import type { PresentedResults, PresentationPolicy } from "@/lib/search/presenting/types";
 import type { RetrieverId, Candidate } from "@/lib/search/types";
+import type { SearchFilterInput } from "@/lib/search/input-schema";
 
 const DEFAULT_POLICY: PresentationPolicy = {
   topMatchesCount: 6,
@@ -28,6 +29,7 @@ export interface SearchOptions {
   portal_id: string;
   portal_slug: string;
   limit: number;
+  filters?: SearchFilterInput;
   user_id?: string;
   signal?: AbortSignal;
 }
@@ -48,19 +50,24 @@ export async function search(
   const started = Date.now();
   const signal = opts.signal ?? new AbortController().signal;
 
-  // Phase 1: Understand
+  // Phase 1: Understand — pass filterInput so structured_filters and temporal
+  // are populated from explicit request params, not left as empty objects.
   const annotateStart = Date.now();
-  const annotated = await annotate(raw, {
-    portal_id: opts.portal_id,
-    portal_slug: opts.portal_slug,
-  });
+  const annotated = await annotate(
+    raw,
+    { portal_id: opts.portal_id, portal_slug: opts.portal_slug },
+    opts.filters
+  );
   const annotateMs = Date.now() - annotateStart;
 
-  // Phase 2: Retrieve — single RPC call, demultiplex by retriever
+  // Phase 2: Retrieve — single RPC call, demultiplex by retriever.
+  // Pass types through RetrieverContext so the SQL function can scope entity
+  // types. filters.types is a retrieval scope, not a row filter.
   const retrieveStart = Date.now();
   const unifiedResult = await runUnifiedRetrieval(annotated, {
     portal_id: opts.portal_id,
     limit: opts.limit,
+    types: opts.filters?.types,
     signal,
   });
   const retrieveMs = Date.now() - retrieveStart;
@@ -74,6 +81,7 @@ export async function search(
     const candidates = await retriever.retrieve(annotated, {
       portal_id: opts.portal_id,
       limit: opts.limit,
+      types: opts.filters?.types,
       signal,
     });
     candidateSets.set(id, candidates);
