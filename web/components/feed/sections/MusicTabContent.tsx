@@ -1,11 +1,13 @@
-// web/components/feed/sections/MusicTabContent.tsx
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
+import { MusicNote } from "@phosphor-icons/react";
 import { TonightShowCard } from "@/components/feed/venues/TonightShowCard";
 import { VenueShowCard } from "@/components/feed/venues/VenueShowCard";
 import { GenreFilterStrip } from "@/components/feed/GenreFilterStrip";
+import FeedSectionHeader from "@/components/feed/FeedSectionHeader";
 import { getGenreBuckets, type GenreBucket } from "@/lib/genre-map";
+import { buildExploreUrl } from "@/lib/find-url";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -40,10 +42,11 @@ interface MusicVenueGroup {
 
 const ACCENT = "#E855A0";
 const FETCH_TIMEOUT_MS = 10_000;
+const MAX_DIRECTORY_VENUES = 6;
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export default function MusicTabContent({
+export default function LiveMusicSection({
   portalSlug,
 }: {
   portalSlug: string;
@@ -83,9 +86,6 @@ export default function MusicTabContent({
 
   const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
 
-  // Apply genre filter to all data — use genres column (dedicated genre data
-  // from LLM extraction + artist enrichment), falling back to tags for events
-  // that only have genre info in tags
   const filteredData = useMemo(() => {
     if (!activeGenre) return data;
     return data
@@ -101,7 +101,6 @@ export default function MusicTabContent({
       .filter((vg) => vg.shows.length > 0);
   }, [data, activeGenre]);
 
-  // Tonight: flatten all shows from all venues where start_date === today
   const tonightShows = useMemo(() => {
     const flat: { show: MusicShow; venue: MusicVenue }[] = [];
     for (const vg of filteredData) {
@@ -116,8 +115,7 @@ export default function MusicTabContent({
     );
   }, [filteredData, today]);
 
-  // Directory: only music_venue place_type, sorted by today-first then show count
-  const directoryVenues = useMemo(() => {
+  const allDirectoryVenues = useMemo(() => {
     return filteredData
       .filter((vg) => vg.venue.place_type === "music_venue")
       .sort((a, b) => {
@@ -128,85 +126,109 @@ export default function MusicTabContent({
       });
   }, [filteredData, today]);
 
-  if (loading) return <MusicTabSkeleton />;
+  const directoryVenues = allDirectoryVenues.slice(0, MAX_DIRECTORY_VENUES);
+  const overflowCount = allDirectoryVenues.length - MAX_DIRECTORY_VENUES;
 
-  if (data.length === 0) {
-    return (
-      <p className="py-6 text-center text-sm text-[var(--muted)]">
-        No music shows this week
-      </p>
-    );
-  }
+  // Don't render the section at all if there's no data
+  if (!loading && data.length === 0) return null;
 
   const hasContent = tonightShows.length > 0 || directoryVenues.length > 0;
+  const seeAllHref = buildExploreUrl({
+    portalSlug,
+    lane: "shows",
+    extraParams: { tab: "music" },
+  });
 
   return (
-    <div>
-      <GenreFilterStrip
-        activeGenre={activeGenre}
-        onGenreChange={setActiveGenre}
+    <section>
+      <FeedSectionHeader
+        title="Live Music"
+        priority="secondary"
+        variant="destinations"
+        accentColor={ACCENT}
+        icon={<MusicNote weight="duotone" className="w-5 h-5" />}
+        seeAllHref={seeAllHref}
       />
 
-      {/* Tonight carousel */}
-      {tonightShows.length > 0 && (
-        <div className="mb-4">
-          <p
-            className="font-mono text-xs font-bold tracking-[0.12em] uppercase mb-2.5"
-            style={{ color: ACCENT }}
-          >
-            Tonight
-          </p>
-          <div className="flex gap-2.5 overflow-x-auto scrollbar-hide snap-x snap-mandatory -mx-1 px-1 pb-2">
-            {tonightShows.map(({ show, venue }) => (
-              <TonightShowCard
-                key={show.id}
-                show={show}
-                venue={venue}
-                portalSlug={portalSlug}
-                accentColor={ACCENT}
-              />
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Venue directory */}
-      {directoryVenues.length > 0 && (
+      {loading ? (
+        <LiveMusicSkeleton />
+      ) : (
         <div>
-          <p className="font-mono text-xs font-bold tracking-[0.12em] uppercase text-[var(--muted)] mb-2.5">
-            {tonightShows.length > 0
-              ? "This Week at Atlanta Venues"
-              : "Atlanta Music Venues"}
-          </p>
-          <div className="flex flex-col gap-1.5">
-            {directoryVenues.map((vg) => (
-              <VenueShowCard
-                key={vg.venue.id}
-                venue={vg.venue}
-                shows={vg.shows}
-                totalCount={vg.shows.length}
-                portalSlug={portalSlug}
-                accentColor={ACCENT}
-                venueType="music_venue"
-              />
-            ))}
-          </div>
+          <GenreFilterStrip
+            activeGenre={activeGenre}
+            onGenreChange={setActiveGenre}
+          />
+
+          {tonightShows.length > 0 && (
+            <div className="mb-4">
+              <p
+                className="font-mono text-xs font-bold tracking-[0.12em] uppercase mb-2.5"
+                style={{ color: ACCENT }}
+              >
+                Tonight
+              </p>
+              <div className="flex gap-2.5 overflow-x-auto scrollbar-hide snap-x snap-mandatory -mx-1 px-1 pb-2">
+                {tonightShows.map(({ show, venue }) => (
+                  <TonightShowCard
+                    key={show.id}
+                    show={show}
+                    venue={venue}
+                    portalSlug={portalSlug}
+                    accentColor={ACCENT}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {directoryVenues.length > 0 && (
+            <div>
+              <p className="font-mono text-xs font-bold tracking-[0.12em] uppercase text-[var(--muted)] mb-2.5">
+                {tonightShows.length > 0
+                  ? "This Week at Atlanta Venues"
+                  : "Atlanta Music Venues"}
+              </p>
+              <div className="flex flex-col gap-1.5">
+                {directoryVenues.map((vg) => (
+                  <VenueShowCard
+                    key={vg.venue.id}
+                    venue={vg.venue}
+                    shows={vg.shows}
+                    totalCount={vg.shows.length}
+                    portalSlug={portalSlug}
+                    accentColor={ACCENT}
+                    venueType="music_venue"
+                  />
+                ))}
+              </div>
+              {overflowCount > 0 && (
+                <div className="flex justify-end pt-2">
+                  <a
+                    href={seeAllHref}
+                    className="text-xs font-mono hover:opacity-80 transition-opacity"
+                    style={{ color: ACCENT }}
+                  >
+                    +{overflowCount} more venues &rarr;
+                  </a>
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeGenre && !hasContent && (
+            <p className="py-6 text-center text-sm text-[var(--muted)]">
+              No {activeGenre} shows this week
+            </p>
+          )}
         </div>
       )}
-
-      {/* Genre filter yields nothing */}
-      {activeGenre && !hasContent && (
-        <p className="py-6 text-center text-sm text-[var(--muted)]">
-          No {activeGenre} shows this week
-        </p>
-      )}
-    </div>
+    </section>
   );
 }
 
 // ── Skeleton ──────────────────────────────────────────────────────────────────
 
-function MusicTabSkeleton() {
+function LiveMusicSkeleton() {
   return (
     <div className="space-y-4">
       <div className="flex gap-2">
