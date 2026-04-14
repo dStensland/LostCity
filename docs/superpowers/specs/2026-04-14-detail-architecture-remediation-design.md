@@ -24,25 +24,28 @@ Centralized URL builders for all entity types. Two context modes:
 ```typescript
 buildEventUrl(id: number, portalSlug: string, context: 'feed' | 'page'): string
 buildSpotUrl(slug: string, portalSlug: string, context: 'feed' | 'page'): string
-buildSeriesUrl(slug: string, portalSlug: string, seriesType?: string): string  // always canonical, routes to /films/ for film type
+buildSeriesUrl(slug: string, portalSlug: string, seriesType?: string): string  // always canonical, routes to /showtimes/ for film type
 buildFestivalUrl(slug: string, portalSlug: string): string  // always canonical
 buildExhibitionUrl(slug: string, portalSlug: string): string  // always canonical
 buildArtistUrl(slug: string, portalSlug: string): string  // always canonical
+buildOrgUrl(slug: string, portalSlug: string): string  // always canonical (overlay ?org= also exists)
 ```
 
 Events and spots get the context parameter because they're the only two entities with overlay support in `detail-entry-contract.ts`. Everything else is always canonical.
 
+**Civic routing coexistence:** `getCivicEventHref()` in `web/lib/civic-routing.ts` remains a separate pre-check. It routes government/community/volunteer events to dedicated civic pages (`/meetings/`, `/volunteer/`) based on portal vertical and event category. The URL builder handles the non-civic path. Call pattern at usage sites remains: `getCivicEventHref(event, portalSlug, vertical) ?? buildEventUrl(id, portalSlug, context)`. The CLAUDE.md update documents this two-step pattern.
+
 **Fix overlay leak on standalone pages:**
 
-These pages currently use `?spot=` overlay links for venues, but they're standalone pages with no feed overlay router beneath them:
+These pages use overlay links (`?spot=` or the now-fixed `?venue=`) for venues, but they're standalone pages with no feed overlay router beneath them. The links currently navigate to the feed root with a query param that no router catches:
 
-- `web/app/[portal]/volunteer/[id]/page.tsx` — lines 300, 466: change to `buildSpotUrl(slug, portal, 'page')`
-- `web/app/[portal]/meetings/[id]/page.tsx` — line 214: same
-- `web/app/[portal]/exhibitions/[slug]/page.tsx` — line 508 ("Plan My Visit" CTA): same
+- `web/app/[portal]/volunteer/[id]/page.tsx` — venue links: change to canonical `/spots/{slug}`
+- `web/app/[portal]/meetings/[id]/page.tsx` — venue link: change to canonical `/spots/{slug}`
+- `web/app/[portal]/exhibitions/[slug]/page.tsx` — "Plan My Visit" CTA: change to canonical `/spots/{slug}`
 
 **CLAUDE.md update:**
 
-Replace the rule "No new shared query-overlay routing" with: "All entity URLs must use `entity-urls.ts` builders. Overlay context (`'feed'`) is only valid inside feed/explore/calendar surface components. Standalone detail pages must use `'page'` context."
+Replace the rule "No new shared query-overlay routing" with: "All entity URLs must use `entity-urls.ts` builders. Overlay context (`'feed'`) is only valid inside feed/explore/calendar surface components. Standalone detail pages must use `'page'` context. Civic events use `getCivicEventHref()` as a pre-check before the URL builder."
 
 **Not in scope:** Migrating all 160+ existing inline links to the builder. Progressive adoption — new code uses it, old code migrates opportunistically.
 
@@ -55,27 +58,45 @@ Replace the rule "No new shared query-overlay routing" with: "All entity URLs mu
 Exhibitions graduated from "a kind of event" (`content_kind='exhibit'`) to their own entity (`exhibitions` table), but the extraction was never finished. Three gaps:
 
 1. Event feeds don't filter `content_kind='exhibit'` — stale exhibit-events leak into feeds
-2. Exhibitions aren't searchable — missing from `InstantSearchEntityType`
+2. Exhibition search retrieval layer is missing — types/presentation exist but the DB query doesn't
 3. No FK between `exhibitions` and `events` — no way to link related events to an exhibition
 
 ### Design
 
 **2a. Feed filter (immediate insurance)**
 
-Add `.neq("content_kind", "exhibit")` to these query builders:
+Add `.neq("content_kind", "exhibit")` to ALL event query paths in the feed pipeline. The architect review identified 6-8 paths, not just 3:
 
+Primary (via `buildEventQuery()`):
 - `buildEventQuery()` in `web/lib/city-pulse/pipeline/fetch-events.ts` (~line 370)
-- `getFilteredEventsWithSearch()` in `web/lib/search.ts`
-- `getFilteredEventsWithCursor()` in `web/lib/search.ts`
 
-One-line each. Doesn't delete data — exhibit-events remain in the DB and are accessible by direct URL. Just removes them from event feeds where they duplicate their proper exhibition pages.
+Standalone queries in `fetch-events.ts` that bypass `buildEventQuery()`:
+- Evening supplemental query (~line 539)
+- Trending query (~line 559)
+- Horizon pool query (~line 584)
+- `buildInterestQueries()` (~line 427)
+- `fetchNewFromSpots()` (~line 728)
+
+Search queries:
+- `getFilteredEventsWithSearch()` in `web/lib/event-search.ts` (NOT `search.ts`)
+- `getFilteredEventsWithCursor()` in `web/lib/event-search.ts`
+
+Spot detail:
+- Upcoming events query in `web/lib/spot-detail.ts` (~line 544) — exhibits at a museum would otherwise show in the venue's events alongside their proper exhibition page
 
 **2b. Exhibitions in search**
 
-- Add `"exhibition"` to `InstantSearchEntityType` union in `web/lib/instant-search-service.ts`
-- Wire up search query to hit `exhibitions` table with text matching on `title`, `description`, `tags`
-- Add to `getDefaultInstantTypes()` so exhibitions surface in search results
-- Portal-scope via `source_id` / `portal_id` filtering consistent with other entity types
+The search type system already partially supports exhibitions:
+- `EntityType` union in `web/lib/search/types.ts` includes `"exhibition"`
+- `input-schema.ts` allows it, `presenting/grouped.ts` has labels and ordering
+- `search-service.ts` has group caps defined
+
+What's missing: the `search_unified` RPC function in `web/lib/search/unified-retrieval.ts` only searches `["event", "venue"]` by default and has no exhibitions CTE.
+
+Work needed:
+- Add an `exhibitions` CTE to the `search_unified` database function (or the Supabase RPC)
+- Extend the default type list to include `"exhibition"`
+- Verify portal scoping via `source_id` / `portal_id` filtering
 
 **2c. `exhibition_id` FK on events**
 
@@ -87,12 +108,18 @@ CREATE INDEX idx_events_exhibition_id ON events(exhibition_id) WHERE exhibition_
 
 This lets "opening night" or "artist talk" events link to their parent exhibition. The exhibition detail page can query related events via this FK instead of the current loose venue-based "Also at this venue" section.
 
+Note: `exhibition_id` is UUID type to match `exhibitions.id`. One event links to at most one exhibition; multiple events can link to the same exhibition. Standard many-to-one — no junction table needed.
+
+The FK is only useful if crawlers populate it. Phase 2d covers the crawler-side documentation. Actual crawler updates to populate `exhibition_id` on related events are future work — the FK exists as infrastructure for when exhibition crawlers are enhanced.
+
 **2d. Deprecate `content_kind='exhibit'`**
 
 - Update `crawlers/ARCHITECTURE.md` to document: crawlers must create exhibitions in the `exhibitions` table, never as events with `content_kind='exhibit'`
 - Events that relate to exhibitions use the `exhibition_id` FK instead
 - Don't DROP the column or modify the CHECK constraint — that's future cleanup
 - The value `'special'` is similarly vestigial (place_specials is now its own table) but also out of scope for this pass
+
+**Phase 2 is a prerequisite for starting P4 Arts portal build.** The exhibition FK and search integration are the data layer the Arts portal will depend on. If P4 kicks off before Phase 2 ships, the build agent will either skip the FK or re-implement it inconsistently.
 
 ---
 
@@ -104,35 +131,29 @@ Entity detail pages fetch by ID/slug with no portal access check. Any event is v
 
 ### Design
 
-**Approach: Soft redirect**
+**Approach: Soft redirect with cross-portal banner for B2B portals**
 
-If an entity's source isn't federated to the current portal, redirect to the entity under its canonical portal (the source's `owner_portal_id`). Links always work — users land in the correct portal context.
+If an entity's source isn't federated to the current portal, redirect to the entity under its canonical portal (the source's `owner_portal_id`).
 
-**Helper: `getCanonicalPortalForSource(sourceId: number): Promise<string | null>`**
+**B2B portal exception:** For distribution portals (FORTH, future hotel clients), a silent redirect is wrong — the guest leaves the white-labeled experience without understanding why. Instead of redirecting, render a cross-portal banner: "This event isn't part of our [Portal Name] collection. [View on Lost City Atlanta →]". This keeps the guest in the branded portal and makes the curation feel intentional. Detect distribution portals via `portals.portal_type` or a similar field.
 
-Looks up `sources.owner_portal_id` → `portals.slug`. Returns the portal slug that owns this source, or null if the source has no owner.
+**Portal lookup — avoid extra DB round-trip:**
 
-**Implementation per detail page:**
-
-After fetching the entity, check whether the current portal has access via `portal_source_access`. If not, resolve the canonical portal slug and `redirect()`:
-
-```typescript
-// Pseudocode — same pattern for events, series, festivals, exhibitions, spots
-const entity = await getEntityById(id);
-if (!entity) notFound();
-
-const canonicalPortal = await getCanonicalPortalForSource(entity.source_id);
-if (canonicalPortal && canonicalPortal !== activePortalSlug) {
-  redirect(`/${canonicalPortal}/events/${entity.id}`);
-}
+Instead of a separate `getCanonicalPortalForSource()` helper, include the source's portal slug in the initial entity fetch via a join:
+```sql
+source:sources(owner_portal_id, portal:portals(slug))
 ```
+This piggybacks on the existing query — zero additional round trips.
+
+**Add `source_id` to Event TypeScript type:** The `Event` type in `web/lib/supabase.ts` doesn't expose `source_id` even though `getEventById` uses `select(*)`. Add it to the type definition so the portal check doesn't require a cast.
 
 **Pages to update:**
 - `web/app/[portal]/events/[id]/page.tsx`
 - `web/app/[portal]/series/[slug]/page.tsx`
 - `web/app/[portal]/festivals/[slug]/page.tsx`
 - `web/app/[portal]/exhibitions/[slug]/page.tsx`
-- `web/app/[portal]/spots/[slug]/page.tsx`
+
+**Spots excluded from scope:** Places have no `source_id` or `portal_id`. Venues are shared infrastructure — The Earl legitimately appears on both Atlanta and Arts portals. Portal access checks don't apply to venues.
 
 **Not in scope:** Locking down API routes. The `/api/events/[id]` route serves the overlay system and doesn't have portal context in the URL — it stays open. Portal scoping is a presentation-layer concern.
 
@@ -146,52 +167,40 @@ if (canonicalPortal && canonicalPortal !== activePortalSlug) {
 
 **Design:**
 
-New route: `web/app/[portal]/films/[slug]/page.tsx`
+New route: `web/app/[portal]/showtimes/[slug]/page.tsx`
 
+The `/showtimes` route already owns film discovery (`/showtimes` is the showtime board). Placing film detail under `/showtimes/[slug]` creates a natural hierarchy:
+- `/showtimes` — all films playing now (the "what's on" board)
+- `/showtimes/nosferatu` — this specific film's detail page
+
+Implementation:
 - Handles series where `series_type='film'`
 - Film-specific layout: poster hero mode, runtime/director/rating metadata, showtimes grouped by theater
 - Same data layer: `getSeriesBySlug()`, `getSeriesEvents()` — only rendering differs
 
 The existing `/series/[slug]` page:
 - Continues handling `recurring_show`, `class_series`, `festival_program`, `tour`, `other`
-- Adds early redirect: if fetched series has `series_type='film'`, `redirect()` to `/films/[slug]`
-- Old `/series/` URLs for films keep working via this redirect
+- Adds early check: if fetched series has `series_type='film'`, `permanentRedirect()` to `/showtimes/[slug]` (301, not the default 307 from `redirect()`)
+- Old `/series/` URLs for films keep working via this permanent redirect — Google transfers ranking
 
 The `buildSeriesUrl()` function in `entity-urls.ts`:
 - Accepts optional `seriesType` parameter
-- Returns `/films/{slug}` when type is `'film'`, `/series/{slug}` otherwise
+- Returns `/showtimes/{slug}` when type is `'film'`, `/series/{slug}` otherwise
 
 No schema changes needed.
 
-### 4b. Event Slugs
+---
 
-**Problem:** Events are the only entity using numeric IDs in URLs. `/events/12345` is worse for SEO and shareability than `/events/tuesday-jazz-the-earl-2026-04-15`.
+## ~~Phase 4b: Event Slugs~~ — DEFERRED
 
-**Design:**
+**Moved to backlog.** All three expert reviewers agreed: weak ROI at current product stage, large cross-system blast radius (DB + crawlers + web routing), and format needs more design work. Revisit after Arts portal is live and FORTH is closed, when SEO surface and sharing patterns are better understood.
 
-**Schema:**
-```sql
-ALTER TABLE events ADD COLUMN slug TEXT;
-CREATE UNIQUE INDEX idx_events_slug ON events(slug) WHERE slug IS NOT NULL;
-```
-
-**Slug format:** `{slugify(title)}-{venue-slug}-{YYYY-MM-DD}` — e.g., `tuesday-jazz-the-earl-2026-04-15`. Uniqueness suffix appended if collision (e.g., `-2`).
-
-**Slug generation:**
-- At crawl time: crawler pipeline generates slug on event insert/update
-- Backfill migration: one-time script generates slugs for all existing events
-
-**Route change:** `/events/[id]` param becomes `/events/[idOrSlug]`:
-- If param is numeric → ID lookup (existing behavior)
-- If param is string → slug lookup
-- If accessed by ID and event has a slug → 301 redirect to slug URL
-- Old numeric URLs keep working and progressively redirect
-
-**`buildEventUrl()` in entity-urls.ts:**
-- Accepts `{ id: number, slug?: string }` — prefers slug when available
-- Components pass both; URL builder picks the best one
-
-**Not in scope:** Changing the events table PK. IDs remain the internal identifier. Slugs are for URL display only.
+Key design decisions to resolve when revisited:
+- Slug format: `{title}-{date}` (drop venue — date provides sufficient uniqueness)
+- Truncation rules for long titles (cap at ~60 chars before date)
+- Virtual/venue-less event fallback
+- Collision resolution algorithm
+- Blast radius: every event query path needs to fetch/expose the slug field
 
 ---
 
@@ -200,6 +209,14 @@ CREATE UNIQUE INDEX idx_events_slug ON events(slug) WHERE slug IS NOT NULL;
 **Volunteer "More from this group" placeholder:**
 
 `web/app/[portal]/volunteer/[id]/page.tsx` (~lines 530-536) renders a visible section with hardcoded text "More opportunities from X will appear here." This is smoke and mirrors on a live portal. Remove the entire section. It can be rebuilt when the data query exists.
+
+**Route audit for empty states:**
+
+Audit these portal routes that exist in the directory structure but whose data layer may not be confirmed working:
+- `/[portal]/studios/` — listed in Arts portal design but may render empty
+- `/[portal]/open-calls/` — listed as P4 remaining work
+
+If these routes render empty/placeholder states, either add proper empty state messaging or remove the routes until the data layer ships.
 
 ---
 
@@ -211,15 +228,13 @@ Phase 2a (feed filter) ← no dependencies, can ship with Phase 1
 Phase 2b (search) ← no dependencies
 Phase 2c (exhibition FK) ← database migration, independent
 Phase 2d (deprecate content_kind) ← after 2c
-Phase 3 (portal access) ← independent, needs helper function
-Phase 4a (films route) ← depends on Phase 1 (uses buildSeriesUrl)
-Phase 4b (event slugs) ← depends on Phase 1 (uses buildEventUrl), DB migration + crawler changes
+Phase 3 (portal access) ← independent, needs source join in entity queries
+Phase 4a (showtimes route) ← depends on Phase 1 (uses buildSeriesUrl)
 Cleanup ← no dependencies
 ```
 
 **Suggested shipping order:**
-1. Phase 1 + 2a + Cleanup (routing hygiene, feed filter, placeholder removal)
-2. Phase 2b + 2c + 2d (exhibition search + FK + deprecation)
+1. Phase 1 + 2a + Cleanup (routing hygiene, feed filter, placeholder/route audit)
+2. Phase 2b + 2c + 2d (exhibition search + FK + deprecation) — **prerequisite for P4 Arts build**
 3. Phase 3 (portal access checks)
-4. Phase 4a (films route split)
-5. Phase 4b (event slugs — largest, most cross-cutting)
+4. Phase 4a (showtimes route split)
