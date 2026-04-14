@@ -92,6 +92,61 @@ Review any unexpected entries. Functions that should NOT be anon-callable get an
 
 ---
 
+## Finding 4 — Midtown query "525ms overhead" was dev-server cold start, not a structural bug
+
+**Discovered:** 2026-04-13, Sprint E-1.3 (performance diagnosis)
+**Severity:** Low — not a production concern
+**Gating:** NO
+**Affects:** Local dev experience only
+
+### Numbers
+
+Timing instrumentation added to the route handler + search-service revealed:
+
+| Phase | midtown (1st req) | midtown (2nd req) | jazz (warm) | brunch (warm) |
+|---|---|---|---|---|
+| resolvePortal | 539.9ms | 0.6ms | 1.3ms | 1.4ms |
+| parseInput | 1.9ms | 0.1ms | 0.1ms | 0.1ms |
+| search() | 191.7ms | 320.8ms | 340.6ms | 140.2ms |
+| serialize | 0.8ms | 0.2ms | 0.3ms | 0.1ms |
+| **TOTAL** | **738.2ms** | **322.3ms** | **343.1ms** | **142.3ms** |
+
+The 539.9ms was entirely `resolvePortalRequest` — a DB lookup on first invocation
+with a cold Supabase client pool. Not related to the query token "midtown".
+The Next.js compile time for the route added another 602ms on top (shown in
+Next.js's own log as "compile: 602ms").
+
+### Root cause
+`resolvePortalRequest` hits the DB to look up the portal record by slug on first
+call. The Supabase JS client pool is cold on the first request after server start.
+All subsequent calls show `resolvePortal` at 0.6–1.4ms.
+
+### Why midtown looked special
+The performance reviewer benchmarked midtown at 644ms HTTP after starting the dev
+server, then compared to 117ms direct psql (which was a **warm** query on an
+already-connected psql client). The comparison was cold vs warm.
+
+### Production impact
+None. Vercel serverless: the route handler module is warm after the first Lambda
+invocation per region. Connection pooling via PgBouncer/Supavisor means the DB
+pool is pre-warmed. Phase 1 Redis caching will further amortize cold starts.
+
+### Warm performance (what matters)
+Warm midtown: 142ms total. Well inside the p95 target of 415ms for warm-miss
+queries. All filter variants verified live:
+- baseline (no filter): 40 results
+- categories=music: 24 results (narrowed)
+- free=true: 31 results (narrowed)
+- types=event: sections=['event'] only
+- date=weekend: 20 results (narrowed)
+
+### Recommended owners
+No action needed for production. If local dev cold starts are annoying, a
+`resolvePortalRequest` in-memory cache for dev mode would help — but this is
+not worth engineering time.
+
+---
+
 ## Template for future findings
 
 ```markdown
