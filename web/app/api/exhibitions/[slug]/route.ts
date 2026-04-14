@@ -30,7 +30,7 @@ export async function GET(
         `
         id,
         slug,
-        venue_id,
+        place_id,
         source_id,
         portal_id,
         title,

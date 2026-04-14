@@ -65,7 +65,7 @@ async function getProgramBySlug(
       id,
       portal_id,
       source_id,
-      venue_id,
+      place_id,
       name,
       slug,
       description,
