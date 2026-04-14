@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import Link from "next/link";
 import type { ReactElement } from "react";
 import { cache } from "react";
@@ -11,7 +11,6 @@ import {
   formatGenre,
   groupSeriesEventsByVenue,
 } from "@/lib/series";
-import { buildFilmCapsule } from "@/lib/film-capsule";
 import { getRelatedSeries } from "@/lib/series-related";
 import {
   DetailHero,
@@ -211,20 +210,6 @@ function formatTime(timeStr: string | null): string {
   return `${displayHour}:${minutes} ${ampm}`;
 }
 
-// Format runtime for display
-function formatRuntime(minutes: number | null): string {
-  if (!minutes) return "Runtime Unknown";
-  const hours = Math.floor(minutes / 60);
-  const mins = minutes % 60;
-  if (hours > 0 && mins > 0) {
-    return `${hours}h ${mins}m`;
-  } else if (hours > 0) {
-    return `${hours}h`;
-  } else {
-    return `${mins}m`;
-  }
-}
-
 // Format recurrence for display
 function formatRecurrence(series: NonNullable<Awaited<ReturnType<typeof getSeriesBySlug>>>): string {
   if (series.frequency) {
@@ -321,6 +306,11 @@ export default async function PortalSeriesPage({ params }: Props) {
   const activePortalSlug = request?.portal.slug || portalSlug;
   const activePortalName = request?.portal.name || portalSlug.charAt(0).toUpperCase() + portalSlug.slice(1);
 
+  // Films have a dedicated route at /showtimes/[slug]
+  if (series.series_type === "film") {
+    permanentRedirect(`/${activePortalSlug}/showtimes/${series.slug}`);
+  }
+
   const [events, relatedSeries] = await Promise.all([
     getSeriesEvents(series.id),
     getRelatedSeries(series.id, series.series_type, series.genres),
@@ -335,16 +325,12 @@ export default async function PortalSeriesPage({ params }: Props) {
   const previewEvents = events.slice(0, 8);
   const remainingPreviewCount = Math.max(0, events.length - previewEvents.length);
   const listingLabel =
-    series.series_type === "film"
-      ? "showtime"
-      : series.series_type === "festival_program"
-        ? "session"
-        : "event";
+    series.series_type === "festival_program"
+      ? "session"
+      : "event";
 
   // Build subtitle for hero
-  const heroSubtitle = series.series_type === "film"
-    ? [series.year, series.rating].filter(Boolean).join(" • ")
-    : formatRecurrence(series);
+  const heroSubtitle = formatRecurrence(series);
 
   return (
     <>
@@ -395,25 +381,6 @@ export default async function PortalSeriesPage({ params }: Props) {
               </span>
             }
           >
-            {/* Film metadata in hero */}
-            {series.series_type === "film" && (
-              <div className="flex flex-wrap items-center gap-3 text-sm text-[var(--muted)] mt-3">
-                {series.director && (
-                  <span>
-                    Directed by{" "}
-                    <span className="text-[var(--soft)]">{series.director}</span>
-                  </span>
-                )}
-                {series.runtime_minutes && (
-                  <span>{formatRuntime(series.runtime_minutes)}</span>
-                )}
-              </div>
-            )}
-            {series.series_type === "film" && buildFilmCapsule(series) && (
-              <p className="text-xs italic text-[var(--muted)] mt-2">
-                {buildFilmCapsule(series)}
-              </p>
-            )}
           </DetailHero>
 
           {/* Festival Context */}
@@ -456,18 +423,7 @@ export default async function PortalSeriesPage({ params }: Props) {
               Quick summary first. Use next up for immediate planning, then open detailed venue breakdown if needed.
             </p>
             {/* Metadata Grid */}
-            {series.series_type === "film" ? (
-              <MetadataGrid
-                items={[
-                  { label: "Year", value: series.year?.toString() || "Unknown" },
-                  { label: "Runtime", value: formatRuntime(series.runtime_minutes) },
-                  { label: "Rating", value: series.rating || "NR" },
-                  { label: "Showtimes", value: `${events.length}` },
-                  { label: "Venues", value: `${venueShowtimes.length}` },
-                ]}
-                className="mb-6"
-              />
-            ) : series.series_type === "festival_program" ? (
+            {series.series_type === "festival_program" ? (
               <MetadataGrid
                 items={[
                   { label: "Festival", value: series.festival?.name || "Festival" },
@@ -856,7 +812,7 @@ export default async function PortalSeriesPage({ params }: Props) {
           {/* Related Series Section */}
           {relatedSeries.length > 0 && (
             <RelatedSection
-              title={series.series_type === "film" ? "Similar Films" : "You Might Also Like"}
+              title="You Might Also Like"
               count={relatedSeries.length}
               emptyMessage="No similar series found"
             >
@@ -905,11 +861,9 @@ export default async function PortalSeriesPage({ params }: Props) {
           events.length > 0
             ? {
                 label:
-                  series.series_type === "film"
-                    ? "See Showtimes"
-                    : series.series_type === "festival_program"
-                      ? "See Sessions"
-                      : "See Events",
+                  series.series_type === "festival_program"
+                    ? "See Sessions"
+                    : "See Events",
                 href: "#showtimes",
               }
             : undefined
