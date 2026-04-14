@@ -504,7 +504,7 @@ export default async function ExhibitionDetailPage({ params }: Props) {
             {/* Plan My Visit CTA */}
             {venue && (
               <Link
-                href={`/${activePortalSlug}?spot=${venue.slug}`}
+                href={`/${activePortalSlug}/spots/${venue.slug}`}
                 className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#C9874F] px-4 py-3 font-[family-name:var(--font-ibm-plex-mono)] text-sm font-semibold text-[var(--void)] transition-opacity hover:opacity-90 mb-4"
               >
                 <Ticket size={16} weight="bold" aria-hidden="true" />

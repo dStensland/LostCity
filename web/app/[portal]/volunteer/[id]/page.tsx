@@ -297,7 +297,7 @@ export default async function VolunteerDetailPage({ params }: Props) {
               {/* Location — tappable if venue exists */}
               {venue && venueAddress && (
                 <Link
-                  href={`/${activePortalSlug}?spot=${venue.slug}`}
+                  href={`/${activePortalSlug}/spots/${venue.slug}`}
                   scroll={false}
                   className="flex items-center gap-2.5 group"
                 >
@@ -463,7 +463,7 @@ export default async function VolunteerDetailPage({ params }: Props) {
           {/* ── Location card ─────────────────────────────────────── */}
           {venue && (
             <Link
-              href={`/${activePortalSlug}?spot=${venue.slug}`}
+              href={`/${activePortalSlug}/spots/${venue.slug}`}
               scroll={false}
               className="flex items-center gap-3 rounded-2xl p-5 group transition-colors"
               style={{
