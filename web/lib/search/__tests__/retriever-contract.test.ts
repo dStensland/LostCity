@@ -4,10 +4,15 @@
  *   2. MONOTONIC — raw_score is non-increasing in the returned array
  *   3. SELF-LABELED — every candidate has source_retriever === retriever.id
  *
- * This test file exists BEFORE any retriever implementation. It gracefully
- * skips if the retriever registry module is not yet present. When Part E
- * (Tasks 19-22) lands the retrievers, this test becomes active automatically
- * and runs on every CI build.
+ * Sprint E-1.2 FIX: The original test scaffold used a directory-import path
+ * hack (process.cwd() + "/lib/search/retrievers") that Node ESM rejects with
+ * ERR_UNSUPPORTED_DIR_IMPORT. The catch swallowed the error, loadRegistry()
+ * returned null, and every test body exited early via `if (registry === null)
+ * return`. All 4 tests reported passing despite executing zero assertions.
+ *
+ * Fix: static import from @/lib/search/retrievers + real fixture with
+ * non-trivial cross-retriever data including one candidate below the 0.25
+ * trigram floor (which the TrigramRetriever must filter out).
  *
  * Together with the `no-retriever-rpc-calls` ESLint rule, this is the second
  * half of the three-layer contract enforcement: lint prevents DB calls at
@@ -15,75 +20,135 @@
  */
 
 import { describe, it, expect } from "vitest";
-import type { Candidate, Retriever, RetrieverContext } from "@/lib/search/types";
+import { buildRetrieverRegistry } from "@/lib/search/retrievers";
+import type { Candidate, RetrieverContext } from "@/lib/search/types";
 import type { AnnotatedQuery } from "@/lib/search/understanding/types";
-
-// ---------------------------------------------------------------------------
-// Registry loader — gracefully absent until Part E ships
-// ---------------------------------------------------------------------------
-
-type RetrieverRegistry = Record<string, Retriever>;
-
-// UnifiedRetrievalResult shape expected by buildRetrieverRegistry.
-// Kept inline here so this file has zero runtime deps on modules that don't
-// exist yet — adding the real type import in Part E is a one-line change.
-interface UnifiedRetrievalResult {
-  fts: unknown[];
-  trigram: unknown[];
-  structured: unknown[];
-}
-
-// Vite resolves `@/` alias imports at transform time even with @vite-ignore,
-// so we construct the path at runtime to prevent a build-time error when the
-// module doesn't exist yet.
-function buildRegistryPath(): string {
-  // Construct dynamically so Vite's static import analysis cannot intercept it.
-  const base = "/lib/search/retrievers";
-  return base; // evaluated at runtime, not transform time
-}
-
-async function loadRegistry(): Promise<RetrieverRegistry | null> {
-  try {
-    // The path resolves to an absolute filesystem path — bypasses Vite's
-    // alias resolution for the missing module. Uses process.cwd() which
-    // vitest provides in the Node.js test environment.
-    const absPath =
-      typeof process !== "undefined" && process.cwd
-        ? process.cwd() + buildRegistryPath()
-        : null;
-    if (!absPath) return null;
-
-    const mod = await import(/* @vite-ignore */ absPath);
-    if (typeof mod.buildRetrieverRegistry !== "function") return null;
-    const emptyResult: UnifiedRetrievalResult = {
-      fts: [],
-      trigram: [],
-      structured: [],
-    };
-    return mod.buildRetrieverRegistry(emptyResult) as RetrieverRegistry;
-  } catch {
-    // Module not found — Part E hasn't shipped yet. Tests gracefully skip.
-    return null;
-  }
-}
+import type { UnifiedRetrievalResult } from "@/lib/search/unified-retrieval";
 
 // ---------------------------------------------------------------------------
 // Test fixtures
 // ---------------------------------------------------------------------------
 
-// AnnotatedQuery satisfies AnnotatedQueryShape (the retrieve() param type) and
-// the full AnnotatedQuery interface — so this mock works both today and when
-// Part E retrievers accept the full type.
+/**
+ * Non-trivial fixture with:
+ *   - 5 fts rows (monotonically decreasing raw_score)
+ *   - 5 trigram rows: 4 above 0.25 floor + 1 below (e7 at 0.15)
+ *   - 1 cross-retriever overlap: e3 appears in both fts and trigram
+ *   - 1 structured row
+ */
+function buildFixture(): UnifiedRetrievalResult {
+  return {
+    fts: [
+      // Rows must be monotonically non-increasing in raw_score — this mirrors
+      // the SQL function's ORDER BY ts_rank_cd DESC guarantee. FtsRetriever
+      // is a pass-through; the fixture must respect this invariant.
+      {
+        id: "e1",
+        type: "event",
+        source_retriever: "fts",
+        raw_score: 0.9,
+        matched_fields: [],
+        payload: { title: "Jazz Night" },
+      },
+      {
+        id: "v1",
+        type: "venue",
+        source_retriever: "fts",
+        raw_score: 0.85,
+        matched_fields: [],
+        payload: { title: "The Jazz Corner" },
+      },
+      {
+        id: "e2",
+        type: "event",
+        source_retriever: "fts",
+        raw_score: 0.7,
+        matched_fields: [],
+        payload: { title: "Blue Note" },
+      },
+      {
+        id: "e3",
+        type: "event",
+        source_retriever: "fts",
+        raw_score: 0.5,
+        matched_fields: [],
+        payload: { title: "Smooth Jazz Brunch" },
+      },
+      {
+        id: "v2",
+        type: "venue",
+        source_retriever: "fts",
+        raw_score: 0.4,
+        matched_fields: [],
+        payload: { title: "Jazz Room" },
+      },
+    ],
+    trigram: [
+      {
+        id: "e4",
+        type: "event",
+        source_retriever: "trigram",
+        raw_score: 0.8,
+        matched_fields: [],
+        payload: { title: "Jazzy Brunch" },
+      },
+      {
+        id: "e5",
+        type: "event",
+        source_retriever: "trigram",
+        raw_score: 0.6,
+        matched_fields: [],
+        payload: { title: "Jazz Session" },
+      },
+      {
+        id: "e3",
+        type: "event",
+        source_retriever: "trigram",
+        raw_score: 0.45,
+        matched_fields: [],
+        payload: { title: "Smooth Jazz Brunch" },
+      }, // cross-retriever overlap with fts
+      {
+        id: "e6",
+        type: "event",
+        source_retriever: "trigram",
+        raw_score: 0.3,
+        matched_fields: [],
+        payload: { title: "Jaz Evening" },
+      },
+      // BELOW similarity floor 0.25 — TrigramRetriever must filter this out
+      {
+        id: "e7",
+        type: "event",
+        source_retriever: "trigram",
+        raw_score: 0.15,
+        matched_fields: [],
+        payload: { title: "Jz" },
+      },
+    ],
+    structured: [
+      {
+        id: "e8",
+        type: "event",
+        source_retriever: "structured",
+        raw_score: 1.0,
+        matched_fields: [],
+        payload: { title: "Music Category Match" },
+      },
+    ],
+  };
+}
+
 const mockAnnotatedQuery: AnnotatedQuery = Object.freeze({
-  raw: "contract test query",
-  normalized: "contract test query",
+  raw: "jazz",
+  normalized: "jazz",
   tokens: Object.freeze([]) as AnnotatedQuery["tokens"],
   entities: Object.freeze([]) as AnnotatedQuery["entities"],
   spelling: Object.freeze([]) as AnnotatedQuery["spelling"],
   synonyms: Object.freeze([]) as AnnotatedQuery["synonyms"],
   structured_filters: Object.freeze({}),
   intent: { type: "find_event" as const, confidence: 0.7 },
-  fingerprint: "contract-test-fingerprint",
+  fingerprint: "contract-test-fixture",
 });
 
 const mockContext: RetrieverContext = {
@@ -97,60 +162,105 @@ const mockContext: RetrieverContext = {
 // ---------------------------------------------------------------------------
 
 describe("Retriever contract", () => {
-  it("scaffold: registry module is importable (or gracefully absent)", async () => {
-    const registry = await loadRegistry();
-    if (registry === null) {
-      // No registry yet — Part E hasn't shipped retrievers.
-      expect(true).toBe(true);
-      return;
-    }
-    expect(registry).toBeDefined();
+  // Meta-assertion: guards against future regression back to the silent-skip
+  // pattern. If registry is null, every retriever test would silently pass.
+  it("meta: registry is non-null and contains expected retriever ids", () => {
+    const registry = buildRetrieverRegistry(buildFixture());
+    expect(registry).not.toBeNull();
+    expect(Object.keys(registry)).toEqual(
+      expect.arrayContaining(["fts", "trigram", "structured"])
+    );
   });
 
-  it("contract: all registered retrievers are pure (same input → same output)", async () => {
-    const registry = await loadRegistry();
-    if (registry === null) {
-      // Skip until Part E ships
-      return;
-    }
-    for (const [name, retriever] of Object.entries(registry)) {
-      const a = await retriever.retrieve(mockAnnotatedQuery, mockContext);
-      const b = await retriever.retrieve(mockAnnotatedQuery, mockContext);
-      expect(a, `retriever ${name} is not pure`).toEqual(b);
-    }
+  describe("FtsRetriever", () => {
+    it("is pure — same input, same output", async () => {
+      const registry = buildRetrieverRegistry(buildFixture());
+      const a = await registry.fts.retrieve(mockAnnotatedQuery, mockContext);
+      const b = await registry.fts.retrieve(mockAnnotatedQuery, mockContext);
+      expect(a).toEqual(b);
+    });
+
+    it("returns raw_score non-increasing (monotonic)", async () => {
+      const registry = buildRetrieverRegistry(buildFixture());
+      const result = await registry.fts.retrieve(mockAnnotatedQuery, mockContext);
+      expect(result.length).toBeGreaterThan(0);
+      for (let i = 1; i < result.length; i++) {
+        expect(result[i - 1].raw_score).toBeGreaterThanOrEqual(result[i].raw_score);
+      }
+    });
+
+    it("every candidate has source_retriever='fts'", async () => {
+      const registry = buildRetrieverRegistry(buildFixture());
+      const result = await registry.fts.retrieve(mockAnnotatedQuery, mockContext);
+      for (const c of result) {
+        expect(c.source_retriever).toBe("fts");
+      }
+    });
   });
 
-  it("contract: all retrievers return raw_score monotonically non-increasing", async () => {
-    const registry = await loadRegistry();
-    if (registry === null) return;
-    for (const [name, retriever] of Object.entries(registry)) {
-      const results: Candidate[] = await retriever.retrieve(
+  describe("TrigramRetriever", () => {
+    it("is pure — same input, same output", async () => {
+      const registry = buildRetrieverRegistry(buildFixture());
+      const a = await registry.trigram.retrieve(mockAnnotatedQuery, mockContext);
+      const b = await registry.trigram.retrieve(mockAnnotatedQuery, mockContext);
+      expect(a).toEqual(b);
+    });
+
+    it("filters out candidates below 0.25 similarity floor", async () => {
+      const registry = buildRetrieverRegistry(buildFixture());
+      const result = await registry.trigram.retrieve(mockAnnotatedQuery, mockContext);
+      expect(result.length).toBeGreaterThan(0);
+      for (const c of result) {
+        expect(c.raw_score).toBeGreaterThanOrEqual(0.25);
+      }
+      // Specifically: e7 (raw_score 0.15) must NOT appear
+      expect(result.find((c: Candidate) => c.id === "e7")).toBeUndefined();
+    });
+
+    it("returns raw_score non-increasing after filtering", async () => {
+      const registry = buildRetrieverRegistry(buildFixture());
+      const result = await registry.trigram.retrieve(mockAnnotatedQuery, mockContext);
+      for (let i = 1; i < result.length; i++) {
+        expect(result[i - 1].raw_score).toBeGreaterThanOrEqual(result[i].raw_score);
+      }
+    });
+
+    it("every candidate has source_retriever='trigram'", async () => {
+      const registry = buildRetrieverRegistry(buildFixture());
+      const result = await registry.trigram.retrieve(mockAnnotatedQuery, mockContext);
+      for (const c of result) {
+        expect(c.source_retriever).toBe("trigram");
+      }
+    });
+  });
+
+  describe("StructuredRetriever", () => {
+    it("is pure — same input, same output", async () => {
+      const registry = buildRetrieverRegistry(buildFixture());
+      const a = await registry.structured.retrieve(mockAnnotatedQuery, mockContext);
+      const b = await registry.structured.retrieve(mockAnnotatedQuery, mockContext);
+      expect(a).toEqual(b);
+    });
+
+    it("passes through the structured slice", async () => {
+      const registry = buildRetrieverRegistry(buildFixture());
+      const result = await registry.structured.retrieve(
         mockAnnotatedQuery,
         mockContext
       );
-      for (let i = 1; i < results.length; i++) {
-        expect(
-          results[i - 1].raw_score >= results[i].raw_score,
-          `retriever ${name} returned candidates in a non-monotonic order at index ${i}: ${results[i - 1].raw_score} < ${results[i].raw_score}`
-        ).toBe(true);
-      }
-    }
-  });
+      expect(result.length).toBe(1);
+      expect(result[0].id).toBe("e8");
+    });
 
-  it("contract: all emitted candidates have source_retriever matching the retriever id", async () => {
-    const registry = await loadRegistry();
-    if (registry === null) return;
-    for (const [name, retriever] of Object.entries(registry)) {
-      const results: Candidate[] = await retriever.retrieve(
+    it("every candidate has source_retriever='structured'", async () => {
+      const registry = buildRetrieverRegistry(buildFixture());
+      const result = await registry.structured.retrieve(
         mockAnnotatedQuery,
         mockContext
       );
-      for (const candidate of results) {
-        expect(
-          candidate.source_retriever,
-          `retriever ${name} emitted a candidate with mismatched source_retriever: ${candidate.source_retriever}`
-        ).toBe(retriever.id);
+      for (const c of result) {
+        expect(c.source_retriever).toBe("structured");
       }
-    }
+    });
   });
 });
