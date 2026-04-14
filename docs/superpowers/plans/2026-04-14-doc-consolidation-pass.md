@@ -851,6 +851,78 @@ EOF
 )"
 ```
 
+### Task 3.4: Spot-check `STRATEGIC_PRINCIPLES.md` for stale schema references
+
+**Files:**
+- Modify: `STRATEGIC_PRINCIPLES.md`
+
+**Why this task exists:** The doc-inventory triage marked `STRATEGIC_PRINCIPLES.md` as "Authoritative" — but "authoritative" means "still directionally valid", not "verified line-by-line against current code". Expert review escalated this: strategy docs that still reference `venues` as a schema noun will silently contradict the places refactor every time an agent loads them. Authoritative + unverified is worse than stale + flagged, because agents treat authoritative docs as ground truth.
+
+This task does NOT rewrite the strategic content. It only surgically corrects schema references that have drifted.
+
+- [ ] **Step 1: Read `STRATEGIC_PRINCIPLES.md` in full**
+
+Read `/Users/coach/Projects/LostCity/.claude/worktrees/doc-consolidation/STRATEGIC_PRINCIPLES.md`.
+
+- [ ] **Step 2: Grep for known stale schema terms**
+
+Run:
+```bash
+grep -n -E '\bvenues\b|\bvenue_type\b|\bvenue_id\b|unified-search\b|content_kind' /Users/coach/Projects/LostCity/.claude/worktrees/doc-consolidation/STRATEGIC_PRINCIPLES.md
+```
+
+For each match:
+- **Generic English prose** (e.g., "music venues", "iconic venues") → leave alone
+- **Schema references** (e.g., "the venues table", "venue_type", `venue_id`) → update to `places`, `place_type`, `place_id`
+- **`unified-search`** references → note: the legacy stack was deleted; `search_unified()` RPC is the replacement. If the doc mentions the legacy term, update to reference the new RPC.
+- **`content_kind='exhibit'`** references → note: deprecated in favor of `exhibition_id` FK. If the doc mentions the legacy pattern, add a brief note about the deprecation.
+
+- [ ] **Step 3: Check for the three-entity vs four-entity framing**
+
+The current `STRATEGIC_PRINCIPLES.md` may still describe LostCity in three-entity terms (events / destinations / programs). Phase 2 updates the north-star to four-entity (adding exhibitions). Check whether `STRATEGIC_PRINCIPLES.md` needs a matching update for internal consistency.
+
+If it does, add a single sentence or bullet acknowledging exhibitions as the fourth first-class entity. Do NOT rewrite the principles — just add the entity mention where the existing docs enumerate entity types.
+
+- [ ] **Step 4: Add a "Status as of 2026-04-14" header at the top of the file**
+
+After the title heading, insert:
+
+```markdown
+> **Status as of 2026-04-14:** Surgical update — schema references corrected for the `venues` → `places` rename and `search_unified` RPC replacement. Four-entity model (events/places/programs/exhibitions) updated for internal consistency with `.claude/north-star.md`. Strategic principles and hypotheses below remain unchanged. A full strategic review against current product state is a separate follow-up.
+
+```
+
+- [ ] **Step 5: Verify**
+
+Run:
+```bash
+grep -n -E '\bvenues\b|\bvenue_type\b|\bvenue_id\b' /Users/coach/Projects/LostCity/.claude/worktrees/doc-consolidation/STRATEGIC_PRINCIPLES.md
+```
+
+Acceptable matches: generic English prose only ("iconic music venues", etc.) or explicit "renamed from" context you introduced. Schema references should be zero.
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add STRATEGIC_PRINCIPLES.md
+git commit -m "$(cat <<'EOF'
+docs: surgical refresh of STRATEGIC_PRINCIPLES.md for current schema
+
+Expert review escalated this: strategy docs marked "Authoritative" had
+not been verified against current code. Agents treat authoritative docs
+as ground truth; stale schema references silently contradict the places
+refactor every time an agent loads the file.
+
+This commit corrects schema references only (venues → places, unified-search
+legacy references, content_kind='exhibit' deprecation where mentioned) and
+adds a status header. Strategic content unchanged — a full strategic review
+against current product state remains a separate follow-up.
+
+Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
+EOF
+)"
+```
+
 ---
 
 ## Phase 4 — Shipped Plans Archive
