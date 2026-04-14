@@ -66,7 +66,7 @@ describe("portal isolation guardrails", () => {
       "app/api/portals/[slug]/explore/route.ts",
       "app/api/portals/[slug]/feed/route.ts",
       "app/api/portals/[slug]/destinations/specials/route.ts",
-      "lib/search.ts",
+      "lib/event-search.ts",
     ];
 
     const offenders: string[] = [];

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import SmartImage from "@/components/SmartImage";
-import type { EventWithLocation } from "@/lib/search";
+import type { EventWithLocation } from "@/lib/event-search";
 import { SkeletonBlock } from "./_shared";
 
 // ---- FeaturedHero ----------------------------------------------------------

@@ -4,7 +4,7 @@ import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { useCallback, useTransition, useMemo } from "react";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import EventCard from "../EventCard";
-import type { EventWithLocation } from "@/lib/search";
+import type { EventWithLocation } from "@/lib/event-search";
 
 interface FamilyDiscoveryViewProps {
   portalId: string;

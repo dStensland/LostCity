@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { useMapEvents } from "@/lib/hooks/useMapEvents";
-import type { EventWithLocation } from "@/lib/search";
+import type { EventWithLocation } from "@/lib/event-search";
 import type { Spot } from "@/lib/spots-constants";
 import type { MapBounds } from "./MapView";
 

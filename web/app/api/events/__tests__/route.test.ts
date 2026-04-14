@@ -11,7 +11,7 @@ vi.mock("@/lib/rate-limit", () => ({
   },
 }));
 
-vi.mock("@/lib/search", () => ({
+vi.mock("@/lib/event-search", () => ({
   getFilteredEventsWithSearch: vi.fn(),
   getFilteredEventsWithCursor: vi.fn(),
   PRICE_FILTERS: [
@@ -184,7 +184,7 @@ describe("GET /api/events", () => {
 
   describe("Offset-based pagination (legacy)", () => {
     it("returns events with offset pagination when no cursor provided", async () => {
-      const { getFilteredEventsWithSearch } = await import("@/lib/search");
+      const { getFilteredEventsWithSearch } = await import("@/lib/event-search");
       vi.mocked(getFilteredEventsWithSearch).mockResolvedValueOnce({
         events: mockEvents,
         total: 100,
@@ -203,7 +203,7 @@ describe("GET /api/events", () => {
     });
 
     it("uses default page and pageSize when not provided", async () => {
-      const { getFilteredEventsWithSearch } = await import("@/lib/search");
+      const { getFilteredEventsWithSearch } = await import("@/lib/event-search");
       vi.mocked(getFilteredEventsWithSearch).mockResolvedValueOnce({
         events: mockEvents,
         total: 10,
@@ -220,7 +220,7 @@ describe("GET /api/events", () => {
     });
 
     it("validates and clamps page and pageSize parameters", async () => {
-      const { getFilteredEventsWithSearch } = await import("@/lib/search");
+      const { getFilteredEventsWithSearch } = await import("@/lib/event-search");
       vi.mocked(getFilteredEventsWithSearch).mockResolvedValueOnce({
         events: mockEvents,
         total: 10,
@@ -240,7 +240,7 @@ describe("GET /api/events", () => {
 
   describe("Cursor-based pagination", () => {
     it("uses cursor pagination when cursor provided", async () => {
-      const { getFilteredEventsWithCursor } = await import("@/lib/search");
+      const { getFilteredEventsWithCursor } = await import("@/lib/event-search");
       vi.mocked(getFilteredEventsWithCursor).mockResolvedValueOnce({
         events: mockEvents,
         nextCursor: "next-cursor",
@@ -264,7 +264,7 @@ describe("GET /api/events", () => {
     });
 
     it("uses cursor pagination when useCursor=true", async () => {
-      const { getFilteredEventsWithCursor } = await import("@/lib/search");
+      const { getFilteredEventsWithCursor } = await import("@/lib/event-search");
       vi.mocked(getFilteredEventsWithCursor).mockResolvedValueOnce({
         events: mockEvents,
         nextCursor: null,
@@ -280,7 +280,7 @@ describe("GET /api/events", () => {
 
   describe("Filter parameters", () => {
     it("parses and applies search filter", async () => {
-      const { getFilteredEventsWithSearch } = await import("@/lib/search");
+      const { getFilteredEventsWithSearch } = await import("@/lib/event-search");
       vi.mocked(getFilteredEventsWithSearch).mockResolvedValueOnce({
         events: mockEvents,
         total: 10,
@@ -299,7 +299,7 @@ describe("GET /api/events", () => {
     });
 
     it("parses category filters as comma-separated values", async () => {
-      const { getFilteredEventsWithSearch } = await import("@/lib/search");
+      const { getFilteredEventsWithSearch } = await import("@/lib/event-search");
       vi.mocked(getFilteredEventsWithSearch).mockResolvedValueOnce({
         events: mockEvents,
         total: 10,
@@ -318,7 +318,7 @@ describe("GET /api/events", () => {
     });
 
     it("parses price filter correctly", async () => {
-      const { getFilteredEventsWithSearch } = await import("@/lib/search");
+      const { getFilteredEventsWithSearch } = await import("@/lib/event-search");
       vi.mocked(getFilteredEventsWithSearch).mockResolvedValueOnce({
         events: mockEvents,
         total: 10,
@@ -337,7 +337,7 @@ describe("GET /api/events", () => {
     });
 
     it("parses venue_id as integer", async () => {
-      const { getFilteredEventsWithSearch } = await import("@/lib/search");
+      const { getFilteredEventsWithSearch } = await import("@/lib/event-search");
       vi.mocked(getFilteredEventsWithSearch).mockResolvedValueOnce({
         events: mockEvents,
         total: 10,
@@ -356,7 +356,7 @@ describe("GET /api/events", () => {
     });
 
     it("parses date filter correctly", async () => {
-      const { getFilteredEventsWithSearch } = await import("@/lib/search");
+      const { getFilteredEventsWithSearch } = await import("@/lib/event-search");
       vi.mocked(getFilteredEventsWithSearch).mockResolvedValueOnce({
         events: mockEvents,
         total: 10,
@@ -376,7 +376,7 @@ describe("GET /api/events", () => {
     });
 
     it("parses map bounds filter", async () => {
-      const { getFilteredEventsWithSearch } = await import("@/lib/search");
+      const { getFilteredEventsWithSearch } = await import("@/lib/event-search");
       vi.mocked(getFilteredEventsWithSearch).mockResolvedValueOnce({
         events: mockEvents,
         total: 10,
@@ -402,7 +402,7 @@ describe("GET /api/events", () => {
     });
 
     it("excludes classes by default", async () => {
-      const { getFilteredEventsWithSearch } = await import("@/lib/search");
+      const { getFilteredEventsWithSearch } = await import("@/lib/event-search");
       vi.mocked(getFilteredEventsWithSearch).mockResolvedValueOnce({
         events: mockEvents,
         total: 10,
@@ -423,7 +423,7 @@ describe("GET /api/events", () => {
 
   describe("Response headers", () => {
     it("includes cache control headers", async () => {
-      const { getFilteredEventsWithSearch } = await import("@/lib/search");
+      const { getFilteredEventsWithSearch } = await import("@/lib/event-search");
       vi.mocked(getFilteredEventsWithSearch).mockResolvedValueOnce({
         events: mockEvents,
         total: 10,
@@ -440,7 +440,7 @@ describe("GET /api/events", () => {
 
   describe("Error handling", () => {
     it("returns 500 on database error", async () => {
-      const { getFilteredEventsWithSearch } = await import("@/lib/search");
+      const { getFilteredEventsWithSearch } = await import("@/lib/event-search");
       const { logger } = await import("@/lib/logger");
 
       vi.mocked(getFilteredEventsWithSearch).mockRejectedValueOnce(
@@ -461,7 +461,7 @@ describe("GET /api/events", () => {
 
   describe("Social proof enrichment", () => {
     it("enriches events with social proof", async () => {
-      const { getFilteredEventsWithSearch } = await import("@/lib/search");
+      const { getFilteredEventsWithSearch } = await import("@/lib/event-search");
       const { enrichEventsWithSocialProof } = await import("@/lib/social-proof");
 
       vi.mocked(getFilteredEventsWithSearch).mockResolvedValueOnce({

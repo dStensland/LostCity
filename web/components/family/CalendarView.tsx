@@ -8,7 +8,7 @@ import {
   type SchoolCalendarEvent,
 } from "@/lib/types/programs";
 import { isAgeMatch, type KidProfile } from "@/lib/types/kid-profiles";
-import type { EventWithLocation } from "@/lib/search";
+import type { EventWithLocation } from "@/lib/event-search";
 import { FAMILY_TOKENS } from "@/lib/family-design-tokens";
 
 // ---- Palette (Afternoon Field) -------------------------------------------

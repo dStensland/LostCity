@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import UserMenu from "../UserMenu";
-import HeaderSearchButton from "../HeaderSearchButton";
+import { LaunchButton } from "@/components/search/LaunchButton";
 import { useAuth } from "@/lib/auth-context";
 import { ADV, ADV_FONT } from "@/lib/adventure-tokens";
 
@@ -61,7 +61,7 @@ export default function AdventureHeader() {
             className="flex items-center"
             style={{ color: ADV.DARK }}
           >
-            <HeaderSearchButton />
+            <LaunchButton />
           </div>
 
           {/* Auth: brutalist sign-in button when unauthenticated, avatar when authenticated */}

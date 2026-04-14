@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getAvailableFilters } from "@/lib/search";
+import { getAvailableFilters } from "@/lib/event-search";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 import { getOrSetSharedCacheJson } from "@/lib/shared-cache";
 import { logger } from "@/lib/logger";

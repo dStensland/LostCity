@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { usePathname, useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import UserMenu from "../UserMenu";
-import HeaderSearchButton from "../HeaderSearchButton";
+import { LaunchButton } from "@/components/search/LaunchButton";
 import { useAuth } from "@/lib/auth-context";
 import { buildDogMapUrl, buildSavedUrl } from "@/lib/find-url";
 
@@ -249,7 +249,7 @@ export default function DogHeader({
 
           {/* Right side: search + user */}
           <div className="flex items-center gap-2">
-            <HeaderSearchButton />
+            <LaunchButton />
             <UserMenu />
 
             {/* Mobile hamburger */}

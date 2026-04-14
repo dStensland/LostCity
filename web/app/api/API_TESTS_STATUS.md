@@ -34,7 +34,7 @@ Coverage includes:
 - Error handling (500 on database errors)
 - Social proof enrichment
 
-**Key Pattern**: Uses mocked `@/lib/search` module functions instead of deep Supabase mocking, which makes tests fast and reliable.
+**Key Pattern**: Uses mocked `@/lib/event-search` module functions (formerly `@/lib/search` — renamed 2026-04 when the unified search stack claimed the `lib/search/` path) instead of deep Supabase mocking, which makes tests fast and reliable.
 
 ## Remaining Routes
 
@@ -79,7 +79,7 @@ The following routes need test coverage with simpler mocking strategies:
 
 ## Recommended Next Steps
 
-1. Create helper modules for each API route (similar to `@/lib/search`)
+1. Create helper modules for each API route (similar to `@/lib/event-search`)
    - Example: `@/lib/spots.ts` with `getSpots(filters)`
    - Example: `@/lib/preferences.ts` with `getUserPreferences(userId)`, `saveUserPreferences(userId, data)`
 
@@ -108,7 +108,7 @@ The following routes need test coverage with simpler mocking strategies:
 
 ```typescript
 // ✓ GOOD: Mock at business logic level
-vi.mock("@/lib/search", () => ({
+vi.mock("@/lib/event-search", () => ({
   getFilteredEventsWithSearch: vi.fn(),
   enrichEventsWithSocialProof: vi.fn((events) => Promise.resolve(events)),
 }));

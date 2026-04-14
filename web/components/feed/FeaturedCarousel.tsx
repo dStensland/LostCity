@@ -12,7 +12,7 @@ import FeedSectionHeader from "./FeedSectionHeader";
 import SeriesCard from "@/components/SeriesCard";
 import FestivalCard from "@/components/FestivalCard";
 import { groupEventsForDisplay } from "@/lib/event-grouping";
-import type { EventWithLocation } from "@/lib/search";
+import type { EventWithLocation } from "@/lib/event-search";
 
 type FeaturedEvent = {
   id: number;

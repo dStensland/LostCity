@@ -9,7 +9,7 @@ import {
   type SchoolCalendarEvent,
   type ProgramWithVenue,
 } from "@/lib/types/programs";
-import type { EventWithLocation } from "@/lib/search";
+import type { EventWithLocation } from "@/lib/event-search";
 import type { FamilyDestination } from "./FamilyDestinationCard";
 
 // ---- Sections ---------------------------------------------------------------

@@ -464,7 +464,7 @@ These three can be done by separate agents simultaneously since they touch diffe
 - `web/lib/types/venue-destinations.ts` → `web/lib/types/place-destinations.ts`
 
 **Files to modify (types/exports only, NOT Supabase queries):**
-- `web/lib/search.ts` — export types as Place*
+- `web/lib/event-search.ts` — export types as Place* (formerly `web/lib/search.ts`; renamed 2026-04 when the unified search stack took over the `lib/search/` path)
 - `web/lib/unified-search.ts` — export types as Place*
 - `web/lib/search-ranking.ts` — update type names
 - `web/lib/search-preview.ts` — update type names

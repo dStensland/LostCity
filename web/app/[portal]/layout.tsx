@@ -3,6 +3,7 @@ import { PortalProvider } from "@/lib/portal-context";
 import { PortalTheme } from "@/components/PortalTheme";
 import PortalThemeClient from "@/components/PortalThemeClient";
 import { NavigationProgress } from "@/components/ui/NavigationProgress";
+import { UnifiedSearchShell } from "@/components/search/UnifiedSearchShell";
 import { Cormorant_Garamond, DM_Sans, IBM_Plex_Mono, Inter, Playfair_Display, Plus_Jakarta_Sans, Space_Grotesk } from "next/font/google";
 import { Suspense } from "react";
 import { getVerticalStyles } from "@/lib/portal-animation-config";
@@ -141,6 +142,7 @@ export default async function PortalLayout({ children, params }: Props) {
         ].filter(Boolean).join(" ")}
         >
           <NavigationProgress />
+          <UnifiedSearchShell portalSlug={slug} mode="overlay" />
           <Suspense fallback={null}>{children}</Suspense>
           <div className="grain-overlay" aria-hidden="true" />
       </div>

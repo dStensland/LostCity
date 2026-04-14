@@ -254,7 +254,7 @@ export default function HappeningNowPage() {
           } : null,
           category_data: null,
         };
-      }) as unknown as import("@/lib/search").EventWithLocation[];
+      }) as unknown as import("@/lib/event-search").EventWithLocation[];
   }, [items]);
 
   // Extract items for NeighborhoodGrid (needs simple arrays with neighborhood)

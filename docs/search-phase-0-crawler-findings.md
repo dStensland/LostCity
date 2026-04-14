@@ -92,6 +92,122 @@ Review any unexpected entries. Functions that should NOT be anon-callable get an
 
 ---
 
+## Finding 4 — Midtown query "525ms overhead" was dev-server cold start, not a structural bug
+
+**Discovered:** 2026-04-13, Sprint E-1.3 (performance diagnosis)
+**Severity:** Low — not a production concern
+**Gating:** NO
+**Affects:** Local dev experience only
+
+### Numbers
+
+Timing instrumentation added to the route handler + search-service revealed:
+
+| Phase | midtown (1st req) | midtown (2nd req) | jazz (warm) | brunch (warm) |
+|---|---|---|---|---|
+| resolvePortal | 539.9ms | 0.6ms | 1.3ms | 1.4ms |
+| parseInput | 1.9ms | 0.1ms | 0.1ms | 0.1ms |
+| search() | 191.7ms | 320.8ms | 340.6ms | 140.2ms |
+| serialize | 0.8ms | 0.2ms | 0.3ms | 0.1ms |
+| **TOTAL** | **738.2ms** | **322.3ms** | **343.1ms** | **142.3ms** |
+
+The 539.9ms was entirely `resolvePortalRequest` — a DB lookup on first invocation
+with a cold Supabase client pool. Not related to the query token "midtown".
+The Next.js compile time for the route added another 602ms on top (shown in
+Next.js's own log as "compile: 602ms").
+
+### Root cause
+`resolvePortalRequest` hits the DB to look up the portal record by slug on first
+call. The Supabase JS client pool is cold on the first request after server start.
+All subsequent calls show `resolvePortal` at 0.6–1.4ms.
+
+### Why midtown looked special
+The performance reviewer benchmarked midtown at 644ms HTTP after starting the dev
+server, then compared to 117ms direct psql (which was a **warm** query on an
+already-connected psql client). The comparison was cold vs warm.
+
+### Production impact
+None. Vercel serverless: the route handler module is warm after the first Lambda
+invocation per region. Connection pooling via PgBouncer/Supavisor means the DB
+pool is pre-warmed. Phase 1 Redis caching will further amortize cold starts.
+
+### Warm performance (what matters)
+Warm midtown: 142ms total. Well inside the p95 target of 415ms for warm-miss
+queries. All filter variants verified live:
+- baseline (no filter): 40 results
+- categories=music: 24 results (narrowed)
+- free=true: 31 results (narrowed)
+- types=event: sections=['event'] only
+- date=weekend: 20 results (narrowed)
+
+### Recommended owners
+No action needed for production. If local dev cold starts are annoying, a
+`resolvePortalRequest` in-memory cache for dev mode would help — but this is
+not worth engineering time.
+
+---
+
+## Finding 5 — Legacy search stack has broader surface than Tasks 41/42/43 assumed
+
+**Discovered:** 2026-04-14, Task 47 attempt
+**Severity:** Medium — non-portal surfaces still run the old search experience
+**Gating:** NO — Phase 0 still ships; this is Phase 0.5 cleanup
+**Affects:** `/community`, `/happening-now`, and the portal `ExploreHomeScreen` sub-tree
+
+### Situation
+Task 47 tried to delete `web/lib/unified-search.ts` + `web/app/api/search/*`.
+Subagent stopped when Grep enumeration found 20 import sites, including live
+UI consumers that Tasks 41/42/43 did not migrate:
+
+1. **`GlassHeader.tsx`** (used by `app/community/page.tsx`, `app/happening-now/page.tsx`)
+   still renders `HeaderSearchButton` + `MobileSearchOverlay`. Task 42
+   migrated the 8 portal-specific headers but missed `GlassHeader`.
+2. **`ExploreHomeScreen.tsx`** / **`ExploreSearchHero.tsx`** render
+   `FindSearchInput` + `ExploreSearchResults` internally. Task 41 replaced
+   the outer `ExploreShellClient` hero with `UnifiedSearchShell`, but the
+   home-screen sub-tree mounted underneath it still uses the old stack.
+3. **`components/find/ExploreHome.tsx`** (distinct from `ExploreHomeScreen`)
+   is used by `app/[portal]/explore/_components/ExploreSurface.tsx` and also
+   consumes `FindSearchInput`. Task 43 swapped the lane filter bars only.
+4. **Shared types** (`SearchResult`, `SearchFacet`, `UnifiedSearchResponse`)
+   live in `lib/unified-search.ts` and are re-exported by
+   `lib/explore-platform/types.ts`. Moving them to a neutral module is a
+   prerequisite to deleting the source file.
+5. **`lib/portal-attribution.test.ts:163-176`** reads `unified-search.ts`
+   from disk as a portal-isolation sentinel test and would fail on deletion
+   regardless of the UI state.
+
+### Impact
+- Portal pages (`/atlanta`, `/atlanta/explore`, etc. outside the Explore
+  sub-tree) use the new unified search stack. The original unmount bug is
+  fixed; filters flow end-to-end; observability, security, retrieval, and
+  ranking are production-quality on those surfaces.
+- Non-portal community pages (`/community`, `/happening-now`) still run the
+  old HeaderSearchButton/MobileSearchOverlay experience.
+- The portal Explore surface mounts both the new `UnifiedSearchShell` (hero)
+  AND the old `ExploreSearchHero` inside `ExploreHomeScreen` below it.
+  Whether this is visually broken in the browser is untested — worth a QA pass.
+
+### Deferred scope (Phase 0.5)
+Tasks 47 and 48 are deferred from Phase 0. A follow-up sprint should:
+1. Move shared types out of `unified-search.ts` into `lib/search/types.ts`
+2. Replace `HeaderSearchButton` usages inside `GlassHeader` with `LaunchButton`
+3. Strip `FindSearchInput` / `ExploreSearchResults` mounts out of
+   `ExploreHomeScreen`, `ExploreSearchHero`, and `find/ExploreHome`
+4. Delete `lib/unified-search.ts`, the `/api/search/*` routes, and the
+   orphaned helpers (`instant-search-service`, `search-preview`,
+   `search-suggestions`, possibly `useInstantSearch`)
+5. Delete or rewrite `lib/portal-attribution.test.ts:163-176`
+
+### Phase 0 acceptance
+The Phase 0 ship goal was "rebuild search on the portal surface." That's
+achieved on the home and header surfaces. The non-portal community pages and
+the Explore sub-tree weren't explicitly in scope — they were assumed to fall
+out of the reshuffle, but didn't. Ship Phase 0 as-is; file this as a
+Phase 0.5 cleanup ticket.
+
+---
+
 ## Template for future findings
 
 ```markdown

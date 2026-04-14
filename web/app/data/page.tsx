@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { supabase } from "@/lib/supabase";
-import { CATEGORIES } from "@/lib/search";
+import { CATEGORIES } from "@/lib/event-search";
 import { SPOT_TYPES, VIBES, NEIGHBORHOODS } from "@/lib/spots";
 import { ITP_NEIGHBORHOODS } from "@/config/neighborhoods";
 import { PLACE_CATEGORIES } from "@/config/categories";

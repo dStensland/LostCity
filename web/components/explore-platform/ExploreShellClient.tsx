@@ -10,7 +10,7 @@ import type { ExploreLaneInitialDataMap } from "@/lib/explore-platform/lane-data
 import { ExploreSidebar } from "./ExploreSidebar";
 import { ExploreMobileBar } from "./ExploreMobileBar";
 import { ExploreHomeScreen } from "./ExploreHomeScreen";
-import { ExploreSearchHero } from "./ExploreSearchHero";
+import { UnifiedSearchShell } from "@/components/search/UnifiedSearchShell";
 
 function ExploreLaneBranchSkeleton() {
   return (
@@ -26,35 +26,10 @@ function ExploreLaneBranchSkeleton() {
   );
 }
 
-function ExploreSearchBranchSkeleton() {
-  return (
-    <div className="space-y-3 py-4 animate-pulse">
-      <div className="h-5 w-48 rounded bg-[var(--twilight)]/30" />
-      <div className="grid gap-2 md:grid-cols-3">
-        {Array.from({ length: 3 }).map((_, i) => (
-          <div key={i} className="h-20 rounded-xl bg-[var(--twilight)]/20" />
-        ))}
-      </div>
-      <div className="space-y-2">
-        {Array.from({ length: 6 }).map((_, i) => (
-          <div key={i} className="h-16 rounded-xl bg-[var(--twilight)]/15" />
-        ))}
-      </div>
-    </div>
-  );
-}
-
 const DeferredExploreLaneHost = dynamic(
   () => import("./ExploreLaneHost").then((mod) => mod.ExploreLaneHost),
   {
     loading: () => <ExploreLaneBranchSkeleton />,
-  },
-);
-
-const DeferredExploreSearchResults = dynamic(
-  () => import("./ExploreSearchResults").then((mod) => mod.ExploreSearchResults),
-  {
-    loading: () => <ExploreSearchBranchSkeleton />,
   },
 );
 
@@ -147,8 +122,8 @@ function ExploreShellInner({
       <div className="lg:ml-[240px] min-w-0">
         {!state.lane && (
           <div className="flex flex-col gap-5 max-w-5xl mx-auto px-4 py-5 sm:py-6 min-h-[calc(100vh-5rem)]">
-            <ExploreSearchHero portalSlug={portalSlug} portalId={portalId} />
-            {!state.q ? (
+            <UnifiedSearchShell portalSlug={portalSlug} mode="inline" />
+            {!state.q && (
               <ExploreHomeScreen
                 portalSlug={portalSlug}
                 data={homeData}
@@ -158,8 +133,6 @@ function ExploreShellInner({
                   setHomeRetryKey((value) => value + 1);
                 }}
               />
-            ) : (
-              <DeferredExploreSearchResults portalSlug={portalSlug} />
             )}
           </div>
         )}

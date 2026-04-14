@@ -509,6 +509,23 @@ UnifiedSearchShell (mode: "inline" | "overlay")
 
 ## Part 3 — Security
 
+> **Schema reality note (added 2026-04-13 post-midpoint review):**
+> The SQL example in §3.2 below was written before the data coverage audit
+> surfaced the actual column names in the events/places schema. The real
+> schema uses `events.portal_id` (not `owner_portal_id`), `events.place_id`
+> (not `venue_id`), `events.category_id TEXT` (not an FK), `events.start_date DATE`
+> (not `starts_at timestamptz`), and **the table is `places` — `venues` was
+> renamed**. Places has no `portal_id` — portal isolation for place search is
+> enforced via a `portal_venues` CTE that scopes places to those referenced by
+> the current portal's active events.
+>
+> **The canonical, committed implementation** is in
+> `database/migrations/20260413000008_search_unified_hardening.sql` (Sprint A).
+> Use that file as the source of truth for column names, return shape, and
+> portal scoping logic. The §3.2 example below remains useful for
+> illustrating the *pattern* (single SQL function, CTEs, portal isolation)
+> but do not copy its specific column names into new code.
+
 ### 3.1 Input validation (Zod schema)
 
 ```typescript

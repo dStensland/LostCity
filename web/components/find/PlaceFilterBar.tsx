@@ -1,8 +1,9 @@
 "use client";
 
 import React, { useCallback, useEffect, useRef, useState, useMemo } from "react";
-import dynamic from "next/dynamic";
 import CategoryIcon from "@/components/CategoryIcon";
+import { LaneFilterInput } from "@/components/find/LaneFilterInput";
+import { useReplaceStateParams } from "@/lib/hooks/useReplaceStateParams";
 import {
   QUICK_VENUE_TYPES,
   QUICK_VIBES,
@@ -16,13 +17,6 @@ import type { FilterState } from "@/lib/hooks/usePlaceDiscovery";
 import { DEFAULT_FILTERS } from "@/lib/hooks/usePlaceDiscovery";
 import { PlaceFilterSheet } from "@/components/find/PlaceFilterSheet";
 import { triggerHaptic } from "@/lib/haptics";
-
-const FindSearchInput = dynamic(() => import("@/components/find/FindSearchInput"), {
-  loading: () => (
-    <div className="h-10 rounded-xl bg-[var(--dusk)]/60 border border-[var(--twilight)]/50 animate-pulse" />
-  ),
-});
-
 
 // ---------------------------------------------------------------------------
 // FilterDropdown — reusable compact dropdown
@@ -725,7 +719,6 @@ export default function PlaceFilterBar({
   openCount,
   neighborhoods,
   portalSlug,
-  portalId,
   contextLabel,
   userLocation = null,
   onLocationChange,
@@ -733,6 +726,23 @@ export default function PlaceFilterBar({
   filteredCount = 0,
 }: PlaceFilterBarProps) {
   const handleLocationChange = onLocationChange ?? (() => {});
+
+  // Lane filter: read/write ?search= via replaceState (usePlaceDiscovery reads it)
+  const urlParams = useReplaceStateParams();
+  const currentSearch = urlParams.get("search") || "";
+  const handleSearchChange = useCallback((next: string) => {
+    const params = new URLSearchParams(window.location.search);
+    const trimmed = next.trim();
+    if (trimmed) {
+      params.set("search", trimmed);
+    } else {
+      params.delete("search");
+    }
+    params.delete("page");
+    const qs = params.toString();
+    const newUrl = qs ? `${window.location.pathname}?${qs}` : window.location.pathname;
+    window.history.replaceState(window.history.state, "", newUrl);
+  }, []);
 
   // Shared geolocation state — single source for both mobile and desktop
   const [geoLoading, setGeoLoading] = useState(false);
@@ -784,12 +794,10 @@ export default function PlaceFilterBar({
         </div>
       )}
       <div className="mb-3">
-        <FindSearchInput
-          portalSlug={portalSlug}
-          portalId={portalId}
-          basePath={`/${portalSlug}/explore`}
-          findType="destinations"
-          placeholder="Search spots..."
+        <LaneFilterInput
+          value={currentSearch}
+          onChange={handleSearchChange}
+          placeholder="Filter spots..."
         />
       </div>
 

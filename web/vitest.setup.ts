@@ -13,6 +13,7 @@ vi.mock("next/navigation", () => ({
   useSearchParams: () => new URLSearchParams(),
 }));
 
-// Mock environment variables
-process.env.NEXT_PUBLIC_SUPABASE_URL = "https://test.supabase.co";
-process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "test-anon-key";
+// Mock environment variables (only if not already set — lets integration
+// tests opt into the real DB by exporting real values before `vitest run`).
+process.env.NEXT_PUBLIC_SUPABASE_URL ||= "https://test.supabase.co";
+process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||= "test-anon-key";

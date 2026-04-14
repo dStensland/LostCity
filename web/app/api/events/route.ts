@@ -1,4 +1,4 @@
-import { getFilteredEventsWithSearch, getFilteredEventsWithCursor, PRICE_FILTERS, type SearchFilters } from "@/lib/search";
+import { getFilteredEventsWithSearch, getFilteredEventsWithCursor, PRICE_FILTERS, type SearchFilters } from "@/lib/event-search";
 import { applyImageFallbacks } from "@/lib/image-fallback";
 import { enrichEventsWithSocialProof } from "@/lib/social-proof";
 import type { MoodId } from "@/lib/moods";

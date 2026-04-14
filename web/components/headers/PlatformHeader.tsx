@@ -4,13 +4,13 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import Logo from "../Logo";
 import UserMenu from "../UserMenu";
-import HeaderSearchButton from "../HeaderSearchButton";
+import { LaunchButton } from "@/components/search/LaunchButton";
 import SavedEventsButton from "../SavedEventsButton";
 
 /**
  * PlatformHeader — used on portal-agnostic pages (profile, settings, calendar,
  * saved, notifications, etc.). Shows LC branding without portal-specific nav
- * tabs. Mobile search opens MobileSearchOverlay via HeaderSearchButton.
+ * tabs. Mobile search opens the global search overlay via LaunchButton.
  */
 export default function PlatformHeader() {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -39,7 +39,7 @@ export default function PlatformHeader() {
 
         {/* Right: Search + Saved + User */}
         <div className="flex items-center gap-2">
-          <HeaderSearchButton />
+          <LaunchButton />
           <SavedEventsButton />
           <UserMenu />
         </div>

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { Clock, ArrowRight } from "@phosphor-icons/react";
 import { useWeekendForecast } from "@/lib/hooks/useWeekendForecast";
-import type { EventWithLocation } from "@/lib/search";
+import type { EventWithLocation } from "@/lib/event-search";
 import { LibraryPassSection } from "../LibraryPassSection";
 import { FAMILY_TOKENS } from "@/lib/family-design-tokens";
 import { SectionLabel, SeeAllLink, SkeletonBlock } from "./_shared";

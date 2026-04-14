@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState, useCallback, memo, useRef } from "react";
 import Map, { Marker, Popup, NavigationControl, GeolocateControl } from "react-map-gl";
 import type { MapRef } from "react-map-gl";
 import Link from "next/link";
-import type { EventWithLocation } from "@/lib/search";
+import type { EventWithLocation } from "@/lib/event-search";
 import type { Spot } from "@/lib/spots-constants";
 import { MAPBOX_TOKEN, getMapStyle, ATLANTA_CENTER, DEFAULT_ZOOM } from "@/lib/map-config";
 import { usePortal } from "@/lib/portal-context";

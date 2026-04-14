@@ -7,7 +7,7 @@ import SmartImage from "@/components/SmartImage";
 import { useWeekendForecast } from "@/lib/hooks/useWeekendForecast";
 import { matchesEnvironmentFilter } from "@/lib/family-constants";
 import type { GenericFilter } from "./KidFilterChips";
-import type { EventWithLocation } from "@/lib/search";
+import type { EventWithLocation } from "@/lib/event-search";
 import type { KidProfile } from "@/lib/types/kid-profiles";
 import { LibraryPassSection } from "./LibraryPassSection";
 import { FamilyDestinationCard, type FamilyDestination } from "./FamilyDestinationCard";

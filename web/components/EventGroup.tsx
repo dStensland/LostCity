@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import type { EventWithLocation } from "@/lib/search";
+import type { EventWithLocation } from "@/lib/event-search";
 import { decodeHtmlEntities, formatTime, formatTimeSplit } from "@/lib/formats";
 import CategoryIcon, { getCategoryColor, getCategoryLabel, type CategoryType } from "./CategoryIcon";
 import ScopedStyles from "@/components/ScopedStyles";

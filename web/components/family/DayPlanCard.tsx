@@ -6,7 +6,7 @@ import { MapPin, Clock, ArrowRight, Sun, CloudRain } from "@phosphor-icons/react
 import type { BreakDayForecast } from "@/lib/hooks/useBreakForecast";
 import type { ProgramWithVenue } from "@/lib/types/programs";
 import { formatAgeRange, formatCost } from "@/lib/types/programs";
-import type { EventWithLocation } from "@/lib/search";
+import type { EventWithLocation } from "@/lib/event-search";
 import { RegistrationBadge } from "./RegistrationBadge";
 
 // ---- Palette (Afternoon Field) -------------------------------------------

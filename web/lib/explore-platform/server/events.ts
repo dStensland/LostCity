@@ -4,7 +4,7 @@ import {
   PRICE_FILTERS,
   getFilteredEventsWithCursor,
   type SearchFilters,
-} from "@/lib/search";
+} from "@/lib/event-search";
 import { enrichEventsWithSocialProof } from "@/lib/social-proof";
 import { deduplicateCinemaEvents } from "@/lib/cinema-filter";
 import type { MoodId } from "@/lib/moods";

@@ -6,7 +6,7 @@ import Link from "next/link";
 import Image from "@/components/SmartImage";
 import Logo from "../Logo";
 import UserMenu from "../UserMenu";
-import HeaderSearchButton from "../HeaderSearchButton";
+import { LaunchButton } from "@/components/search/LaunchButton";
 import HeroSection from "../HeroSection";
 import BackButton from "./BackButton";
 import { usePortalOptional, DEFAULT_PORTAL, DEFAULT_PORTAL_SLUG } from "@/lib/portal-context";
@@ -274,7 +274,7 @@ export default function ImmersiveHeader({
           <div className="flex items-center gap-2 flex-shrink-0">
             {headerConfig.show_search_in_header !== false && currentView !== "find" && (
               <div className={scrollProgress > 0.3 ? "" : "text-white"}>
-                <HeaderSearchButton />
+                <LaunchButton />
               </div>
             )}
             <UserMenu />

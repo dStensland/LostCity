@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import UserMenu from "../UserMenu";
-import HeaderSearchButton from "../HeaderSearchButton";
+import { LaunchButton } from "@/components/search/LaunchButton";
 import { useAuth } from "@/lib/auth-context";
 
 /*
@@ -64,7 +64,7 @@ export default function ATLittleHeader() {
         {/* Right side actions: search + user menu only */}
         <div className="flex items-center gap-2">
           <div className="rounded-full family-header-pill">
-            <HeaderSearchButton />
+            <LaunchButton />
           </div>
           <div className="rounded-full family-header-pill">
             <UserMenu minimal />
