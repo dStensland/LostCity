@@ -20,10 +20,12 @@ SET search_path = public, pg_temp
 AS $$
 BEGIN
   -- Defense in depth: only the authenticated user may write their own history.
-  -- auth.uid() reads from the current session's JWT. service_role bypass is
-  -- allowed because auth.uid() returns NULL for service_role sessions and we
-  -- want trusted backend code to be able to seed data — but in Phase 0 the
-  -- only caller is the /api/user/recent-searches route (Task 29) which uses
+  -- auth.uid() reads the `sub` claim from the current session's JWT. We
+  -- explicitly REJECT (not bypass) any caller without a JWT — including
+  -- service_role, which has no `sub` claim and therefore returns NULL from
+  -- auth.uid(). If trusted backend code ever needs to seed rows, it must do
+  -- a direct INSERT into user_recent_searches rather than calling this RPC.
+  -- The Phase 0 caller is /api/user/recent-searches, which goes through
   -- withAuth and passes the verified user.id as p_user_id.
   IF auth.uid() IS NULL THEN
     RAISE EXCEPTION 'insert_recent_search: unauthenticated caller';
