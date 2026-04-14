@@ -51,22 +51,28 @@ function isAllowedOrigin(request: NextRequest): boolean {
  * Portal isolation (Phase 0.5 fix):
  * The route is nested under [portal], so the portal context is always known.
  * Before querying saved_items, we filter the client-supplied event/venue IDs
- * through `events.portal_id` / `places.portal_id` lookups so callers cannot
- * probe cross-portal saved state. The old implementation (Phase 0) trusted
- * the client-supplied ID list directly, which was a low-severity info leak
- * on the user's own saves across portals — architect pre-merge review
- * Important finding. This version enforces the portal-isolation invariant
- * baked into every other layer of the search stack.
+ * through portal-scoped lookups so callers cannot probe cross-portal saved
+ * state. The old implementation (Phase 0) trusted the client-supplied ID
+ * list directly, which was a low-severity info leak on the user's own saves
+ * across portals — architect pre-merge review Important finding. This
+ * version enforces the portal-isolation invariant baked into every other
+ * layer of the search stack.
+ *
+ * Events use `events.portal_id = portal.id` directly. Places have NO
+ * `portal_id` column, so venues are scoped via the same pattern the SQL
+ * `search_unified` function uses: a venue belongs to this portal if it
+ * hosts at least one active event in this portal (see the `portal_venues`
+ * CTE in migration 20260413000007_search_unified.sql). That derivation
+ * is authoritative — it's the exact rule the search RPC enforces.
  *
  * Schema notes (verified against production codebase):
  *   - saved_items: columns are user_id, event_id (int4), venue_id (int4).
  *     No item_type discriminator — separate nullable FK columns per entity.
  *   - event_rsvps: columns are user_id, event_id (int4), status.
- *   - events.portal_id is nullable (global events), so the portal filter
- *     uses `.eq("portal_id", portal.id)` which correctly drops NULL rows.
- *   - places.portal_id does NOT exist; places are portal-scoped via city_id.
- *     For Phase 0 we skip venue portal-scoping and accept the minor gap —
- *     this is tracked in a later follow-up. The filter is a no-op on venues.
+ *   - events.portal_id is nullable (global events); `.eq("portal_id", X)`
+ *     correctly drops NULL rows.
+ *   - places has no portal_id; venue portal-scoping uses a distinct
+ *     place_id pull from the portal's events table.
  *
  * The search service emits string IDs (Candidate.id = string). Client
  * passes those string IDs here; we coerce to integers for the DB queries.
@@ -133,17 +139,36 @@ export async function POST(request: NextRequest, context: RouteContext) {
   const eventIntIds = toInts(body.eventIds ?? []);
   const venueIntIds = toInts(body.venueIds ?? []);
 
-  const serviceClient = createServiceClient();
+  // createServiceClient() throws if SUPABASE_SERVICE_KEY is missing.
+  // Surface a sanitized 503 instead of letting the error propagate and
+  // leak a stack in dev (or a generic 500 that masks the root cause).
+  let serviceClient;
+  try {
+    serviceClient = createServiceClient();
+  } catch (err) {
+    console.error("personalize: service client init failed", err);
+    return NextResponse.json(
+      { error: "Personalization unavailable" },
+      { status: 503 }
+    );
+  }
 
-  // Step 1: portal-scope the event IDs. Any ID not belonging to this portal
+  // Step 1a: portal-scope the event IDs. Any ID not belonging to this portal
   // gets dropped before the saved_items query, so a user on /atlanta cannot
   // probe whether they saved an event from /helpatl by guessing event IDs.
-  // Venues are currently portal-scoped via city_id (no places.portal_id
-  // column) — left unscoped for Phase 0 and tracked as a follow-up.
-  const portalScopedEventIds: number[] =
+  //
+  // Step 1b: portal-scope the venue IDs using the same rule search_unified's
+  // `portal_venues` CTE enforces — a venue belongs to this portal if it
+  // hosts at least one active event in the portal. See migration
+  // 20260413000007_search_unified.sql:138-160 for the authoritative rule.
+  //
+  // Both portal-filter queries run in parallel (they're independent PK-in
+  // lookups) so the added latency is max(events, events) ≈ one round-trip
+  // rather than two serial hops.
+  const [portalScopedEventIds, portalScopedVenueIds]: [number[], number[]] = await Promise.all([
     eventIntIds.length === 0
-      ? []
-      : await serviceClient
+      ? Promise.resolve([] as number[])
+      : serviceClient
           .from("events")
           .select("id")
           .eq("portal_id", portal.id)
@@ -151,7 +176,25 @@ export async function POST(request: NextRequest, context: RouteContext) {
           .then((r) => {
             const rows = (r.data ?? []) as Array<{ id: number }>;
             return rows.map((row) => row.id);
-          });
+          }),
+    venueIntIds.length === 0
+      ? Promise.resolve([] as number[])
+      : serviceClient
+          .from("events")
+          .select("place_id")
+          .eq("portal_id", portal.id)
+          .in("place_id", venueIntIds)
+          .not("place_id", "is", null)
+          .then((r) => {
+            const rows = (r.data ?? []) as Array<{ place_id: number | null }>;
+            // Deduplicate — multiple events can reference the same place_id.
+            const unique = new Set<number>();
+            for (const row of rows) {
+              if (row.place_id !== null) unique.add(row.place_id);
+            }
+            return Array.from(unique);
+          }),
+  ]);
 
   // Step 2: fetch saved + RSVP state in parallel against the portal-scoped ID set.
   const [savedEvents, rsvpEvents, savedVenues] = await Promise.all([
@@ -172,13 +215,13 @@ export async function POST(request: NextRequest, context: RouteContext) {
           .eq("user_id", user.id)
           .in("event_id", portalScopedEventIds)
           .then((r) => (r.data ?? []) as Array<{ event_id: number; status: string }>),
-    venueIntIds.length === 0
+    portalScopedVenueIds.length === 0
       ? Promise.resolve([])
       : serviceClient
           .from("saved_items")
           .select("venue_id")
           .eq("user_id", user.id)
-          .in("venue_id", venueIntIds)
+          .in("venue_id", portalScopedVenueIds)
           .not("venue_id", "is", null)
           .then((r) => (r.data ?? []) as Array<{ venue_id: number }>),
   ]);
