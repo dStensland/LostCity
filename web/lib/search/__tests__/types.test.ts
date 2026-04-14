@@ -141,6 +141,7 @@ describe("search/presenting/types", () => {
         total_ms: 100,
         cache_hit: "miss",
         degraded: false,
+        retrieve_total_ms: 0,
         retriever_ms: {},
         result_type_counts: {},
       },
@@ -184,10 +185,12 @@ describe("search/presenting/types", () => {
       total_ms: 0,
       cache_hit: "fresh",
       degraded: false,
+      retrieve_total_ms: 42,
       retriever_ms: {},
       result_type_counts: {},
       annotate_ms: 5,
     };
     expectTypeOf(d.annotate_ms).toEqualTypeOf<number | undefined>();
+    expectTypeOf(d.retrieve_total_ms).toBeNumber();
   });
 });

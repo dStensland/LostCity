@@ -88,7 +88,11 @@ export function buildSearchEventRow(input: BuildRowInput) {
     filters_json: hadFilters ? { had: true } : {},
     cache_hit: presented.diagnostics.cache_hit,
     degraded: presented.diagnostics.degraded,
+    // retriever_breakdown stays as a jsonb map for when we measure per
+    // retriever. retrieve_total_ms is the scalar aggregate that replaces
+    // the old "stuff the total into retriever_ms.fts" anti-pattern.
     retriever_breakdown: presented.diagnostics.retriever_ms,
+    retrieve_total_ms: presented.diagnostics.retrieve_total_ms,
     result_count: presented.sections.reduce((sum, s) => sum + s.total, 0),
     result_type_counts: presented.diagnostics.result_type_counts,
     top_matches_types: presented.topMatches.map((c) => c.type),

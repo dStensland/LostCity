@@ -88,6 +88,7 @@ export const GroupedPresenter: Presenter = {
         total_ms: 0, // filled by orchestrator
         cache_hit: "miss",
         degraded: false,
+        retrieve_total_ms: 0, // filled by orchestrator
         retriever_ms: {},
         result_type_counts: totals,
       },

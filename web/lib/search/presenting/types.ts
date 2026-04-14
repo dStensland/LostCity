@@ -12,6 +12,20 @@ export interface SearchDiagnostics {
   total_ms: number;
   cache_hit: "fresh" | "stale" | "miss";
   degraded: boolean;
+  /**
+   * Total wall-clock time spent in the retrieval phase across ALL retrievers
+   * (the combined cost of the unified retrieval RPC + any follow-up retriever
+   * calls). This is a scalar, not a per-retriever breakdown — it replaces the
+   * old `retriever_ms` scalar-hiding-inside-a-map anti-pattern where the total
+   * was stuffed into `{ fts: <total> }` and misread as an fts-only measure.
+   */
+  retrieve_total_ms: number;
+  /**
+   * Per-retriever timing map, for when we actually measure each retriever
+   * independently. Phase 0 leaves this empty — we only track the aggregate
+   * via retrieve_total_ms. Populated in a later phase when retrievers issue
+   * independent timings.
+   */
   retriever_ms: Partial<Record<RetrieverId, number>>;
   result_type_counts: Partial<Record<EntityType, number>>;
   annotate_ms?: number;

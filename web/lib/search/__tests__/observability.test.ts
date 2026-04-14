@@ -50,7 +50,8 @@ describe("buildSearchEventRow", () => {
     total_ms: 123,
     cache_hit: "miss" as const,
     degraded: false,
-    retriever_ms: { fts: 50 },
+    retrieve_total_ms: 50,
+    retriever_ms: {},
     result_type_counts: { event: 5 },
   };
 
@@ -94,6 +95,23 @@ describe("buildSearchEventRow", () => {
       salt: Buffer.from("0".repeat(64), "hex"),
     });
     expect(row.zero_result).toBe(true);
+  });
+
+  it("logs retrieve_total_ms as a scalar column (not stuffed into a map)", () => {
+    const row = buildSearchEventRow({
+      query: "jazz",
+      portalSlug: "atlanta",
+      segment: "anon",
+      hadFilters: false,
+      presented: basePresented,
+      intentType: "find_event",
+      salt: Buffer.from("0".repeat(64), "hex"),
+    });
+    // The scalar field is present and equals the diagnostics value
+    expect((row as Record<string, unknown>).retrieve_total_ms).toBe(50);
+    // retriever_breakdown is still emitted as a jsonb map for future
+    // per-retriever timings (empty in Phase 0).
+    expect((row as Record<string, unknown>).retriever_breakdown).toEqual({});
   });
 
   it("counts query words correctly", () => {
