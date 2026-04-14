@@ -9,52 +9,20 @@
 import { createServiceClient } from "./supabase/service";
 import { analyzeQueryIntent, applyIntentBoost, extractCategorySignals, extractCleanQuery, type QueryIntentResult, type SearchType } from "./query-intent";
 import { fetchSocialProofCounts } from "@/lib/social-proof";
+import type {
+  SearchResult,
+  SearchFacet,
+  UnifiedSearchResponse,
+} from "@/lib/search/legacy-result-types";
 
 // ============================================
 // Types
 // ============================================
 
-export interface SearchResult {
-  id: number | string;
-  type: "event" | "venue" | "organizer" | "series" | "list" | "neighborhood" | "category" | "festival" | "program" | "exhibition";
-  title: string;
-  subtitle?: string;
-  href: string;
-  score: number;
-  metadata?: {
-    date?: string;
-    time?: string;
-    neighborhood?: string;
-    category?: string;
-    isLive?: boolean;
-    isFree?: boolean;
-    venueType?: string;
-    vibes?: string[];
-    orgType?: string;
-    eventCount?: number;
-    followerCount?: number;
-    rsvpCount?: number;
-    recommendationCount?: number;
-    // Series-specific
-    seriesType?: string;
-    nextEventDate?: string;
-    // List-specific
-    itemCount?: number;
-    curatorName?: string;
-    // Venue-specific ranking signals
-    featured?: boolean;
-    exploreFeatured?: boolean;
-    dataQuality?: number;
-    isEventVenue?: boolean;
-    // Program-specific
-    programType?: string;
-    ageMin?: number;
-    ageMax?: number;
-    registrationStatus?: string;
-    sessionStart?: string;
-    sessionEnd?: string;
-  };
-}
+// Legacy result shapes now live in lib/search/legacy-result-types.ts.
+// Re-exported here temporarily so existing value consumers continue to work
+// until the Phase 0.5 deletion cascade removes this file entirely.
+export type { SearchResult, SearchFacet, UnifiedSearchResponse } from "@/lib/search/legacy-result-types";
 
 export interface SearchOptions {
   query: string;
@@ -80,17 +48,8 @@ export interface SearchOptions {
   timingRecorder?: SearchTimingRecorder;
 }
 
-export interface SearchFacet {
-  type: "event" | "venue" | "organizer" | "series" | "list" | "festival" | "program" | "exhibition";
-  count: number;
-}
-
-export interface UnifiedSearchResponse {
-  results: SearchResult[];
-  facets: SearchFacet[];
-  total: number;
-  didYouMean?: string[];
-}
+// SearchFacet + UnifiedSearchResponse were moved to lib/search/legacy-result-types.ts
+// and are re-exported from the top of this file.
 
 type SearchTimingRecorder = {
   measure<T>(name: string, fn: () => Promise<T> | T, desc?: string): Promise<T>;
