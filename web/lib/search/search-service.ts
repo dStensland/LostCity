@@ -7,6 +7,7 @@ import { GroupedPresenter } from "@/lib/search/presenting";
 import type { PresentedResults, PresentationPolicy } from "@/lib/search/presenting/types";
 import type { RetrieverId, Candidate } from "@/lib/search/types";
 import type { SearchFilterInput } from "@/lib/search/input-schema";
+import type { AnnotatedQuery } from "@/lib/search/understanding/types";
 
 const DEFAULT_POLICY: PresentationPolicy = {
   topMatchesCount: 6,
@@ -30,8 +31,19 @@ export interface SearchOptions {
   portal_slug: string;
   limit: number;
   filters?: SearchFilterInput;
-  user_id?: string;
   signal?: AbortSignal;
+}
+
+/**
+ * Result of search(). Carries both the presented payload for rendering AND
+ * the annotated query used upstream, so callers that need the annotation
+ * (e.g., the route handler logging search_events.intent_type) can read it
+ * off the service result instead of re-invoking annotate() — which would
+ * double the work and double-count in telemetry.
+ */
+export interface SearchResult {
+  annotated: AnnotatedQuery;
+  presented: PresentedResults;
 }
 
 /**
@@ -46,9 +58,14 @@ export interface SearchOptions {
 export async function search(
   raw: string,
   opts: SearchOptions
-): Promise<PresentedResults> {
+): Promise<SearchResult> {
   const started = Date.now();
   const signal = opts.signal ?? new AbortController().signal;
+
+  // Early-abort guard — if the caller cancelled before we started, bail now.
+  if (signal.aborted) {
+    throw new DOMException("search aborted", "AbortError");
+  }
 
   // Phase 1: Understand — pass filterInput so structured_filters and temporal
   // are populated from explicit request params, not left as empty objects.
@@ -70,22 +87,27 @@ export async function search(
     types: opts.filters?.types,
     signal,
   });
-  const retrieveMs = Date.now() - retrieveStart;
 
-  // Phase 3a: Instantiate retrievers reading from the unified result
+  // Phase 3a: Instantiate retrievers reading from the unified result.
+  // Retrievers run in parallel via Promise.all — they share the same
+  // in-memory UnifiedRetrievalResult and never hit the database, so the
+  // parallelism is essentially free but keeps the wall-clock bounded by
+  // the slowest retriever rather than the sum.
   const registry = buildRetrieverRegistry(unifiedResult);
   const retrieverIds: RetrieverId[] = ["fts", "trigram", "structured"];
+  const retrieverResults = await Promise.all(
+    retrieverIds.map((id) =>
+      registry[id].retrieve(annotated, {
+        portal_id: opts.portal_id,
+        limit: opts.limit,
+        types: opts.filters?.types,
+        signal,
+      })
+    )
+  );
   const candidateSets = new Map<RetrieverId, Candidate[]>();
-  for (const id of retrieverIds) {
-    const retriever = registry[id];
-    const candidates = await retriever.retrieve(annotated, {
-      portal_id: opts.portal_id,
-      limit: opts.limit,
-      types: opts.filters?.types,
-      signal,
-    });
-    candidateSets.set(id, candidates);
-  }
+  retrieverIds.forEach((id, i) => candidateSets.set(id, retrieverResults[i]));
+  const retrieveTotalMs = Date.now() - retrieveStart;
 
   // Phase 3b: Rank
   const rankStart = Date.now();
@@ -106,8 +128,11 @@ export async function search(
   presented.diagnostics.annotate_ms = annotateMs;
   presented.diagnostics.rank_ms = rankMs;
   presented.diagnostics.present_ms = presentMs;
-  presented.diagnostics.retriever_ms = { fts: retrieveMs };
+  presented.diagnostics.retrieve_total_ms = retrieveTotalMs;
+  // retriever_ms is reserved for future per-retriever measurements. Phase 0
+  // only tracks the aggregate via retrieve_total_ms.
+  presented.diagnostics.retriever_ms = {};
   presented.diagnostics.cache_hit = "miss";
 
-  return presented;
+  return { annotated, presented };
 }
