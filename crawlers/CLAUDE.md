@@ -6,7 +6,7 @@ This file provides guidance to Claude Code when working with the crawlers pipeli
 
 When multiple Claude Code sessions work in parallel, check `ACTIVE_WORK.md` in the repo root before starting. It tracks which agent is working on what and which files/directories are claimed. Don't modify files claimed by another agent — tell the user if you need to.
 
-See `BACKLOG.md` for the full prioritized roadmap with implementation status.
+See `DEV_PLAN.md` for the active execution status. (Historical roadmap archived to `docs/archive/root-strategy-2026-Q1/BACKLOG.md`.)
 
 ## Core Philosophy
 
@@ -33,7 +33,7 @@ When a crawler visits a venue page, look for and capture:
 2. **Programs** — structured activities with sessions, age ranges, registration (swim lessons, camps, classes, leagues). These are NOT events — they go in the `programs` table if it exists, or as events with `age_min`/`age_max` and appropriate series grouping.
 3. **Recurring programming** — weekly trivia, DJ nights, open mic, karaoke, brunch, yoga. These are `series` with `is_recurring: True`. If the page has a "Weekly Events" or "Regular Programming" section, grab it.
 4. **Specials & deals** — happy hours, daily food/drink specials, brunch deals, industry nights. These go in `venue_specials`, NOT events. Look for "Specials", "Happy Hour", "Daily Deals" sections on venue websites.
-5. **Hours of operation** — opening/closing times by day. Store in `venues.hours` as structured JSON.
+5. **Hours of operation** — opening/closing times by day. Store in `places.hours` as structured JSON.
 6. **Venue metadata** — description, hero image (og:image), vibe tags, cuisine type, price range, parking info, reservation links, social media handles.
 7. **Menu highlights** — not the full menu, but categories that inform vibes (craft cocktails, natural wine, vegan-friendly, etc.)
 
@@ -43,7 +43,7 @@ The goal: after a single crawl, the venue record should be complete enough that 
 
 Before submitting a new crawler, verify it captures everything available:
 
-- [ ] `VENUE_DATA` has all fields filled (name, slug, address, neighborhood, city, state, zip, lat, lng, venue_type, website, vibes)
+- [ ] `PLACE_DATA` has all fields filled (name, slug, address, neighborhood, city, state, zip, lat, lng, place_type, website, vibes)
 - [ ] `image_url` set from og:image or hero image on the page
 - [ ] `description` set from meta description or about section
 - [ ] Hours captured if visible on the page
@@ -65,7 +65,7 @@ Before submitting a new crawler, verify it captures everything available:
 ```
 crawlers/
 ├── main.py                # Orchestration — source registry, parallel execution
-├── db.py                  # All Supabase operations (venues, events, sources, logs)
+├── db.py                  # All Supabase operations (places, events, sources, logs)
 ├── dedupe.py              # Content hash deduplication
 ├── config.py              # Environment config (Supabase keys, API keys)
 ├── tag_inference.py       # Auto-tagging from event/venue data
@@ -109,10 +109,10 @@ python3 main.py --allow-production-writes
 
 Every crawler exports a `crawl(source: dict) -> tuple[int, int, int]` function returning `(events_found, events_new, events_updated)`.
 
-### Venue Data (CRITICAL — always complete)
+### Place Data (CRITICAL — always complete)
 
 ```python
-VENUE_DATA = {
+PLACE_DATA = {
     "name": "Venue Name",
     "slug": "venue-slug",              # Unique, used for dedup
     "address": "123 Main St",
@@ -120,16 +120,21 @@ VENUE_DATA = {
     "city": "Atlanta",
     "state": "GA",
     "zip": "30308",
-    "lat": 33.7834,                    # Required for map placement
+    "lat": 33.7834,                    # Required — auto-populates places.location (PostGIS)
     "lng": -84.3831,
-    "venue_type": "bar",               # bar, restaurant, music_venue, etc.
+    "place_type": "bar",               # bar, restaurant, music_venue, etc. (renamed from venue_type)
     "spot_type": "bar",                # Used for spot filtering in the app
     "website": "https://venue.com",
     "vibes": ["dive-bar", "live-music", "late-night"],  # Discovery tags
 }
+
+# Note: as of 2026-03 the `venues` table was renamed to `places` and `venue_type`
+# to `place_type`. Use `db.get_or_create_place(PLACE_DATA)`. Older crawlers may
+# still pass the variable as `VENUE_DATA` — both work, but new code should use
+# the new names.
 ```
 
-### Venue Types
+### Place Types (the `place_type` taxonomy)
 
 bar, restaurant, music_venue, nightclub, comedy_club, gallery, museum, brewery,
 coffee_shop, bookstore, library, arena, cinema, park, garden, food_hall,
@@ -141,7 +146,7 @@ record_store, studio, fitness_center, community_center, college, university
 
 Every crawler and import should produce data that meets our health targets. See `CRAWLER_STRATEGY.md` for full criteria. Run `python3 data_health.py` to check current scores.
 
-### Minimum Venue Data (when creating via `get_or_create_place`)
+### Minimum Place Data (when creating via `get_or_create_place`)
 
 | Field | Required? | Notes |
 |-------|-----------|-------|
@@ -151,7 +156,7 @@ Every crawler and import should produce data that meets our health targets. See 
 | city, state | Yes | |
 | lat, lng | Yes | Both or neither. Critical for maps |
 | neighborhood | Yes | From coordinates or manual |
-| venue_type | Yes | From valid taxonomy above |
+| place_type | Yes | From valid taxonomy above (renamed from venue_type) |
 | website | Strongly preferred | Enables image/description enrichment |
 | image_url | Preferred | From og:image or Google Places |
 
@@ -253,3 +258,13 @@ Priority neighborhoods for coverage:
 - **West Midtown / Westside** — Ormsby's, Painted Duck, Monday Night Brewing
 - **Inman Park** — Barcelona, Wrecking Bar
 - **Downtown** — Max Lager's, Sidebar, Der Biergarten
+
+## Recent Architectural Shifts (as of 2026-04-14)
+
+When building or updating crawlers, be aware these landed recently:
+
+- **`venues` → `places` rename.** The destination table is now `places`. `venue_type` → `place_type`. `active` → `is_active`. Use `db.get_or_create_place(place_data)` (the function name was already correct). New crawlers should use `PLACE_DATA` as the dict variable name, but `VENUE_DATA` still works. **Note:** `venue_specials` was NOT renamed — that table still exists under its original name.
+- **Exhibitions are first-class — create them in the `exhibitions` table, never as events.** If you crawl a museum/gallery/art space, use `exhibition_utils.py` to create exhibitions. Events related to an exhibition (opening nights, artist talks, walkthroughs) should set `events.exhibition_id` to link back to the parent exhibition — the FK landed in commit `838b9052` and is live. **Do not set `content_kind='exhibit'` on new events** — it's deprecated (see `crawlers/ARCHITECTURE.md` and commit `89026d9b`); the feed filter on it remains only for legacy rows pending migration.
+- **First-pass capture rule still applies.** Capture specials, hours, programs, and venue metadata in the same pass. The places refactor did not change this — every enrichment script is still a crawler failure.
+- **Portal attribution is mandatory.** `sources.owner_portal_id` must be set; events inherit `portal_id` via trigger. Don't bypass this when seeding test data.
+- **Programs are a real entity.** If a venue offers structured classes/lessons/camps with sessions and registration, those are programs (or events with `series_hint`), not loose events. See the Series Grouping section above.
