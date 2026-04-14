@@ -48,8 +48,8 @@ export default function ShareEventButton({
   };
 
   const handleShare = async () => {
-    // Use portal-aware URL structure: /{portal}?event={id}
-    const url = `${window.location.origin}/${portalSlug}?event=${eventId}`;
+    // Use canonical URL for proper SSR, OG tags, and JSON-LD
+    const url = `${window.location.origin}/${portalSlug}/events/${eventId}`;
     const shareText = brandName === "Lost City"
       ? `Check out ${eventTitle} on Lost City`
       : `Check out ${eventTitle} on ${brandName}`;
