@@ -22,29 +22,18 @@ export const PATCH = withAuthAndParams<{ id: string }>(
       return NextResponse.json({ error: "List not found" }, { status: 404 });
     }
 
-    const { name, movie_ids } = await request.json();
+    const body = await request.json();
+    const updates: Record<string, unknown> = {};
 
-    if (name) {
+    if (body.name !== undefined) updates.name = body.name;
+    if (body.description !== undefined) updates.description = body.description?.trim() || null;
+    if (body.sort_order !== undefined) updates.sort_order = body.sort_order;
+
+    if (Object.keys(updates).length > 0) {
       await serviceClient
         .from("goblin_lists")
-        .update({ name } as never)
+        .update(updates as never)
         .eq("id", listId);
-    }
-
-    if (Array.isArray(movie_ids)) {
-      // Replace all movies: delete existing, insert new
-      await serviceClient
-        .from("goblin_list_movies")
-        .delete()
-        .eq("list_id", listId);
-
-      if (movie_ids.length > 0) {
-        const rows = movie_ids.map((mid: number) => ({
-          list_id: listId,
-          movie_id: mid,
-        }));
-        await serviceClient.from("goblin_list_movies").insert(rows as never);
-      }
     }
 
     return NextResponse.json({ success: true });
