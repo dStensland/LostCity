@@ -1,4 +1,5 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
+import { getCanonicalPortalRedirect } from "@/lib/portal-access";
 import Link from "next/link";
 import {
   InfoCard,
@@ -167,6 +168,19 @@ export default async function ExhibitionDetailPage({ params }: Props) {
   }
 
   const activePortalSlug = request?.portal.slug || portalSlug;
+
+  // Portal access check: redirect to canonical portal if source isn't federated here
+  const canonicalPortal = await getCanonicalPortalRedirect(
+    exhibition.source_id,
+    request?.portal.id,
+  );
+  if (canonicalPortal && canonicalPortal !== activePortalSlug) {
+    if (request?.portal.portal_type !== "business") {
+      redirect(`/${canonicalPortal}/exhibitions/${slug}`);
+    }
+    // Business portals: allow rendering — cross-portal banner is a future enhancement
+  }
+
   const accentColor = "var(--action-primary)";
 
   const isArtExhibition = ART_PORTAL_SLUGS.has(portalSlug);

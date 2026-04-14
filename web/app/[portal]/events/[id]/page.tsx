@@ -2,6 +2,7 @@ import ScrollToTop from "@/components/ScrollToTop";
 import { getEventById, getRelatedEvents } from "@/lib/supabase";
 import { format, parseISO } from "date-fns";
 import { notFound, redirect } from "next/navigation";
+import { getCanonicalPortalRedirect } from "@/lib/portal-access";
 import type { Metadata } from "next";
 import { safeJsonLd } from "@/lib/formats";
 import { cache } from "react";
@@ -269,6 +270,18 @@ export default async function PortalEventPage({ params }: Props) {
   // Redirect duplicate events to their canonical version (308 permanent)
   if (event.canonical_event_id && event.canonical_event_id !== event.id) {
     redirect(`/${activePortalSlug}/events/${event.canonical_event_id}`);
+  }
+
+  // Portal access check: redirect to canonical portal if source isn't federated here
+  const canonicalPortal = await getCanonicalPortalRedirect(
+    event.source_id,
+    request?.portal.id,
+  );
+  if (canonicalPortal && canonicalPortal !== activePortalSlug) {
+    if (request?.portal.portal_type !== "business") {
+      redirect(`/${canonicalPortal}/events/${event.id}`);
+    }
+    // Business portals: allow rendering — cross-portal banner is a future enhancement
   }
 
   // Fetch related data in parallel
