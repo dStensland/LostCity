@@ -7,7 +7,7 @@ import Image from "@/components/SmartImage";
 import Logo from "../Logo";
 import UserMenu from "../UserMenu";
 import BackButton from "./BackButton";
-import HeaderSearchButton from "../HeaderSearchButton";
+import { LaunchButton } from "@/components/search/LaunchButton";
 import { usePortalOptional, DEFAULT_PORTAL, DEFAULT_PORTAL_SLUG } from "@/lib/portal-context";
 import { useAuth } from "@/lib/auth-context";
 import { getPortalNavLabel } from "@/lib/nav-labels";
@@ -375,7 +375,7 @@ export default function StandardHeader({
 
           {/* Right: Search, User menu, Mobile overflow */}
           <div className="portal-feed-actions flex items-center gap-1.5 sm:gap-2 flex-shrink-0 ml-auto">
-            {headerConfig.show_search_in_header !== false && currentView !== "find" && currentView !== "happening" && <HeaderSearchButton portalSlug={portalSlug} />}
+            {headerConfig.show_search_in_header !== false && currentView !== "find" && currentView !== "happening" && <LaunchButton />}
             <UserMenu />
 
             {/* Mobile overflow menu — utility items only (nav is in the tab bar below) */}

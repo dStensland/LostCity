@@ -6,7 +6,7 @@ import Link from "next/link";
 import Image from "@/components/SmartImage";
 import Logo from "../Logo";
 import UserMenu from "../UserMenu";
-import HeaderSearchButton from "../HeaderSearchButton";
+import { LaunchButton } from "@/components/search/LaunchButton";
 import BackButton from "./BackButton";
 import { DEFAULT_PORTAL_SLUG } from "@/lib/portal-context";
 import { isHelpAtlSupportDirectoryEnabled } from "@/lib/helpatl-support";
@@ -150,7 +150,7 @@ export default function MinimalHeader({
               Support
             </Link>
           )}
-          {headerConfig.show_search_in_header && currentView !== "find" && <HeaderSearchButton portalSlug={portalSlug} />}
+          {headerConfig.show_search_in_header && currentView !== "find" && <LaunchButton />}
           <UserMenu />
         </div>
       </div>

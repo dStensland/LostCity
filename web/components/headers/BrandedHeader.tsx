@@ -6,7 +6,7 @@ import Link from "next/link";
 import Image from "@/components/SmartImage";
 import Logo from "../Logo";
 import UserMenu from "../UserMenu";
-import HeaderSearchButton from "../HeaderSearchButton";
+import { LaunchButton } from "@/components/search/LaunchButton";
 import BackButton from "./BackButton";
 import { usePortalOptional, DEFAULT_PORTAL } from "@/lib/portal-context";
 import { useAuth } from "@/lib/auth-context";
@@ -210,7 +210,7 @@ export default function BrandedHeader({
 
         {/* Right: Search + User menu + Mobile menu */}
         <div className="flex items-center gap-2 flex-shrink-0">
-          {headerConfig.show_search_in_header !== false && currentView !== "find" && <HeaderSearchButton />}
+          {headerConfig.show_search_in_header !== false && currentView !== "find" && <LaunchButton />}
           <UserMenu />
 
           {/* Mobile hamburger */}
