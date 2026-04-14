@@ -238,14 +238,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         tags = ["music", "concert", "tabernacle", "downtown"]
 
                         title_lower = title.lower()
-                        if any(
-                            w in title_lower
-                            for w in ["comedy", "comedian", "stand-up", "stand up"]
-                        ):
-                            category = "comedy"
-                            subcategory = None
-                            tags = ["comedy", "tabernacle", "downtown"]
-                        elif any(w in title_lower for w in ["murder", "podcast"]):
+                        if any(w in title_lower for w in ["murder", "podcast"]):
                             category = "community"
                             subcategory = "podcast"
                             tags = ["podcast", "tabernacle", "downtown"]
