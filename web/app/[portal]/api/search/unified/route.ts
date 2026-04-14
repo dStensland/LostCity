@@ -159,13 +159,14 @@ export async function GET(request: NextRequest, context: RouteContext) {
 
     return response;
   } catch (err) {
+    // Server-side full detail for debugging, generic response to avoid
+    // leaking DB internals (Supabase error messages often include function
+    // names, argument types, column names, or SQL state).
     console.error("search failed", err);
-    return NextResponse.json(
-      {
-        error: "Search failed",
-        detail: err instanceof Error ? err.message : "unknown",
-      },
-      { status: 500 }
-    );
+    const body: { error: string; detail?: string } = { error: "Search failed" };
+    if (process.env.NODE_ENV !== "production") {
+      body.detail = err instanceof Error ? err.message : "unknown";
+    }
+    return NextResponse.json(body, { status: 500 });
   }
 }
