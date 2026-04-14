@@ -12,7 +12,7 @@ import {
   useReplaceStateSearch,
 } from "@/lib/hooks/useReplaceStateParams";
 import { SuggestionGroup, QuickActionsList } from "@/components/search";
-import type { SearchResult } from "@/lib/unified-search";
+import type { SearchResult } from "@/lib/search/legacy-result-types";
 import type { QuickAction } from "@/lib/search-ranking";
 import type { PreSearchPayload } from "@/lib/search-presearch";
 import { TRENDING_SEARCHES } from "@/lib/search-presearch";

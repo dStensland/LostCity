@@ -8,7 +8,7 @@
  */
 
 import type { ViewMode, FindType, UserPreferences } from "./search-context";
-import type { SearchResult } from "./unified-search";
+import type { SearchResult } from "@/lib/search/legacy-result-types";
 import { ITP_NEIGHBORHOODS, NEIGHBORHOOD_ALIASES } from "@/config/neighborhoods";
 import { buildExploreUrl } from "@/lib/find-url";
 

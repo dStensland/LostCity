@@ -10,7 +10,7 @@ import {
   applyFederatedPortalScopeToQuery,
   filterByPortalCity,
 } from "@/lib/portal-scope";
-import type { SearchFacet, SearchResult, UnifiedSearchResponse } from "@/lib/unified-search";
+import type { SearchFacet, SearchResult, UnifiedSearchResponse } from "@/lib/search/legacy-result-types";
 import { getSearchSuggestionsWithFallback } from "@/lib/search-suggestions";
 import { mapSuggestionToSearchResult } from "@/lib/search-suggestion-results";
 import { getFindSearchSubtitle } from "@/lib/find-labels";

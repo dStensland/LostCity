@@ -1,6 +1,6 @@
 import type { ComponentType } from "react";
 import type { Icon as PhosphorIcon } from "@phosphor-icons/react";
-import type { SearchFacet, SearchResult } from "@/lib/unified-search";
+import type { SearchFacet, SearchResult } from "@/lib/search/legacy-result-types";
 import type { LanePreview, LaneState } from "@/lib/types/explore-home";
 import type { Portal } from "@/lib/portal-context";
 import type { ExploreLaneInitialDataMap } from "./lane-data";

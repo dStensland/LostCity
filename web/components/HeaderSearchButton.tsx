@@ -7,7 +7,7 @@ import { buildSearchResultHref } from "@/lib/search-navigation";
 import { addRecentSearch } from "@/lib/searchHistory";
 import { SuggestionGroup } from "@/components/search";
 import { MobileSearchOverlay } from "@/components/search/MobileSearchOverlay";
-import type { SearchResult } from "@/lib/unified-search";
+import type { SearchResult } from "@/lib/search/legacy-result-types";
 import { buildExploreUrl } from "@/lib/find-url";
 
 // ─── Types ────────────────────────────────────────────────────────────────────

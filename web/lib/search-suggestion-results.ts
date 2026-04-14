@@ -1,4 +1,4 @@
-import type { SearchResult } from "@/lib/unified-search";
+import type { SearchResult } from "@/lib/search/legacy-result-types";
 import type { SearchSuggestion } from "@/lib/search-suggestions";
 import type { FindType } from "@/lib/find-filter-schema";
 import { buildExploreUrl } from "@/lib/find-url";

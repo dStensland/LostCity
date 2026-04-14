@@ -1,4 +1,4 @@
-import type { SearchResult } from "@/lib/unified-search";
+import type { SearchResult } from "@/lib/search/legacy-result-types";
 import { buildExploreUrl } from "@/lib/find-url";
 
 const DEFAULT_SEARCH_PORTAL = "atlanta";

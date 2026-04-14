@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { buildSearchResultHref } from "@/lib/search-navigation";
 import { useExploreUrlState } from "@/lib/explore-platform/url-state";
-import type { SearchResult } from "@/lib/unified-search";
+import type { SearchResult } from "@/lib/search/legacy-result-types";
 
 // ─── Synthetic fallback detection ────────────────────────────────────────────
 // The instant-search API injects placeholder rows with IDs like

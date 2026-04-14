@@ -11,7 +11,7 @@ import {
   getVerticalFromRequest,
 } from "@/lib/portal-query-context";
 import { buildInstantSearchPayload, type InstantSearchEntityType } from "@/lib/instant-search-service";
-import type { UnifiedSearchResponse } from "@/lib/unified-search";
+import type { UnifiedSearchResponse } from "@/lib/search/legacy-result-types";
 
 const PREVIEW_CACHE_TTL_MS = 30 * 1000;
 const PREVIEW_CACHE_MAX_ENTRIES = 200;

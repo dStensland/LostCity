@@ -1,6 +1,6 @@
 "use client";
 
-import { type SearchResult } from "@/lib/unified-search";
+import { type SearchResult } from "@/lib/search/legacy-result-types";
 import { TypeIcon } from "../SearchResultItem";
 
 // ============================================

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import type { SearchResult } from "@/lib/unified-search";
+import type { SearchResult } from "@/lib/search/legacy-result-types";
 import { formatCompactCount } from "@/lib/formats";
 import { buildSearchResultHref } from "@/lib/search-navigation";
 import { PUBLIC_EVENT_CATEGORY_OPTIONS } from "@/lib/event-taxonomy";

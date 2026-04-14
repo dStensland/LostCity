@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildSearchResultHref } from "@/lib/search-navigation";
-import type { SearchResult } from "@/lib/unified-search";
+import type { SearchResult } from "@/lib/search/legacy-result-types";
 
 describe("buildSearchResultHref", () => {
   it("preserves explicit hrefs for synthetic search suggestions", () => {
