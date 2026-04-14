@@ -43,7 +43,7 @@ function BestOfPlaceCardInner({
 
   const handleVenueClick = () => {
     if (venue.slug) {
-      router.push(`/${portalSlug}/venues/${venue.slug}`);
+      router.push(`/${portalSlug}/spots/${venue.slug}`);
     }
   };
 

@@ -66,7 +66,7 @@ interface SpotCardProps {
 }
 
 function SpotCard({ name, slug, neighborhood, image_url, portalSlug }: SpotCardProps) {
-  const href = slug ? `/${portalSlug}/venues/${slug}` : null;
+  const href = slug ? `/${portalSlug}/spots/${slug}` : null;
   const inner = (
     <div className="flex-shrink-0 w-36 sm:w-full rounded-card overflow-hidden bg-[var(--night)] border border-[var(--twilight)]/40 hover-lift shadow-card-sm sm:flex sm:flex-row">
       <div className="relative h-20 sm:h-auto sm:w-16 sm:flex-shrink-0 bg-[var(--dusk)]">

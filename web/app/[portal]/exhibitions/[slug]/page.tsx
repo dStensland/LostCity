@@ -464,7 +464,7 @@ export default async function ExhibitionDetailPage({ params }: Props) {
                 <SectionHeader title="Venue" />
                 <div className="mb-4">
                   <Link
-                    href={`/${activePortalSlug}/venues/${venue.slug}`}
+                    href={`/${activePortalSlug}/spots/${venue.slug}`}
                     className="group flex items-start gap-3 p-3 border border-[var(--twilight)] hover:border-[var(--soft)] transition-colors"
                   >
                     <div className="flex-1 min-w-0">

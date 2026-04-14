@@ -36,7 +36,7 @@ export const VenueShowsCard = memo(function VenueShowsCard({
   fallbackIcon,
   renderMeta,
 }: VenueShowsCardProps) {
-  const venueHref = `/${portalSlug}/places/${venue.slug}`;
+  const venueHref = `/${portalSlug}/spots/${venue.slug}`;
   const countLabel = `${showCount} ${showCount === 1 ? "show" : "shows"} tonight`;
 
   const fallbackBg = `color-mix(in srgb, ${accentColor} 15%, transparent)`;

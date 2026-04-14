@@ -159,7 +159,7 @@ export const ClassStudioSchedule = memo(function ClassStudioSchedule({
             </div>
             {hasFullMeta && (
               <Link
-                href={`/${portalSlug}/places/${studioSlug}`}
+                href={`/${portalSlug}/spots/${studioSlug}`}
                 className="flex-shrink-0 text-xs font-medium text-[var(--coral)] hover:text-[var(--coral)]/80 transition-colors mt-0.5 whitespace-nowrap"
               >
                 See venue →
