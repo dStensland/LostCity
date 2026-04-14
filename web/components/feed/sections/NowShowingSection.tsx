@@ -86,7 +86,7 @@ type ShowtimesResponse = {
 
 // ── Constants ────────────────────────────────────────────────────────
 
-const MAX_FILMS_PER_CARD = 4;
+const MAX_FILMS_PER_CARD = 3;
 const MAX_TIMES_PER_FILM = 4;
 const CARD_WIDTH = 256; // w-64
 const GAP = 12; // gap-3

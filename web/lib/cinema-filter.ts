@@ -26,6 +26,7 @@ const CHAIN_CINEMA_PATTERNS = [
   /\bmovie tavern\b/i,
   /\bcinepolis\b/i,
   /\blook cinemas?\b/i,
+  /\bstudio movie grill\b/i,
 ];
 
 export function isRegularShowtimeEvent(

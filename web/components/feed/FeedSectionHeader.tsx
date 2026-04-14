@@ -158,8 +158,12 @@ export default function FeedSectionHeader({
 
         case "cinema":
           return (
-            <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              {displayIcon && (
+                <span className="text-[var(--section-accent)] [&>svg]:w-[18px] [&>svg]:h-[18px]">{displayIcon}</span>
+              )}
               <h3 className="section-header-cinema">{title}</h3>
+              <div className="flex-1" />
               {seeAll}
             </div>
           );
