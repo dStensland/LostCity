@@ -1,7 +1,9 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
 import { UnifiedSearchShell } from "@/components/search/UnifiedSearchShell";
+import { useSearchStore } from "@/lib/search/store";
 import { RESERVED_PORTAL_ROUTE_SLUGS } from "@/lib/portal-runtime/types";
 
 /**
@@ -31,6 +33,23 @@ import { RESERVED_PORTAL_ROUTE_SLUGS } from "@/lib/portal-runtime/types";
 export function RootSearchOverlay() {
   const pathname = usePathname();
   const portalSlug = derivePortalSlug(pathname);
+
+  // Reset the store when the user crosses a portal boundary. The shell is
+  // mounted once in the root layout and persists across every client
+  // navigation (by design — survives route changes without remounting), so
+  // stale `raw`/`results`/`filters` from the old portal would otherwise
+  // leak into the new portal's overlay on first open — producing a
+  // one-frame flash of wrong-portal results before the next fetch lands.
+  // Intra-portal navigation (e.g., /atlanta → /atlanta/explore) preserves
+  // search continuity; only cross-portal transitions reset.
+  const prevSlugRef = useRef(portalSlug);
+  useEffect(() => {
+    if (prevSlugRef.current !== portalSlug) {
+      prevSlugRef.current = portalSlug;
+      useSearchStore.getState().clear();
+    }
+  }, [portalSlug]);
+
   return <UnifiedSearchShell portalSlug={portalSlug} mode="overlay" />;
 }
 

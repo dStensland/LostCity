@@ -1725,17 +1725,34 @@ web/app/api/search/suggestions/route.ts                      # orphaned
 # ExploreSearchResults.tsx becomes UnifiedSearchShell inline mode content
 ```
 
-**Files modified (Phase 0):**
+**Files modified (Phase 0 + Phase 0.5):**
 
 ```
+# Phase 0
 web/components/explore-platform/ExploreShellClient.tsx      # renders UnifiedSearchShell inline
-web/components/explore-platform/ExploreSearchHero.tsx       # becomes thin wrapper or deleted
-web/components/explore-platform/ExploreHomeScreen.tsx       # unchanged (already refactored today)
+web/components/explore-platform/ExploreHomeScreen.tsx       # JSDoc updated to reference UnifiedSearchShell (Phase 0.5)
 web/components/find/EventsFinder.tsx                        # uses LaneFilterInput
 web/components/find/PlaceFilterBar.tsx                      # uses LaneFilterInput
-web/components/headers/*.tsx                                # replace HeaderSearchButton with LaunchButton
+web/components/headers/*.tsx                                # replaced HeaderSearchButton with LaunchButton
 web/lib/rate-limit.ts                                       # add search presets (Phase 1)
-web/next.config.ts                                          # add Referrer-Policy header
+web/next.config.ts                                          # add Referrer-Policy header (already present)
+# ExploreSearchHero.tsx, ExploreSearchResults.tsx, FindSearchInput.tsx,
+# HeaderSearchButton.tsx, MobileSearchOverlay.tsx listed above as "deleted"
+# — they were removed in Phase 0.5's cascade, not modified.
+
+# Phase 0.5 — legacy cleanup + regression fix
+web/components/GlassHeader.tsx                              # HeaderSearchButton → LaunchButton
+web/components/search/RootSearchOverlay.tsx                 # new — root-layout overlay mount
+web/app/layout.tsx                                          # mount RootSearchOverlay in provider chain
+web/app/[portal]/layout.tsx                                 # remove duplicate overlay mount (root covers it)
+web/app/[portal]/api/search/unified/personalize/route.ts    # portal-scope event + venue IDs
+web/lib/search/search-service.ts                            # diagnostics immutable via spread
+web/lib/portal-attribution.test.ts                          # drop unified-search disk sentinel
+web/scripts/perf-audit.ts                                   # retarget to new /{portal}/api/search/unified
+web/scripts/prewarm-cache.ts                                # retarget to new /{portal}/api/search/unified
+web/package.json                                            # drop search:audit / search:check npm scripts
+.github/workflows/web-perf-smoke.yml                        # drop 'Run search quality audit' step
+database/migrations/20260413000012_revoke_anon_insert_recent_search.sql  # new (Phase 0 security H1)
 ```
 
 ---
