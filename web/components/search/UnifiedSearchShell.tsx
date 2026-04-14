@@ -47,6 +47,30 @@ export function UnifiedSearchShell({ portalSlug, mode }: UnifiedSearchShellProps
   useEffect(() => setMounted(true), []);
   useEffect(() => setRecents(loadRecents()), []);
 
+  // Inline mode only: seed store from URL on mount
+  useEffect(() => {
+    if (mode !== "inline") return;
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const q = params.get("q") ?? "";
+    if (q) useSearchStore.getState().setRaw(q);
+  }, [mode]);
+
+  // Inline mode only: write raw back to URL (debounced 400ms)
+  useEffect(() => {
+    if (mode !== "inline") return;
+    if (typeof window === "undefined") return;
+    const t = setTimeout(() => {
+      const params = new URLSearchParams(window.location.search);
+      const trimmed = raw.trim();
+      if (trimmed) params.set("q", trimmed);
+      else params.delete("q");
+      const next = params.toString() ? `${window.location.pathname}?${params.toString()}` : window.location.pathname;
+      window.history.replaceState(window.history.state, "", next);
+    }, 400);
+    return () => clearTimeout(t);
+  }, [mode, raw]);
+
   // Body-scroll lock in overlay mode
   useEffect(() => {
     if (mode !== "overlay" || !overlayOpen) return;
