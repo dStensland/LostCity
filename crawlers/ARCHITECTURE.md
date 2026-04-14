@@ -92,10 +92,14 @@ what earlier phases did not provide unless explicitly allowed.
 Use the storage lane that matches the user-visible contract:
 
 - `events`: dated happenings that belong in the feed.
-- `events` + `content_kind='exhibit'`: exhibitions with real date ranges.
+- ~~`events` + `content_kind='exhibit'`~~: **DEPRECATED.** See note below.
 - `series`: recurring classes, weekly shows, festival programs, film runs.
 - `programs`: structured enrollment-based activities with registration state.
 - `exhibitions`: exhibition runs that deserve independent identity beyond event cards.
+  **All exhibitions must be created in this table** (via `exhibition_utils.py`),
+  never as events with `content_kind='exhibit'`. Events related to an exhibition
+  (opening nights, artist talks) should set `exhibition_id` to link to the parent
+  exhibition record. `content_kind='exhibit'` is filtered from all event feeds.
 - `destination_details`: reusable destination-intelligence extensions for drive
   time, commitment, conditions fit, and practical planning.
 - concrete opportunity tables: deadline- or commitment-driven actionables such
