@@ -6,6 +6,7 @@ import { VenueResultCard } from "./VenueResultCard";
 import { OrganizerResultCard } from "./OrganizerResultCard";
 import { SeriesResultCard } from "./SeriesResultCard";
 import { FestivalResultCard } from "./FestivalResultCard";
+import { ExhibitionResultCard } from "./ExhibitionResultCard";
 import { ProgramResultCard } from "./ProgramResultCard";
 import { NeighborhoodResultCard } from "./NeighborhoodResultCard";
 import { CategoryResultCard } from "./CategoryResultCard";
@@ -28,6 +29,8 @@ export function ResultCard({ candidate, variant, isSaved }: ResultCardProps) {
       return <SeriesResultCard candidate={candidate} variant={variant} isSaved={isSaved} />;
     case "festival":
       return <FestivalResultCard candidate={candidate} variant={variant} />;
+    case "exhibition":
+      return <ExhibitionResultCard candidate={candidate} variant={variant} isSaved={isSaved} />;
     case "program":
       return <ProgramResultCard candidate={candidate} variant={variant} />;
     case "neighborhood":
