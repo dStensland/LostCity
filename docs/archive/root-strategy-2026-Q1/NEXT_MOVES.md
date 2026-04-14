@@ -1,3 +1,7 @@
+> **ARCHIVED 2026-04-14.** This document predates the consumer-ready shift (March 2026), the places refactor, exhibitions as a first-class entity, and search_unified. The "moat builder" feature ideas are not active work. The active priorities live in `DEV_PLAN.md` and `.claude/north-star.md`. Kept for historical reference only.
+
+---
+
 # LostCity: Next Moves — Moat Building + Elite Design
 
 > **Archived 2026-03-21.** This document was written 2026-02-10 when foundation phases A-M were freshly complete. The active roadmap is now **`DEV_PLAN.md`** with active portal ecosystem work (P1-P5), and the strategic frame has shifted from "demo-ready" to "consumer-ready" (see `STRATEGIC_PRINCIPLES.md`). The moat-building ideas below remain directionally valid but effort ratings (S/M/L) should be ignored — build cost is no longer a decision variable (Principle 12).
