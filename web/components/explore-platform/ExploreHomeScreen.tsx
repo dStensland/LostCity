@@ -17,9 +17,11 @@ interface ExploreHomeScreenProps {
 /**
  * Body of the Explore home (quick intents + pick-a-lane grid).
  *
- * Rendered below <ExploreSearchHero> when no search query is active. The hero
- * lives in the parent shell so it stays mounted across the home ↔ results
- * swap; keeping it inside this component causes the input to unmount mid-type.
+ * Rendered below <UnifiedSearchShell mode="inline"> in ExploreShellClient when
+ * no search query is active. The shell owns the input AND the results surface,
+ * reading/writing Zustand directly so the input stays mounted across the
+ * home ↔ results swap — the architectural fix for the original unmount bug
+ * (keeping the input inside this screen caused it to unmount mid-type).
  */
 export function ExploreHomeScreen({
   portalSlug,
