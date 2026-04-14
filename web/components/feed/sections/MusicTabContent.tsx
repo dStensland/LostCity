@@ -43,6 +43,22 @@ interface MusicVenueGroup {
 const ACCENT = "#E855A0";
 const FETCH_TIMEOUT_MS = 10_000;
 const MAX_DIRECTORY_VENUES = 6;
+const MAX_TONIGHT_SHOWS = 10;
+
+/** Filter out non-music events that leak through category/is_show filters */
+const JUNK_TITLE_PATTERNS = [
+  /\bfor the very young\b/i,
+  /\bkids\b.*\bcrafts?\b/i,
+  /\bfield trips?\b/i,
+  /\bvinofile\b/i,
+  /\bpick-?up party\b/i,
+  /\bclosing reception\b/i,
+  /\bopening reception\b/i,
+  /\blistening session\b/i,
+  /\bportrait session\b/i,
+  /^event for calendar\b/i,
+  /^test\b/i,
+];
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
@@ -103,16 +119,30 @@ export default function LiveMusicSection({
 
   const tonightShows = useMemo(() => {
     const flat: { show: MusicShow; venue: MusicVenue }[] = [];
+    const seenTitles = new Set<string>();
     for (const vg of filteredData) {
       for (const show of vg.shows) {
-        if (show.start_date === today) {
-          flat.push({ show, venue: vg.venue });
-        }
+        if (show.start_date !== today) continue;
+        // Filter junk titles
+        if (JUNK_TITLE_PATTERNS.some((p) => p.test(show.title))) continue;
+        // Deduplicate by normalized title
+        const normTitle = show.title.toLowerCase().replace(/[^a-z0-9]/g, "");
+        if (seenTitles.has(normTitle)) continue;
+        seenTitles.add(normTitle);
+        flat.push({ show, venue: vg.venue });
       }
     }
-    return flat.sort((a, b) =>
-      (a.show.start_time ?? "").localeCompare(b.show.start_time ?? ""),
-    );
+    // Sort evening-first (17:00+), then by time ascending
+    return flat
+      .sort((a, b) => {
+        const ta = a.show.start_time ?? "23:59";
+        const tb = b.show.start_time ?? "23:59";
+        const aEvening = ta >= "17:00";
+        const bEvening = tb >= "17:00";
+        if (aEvening !== bEvening) return aEvening ? -1 : 1;
+        return ta.localeCompare(tb);
+      })
+      .slice(0, MAX_TONIGHT_SHOWS);
   }, [filteredData, today]);
 
   const allDirectoryVenues = useMemo(() => {
