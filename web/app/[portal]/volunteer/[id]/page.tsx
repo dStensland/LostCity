@@ -499,42 +499,6 @@ export default async function VolunteerDetailPage({ params }: Props) {
             </Link>
           )}
 
-          {/* ── More from this group ──────────────────────────────── */}
-          {event.organization && (
-            <div
-              className="rounded-2xl p-5"
-              style={{
-                backgroundColor: CARD_BG,
-                border: `1px solid ${BORDER}`,
-              }}
-            >
-              {/* Section header */}
-              <div className="flex items-center justify-between mb-4">
-                <h2
-                  className="text-xs font-mono font-bold uppercase tracking-wider"
-                  style={{ color: TEXT_MUTED }}
-                >
-                  More From This Group
-                </h2>
-                <Link
-                  href={`/${activePortalSlug}?org=${event.organization.slug}&category=volunteer`}
-                  className="flex items-center gap-1 text-xs font-medium"
-                  style={{ color: GREEN }}
-                >
-                  See all
-                  <ArrowRight size={12} weight="bold" />
-                </Link>
-              </div>
-
-              {/* Placeholder cards — populated when org has events */}
-              <p
-                className="text-sm text-center py-4"
-                style={{ color: TEXT_MUTED }}
-              >
-                More opportunities from {event.organization.name} will appear here.
-              </p>
-            </div>
-          )}
         </main>
       </div>
     </>
