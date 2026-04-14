@@ -12,6 +12,22 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 5;
 
 /**
+ * CSRF defense via Origin header check. SameSite=Lax cookies block classic
+ * form-POST CSRF but NOT cross-site fetch() with credentials. An explicit
+ * Origin header comparison catches the latter. Mirrors the helper used in
+ * /api/user/recent-searches — kept inline so this route has no new imports.
+ */
+function isAllowedOrigin(request: NextRequest): boolean {
+  const origin = request.headers.get("origin");
+  if (!origin) return false; // modern browsers always send Origin on non-GET
+  try {
+    return new URL(origin).host === request.nextUrl.host;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Private personalization hydration endpoint.
  *
  * POST /{portal}/api/search/unified/personalize
@@ -34,6 +50,9 @@ export const maxDuration = 5;
  * Non-numeric IDs are filtered out before querying.
  */
 export const POST = withAuth(async (request: NextRequest, { user, serviceClient }) => {
+  if (!isAllowedOrigin(request)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
   const rl = await applyRateLimit(request, RATE_LIMITS.read, `user:${user.id}`);
   if (rl) return rl;
 
