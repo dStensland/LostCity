@@ -31,6 +31,18 @@ describe("hashQuery", () => {
     const b = hashQuery("jazz", salt2, "atlanta");
     expect(a.equals(b)).toBe(false);
   });
+
+  // Null bytes in the input must not crash createHash.update() and must
+  // still produce a deterministic SHA-256 digest. Node's createHash accepts
+  // strings with embedded \u0000 — this regression guard pins that.
+  it("handles null-byte queries deterministically", () => {
+    const salt = Buffer.from("0".repeat(64), "hex");
+    const a = hashQuery("foo\u0000bar", salt, "atlanta");
+    const b = hashQuery("foo\u0000bar", salt, "atlanta");
+    const hex = a.toString("hex");
+    expect(hex).toMatch(/^[0-9a-f]{64}$/);
+    expect(a.equals(b)).toBe(true);
+  });
 });
 
 describe("buildSearchEventRow", () => {

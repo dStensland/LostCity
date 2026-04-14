@@ -97,3 +97,71 @@ describe("runUnifiedRetrieval", () => {
     ).rejects.toThrow(/portal_id/);
   });
 });
+
+// Separate describe block so we can install a custom mock that returns an
+// unknown retriever_id. The unified-retrieval module fails loudly rather
+// than silently dropping rows it doesn't recognize — this pins that contract.
+describe("runUnifiedRetrieval throw path", () => {
+  beforeEach(() => vi.resetModules());
+
+  it("throws on unknown retriever_id rather than dropping the row", async () => {
+    vi.doMock("@/lib/supabase/service", () => ({
+      createServiceClient: () => ({
+        rpc: vi.fn().mockResolvedValue({
+          data: [
+            {
+              retriever_id: "mystery_meat",
+              entity_type: "event",
+              entity_id: "e99",
+              raw_score: 0.5,
+              quality: 0.5,
+              days_out: 1,
+              title: "Unknown Bucket Event",
+              venue_name: null,
+              neighborhood: null,
+              image_url: null,
+              href_slug: "e99",
+              starts_at: null,
+            },
+          ],
+          error: null,
+        }),
+      }),
+    }));
+
+    const { runUnifiedRetrieval: runFresh } = await import(
+      "@/lib/search/unified-retrieval"
+    );
+
+    await expect(
+      runFresh(mockQuery, {
+        portal_id: "p1",
+        limit: 20,
+        signal: new AbortController().signal,
+      })
+    ).rejects.toThrow(/unknown retriever_id 'mystery_meat'/);
+  });
+
+  it("throws when the RPC itself returns an error", async () => {
+    vi.doMock("@/lib/supabase/service", () => ({
+      createServiceClient: () => ({
+        rpc: vi.fn().mockResolvedValue({
+          data: null,
+          error: { message: "permission denied for function search_unified" },
+        }),
+      }),
+    }));
+
+    const { runUnifiedRetrieval: runFresh } = await import(
+      "@/lib/search/unified-retrieval"
+    );
+
+    await expect(
+      runFresh(mockQuery, {
+        portal_id: "p1",
+        limit: 20,
+        signal: new AbortController().signal,
+      })
+    ).rejects.toThrow(/search_unified failed: permission denied/);
+  });
+});
