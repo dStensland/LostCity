@@ -147,6 +147,67 @@ not worth engineering time.
 
 ---
 
+## Finding 5 — Legacy search stack has broader surface than Tasks 41/42/43 assumed
+
+**Discovered:** 2026-04-14, Task 47 attempt
+**Severity:** Medium — non-portal surfaces still run the old search experience
+**Gating:** NO — Phase 0 still ships; this is Phase 0.5 cleanup
+**Affects:** `/community`, `/happening-now`, and the portal `ExploreHomeScreen` sub-tree
+
+### Situation
+Task 47 tried to delete `web/lib/unified-search.ts` + `web/app/api/search/*`.
+Subagent stopped when Grep enumeration found 20 import sites, including live
+UI consumers that Tasks 41/42/43 did not migrate:
+
+1. **`GlassHeader.tsx`** (used by `app/community/page.tsx`, `app/happening-now/page.tsx`)
+   still renders `HeaderSearchButton` + `MobileSearchOverlay`. Task 42
+   migrated the 8 portal-specific headers but missed `GlassHeader`.
+2. **`ExploreHomeScreen.tsx`** / **`ExploreSearchHero.tsx`** render
+   `FindSearchInput` + `ExploreSearchResults` internally. Task 41 replaced
+   the outer `ExploreShellClient` hero with `UnifiedSearchShell`, but the
+   home-screen sub-tree mounted underneath it still uses the old stack.
+3. **`components/find/ExploreHome.tsx`** (distinct from `ExploreHomeScreen`)
+   is used by `app/[portal]/explore/_components/ExploreSurface.tsx` and also
+   consumes `FindSearchInput`. Task 43 swapped the lane filter bars only.
+4. **Shared types** (`SearchResult`, `SearchFacet`, `UnifiedSearchResponse`)
+   live in `lib/unified-search.ts` and are re-exported by
+   `lib/explore-platform/types.ts`. Moving them to a neutral module is a
+   prerequisite to deleting the source file.
+5. **`lib/portal-attribution.test.ts:163-176`** reads `unified-search.ts`
+   from disk as a portal-isolation sentinel test and would fail on deletion
+   regardless of the UI state.
+
+### Impact
+- Portal pages (`/atlanta`, `/atlanta/explore`, etc. outside the Explore
+  sub-tree) use the new unified search stack. The original unmount bug is
+  fixed; filters flow end-to-end; observability, security, retrieval, and
+  ranking are production-quality on those surfaces.
+- Non-portal community pages (`/community`, `/happening-now`) still run the
+  old HeaderSearchButton/MobileSearchOverlay experience.
+- The portal Explore surface mounts both the new `UnifiedSearchShell` (hero)
+  AND the old `ExploreSearchHero` inside `ExploreHomeScreen` below it.
+  Whether this is visually broken in the browser is untested — worth a QA pass.
+
+### Deferred scope (Phase 0.5)
+Tasks 47 and 48 are deferred from Phase 0. A follow-up sprint should:
+1. Move shared types out of `unified-search.ts` into `lib/search/types.ts`
+2. Replace `HeaderSearchButton` usages inside `GlassHeader` with `LaunchButton`
+3. Strip `FindSearchInput` / `ExploreSearchResults` mounts out of
+   `ExploreHomeScreen`, `ExploreSearchHero`, and `find/ExploreHome`
+4. Delete `lib/unified-search.ts`, the `/api/search/*` routes, and the
+   orphaned helpers (`instant-search-service`, `search-preview`,
+   `search-suggestions`, possibly `useInstantSearch`)
+5. Delete or rewrite `lib/portal-attribution.test.ts:163-176`
+
+### Phase 0 acceptance
+The Phase 0 ship goal was "rebuild search on the portal surface." That's
+achieved on the home and header surfaces. The non-portal community pages and
+the Explore sub-tree weren't explicitly in scope — they were assumed to fall
+out of the reshuffle, but didn't. Ship Phase 0 as-is; file this as a
+Phase 0.5 cleanup ticket.
+
+---
+
 ## Template for future findings
 
 ```markdown
