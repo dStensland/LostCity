@@ -1,5 +1,9 @@
 # Event Sources
 
+> **ARCHIVED 2026-04-14.** This document was last touched 2026-01-13 — last-crawl dates throughout are from January 2026. The crawler landscape has changed substantially since then: the places refactor (March 2026), 1000+ sources now live, exhibitions as a first-class entity, and `content_kind='exhibit'` deprecation. Static markdown is the wrong substrate for a living crawler registry — the authoritative source is the `sources` table in the database. Do not use this document as current truth. Kept for historical reference only.
+
+---
+
 ## Working Crawlers
 
 | Source | Method | Type | Categories | Events | Last Crawl | Frequency | Data Quality | Coverage |
