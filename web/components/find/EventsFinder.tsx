@@ -1,10 +1,10 @@
 "use client";
 
-import { Suspense, useDeferredValue } from "react";
+import { Suspense, useCallback, useDeferredValue } from "react";
 import dynamic from "next/dynamic";
 import { TransitionContainer } from "@/components/ui/TransitionContainer";
 import FindFilterBar from "@/components/find/FindFilterBar";
-import FindSearchInput from "@/components/find/FindSearchInput";
+import { LaneFilterInput } from "@/components/find/LaneFilterInput";
 import {
   useReplaceStateParams,
   useReplaceStateSearch,
@@ -59,17 +59,30 @@ function EventsFinderFiltersInner({
   vertical,
 }: EventsFinderProps) {
   const searchParams = useReplaceStateParams();
+  const currentSearch = searchParams.get("search") || "";
+
+  const handleFilterChange = useCallback((next: string) => {
+    const params = new URLSearchParams(window.location.search);
+    const trimmed = next.trim();
+    if (trimmed) {
+      params.set("search", trimmed);
+    } else {
+      params.delete("search");
+    }
+    params.delete("page");
+    const qs = params.toString();
+    const newUrl = qs ? `${window.location.pathname}?${qs}` : window.location.pathname;
+    window.history.replaceState(window.history.state, "", newUrl);
+  }, []);
 
   return (
     <div className="mt-2.5 pt-2.5 border-t border-[var(--twilight)]/65">
-      {/* Search input with typeahead */}
+      {/* Lane filter input (text match within current lane) */}
       <div className="mb-3">
-        <FindSearchInput
-          portalSlug={portalSlug}
-          portalId={portalId}
-          basePath={`/${portalSlug}/explore`}
-          findType="events"
-          placeholder="Search events..."
+        <LaneFilterInput
+          value={currentSearch}
+          onChange={handleFilterChange}
+          placeholder="Filter events..."
         />
       </div>
 
