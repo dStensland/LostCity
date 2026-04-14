@@ -26,18 +26,20 @@ type EndpointCase = {
 };
 
 const endpointCases: EndpointCase[] = [
-  { name: "search_instant", path: "/api/search/instant?q=music&portal=atlanta" },
+  // Phase 0.5: migrated from the deleted /api/search/instant endpoint to
+  // the new portal-scoped /{portal}/api/search/unified. The unified
+  // endpoint accepts q + limit + optional filter params (categories, types,
+  // date, free, neighborhoods) — none of the legacy portal_id / portalSlug /
+  // viewMode / findType / include_* flags apply.
+  { name: "search_unified_music", path: "/atlanta/api/search/unified?q=music&limit=7" },
+  { name: "search_unified_afrobeat", path: "/atlanta/api/search/unified?q=afrobeat&limit=7" },
   {
-    name: "search_instant_afrobeat",
-    path: "/api/search/instant?q=afrobeat&portal=atlanta&portal_id=74c2f211-ee11-453d-8386-ac2861705695&portalSlug=atlanta&viewMode=find&findType=events&limit=7",
+    name: "search_unified_live_music_tonight",
+    path: "/atlanta/api/search/unified?q=live%20music%20tonight&limit=7",
   },
   {
-    name: "search_instant_live_music_tonight",
-    path: "/api/search/instant?q=live%20music%20tonight&portal=atlanta&portal_id=74c2f211-ee11-453d-8386-ac2861705695&portalSlug=atlanta&viewMode=find&findType=events&limit=7",
-  },
-  {
-    name: "search_full_overlay",
-    path: "/api/search?q=live%20music%20tonight&types=event,venue,organizer&portal=atlanta&portal_id=74c2f211-ee11-453d-8386-ac2861705695&limit=12&include_facets=false&include_did_you_mean=false&include_event_popularity=false",
+    name: "search_unified_full",
+    path: "/atlanta/api/search/unified?q=live%20music%20tonight&types=event,venue&limit=12",
   },
   { name: "portal_feed", path: "/api/portals/atlanta/feed" },
   { name: "showtimes", path: "/api/showtimes?portal=atlanta" },
