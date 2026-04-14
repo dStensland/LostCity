@@ -6,12 +6,13 @@
 
 LostCity exists to **get people out and active in the real world** — to make it easy to discover what to do, where to go, and how to connect with others in your city. That's the mission.
 
-The core question we answer is **"What should I go do?"** — and the answer is three first-class entity types working together:
+The core question we answer is **"What should I go do?"** — and the answer is four first-class entity types working together:
 - **Events**: What's happening — concerts, openings, classes, meetups, festivals. Temporal, crawled, comprehensive.
-- **Destinations**: Where to go — restaurants, bars, parks, museums, trails, campgrounds. Persistent, enriched, opinionated. Not just containers for events, but independently discoverable places worth going to.
-- **Programs**: What to join — swim lessons, summer camps, rec league basketball, pottery classes. Structured activities with sessions, age ranges, and registration. The bridge between events (one-off) and destinations (always there).
+- **Places** (formerly "destinations" in older docs, now `places` in code): Where to go — restaurants, bars, parks, museums, trails, campgrounds. Persistent, enriched, opinionated. Not just containers for events, but independently discoverable places worth going to. Stored in the `places` table with PostGIS spatial data.
+- **Programs**: What to join — swim lessons, summer camps, rec league basketball, pottery classes. Structured activities with sessions, age ranges, and registration. The bridge between events (one-off) and places (always there).
+- **Exhibitions**: What to experience *while you're there* — gallery shows, museum exhibitions, aquarium habitats, zoo exhibits, historic site displays, park attractions, interpretive centers, permanent installations. Persistent experiences attached to a place, with optional run dates. Each lives in the `exhibitions` table with its own search vector, detail surface, and cross-vertical schema. The Arts portal produces gallery and museum shows; the Family portal produces aquarium/zoo/children's-museum experiences; the Adventure portal produces park attractions and interpretive centers; civic/historic portals produce permanent exhibits. Not Arts-specific.
 
-Events tell you what's happening *right now*. Destinations tell you where's worth going *anytime*. Programs tell you what's worth committing to *this season*. Together they're the complete answer.
+Events tell you what's happening *right now*. Places tell you where's worth going *anytime*. Programs tell you what's worth committing to *this season*. Exhibitions tell you what's worth experiencing *while you're at a place*. Together they're the complete answer.
 
 The business model is a **local discovery data infrastructure** company. The data layer is the product. Frontends are generated artifacts. Portals are one surface — the API, widgets, feeds, and AI integrations are others. We're building the local discovery infrastructure layer that hotels, hospitals, tourism boards, publications, and eventually dating apps and AI assistants all query.
 
@@ -50,6 +51,16 @@ The hardest part of going out isn't finding something to do — it's coordinatin
 
 White-labeling demonstrated through B2B clients (FORTH, Gozio), not first-party portal name variety.
 
+## Current Architecture Anchor (as of 2026-04-14)
+
+Strategy without grounding becomes fiction. These are the load-bearing technical realities that shape what's possible. If you're proposing work that ignores them, the work is wrong.
+
+- **The `places` table is the canonical destination model.** Renamed from `venues` in March 2026. PostGIS `location` column for spatial queries. All FKs use `place_id`. New work must use these names.
+- **`web/lib/entity-urls.ts` builds all entity URLs.** Never hand-build a URL to an event, place, exhibition, series, or festival. `buildEventUrl` and `buildSpotUrl` take a `'feed' | 'page'` context arg — overlay is feed-only, canonical is everywhere else. Other builders are always canonical. This rule prevents infinite overlay nesting and broken share links.
+- **`search_unified()` is the single search entry point.** Replaces all prior search stacks. Portal isolation is enforced inside the RPC via mandatory `p_portal_id`. New search features wrap this RPC; do not bypass it.
+- **Portal isolation is enforced at the database layer.** `sources.owner_portal_id` is `NOT NULL` and CHECK-constrained. Events inherit `portal_id` via trigger. Cross-portal data leakage is a P0 trust failure — if a query needs to span portals, it must do so explicitly, never accidentally.
+- **Exhibitions are first-class, cross-vertical, and mechanically so.** The `exhibitions` table models persistent experiences at a place — gallery shows, museum exhibitions, aquarium habitats, historic site displays, park attractions, permanent installations. The schema is portal-agnostic. The `events.exhibition_id` FK shipped 2026-04-14 (commit `838b9052`), `search_unified()` exposes exhibitions directly (commit `bd9cd223`), and `content_kind='exhibit'` is deprecated (commit `89026d9b`). Exhibitions are a noun on the same level as events and places — not a flag on events, not an Arts-only thing. Any portal that surfaces museums, aquariums, historic sites, or parks should be producing exhibitions. New exhibition-related events link via `exhibition_id`; new exhibitions live in the `exhibitions` table. Note: the `exhibition_type` enum currently carries arts-biased values (`solo/group/installation/retrospective/popup/permanent`) and will need expansion as non-arts portals start producing exhibitions — track as follow-up.
+
 ## Current Priorities
 
 Check `DEV_PLAN.md` for latest, but the general order is:
@@ -66,7 +77,7 @@ Check `DEV_PLAN.md` for latest, but the general order is:
 
 Before building anything, ask:
 1. **Would a real user notice if this was missing or broken?** Consumer-ready means no dead links, no empty states without guidance, no errors that embarrass us. If a real person would hit it, it matters.
-2. **Does this make the data layer richer — for events, destinations, OR programs?**
+2. **Does this make the data layer richer — for events, places, programs, OR exhibitions?**
 3. **Does it work across verticals and cities, or only for one?**
 4. **Does it strengthen the portal platform (federation, attribution, bespoke creation), or is it a one-off?**
 5. **Does it increase coverage or fix data quality at the source?**
@@ -105,3 +116,7 @@ Features can earn their place through infrastructure value (questions 2-7), comm
 - **Challenge the strategy, not just the code.** These strategy files are living documents, not scripture. If a principle isn't working in practice, if a hypothesis is being disproven by what you're building, or if the real work has diverged from what the docs say — flag it. Propose a specific update to `north-star.md`, `STRATEGIC_PRINCIPLES.md`, or `DEV_PLAN.md`. Strategy that doesn't match reality is worse than no strategy because it sends agents in the wrong direction.
 - **Be direct.** No hedging, no "great question!", no softening bad news. Respect the human's time and intelligence.
 - **Scope discipline.** Do what was asked. Don't gold-plate, don't add unrequested features, don't refactor adjacent code. If you see something worth fixing, note it separately.
+
+---
+
+**Last refreshed:** 2026-04-14 — added exhibitions as the fourth first-class entity (cross-vertical, not Arts-specific), renamed "destinations" to "places" to match the code, added "Current Architecture Anchor" section documenting the load-bearing technical realities (places table, entity-urls, search_unified, portal isolation, exhibitions as mechanical first-class). Previous refresh: 2026-02-25 (initial). Re-review whenever a major architectural shift lands.
