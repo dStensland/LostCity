@@ -75,8 +75,8 @@ Run `database/schema.sql` in Supabase SQL Editor to initialize tables.
 
 ### Database Schema (Supabase/PostgreSQL)
 - `sources` - Event source configurations
-- `venues` - Normalized venue data with aliases
-- `events` - Core event data with foreign keys to sources/venues
+- `places` - Normalized destination/venue data with aliases (renamed from `venues` in 2026-03; PostGIS `location` geography column for spatial queries)
+- `events` - Core event data with foreign keys to sources/places
 - `crawl_logs` - Crawler run history for monitoring
 
 ## Multi-Agent Coordination
@@ -96,7 +96,7 @@ When multiple Claude Code sessions work in parallel, check `ACTIVE_WORK.md` in t
    `python3 /Users/coach/Projects/LostCity/database/audit_migration_parity.py --fail-on-unmatched`
 9. Prefer working in git worktrees (`/worktree`) for isolation when touching shared files.
 
-See `BACKLOG.md` for the full prioritized roadmap with implementation status.
+See `DEV_PLAN.md` for the active execution status. (Historical roadmap archived to `docs/archive/root-strategy-2026-Q1/BACKLOG.md`.)
 
 ## Migration Numbering
 
@@ -136,7 +136,7 @@ Optional:
 1. **Research** — Fetch the site, identify platform (Shopify, Wix, WordPress, etc.), find the events/classes URL, note the HTML structure. Also look for: specials/happy hour pages, hours of operation, recurring programming (trivia, DJ nights, etc.), about/description text, hero images.
 2. **Migration** — Prefer `python3 /Users/coach/Projects/LostCity/database/create_migration_pair.py source_name` to scaffold both files, then fill in:
    - Source INSERT (`sources` table): slug, name, url, source_type (`venue` or `organization`), crawl_frequency, is_active, integration_method
-   - Venue INSERT (`venues` table): name, slug, address, neighborhood, city, state, zip, lat, lng, venue_type, spot_type, website, phone, description, vibes
+   - Place INSERT (`places` table): name, slug, address, neighborhood, city, state, zip, lat, lng, place_type, spot_type, website, phone, description, vibes. Set `is_active = true`. The `location` geography column is auto-populated by trigger from lat/lng.
    - Matching `supabase/migrations/YYYYMMDDHHMMSS_source_name.sql` with the same SQL body unless there is an explicit documented reason not to
 3. **Crawler** — Create `crawlers/sources/source_slug.py` (underscores, matching the source slug with hyphens → underscores). Must export `crawl(source: dict) -> tuple[int, int, int]`. See `crawlers/CLAUDE.md` for the full pattern and required fields. **The crawler should capture everything in one pass:** events, recurring programming (as series), specials (to `venue_specials`), hours, venue description/image. Don't leave data on the page for a later enrichment script to pick up.
 4. **Profile** — Create `crawlers/sources/profiles/source-slug.yaml` with discovery URLs, selectors, and defaults
@@ -155,7 +155,7 @@ For venues where events are promoted via Instagram, Resy, or other non-scrapeabl
 For orgs like community groups that host events at rotating locations:
 
 1. **Migration** — Source with `source_type = 'organization'`. No venue INSERT (events happen at other venues).
-2. **Crawler** — Set `venue_id = None` on events. Use `venue_name_hint` and `venue_address_hint` fields for downstream venue matching.
+2. **Crawler** — Set `place_id = None` on events. Use `venue_name_hint` and `venue_address_hint` fields for downstream place matching.
 3. **Profile** — Same as full flow.
 
 ### Naming conventions
@@ -164,3 +164,13 @@ For orgs like community groups that host events at rotating locations:
 - Crawler file: `tio_luchos.py` (underscores)
 - Profile file: `tio-luchos.yaml` (hyphens)
 - Migration file: `NNN_tio_luchos.sql` (sequential number + underscores)
+
+## Recent Architectural Shifts (as of 2026-04-14)
+
+When working on database changes, be aware these landed recently and older docs may not reflect them:
+
+- **`venues` → `places` rename** (`20260328200001_places_final_rename.sql`). The table is now `places`. `venue_type` is now `place_type`. `active` is now `is_active`. All foreign keys renamed: `events.venue_id → events.place_id`, `series.venue_id → series.place_id`, etc. Code is fully migrated; if you find a doc, comment, or migration that still says `venues`, update it.
+- **PostGIS spatial column** (`20260328100001_places_refactor_foundation.sql`). `places.location` is a `geography(Point, 4326)` auto-populated by trigger from `lat`/`lng`. Use it for spatial queries (`ST_DWithin`, etc.); don't recompute distance from raw lat/lng.
+- **Portal isolation enforcement.** Sources have `owner_portal_id NOT NULL` enforced by CHECK constraint. Events inherit `portal_id` from their source via DB trigger. Cross-portal queries should use the portal_id column, never join through sources.
+- **`search_unified()` RPC** (`20260413000007_search_unified.sql`). Single point-of-control for search across events + places. **Always pass `p_portal_id`** — portal isolation is enforced inside the RPC. Do not write new search queries that bypass this. Filter args: `p_query`, `p_portal_id`, `p_categories`, `p_neighborhoods`, `p_date_from`, `p_date_to`. Returns events and places in a unified result shape.
+- **`exhibitions` table is first-class — mechanically so.** Has its own `search_vector` (`20260413100001_exhibitions_search_vector.sql`) and is wired into `search_unified()` via exhibition CTEs (commit `bd9cd223`). The `events.exhibition_id` FK shipped 2026-04-14 (`20260413100003_events_exhibition_id.sql`, commit `838b9052`) — opening nights, artist talks, and other exhibition-related events set `exhibition_id` to link to the parent exhibition. `content_kind='exhibit'` is **deprecated** (see `crawlers/ARCHITECTURE.md` and commit `89026d9b`); the filter on feed/event queries remains only as protection for legacy rows. **Do not create new `content_kind='exhibit'` rows.** New exhibitions go directly in the `exhibitions` table.
