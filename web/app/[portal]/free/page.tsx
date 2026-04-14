@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { getFilteredEventsWithCursor } from "@/lib/search";
+import { getFilteredEventsWithCursor } from "@/lib/event-search";
 import { getPortalSourceAccess } from "@/lib/federation";
 import { filterByPortalCity } from "@/lib/portal-scope";
 import EventListingPage from "@/components/seo/EventListingPage";

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useCallback, useState } from "react";
 import MapPopupCard from "./MapPopupCard";
-import type { EventWithLocation } from "@/lib/search";
+import type { EventWithLocation } from "@/lib/event-search";
 import type { Spot } from "@/lib/spots-constants";
 
 interface MobileMapSheetProps {

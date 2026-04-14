@@ -6,7 +6,7 @@ import { X, CalendarBlank, ArrowLeft } from "@phosphor-icons/react";
 import { useBreakForecast } from "@/lib/hooks/useBreakForecast";
 import { DayPlanCard } from "./DayPlanCard";
 import type { SchoolCalendarEvent, ProgramWithVenue } from "@/lib/types/programs";
-import type { EventWithLocation } from "@/lib/search";
+import type { EventWithLocation } from "@/lib/event-search";
 import { FAMILY_TOKENS } from "@/lib/family-design-tokens";
 
 // ---- Palette (Afternoon Field) -------------------------------------------

@@ -5,7 +5,7 @@ import SeriesCard from "@/components/SeriesCard";
 import FestivalCard from "@/components/FestivalCard";
 import FeedSectionHeader from "@/components/feed/FeedSectionHeader";
 import { groupEventsForDisplay } from "@/lib/event-grouping";
-import type { EventWithLocation } from "@/lib/search";
+import type { EventWithLocation } from "@/lib/event-search";
 import { TrendingEventCard, type FeedEventData } from "@/components/EventCard";
 import { getTrendingEmptyStateCopy } from "@/lib/empty-state-copy";
 

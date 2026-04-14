@@ -1,4 +1,4 @@
-import { getFilteredEventsWithCursor, PRICE_FILTERS, type SearchFilters } from "@/lib/search";
+import { getFilteredEventsWithCursor, PRICE_FILTERS, type SearchFilters } from "@/lib/event-search";
 import { enrichEventsWithSocialProof } from "@/lib/social-proof";
 import { deduplicateCinemaEvents } from "@/lib/cinema-filter";
 import type { MoodId } from "@/lib/moods";

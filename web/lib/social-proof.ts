@@ -7,7 +7,7 @@
 
 import { createServiceClient } from "./supabase/service";
 import { createLogger } from "./logger";
-import type { EventWithLocation } from "./search";
+import type { EventWithLocation } from "./event-search";
 import { getSharedCacheJson, setSharedCacheJson } from "./shared-cache";
 
 const logger = createLogger("social-proof");

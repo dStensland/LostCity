@@ -2,7 +2,7 @@ import Link from "next/link";
 import { safeJsonLd, formatTime } from "@/lib/formats";
 import { buildBreadcrumbSchema } from "@/lib/breadcrumb-schema";
 import { toAbsoluteUrl } from "@/lib/site-url";
-import type { EventWithLocation } from "@/lib/search";
+import type { EventWithLocation } from "@/lib/event-search";
 import { getEventListingEmptyStateCopy } from "@/lib/empty-state-copy";
 
 type Props = {

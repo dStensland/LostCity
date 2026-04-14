@@ -2,7 +2,7 @@
 
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { useMemo, useCallback } from "react";
-import type { EventWithLocation } from "@/lib/search";
+import type { EventWithLocation } from "@/lib/event-search";
 import type { Festival } from "@/lib/festivals";
 import { fetchWithRetry } from "@/lib/fetchWithRetry";
 import { useReplaceStateParams } from "@/lib/hooks/useReplaceStateParams";

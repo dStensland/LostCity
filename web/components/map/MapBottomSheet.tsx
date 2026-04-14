@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState, useCallback, useEffect, useMemo } from "react";
-import type { EventWithLocation } from "@/lib/search";
+import type { EventWithLocation } from "@/lib/event-search";
 import type { Spot } from "@/lib/spots-constants";
 import { getCategoryColor } from "@/lib/category-config";
 import { decodeHtmlEntities, formatTime } from "@/lib/formats";

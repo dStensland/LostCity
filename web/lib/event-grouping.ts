@@ -1,5 +1,5 @@
 import { format, parseISO, isToday, isTomorrow } from "date-fns";
-import type { EventWithLocation } from "@/lib/search";
+import type { EventWithLocation } from "@/lib/event-search";
 import type { SeriesInfo, SeriesVenueGroup } from "@/components/SeriesCard";
 import type { Festival } from "@/lib/festivals";
 

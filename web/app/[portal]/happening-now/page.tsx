@@ -158,7 +158,7 @@ export default function WhatsOpenPage() {
   const { mapEvents, mapSpots } = useMemo(() => {
     if (!showMap) return { mapEvents: [], mapSpots: [] };
 
-    type MapEvent = import("@/lib/search").EventWithLocation;
+    type MapEvent = import("@/lib/event-search").EventWithLocation;
     type MapSpot = import("@/lib/spots").Spot;
     const events: MapEvent[] = [];
     const spots: MapSpot[] = [];

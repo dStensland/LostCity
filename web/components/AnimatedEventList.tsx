@@ -18,7 +18,7 @@ import {
   type DisplayItem,
   type TimePeriod,
 } from "@/lib/event-grouping";
-import type { EventWithLocation } from "@/lib/search";
+import type { EventWithLocation } from "@/lib/event-search";
 import type { Festival } from "@/lib/festivals";
 import type { FriendGoing } from "@/lib/hooks/use-friends-going";
 

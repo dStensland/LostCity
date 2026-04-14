@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import Link from "next/link";
 import { Clock } from "@phosphor-icons/react";
-import type { EventWithLocation } from "@/lib/search";
+import type { EventWithLocation } from "@/lib/event-search";
 import { FAMILY_TOKENS } from "@/lib/family-design-tokens";
 import { SectionLabel, SeeAllLink, SkeletonBlock } from "./_shared";
 import { buildExploreUrl } from "@/lib/find-url";

@@ -3,7 +3,7 @@
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { useSearchParams } from "next/navigation";
 import { useMemo, useState, useCallback, useRef, useEffect } from "react";
-import type { EventWithLocation } from "@/lib/search";
+import type { EventWithLocation } from "@/lib/event-search";
 import { FIND_TYPE_FILTER_KEYS } from "@/lib/find-filter-schema";
 
 /**

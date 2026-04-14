@@ -1,8 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-// Import directly from search-service rather than the barrel @/lib/search —
-// lib/search.ts (legacy 1869-line file) shadows lib/search/index.ts when
-// Node/Vite resolves @/lib/search. Barrel import is tested via tsc.
-import { search } from "@/lib/search/search-service";
+import { search } from "@/lib/search";
 import type { UnifiedRetrievalResult } from "@/lib/search/unified-retrieval";
 
 vi.mock("@/lib/search/unified-retrieval", () => ({

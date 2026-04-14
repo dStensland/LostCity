@@ -44,7 +44,7 @@ import EventGroup from "@/components/EventGroup";
 import SeriesCard from "@/components/SeriesCard";
 import FestivalCard from "@/components/FestivalCard";
 import { groupEventsForDisplay, type DisplayItem } from "@/lib/event-grouping";
-import type { EventWithLocation } from "@/lib/search";
+import type { EventWithLocation } from "@/lib/event-search";
 import { getSmartDateLabel } from "@/lib/card-utils";
 import {
   GridEventCard,

@@ -12,7 +12,7 @@ import SmartEmptyState from "./SmartEmptyState";
 import { useTimeline } from "@/lib/hooks/useTimeline";
 import { useEventFilters } from "@/lib/hooks/useEventFilters";
 import { useFriendsGoing } from "@/lib/hooks/use-friends-going";
-import type { EventWithLocation } from "@/lib/search";
+import type { EventWithLocation } from "@/lib/event-search";
 import {
   groupEventsByDate,
   getSortedDates,
