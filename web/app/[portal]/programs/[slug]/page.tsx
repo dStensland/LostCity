@@ -426,7 +426,7 @@ export default async function ProgramDetailPage({ params }: Props) {
                 <div className="mb-5">
                   {program.venue.slug ? (
                     <Link
-                      href={`/${activePortalSlug}?venue=${program.venue.slug}`}
+                      href={`/${activePortalSlug}?spot=${program.venue.slug}`}
                       scroll={false}
                       className="block p-3 rounded-lg border transition-all hover:opacity-80 group"
                       style={{ borderColor: `${WARM_STONE}30`, backgroundColor: `${WARM_STONE}08` }}

@@ -211,7 +211,7 @@ function MeetingCard({
           <div className="flex items-start gap-2.5">
             <MapPin size={16} className="mt-0.5 flex-shrink-0" style={{ color: "#6D6C6A" }} />
             <Link
-              href={`/${portalSlug}?venue=${event.venue.slug}`}
+              href={`/${portalSlug}?spot=${event.venue.slug}`}
               scroll={false}
               className="text-sm hover:underline"
               style={{ color: "#1D4ED8" }}
