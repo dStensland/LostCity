@@ -6,7 +6,7 @@ This file provides guidance to Claude Code when working with the crawlers pipeli
 
 When multiple Claude Code sessions work in parallel, check `ACTIVE_WORK.md` in the repo root before starting. It tracks which agent is working on what and which files/directories are claimed. Don't modify files claimed by another agent — tell the user if you need to.
 
-See `DEV_PLAN.md` for the active execution status. (Historical roadmap archived to `docs/archive/root-strategy-2026-Q1/BACKLOG.md`.)
+See `DEV_PLAN.md` for the active execution status. `BACKLOG.md` at the repo root is being wound down — do not add new items there.
 
 ## Core Philosophy
 
@@ -264,7 +264,7 @@ Priority neighborhoods for coverage:
 When building or updating crawlers, be aware these landed recently:
 
 - **`venues` → `places` rename.** The destination table is now `places`. `venue_type` → `place_type`. `active` → `is_active`. Use `db.get_or_create_place(place_data)` (the function name was already correct). New crawlers should use `PLACE_DATA` as the dict variable name, but `VENUE_DATA` still works. **Note:** `venue_specials` was renamed to `place_specials` in the same 2026-03 refactor (migration `20260328200001_places_final_rename.sql`), and its `venue_id` column became `place_id`. All crawler code is already on the new name.
-- **Exhibitions are first-class — create them in the `exhibitions` table, never as events.** If you crawl a museum/gallery/art space, use `exhibition_utils.py` to create exhibitions. Events related to an exhibition (opening nights, artist talks, walkthroughs) should set `events.exhibition_id` to link back to the parent exhibition — the FK landed in commit `838b9052` and is live. **Do not set `content_kind='exhibit'` on new events** — it's deprecated (see `crawlers/ARCHITECTURE.md` and commit `89026d9b`); the feed filter on it remains only for legacy rows pending migration.
+- **Exhibitions are first-class and cross-vertical — create them in the `exhibitions` table, never as events.** If you crawl a museum, gallery, aquarium, zoo, historic site, interpretive center, or any other destination with persistent or run-dated experiences, use `exhibition_utils.py` to create exhibitions. This is NOT an Arts-portal-only pattern — the Family portal crawling the Georgia Aquarium should be creating exhibition records for `Cold Water Quest`, the Adventure portal crawling a state park should be creating exhibition records for interpretive center displays, and so on. Events related to an exhibition (opening nights, artist talks, guided tours, feedings, walkthroughs) should set `events.exhibition_id` to link back to the parent exhibition — the FK landed in commit `838b9052` and is live. **Do not set `content_kind='exhibit'` on new events** — it's deprecated (see `crawlers/ARCHITECTURE.md` and commit `89026d9b`); the feed filter on it remains only for legacy rows pending migration.
 - **First-pass capture rule still applies.** Capture specials, hours, programs, and venue metadata in the same pass. The places refactor did not change this — every enrichment script is still a crawler failure.
 - **Portal attribution is mandatory.** `sources.owner_portal_id` must be set; events inherit `portal_id` via trigger. Don't bypass this when seeding test data.
 - **Programs are a real entity.** If a venue offers structured classes/lessons/camps with sessions and registration, those are programs (or events with `series_hint`), not loose events. See the Series Grouping section above.
