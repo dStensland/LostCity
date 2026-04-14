@@ -32,7 +32,7 @@ When a crawler visits a venue page, look for and capture:
 1. **Events** — the obvious one, but not the only one
 2. **Programs** — structured activities with sessions, age ranges, registration (swim lessons, camps, classes, leagues). These are NOT events — they go in the `programs` table if it exists, or as events with `age_min`/`age_max` and appropriate series grouping.
 3. **Recurring programming** — weekly trivia, DJ nights, open mic, karaoke, brunch, yoga. These are `series` with `is_recurring: True`. If the page has a "Weekly Events" or "Regular Programming" section, grab it.
-4. **Specials & deals** — happy hours, daily food/drink specials, brunch deals, industry nights. These go in `venue_specials`, NOT events. Look for "Specials", "Happy Hour", "Daily Deals" sections on venue websites.
+4. **Specials & deals** — happy hours, daily food/drink specials, brunch deals, industry nights. These go in `place_specials` (formerly `venue_specials`), NOT events. Look for "Specials", "Happy Hour", "Daily Deals" sections on venue websites.
 5. **Hours of operation** — opening/closing times by day. Store in `places.hours` as structured JSON.
 6. **Venue metadata** — description, hero image (og:image), vibe tags, cuisine type, price range, parking info, reservation links, social media handles.
 7. **Menu highlights** — not the full menu, but categories that inform vibes (craft cocktails, natural wine, vegan-friendly, etc.)
@@ -48,7 +48,7 @@ Before submitting a new crawler, verify it captures everything available:
 - [ ] `description` set from meta description or about section
 - [ ] Hours captured if visible on the page
 - [ ] Recurring events grouped into series (not individual events for each occurrence)
-- [ ] Specials captured in `venue_specials` if the page has a specials/happy hour section
+- [ ] Specials captured in `place_specials` if the page has a specials/happy hour section
 - [ ] Programs captured with age ranges if the source has structured classes/lessons
 - [ ] No fields left empty that are available on the page
 
@@ -263,7 +263,7 @@ Priority neighborhoods for coverage:
 
 When building or updating crawlers, be aware these landed recently:
 
-- **`venues` → `places` rename.** The destination table is now `places`. `venue_type` → `place_type`. `active` → `is_active`. Use `db.get_or_create_place(place_data)` (the function name was already correct). New crawlers should use `PLACE_DATA` as the dict variable name, but `VENUE_DATA` still works. **Note:** `venue_specials` was NOT renamed — that table still exists under its original name.
+- **`venues` → `places` rename.** The destination table is now `places`. `venue_type` → `place_type`. `active` → `is_active`. Use `db.get_or_create_place(place_data)` (the function name was already correct). New crawlers should use `PLACE_DATA` as the dict variable name, but `VENUE_DATA` still works. **Note:** `venue_specials` was renamed to `place_specials` in the same 2026-03 refactor (migration `20260328200001_places_final_rename.sql`), and its `venue_id` column became `place_id`. All crawler code is already on the new name.
 - **Exhibitions are first-class — create them in the `exhibitions` table, never as events.** If you crawl a museum/gallery/art space, use `exhibition_utils.py` to create exhibitions. Events related to an exhibition (opening nights, artist talks, walkthroughs) should set `events.exhibition_id` to link back to the parent exhibition — the FK landed in commit `838b9052` and is live. **Do not set `content_kind='exhibit'` on new events** — it's deprecated (see `crawlers/ARCHITECTURE.md` and commit `89026d9b`); the feed filter on it remains only for legacy rows pending migration.
 - **First-pass capture rule still applies.** Capture specials, hours, programs, and venue metadata in the same pass. The places refactor did not change this — every enrichment script is still a crawler failure.
 - **Portal attribution is mandatory.** `sources.owner_portal_id` must be set; events inherit `portal_id` via trigger. Don't bypass this when seeding test data.
