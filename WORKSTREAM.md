@@ -1,5 +1,7 @@
 # Entity Graph Rollout Workstream
 
+> **Status as of 2026-04-14:** Surgical update for schema drift — `venues` → `places`, `venue_specials` → `place_specials`, `search_unified()` replaces legacy unified-search stack, four-entity model (events/places/programs/exhibitions) replaces the older three-entity framing, `content_kind='exhibit'` deprecated in favor of `events.exhibition_id` FK. Strategic/operational content below is preserved unchanged. For active execution status see `DEV_PLAN.md`. For mission see `.claude/north-star.md`. For current architecture reference see `.claude/agents/_shared-architecture-context.md`.
+
 **Surface:** `consumer`
 
 This is the execution workstream for rolling LostCity from an event-centric implementation toward a real multi-entity platform across Atlanta and the content pillar portals.
@@ -174,7 +176,11 @@ python3 -m py_compile crawlers/sources/atlanta_family_programs.py
 **Discovery command**
 
 ```bash
-rg -n "insert_exhibition|content_kind.*exhibit" crawlers/sources
+# Note: content_kind='exhibit' is deprecated as of 2026-04-14; exhibitions
+# are now first-class via the `exhibitions` table and `events.exhibition_id` FK.
+# Historical `content_kind='exhibit'` rows remain in some sources and are part
+# of the audit target.
+rg -n "insert_exhibition|exhibition_id|content_kind.*exhibit" crawlers/sources
 ```
 
 ### B3. Convert one real Adventure/Yonder source to destination lanes
