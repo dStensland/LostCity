@@ -96,6 +96,20 @@ describe("runUnifiedRetrieval", () => {
       })
     ).rejects.toThrow(/portal_id/);
   });
+
+  it("rejects with AbortError when signal is already aborted", async () => {
+    // Regression guard for E-3.3: ctx.signal is honored so cancelled
+    // requests don't waste the downstream RPC round-trip.
+    const controller = new AbortController();
+    controller.abort();
+    await expect(
+      runUnifiedRetrieval(mockQuery, {
+        portal_id: "p1",
+        limit: 20,
+        signal: controller.signal,
+      })
+    ).rejects.toThrow(/abort/i);
+  });
 });
 
 // Separate describe block so we can install a custom mock that returns an

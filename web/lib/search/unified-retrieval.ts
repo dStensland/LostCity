@@ -37,6 +37,37 @@ interface RawRow {
   starts_at: string | null;
 }
 
+/**
+ * Race a promise against an AbortSignal. Resolves with the promise's value
+ * if it wins; rejects with an AbortError if the signal fires first. The
+ * underlying promise is NOT cancelled (Supabase rpc has no AbortSignal
+ * support) — this just stops the caller from waiting on it.
+ */
+function raceAbort<T>(p: Promise<T>, signal?: AbortSignal): Promise<T> {
+  if (!signal) return p;
+  return new Promise<T>((resolve, reject) => {
+    const onAbort = () => {
+      signal.removeEventListener("abort", onAbort);
+      reject(new DOMException("runUnifiedRetrieval aborted", "AbortError"));
+    };
+    if (signal.aborted) {
+      onAbort();
+      return;
+    }
+    signal.addEventListener("abort", onAbort, { once: true });
+    p.then(
+      (v) => {
+        signal.removeEventListener("abort", onAbort);
+        resolve(v);
+      },
+      (err) => {
+        signal.removeEventListener("abort", onAbort);
+        reject(err);
+      }
+    );
+  });
+}
+
 function toCandidate(row: RawRow): Candidate {
   return {
     id: row.entity_id,
@@ -76,6 +107,17 @@ export async function runUnifiedRetrieval(
     throw new Error("runUnifiedRetrieval: portal_id is required");
   }
 
+  // Honor the abort signal cooperatively. The Supabase JS client does NOT
+  // accept an AbortSignal on rpc() calls, so we race the RPC promise against
+  // an abort promise. If the signal fires, the caller sees an AbortError;
+  // the RPC will still complete in the background but its result is discarded.
+  //
+  // If the signal was already aborted before we got here, bail immediately
+  // without doing any work.
+  if (ctx.signal?.aborted) {
+    throw new DOMException("runUnifiedRetrieval aborted", "AbortError");
+  }
+
   const client = createServiceClient();
 
   // Honor ctx.types when present; default to ["event","venue"] when absent.
@@ -86,17 +128,26 @@ export async function runUnifiedRetrieval(
   // Note: database.types.ts still has the OLD search_unified signature typed.
   // Task 47 (legacy cleanup) will regenerate types. Until then, cast args
   // as `never` per project convention.
-  const { data, error } = await client.rpc("search_unified", {
-    p_portal_id: ctx.portal_id,
-    p_query: q.normalized,
-    p_types: typesToSearch,
-    p_categories: q.structured_filters.categories ?? null,
-    p_neighborhoods: q.structured_filters.neighborhoods ?? null,
-    p_date_from: q.temporal?.start ?? null,
-    p_date_to: q.temporal?.end ?? null,
-    p_free_only: q.structured_filters.price?.free ?? false,
-    p_limit_per_retriever: ctx.limit,
-  } as never);
+  // PostgrestFilterBuilder is thenable but not a Promise — wrap in
+  // Promise.resolve() so raceAbort gets a real Promise<T>.
+  const rpcPromise: Promise<{
+    data: unknown;
+    error: { message: string } | null;
+  }> = Promise.resolve(
+    client.rpc("search_unified", {
+      p_portal_id: ctx.portal_id,
+      p_query: q.normalized,
+      p_types: typesToSearch,
+      p_categories: q.structured_filters.categories ?? null,
+      p_neighborhoods: q.structured_filters.neighborhoods ?? null,
+      p_date_from: q.temporal?.start ?? null,
+      p_date_to: q.temporal?.end ?? null,
+      p_free_only: q.structured_filters.price?.free ?? false,
+      p_limit_per_retriever: ctx.limit,
+    } as never)
+  );
+
+  const { data, error } = await raceAbort(rpcPromise, ctx.signal);
 
   if (error) {
     throw new Error(`search_unified failed: ${error.message}`);
