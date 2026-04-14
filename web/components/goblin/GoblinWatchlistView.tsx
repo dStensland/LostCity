@@ -4,12 +4,15 @@ import { useState, useMemo, useCallback, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { useGoblinWatchlist } from "@/lib/hooks/useGoblinWatchlist";
 import { useGoblinLog } from "@/lib/hooks/useGoblinLog";
+import { useGoblinGroups } from "@/lib/hooks/useGoblinGroups";
 import GoblinWatchlistCard from "./GoblinWatchlistCard";
 import GoblinAddToWatchlistModal from "./GoblinAddToWatchlistModal";
 import GoblinWatchlistWatchedModal from "./GoblinWatchlistWatchedModal";
+import GoblinGroupSection from "./GoblinGroupSection";
+import GoblinCreateGroupModal from "./GoblinCreateGroupModal";
 import GoblinTagPicker from "./GoblinTagPicker";
-import SmartImage from "@/components/SmartImage";
-import type { WatchlistEntry, WatchlistTag } from "@/lib/goblin-watchlist-utils";
+import type { WatchlistEntry } from "@/lib/goblin-watchlist-utils";
+import type { GoblinGroupMovie } from "@/lib/goblin-group-utils";
 
 interface Props {
   isAuthenticated: boolean;
@@ -28,14 +31,12 @@ export default function GoblinWatchlistView({ isAuthenticated }: Props) {
     createTag,
     deleteTag,
     searchTMDB,
-    recommendations,
-    recommendationCount,
-    addRecommendation,
-    dismissRecommendation,
   } = useGoblinWatchlist(isAuthenticated);
 
   // Log hook — needed for "Watched" flow (log tags + createTag)
   const logHook = useGoblinLog(isAuthenticated);
+
+  const groupsHook = useGoblinGroups(isAuthenticated);
 
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [watchedEntry, setWatchedEntry] = useState<WatchlistEntry | null>(null);
@@ -46,6 +47,8 @@ export default function GoblinWatchlistView({ isAuthenticated }: Props) {
 
   const [copied, setCopied] = useState(false);
   const [username, setUsername] = useState<string | null>(null);
+  const [createGroupOpen, setCreateGroupOpen] = useState(false);
+  const [addToGroupId, setAddToGroupId] = useState<number | null>(null);
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -147,6 +150,18 @@ export default function GoblinWatchlistView({ isAuthenticated }: Props) {
     [updateEntry]
   );
 
+  const handleGroupReorderMovies = useCallback(
+    async (groupId: number, newOrder: GoblinGroupMovie[]) => {
+      const order = newOrder.map((m, i) => ({
+        movie_id: m.movie_id,
+        sort_order: i + 1,
+      }));
+      await groupsHook.reorderMovies(groupId, order);
+      await groupsHook.refreshGroups();
+    },
+    [groupsHook]
+  );
+
   const toggleEditTag = useCallback((tagId: number) => {
     setEditTagIds((prev) =>
       prev.includes(tagId) ? prev.filter((id) => id !== tagId) : [...prev, tagId]
@@ -200,6 +215,16 @@ export default function GoblinWatchlistView({ isAuthenticated }: Props) {
                 {copied ? "COPIED!" : "SHARE"}
               </button>
             )}
+            <button
+              onClick={() => setCreateGroupOpen(true)}
+              className="px-3 py-1.5 text-zinc-400
+                font-mono text-2xs font-bold tracking-[0.2em] uppercase
+                border border-zinc-700
+                hover:text-amber-300 hover:border-amber-700 hover:shadow-[0_0_12px_rgba(255,217,61,0.15)]
+                active:scale-95 transition-all"
+            >
+              + GROUP
+            </button>
             <button
               onClick={() => setAddModalOpen(true)}
               className="px-4 py-1.5 text-white
@@ -262,64 +287,6 @@ export default function GoblinWatchlistView({ isAuthenticated }: Props) {
         )}
       </div>
 
-      {/* Recommendations */}
-      {recommendationCount > 0 && (
-        <div className="mb-8 relative z-10">
-          <div className="flex items-center gap-2 mb-4">
-            <h3 className="text-xs font-mono font-bold tracking-[0.2em] uppercase text-amber-500/80">
-              Recommendations
-            </h3>
-            <span className="px-1.5 py-0.5 text-2xs font-mono font-bold bg-amber-950/40 border border-amber-800/30 text-amber-400">
-              {recommendationCount}
-            </span>
-          </div>
-          <div className="space-y-2">
-            {recommendations.map((rec) => (
-              <div key={rec.id}
-                className="flex items-center gap-3 p-3 bg-[rgba(5,5,8,0.8)] border border-zinc-800/30
-                  border-l-2 border-l-amber-700/40">
-                <div className="w-10 h-15 flex-shrink-0 overflow-hidden bg-zinc-900">
-                  {rec.movie.poster_path && (
-                    <SmartImage
-                      src={`https://image.tmdb.org/t/p/w185${rec.movie.poster_path}`}
-                      alt={rec.movie.title} width={40} height={60} loading="lazy"
-                      className="object-cover w-full h-full" />
-                  )}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-bold text-white uppercase tracking-wide truncate">
-                    {rec.movie.title}
-                    {rec.movie.year && <span className="text-zinc-600 font-normal ml-1.5">({rec.movie.year})</span>}
-                  </p>
-                  <p className="text-2xs text-zinc-500 font-mono mt-0.5">
-                    from <span className="text-amber-500/70">{rec.recommender_name}</span>
-                  </p>
-                  {rec.note && (
-                    <p className="text-2xs text-zinc-600 italic mt-1 line-clamp-1">
-                      &ldquo;{rec.note}&rdquo;
-                    </p>
-                  )}
-                </div>
-                <div className="flex items-center gap-2 flex-shrink-0">
-                  <button
-                    onClick={() => addRecommendation(rec.id)}
-                    className="px-2 py-1 text-2xs font-mono font-bold text-emerald-500
-                      border border-emerald-800/40 hover:bg-emerald-950/30 transition-colors">
-                    + ADD
-                  </button>
-                  <button
-                    onClick={() => dismissRecommendation(rec.id)}
-                    className="px-2 py-1 text-2xs font-mono text-zinc-700
-                      hover:text-red-400 transition-colors">
-                    x
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
       {/* Loading skeleton */}
       {loading ? (
         <div className="space-y-1">
@@ -381,6 +348,30 @@ export default function GoblinWatchlistView({ isAuthenticated }: Props) {
               onDrop={() => handleDrop(i)}
               isDragging={dragFrom === i}
               isDragTarget={dragOver === i && dragFrom !== i}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* Group sections */}
+      {groupsHook.groups.length > 0 && (
+        <div className="mt-10 space-y-6 relative z-10">
+          <div
+            className="h-px"
+            style={{ background: "linear-gradient(to right, transparent, rgba(255,217,61,0.15), transparent)" }}
+          />
+          {groupsHook.groups.map((group) => (
+            <GoblinGroupSection
+              key={group.id}
+              group={group}
+              onAddMovie={() => setAddToGroupId(group.id)}
+              onRemoveMovie={groupsHook.removeMovie}
+              onMarkWatched={groupsHook.markWatched}
+              onEditGroup={() => {}}
+              onDeleteGroup={groupsHook.deleteGroup}
+              onReorderMovies={handleGroupReorderMovies}
+              logTags={logHook.tags}
+              onCreateLogTag={logHook.createTag}
             />
           ))}
         </div>
@@ -497,6 +488,30 @@ export default function GoblinWatchlistView({ isAuthenticated }: Props) {
           </div>,
           document.body
         )}
+
+      {/* Create Group Modal */}
+      <GoblinCreateGroupModal
+        open={createGroupOpen}
+        onClose={() => setCreateGroupOpen(false)}
+        onSubmit={async (data) => {
+          await groupsHook.createGroup(data);
+        }}
+        searchPerson={groupsHook.searchPerson}
+        getFilmography={groupsHook.getFilmography}
+      />
+
+      {/* Add Movie to Group Modal — reuses TMDB search */}
+      <GoblinAddToWatchlistModal
+        open={addToGroupId !== null}
+        onClose={() => setAddToGroupId(null)}
+        onSubmit={async (data) => {
+          if (addToGroupId === null) return false;
+          return await groupsHook.addMovie(addToGroupId, data.tmdb_id, data.note);
+        }}
+        searchTMDB={searchTMDB}
+        tags={[]}
+        onCreateTag={async () => null}
+      />
     </div>
   );
 }
