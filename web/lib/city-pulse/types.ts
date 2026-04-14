@@ -442,6 +442,7 @@ export type FeedBlockId =
   | "experiences"
   | "community"
   | "cinema"
+  | "live_music"
   | "sports"
   | "horizon"
   | "browse";
@@ -470,6 +471,7 @@ export const DEFAULT_FEED_ORDER: FeedBlockId[] = [
   "briefing",
   "events",
   "cinema",
+  "live_music",
   "sports",
   "horizon",
   "browse",
