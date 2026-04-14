@@ -24,6 +24,7 @@ RULES:
 3. Dates should be ISO 8601 format (YYYY-MM-DD).
 4. Times should be 24-hour format (HH:MM).
 5. If the listing contains multiple events, return an array.
+6a. DOORS TIME: For concerts and live shows, extract doors_time separately from start_time. "Doors 7pm / Show 8pm" means doors_time=19:00, start_time=20:00. If only one time is given, use it as start_time and leave doors_time null.
 6. Set confidence as a decimal between 0.0 and 1.0 (e.g. 0.85, not 85) based on how complete/clear the source data was.
 7. TIME VALIDATION: Be careful with AM/PM. Events between 1:00-5:00 AM are rare except for nightlife/music venues. If an event seems like daytime (workshops, volunteer events, family events) but parses to early AM, the source probably meant PM or there's an error - use null instead.
 8. ALL-DAY EVENTS: Set is_all_day=true ONLY for events that genuinely span the entire day (festivals, exhibitions, markets, open houses). Do NOT set is_all_day=true just because a specific time is unknown. "Night", "Evening", "Afternoon" events are NOT all-day - set is_all_day=false and start_time=null if time is unknown.
@@ -115,8 +116,9 @@ Return valid JSON matching this schema:
       "description": string | null,
       "start_date": "YYYY-MM-DD",
       "start_time": "HH:MM" | null,
-      "end_date": "YYYY-MM-DD" | null,
       "end_time": "HH:MM" | null,
+      "doors_time": "HH:MM" | null,
+      "end_date": "YYYY-MM-DD" | null,
       "is_all_day": boolean,
       "venue": {
         "name": string,
@@ -250,8 +252,9 @@ class EventData(BaseModel):
     description: Optional[str] = None
     start_date: str
     start_time: Optional[str] = None
-    end_date: Optional[str] = None
     end_time: Optional[str] = None
+    doors_time: Optional[str] = None
+    end_date: Optional[str] = None
     is_all_day: bool = False
     venue: VenueData
     category: str

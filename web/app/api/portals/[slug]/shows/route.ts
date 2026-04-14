@@ -111,6 +111,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
           is_free,
           tags,
           doors_time,
+          genres,
           venue:places!inner(id, name, slug, neighborhood, image_url, place_type)
         `)
         .gte("start_date", today)
@@ -151,7 +152,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
       logger.warn("Shows API falling back without is_show filter because the column is missing");
       ({ data: rawEvents, error: queryError } = await buildShowsQuery(false));
     }
-    const events = rawEvents as { id: number; title: string; start_date: string; start_time: string | null; price_min: number | null; image_url: string | null; is_free: boolean; tags: string[] | null; doors_time: string | null; venue: { id: number; name: string; slug: string; neighborhood: string; image_url: string | null; place_type: string | null } }[] | null;
+    const events = rawEvents as { id: number; title: string; start_date: string; start_time: string | null; price_min: number | null; image_url: string | null; is_free: boolean; tags: string[] | null; doors_time: string | null; genres: string[] | null; venue: { id: number; name: string; slug: string; neighborhood: string; image_url: string | null; place_type: string | null } }[] | null;
 
     if (queryError) {
       logger.error("Error fetching shows:", queryError);
@@ -187,6 +188,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
       is_free: boolean;
       tags: string[];
       doors_time: string | null;
+      genres: string[];
     };
 
     const venueMap = new Map<number, { venue: VenueRow; shows: ShowRow[] }>();
@@ -209,6 +211,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
         is_free: event.is_free,
         tags: event.tags ?? [],
         doors_time: event.doors_time ?? null,
+        genres: event.genres ?? [],
       });
     }
 

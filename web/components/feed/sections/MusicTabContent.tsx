@@ -19,6 +19,7 @@ interface MusicShow {
   image_url: string | null;
   is_free: boolean;
   tags: string[];
+  genres: string[];
 }
 
 interface MusicVenue {
@@ -82,15 +83,20 @@ export default function MusicTabContent({
 
   const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
 
-  // Apply genre filter to all data
+  // Apply genre filter to all data — use genres column (dedicated genre data
+  // from LLM extraction + artist enrichment), falling back to tags for events
+  // that only have genre info in tags
   const filteredData = useMemo(() => {
     if (!activeGenre) return data;
     return data
       .map((vg) => ({
         ...vg,
-        shows: vg.shows.filter((s) =>
-          getGenreBuckets(s.tags).includes(activeGenre as GenreBucket),
-        ),
+        shows: vg.shows.filter((s) => {
+          const fromGenres = getGenreBuckets(s.genres);
+          const fromTags = getGenreBuckets(s.tags);
+          const allBuckets = [...new Set([...fromGenres, ...fromTags])];
+          return allBuckets.includes(activeGenre as GenreBucket);
+        }),
       }))
       .filter((vg) => vg.shows.length > 0);
   }, [data, activeGenre]);

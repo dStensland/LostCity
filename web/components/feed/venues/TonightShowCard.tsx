@@ -15,6 +15,7 @@ interface TonightShowCardProps {
     image_url: string | null;
     is_free: boolean;
     tags: string[] | null;
+    genres: string[] | null;
   };
   venue: {
     name: string;
@@ -36,7 +37,9 @@ export const TonightShowCard = memo(function TonightShowCard({
   const doorsLabel = show.doors_time
     ? `Doors ${formatTime(show.doors_time)}`
     : null;
-  const subgenres = getSubgenreLabels(show.tags).slice(0, 3);
+  // Prefer genres column (dedicated genre data), fall back to tags
+  const genreSource = show.genres?.length ? show.genres : show.tags;
+  const subgenres = getSubgenreLabels(genreSource).slice(0, 3);
 
   return (
     <Link
