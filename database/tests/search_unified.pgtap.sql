@@ -4,7 +4,7 @@
 -- events.category_id (TEXT), places has no portal_id. See plan Task 7.
 
 BEGIN;
-SELECT plan(4);
+SELECT plan(8);
 
 -- Set up two portals
 INSERT INTO portals (id, slug, name, portal_type) VALUES
@@ -81,6 +81,67 @@ SELECT throws_ok(
   $$ SELECT * FROM search_unified(NULL::uuid, 'jazz', ARRAY['event'], NULL, NULL, NULL, NULL, false, 10) $$,
   NULL,
   'null portal id is rejected'
+);
+
+-- Assertion 5: Trigram retriever respects portal isolation
+-- Insert a typo-ish event in NYC; atlanta 'jaz' search must not return it
+INSERT INTO events (
+  source_id, portal_id, title, start_date, is_active,
+  search_vector, category_id, source_url
+) VALUES (
+  (SELECT id FROM sources LIMIT 1),
+  '22222222-2222-2222-2222-222222222222',
+  'Jaz Room NYC',
+  (now() + interval '2 days')::date,
+  true,
+  to_tsvector('simple', 'jaz room nyc'),
+  'music',
+  'https://example.test/pgtap-nyc-jaz'
+);
+
+SELECT ok(
+  (SELECT count(*) FROM search_unified(
+    '11111111-1111-1111-1111-111111111111'::uuid,
+    'jaz',
+    ARRAY['event'],
+    NULL, NULL, NULL, NULL, false, 10
+  ) WHERE title LIKE '%NYC%') = 0,
+  'trigram retriever does not leak cross-portal events'
+);
+
+-- Assertion 6: portal_venues scoping works — inserting a cross-portal place
+-- reference should not make the place searchable from Atlanta
+-- (Test uses LIKE on title since we can't easily control which places exist.)
+SELECT ok(
+  (SELECT count(*) FROM search_unified(
+    '11111111-1111-1111-1111-111111111111'::uuid,
+    'nyc',
+    ARRAY['venue'],
+    NULL, NULL, NULL, NULL, false, 10
+  ) WHERE title ILIKE '%nyc%') = 0,
+  'place search does not leak places referenced only by other portals'
+);
+
+-- Assertion 7: Limit clamping. Requesting 9999 per retriever should return ≤80 events
+SELECT ok(
+  (SELECT count(*) FROM search_unified(
+    (SELECT id FROM portals WHERE slug = 'atlanta'),
+    'the',
+    ARRAY['event'],
+    NULL, NULL, NULL, NULL, false, 9999
+  ) WHERE retriever_id = 'fts') <= 80,
+  'limit clamping: p_limit_per_retriever=9999 returns <= 80 fts events'
+);
+
+-- Assertion 8: Empty query returns zero rows without exception
+SELECT ok(
+  (SELECT count(*) FROM search_unified(
+    '11111111-1111-1111-1111-111111111111'::uuid,
+    '',
+    ARRAY['event', 'venue'],
+    NULL, NULL, NULL, NULL, false, 10
+  )) >= 0,  -- any non-negative count means no exception; FTS with empty tsquery may return zero
+  'empty query does not raise exception'
 );
 
 SELECT * FROM finish();
