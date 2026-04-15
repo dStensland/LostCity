@@ -32,21 +32,42 @@ Thin per-type files that compose DetailLayout. Each orchestrator defines:
 Every section module exports a `SectionModule` object:
 
 ```typescript
+type SectionId =
+  | 'about' | 'lineup' | 'showtimes' | 'dining' | 'exhibitions'
+  | 'schedule' | 'upcomingDates' | 'eventsAtVenue' | 'features'
+  | 'connections' | 'socialProof' | 'gettingThere' | 'nearby'
+  | 'planYourVisit' | 'specials' | 'occasions' | 'accolades'
+  | 'showSignals' | 'volunteer' | 'producer'
+
+type EntityType = 'event' | 'place' | 'series' | 'festival' | 'org'
+
+// Discriminated union — each variant wraps its API response type
+type EntityData =
+  | { entityType: 'event'; payload: EventApiResponse }
+  | { entityType: 'place'; payload: SpotApiResponse }
+  | { entityType: 'series'; payload: SeriesApiResponse }
+  | { entityType: 'festival'; payload: FestivalResponse }
+  | { entityType: 'org'; payload: OrgApiResponse }
+
 interface SectionModule {
   id: SectionId                              // unique registry key
   component: React.FC<SectionProps>          // the section content
   trait: (data: EntityData) => boolean       // does the data support this section?
   label: string                              // "Now Playing", "On View", "Lineup"
   icon?: React.FC                            // Phosphor duotone icon for section header
+  allowedEntityTypes: EntityType[]           // runtime guard — enforces the "never mounts" column
+  getCount?: (data: EntityData) => number | null  // count badge for SectionHeader
 }
 
 interface SectionProps {
-  data: EntityData                           // full entity payload — section picks what it needs
+  data: EntityData                           // discriminated union — section narrows via entityType
   portalSlug: string
   accentColor: string                        // inherited from entity category
-  entityType: 'event' | 'place' | 'series' | 'festival' | 'org'
+  entityType: EntityType
 }
 ```
+
+**Type safety:** The `EntityData` discriminated union enables narrowing inside sections via `if (data.entityType === 'event') { data.payload.event.venue... }`. The `allowedEntityTypes` field provides runtime enforcement — DetailLayout checks it before calling `trait()`, turning the matrix's "never mounts" column into enforced behavior. `SectionId` is a string literal union so manifest arrays get compile-time typo checking.
 
 ### 2.2 Section Registry
 
@@ -129,15 +150,39 @@ const cinemaSections: SectionId[] = [
 
 **Legend:** ★ = type-priority (leads content for this type), ● = trait-included (renders if data exists), — = never mounts
 
-### 3.3 Place Subtype Manifests
+### 3.3 Event Manifest
+
+1. `about`
+2. `lineup` (type-priority for music/comedy/theater)
+3. `showSignals`
+4. `connections`
+5. `socialProof`
+6. `gettingThere`
+7. `producer`
+8. `nearby`
+
+### 3.4 Place Subtype Manifests
+
+Place manifests are resolved via `getPlaceManifest(placeType: string)`. The mapping from `spot_type` DB values to manifest groups:
+
+| Manifest | spot_type values |
+|----------|-----------------|
+| Cinema | `movie_theater`, `cinema`, `drive_in_theater` |
+| Restaurant | `restaurant`, `cafe`, `bakery`, `food_hall`, `food_truck` |
+| Museum / Gallery | `museum`, `gallery`, `arts_center`, `historic_site`, `science_center` |
+| Bar / Nightclub | `bar`, `nightclub`, `lounge`, `sports_bar`, `wine_bar`, `brewery`, `distillery` |
+| Park / Garden | `park`, `garden`, `nature_preserve`, `recreation`, `trail` |
+| Music Venue | `music_venue`, `amphitheater`, `stadium`, `theater`, `event_space` |
+| Default | All other types — uses the Music Venue manifest as fallback |
 
 **Cinema:**
 1. `showtimes` (type-priority)
 2. `about`
 3. `connections`
-4. `features`
-5. `planYourVisit`
-6. `nearby`
+4. `eventsAtVenue`
+5. `features`
+6. `planYourVisit`
+7. `nearby`
 
 **Restaurant:**
 1. `dining` (type-priority)
@@ -146,7 +191,8 @@ const cinemaSections: SectionId[] = [
 4. `specials`
 5. `eventsAtVenue`
 6. `accolades`
-7. `nearby`
+7. `connections`
+8. `nearby`
 
 **Museum / Gallery:**
 1. `exhibitions` (type-priority)
@@ -154,16 +200,19 @@ const cinemaSections: SectionId[] = [
 3. `features`
 4. `planYourVisit`
 5. `eventsAtVenue`
-6. `accolades`
-7. `nearby`
+6. `socialProof`
+7. `accolades`
+8. `connections`
+9. `nearby`
 
 **Bar / Nightclub:**
 1. `eventsAtVenue` (type-priority)
 2. `about`
 3. `occasions`
 4. `specials`
-5. `connections`
-6. `nearby`
+5. `accolades`
+6. `connections`
+7. `nearby`
 
 **Park / Garden:**
 1. `features` (type-priority)
@@ -171,15 +220,48 @@ const cinemaSections: SectionId[] = [
 3. `eventsAtVenue`
 4. `planYourVisit`
 5. `accolades`
-6. `nearby`
+6. `connections`
+7. `nearby`
 
 **Music Venue:**
 1. `eventsAtVenue` (type-priority)
 2. `about`
 3. `occasions`
-4. `features`
+4. `specials`
+5. `features`
+6. `connections`
+7. `nearby`
+
+### 3.5 Series Manifests
+
+**Film series** (`getSeriesManifest(isFilm: true)`):
+1. `showtimes` (type-priority)
+2. `about`
+3. `connections`
+4. `gettingThere`
+
+**Non-film recurring series** (`getSeriesManifest(isFilm: false)`):
+1. `upcomingDates` (type-priority)
+2. `about`
+3. `connections`
+4. `gettingThere`
+
+### 3.6 Festival Manifest
+
+1. `schedule` (type-priority)
+2. `about`
+3. `showtimes`
+4. `exhibitions`
 5. `connections`
-6. `nearby`
+6. `gettingThere`
+7. `producer`
+
+### 3.7 Org Manifest
+
+1. `about`
+2. `volunteer` (type-priority)
+3. `eventsAtVenue`
+4. `connections`
 
 ---
 
@@ -189,24 +271,35 @@ const cinemaSections: SectionId[] = [
 
 Every entity is a node in LostCity's data graph. ConnectionsSection reveals the edges — making each detail page a gateway to deeper exploration. This is the key differentiator: LostCity doesn't just list things, it shows how everything connects.
 
-### 4.2 Connection Types
+### 4.2 Connection Types & Resolvers
 
-A `resolveConnections(entity)` function in `web/lib/detail/connections.ts` extracts graph edges from any entity:
+Five per-type resolver functions in `web/lib/detail/connections.ts`, each returning `ConnectionRow[]`:
 
-- **Venue** — event → venue, series → venue, festival → venues
-- **Series** — event → series, venue screenings → series
-- **Festival** — event → festival (via series), venue → active festival screenings, series → parent festival
-- **Org/Producer** — event → producer, venue → operating org, festival → presenting org
-- **Artists** — event → artists, series director → other films
-- **Social** — friends going/attending (events, festivals)
-- **Proximity** — nearby food/drinks for pre/post-show (contextual, not just geo)
+```typescript
+resolveEventConnections(data: EventApiResponse): ConnectionRow[]
+resolvePlaceConnections(data: SpotApiResponse): ConnectionRow[]
+resolveSeriesConnections(data: SeriesApiResponse): ConnectionRow[]
+resolveFestivalConnections(data: FestivalResponse): ConnectionRow[]
+resolveOrgConnections(data: OrgApiResponse): ConnectionRow[]
+```
+
+The orchestrator calls the right resolver based on entity type. The `ConnectionRow` output type is shared — this is the adapter pattern (different inputs, common output).
+
+**Connection types by entity:**
+- **Event:** venue link, tour/series, festival (via series), producer, friends going
+- **Place:** operating org, active festival screenings, recurring series at this venue, nearby pre-show spots
+- **Series:** parent festival, screening theaters, director's other films
+- **Festival:** presenting org, festival venues, film count, friends attending
+- **Org:** venues they operate, festivals they present
+
+**Dependency:** ATLFF `festival_id` linkage must be wired in the crawler before ConnectionsSection can surface festival connections. This is a P0 crawler fix independent of this rearchitecture.
 
 ### 4.3 Connection Row Design
 
 Each connection renders as a tappable row:
 - 36px icon thumbnail (entity type icon or image) in `bg-[var(--twilight)]` rounded-lg
 - Entity name in `text-sm font-medium text-[var(--cream)]`
-- Context line in `text-xs text-[var(--muted)]` — live counts ("14 upcoming events", "12 screenings here"), relationship label ("Promoter", "Official Selection")
+- Context line in `text-xs text-[var(--muted)]` — relationship-first, not quantity-first. Lead with *why this connection matters now*: "hosting 3 ATLFF screenings this week", "Official Selection", "2 friends attending". Fall back to counts ("14 upcoming events") only when no temporal or social signal exists
 - Arrow indicator on the right
 
 **Accent treatment:**
@@ -234,7 +327,21 @@ Every detail page sidebar has three zones, rendered by DetailLayout:
 2. **IdentityZone** — a ReactNode slot, filled by per-type identity components
 3. **ActionZone** — configured via `ActionConfig` (primary CTA, secondary action buttons)
 
-### 5.2 Hero Config
+### 5.2 Mobile Layout
+
+On mobile, the sidebar stacks above content. Without intervention, hero (~211px) + identity zone (~200px) + actions (~80px) = ~500px of chrome before the first content section. This defeats the purpose of type-priority manifests.
+
+**Mobile-specific behavior in DetailLayout:**
+
+1. **Compact identity strip on mobile:** On `< lg`, the identity zone renders a compact variant: title + one-line metadata (venue, date/time or type/neighborhood) + primary CTA button inline. Genre pills, taxonomy badges, show signals, hours summary, and quick action grids collapse behind a "More details" expandable. This gets the first content section visible by ~280px scroll.
+
+2. **Film poster height constraint:** Series (film) hero uses `max-h-[280px] object-cover` on mobile instead of the full 2:3 aspect ratio (which would be 563px on a 375px viewport). Desktop keeps the full portrait poster. Tap to expand to full poster.
+
+3. **Sticky identity bar:** After scrolling past the identity zone, a slim sticky bar locks at the top: entity name + primary CTA. `h-[48px] bg-[var(--night)] border-b border-[var(--twilight)]`. Appears on scroll > identity zone bottom edge.
+
+Each identity component (`EventIdentity.tsx`, etc.) must export both a full and compact variant, or accept a `compact: boolean` prop. DetailLayout switches based on viewport.
+
+### 5.3 Hero Config
 
 ```typescript
 interface HeroConfig {
@@ -248,26 +355,35 @@ interface HeroConfig {
 Per-type defaults:
 - **Event:** aspect 16/10, category-icon fallback, no gallery
 - **Place:** aspect 16/10, type-icon fallback, gallery enabled
-- **Series (film):** aspect 2/3 (poster), category-icon fallback, no gallery
+- **Series (film):** aspect 2/3 (poster) on desktop, `max-h-[280px] object-cover` on mobile, category-icon fallback, no gallery
 - **Series (non-film):** aspect 16/10, banner fallback (h-[120px] with type color + icon), no gallery
 - **Festival:** fixed h-[240px], gradient overlay, no gallery
 - **Org:** logo mode (small centered), no gallery
 
-### 5.3 Identity Zones (per-type)
+### 5.4 Identity Zones (per-type)
 
-Each identity component is a standalone file in `web/components/detail/identity/`:
+Each identity component is a standalone file in `web/components/detail/identity/`. Each exports both a full variant (desktop) and a compact variant (mobile — see 5.2).
 
-**EventIdentity:** Title, venue link, date + time + price, genre pills, taxonomy badges (cost_tier, duration, indoor_outdoor, booking_required), show signals (doors, age, reentry)
+**EventIdentity:** Title, venue link + address inline, date + time + price, genre pills, taxonomy badges (cost_tier, duration, indoor_outdoor, booking_required), show signals (doors, age, reentry). *Compact:* Title, venue + date/time, price.
 
-**PlaceIdentity:** Name, type badge with category color, neighborhood, price level + rating, quick actions grid (reserve/website, menu, phone, directions), hours summary
+**PlaceIdentity:** Name, type badge with category color, neighborhood, price level + rating, quick actions grid (reserve/website, menu, phone, directions), hours summary. *Compact:* Name, type, neighborhood.
 
-**SeriesIdentity:** Title, type badge (Film/Recurring), recurrence label, venue link, film metadata (year, rating, runtime), director + trailer (film only), genre pills
+**SeriesIdentity:** Title, type badge (Film/Recurring), recurrence label, venue link, film metadata (year, rating, runtime), director + trailer (film only), genre pills. *Compact:* Title, type, next date.
 
-**FestivalIdentity:** Name, type badge, date range, location, temporal status banner, experience tags, price/duration metadata
+**FestivalIdentity:** Name, type badge, date range, location, temporal status banner (states: upcoming/happening-first/happening-mid/happening-last/ended — each with distinct color), experience tags, price/duration metadata. *Compact:* Name, date range, status.
 
-**OrgIdentity:** Logo, name, org type, location, category tags, links (website, Instagram, email)
+**OrgIdentity:** Logo, name, org type, location, primary activity summary (next event or "Presents N+ events annually"), category tags, links (website, Instagram, email). *Compact:* Logo, name, type.
 
-### 5.4 Action Config
+### 5.5 DetailIdentity Wrapper
+
+`web/components/detail/core/DetailIdentity.tsx` wraps the identity ReactNode with consistent sidebar chrome:
+- Padding: `px-5 py-4`
+- Bottom divider: `border-b border-[var(--twilight)]/40`
+- Handles the full/compact switch based on viewport (`useMediaQuery` or Tailwind responsive)
+
+Individual identity components do NOT manage their own padding or dividers.
+
+### 5.6 Action Config
 
 ```typescript
 interface ActionConfig {
@@ -369,8 +485,50 @@ function useDetailData<T extends EntityData>(config: {
 
 ### 6.6 Trait Functions
 
-`web/lib/detail/traits.ts` — centralized data presence checks:
+`web/lib/detail/traits.ts` — centralized data presence checks. Each trait receives the full `EntityData` discriminated union and narrows internally:
 - `hasDescription(data)`, `hasArtists(data)`, `hasScreenings(data)`, `hasDiningProfile(data)`, `hasExhibitions(data)`, `hasPrograms(data)`, `hasUpcomingEvents(data)`, `hasFeatures(data)`, `hasConnections(data)`, `hasSocialData(data)`, `hasLocation(data)`, `hasCoordinates(data)`, `hasAdmission(data)`, `hasAccessibility(data)`, `hasSpecials(data)`, `hasOccasions(data)`, `hasEditorialMentions(data)`, `hasShowSignals(data)`, `hasVolunteerOpportunities(data)`, `hasProducer(data)`
+
+Traits evaluate at the orchestrator level before props are passed to sections. This ensures compound traits (e.g., `hasUpcomingEvents && isRecurring` for UpcomingDatesSection) have access to the full API response.
+
+### 6.7 Accent Color Plumbing
+
+DetailLayout renders a single `<ScopedStyles>` element that sets `--detail-accent` from the `accentColor` prop (derived from `getCategoryColor()` in the orchestrator). Sections use `text-[var(--detail-accent)]` and `bg-[var(--detail-accent)]/10` etc. No section renders its own ScopedStyles.
+
+For multi-accent scenarios (e.g., an event with both a category color and a festival color), DetailLayout sets:
+- `--detail-accent` — primary accent (category color)
+- `--detail-accent-secondary` — secondary accent (series/festival color, if present)
+
+The orchestrator derives both from its entity data and passes them to DetailLayout.
+
+### 6.8 Loading & Error States
+
+**Loading:** DetailLayout renders a per-type skeleton when `status === 'loading'`. The skeleton matches the expected layout structure:
+- Sidebar: hero skeleton (matching aspect ratio from heroConfig) + identity skeleton (3-4 shimmer lines) + action skeleton (button placeholders)
+- Content: 2-3 section skeletons with SectionHeader shimmer + content placeholders
+
+The skeleton is driven by `entityType` — a place skeleton shows a quick-actions grid placeholder, an event skeleton shows a lineup placeholder. Each orchestrator can optionally provide a `skeletonHint` to customize the content skeleton count/shapes.
+
+**Error:** DetailLayout renders a centered error state via DetailShell's `singleColumn` mode: Phosphor `Warning` icon at 48px, heading "Something went wrong", retry button. Consistent across all entity types.
+
+### 6.9 SocialProof vs Connections Boundary
+
+These sections have distinct purposes and do not overlap:
+- **SocialProofSection** — detailed attendance view: friend avatars with names, "N people going" count, "Who's Going" tab. Renders on events and places. This is the full social detail.
+- **ConnectionsSection** — entity-level graph links: "3 friends going" as a single connection row with avatar stack. This is the summary signal pointing to the social layer.
+
+When both sections render on the same page (e.g., an event), ConnectionsSection shows the friend count as a tappable row. SocialProofSection shows the full list with names. No duplication — one is a summary link, the other is the detail.
+
+For logged-out users, SocialProofSection shows aggregate count only ("12 people going") without friend names. ConnectionsSection omits the social row entirely for logged-out users.
+
+### 6.10 Empty / Thin State Handling
+
+When fewer than 3 sections pass their trait checks, the page risks feeling empty. DetailLayout handles this:
+
+1. If 0 content sections render: show a single centered block — category/type icon at 48px opacity 0.2, "We're still learning about this place" in `text-base font-semibold text-[var(--cream)]`, "Check back soon — or help us out by suggesting details" in `text-sm text-[var(--muted)]`. Plus a `NearbySection` injected as fallback content if coordinates exist.
+
+2. If 1-2 content sections render: render normally but inject `NearbySection` and/or `ConnectionsSection` at the end if not already in the manifest and the traits pass. This fills the page with discovery content.
+
+The thin state is a data quality signal, not a design failure. The page should feel honest ("we're building this out") not broken.
 
 ---
 
@@ -381,7 +539,7 @@ web/components/detail/
 ├── core/
 │   ├── DetailLayout.tsx          — sidebar skeleton + section pipeline
 │   ├── DetailHero.tsx            — unified hero (image, gallery, poster, logo, fallback)
-│   ├── DetailIdentity.tsx        — sidebar identity wrapper (padding, dividers)
+│   ├── DetailIdentity.tsx        — sidebar identity wrapper (padding, dividers, full/compact switch)
 │   ├── DetailActions.tsx         — action zone (primary CTA + secondaries)
 │   ├── DetailStickyBar.tsx       — mobile sticky bar (cleaned up from existing)
 │   ├── SectionWrapper.tsx        — wraps each section with SectionHeader + spacing
@@ -441,9 +599,9 @@ web/components/views/               (rewritten — thin orchestrators)
 └── OrgDetailView.tsx               — ~50 lines
 
 web/lib/detail/                     (new — unified data layer)
-├── types.ts                        — EntityData union, SectionId, SectionManifest, configs
-├── traits.ts                       — trait functions
-├── connections.ts                  — resolveConnections(entity) → ConnectionRow[]
+├── types.ts                        — EntityData discriminated union, SectionId literal union, configs
+├── traits.ts                       — trait functions (operate on EntityData union)
+├── connections.ts                  — per-type resolvers + shared ConnectionRow type
 ├── use-detail-data.ts              — unified data hook
 └── format.ts                       — shared formatters
 ```
@@ -520,8 +678,10 @@ Full-page comps for web (desktop) and mobile before any code is written.
 | 10 | Series — Recurring | Upcoming dates, venue link, banner fallback hero | ● | ● |
 | 11 | Festival — Multi-day (ATLFF) | Schedule grid, day tabs, screenings, temporal banner, connections | ● | ● |
 | 12 | Org — Producer | Logo hero, events, volunteer, connection graph | ● | ● |
+| 13 | Place — Thin State | Only about + gettingThere, fallback content injection | ● | ● |
+| 14 | Event — Minimal (no image, desktop) | Fallback hero at desktop proportions | ● | — |
 
-**Total: 12 page types × ~2 breakpoints = ~21 comps** (3 are mobile-only)
+**Total: 14 page types × ~2 breakpoints = ~24 comps**
 
 ### 9.2 Design Process
 
