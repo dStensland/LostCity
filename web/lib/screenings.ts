@@ -53,10 +53,27 @@ export type ScreeningBundle = {
   times: ScreeningTime[];
 };
 
+// File-local chain-builder type. Models just the subset of the Supabase
+// query builder that fetchScreeningBundleFromTables actually calls — select,
+// eq, in, order — plus thenable so the chain is awaitable.
+type ScreeningQueryChain = {
+  select: (columns: string) => ScreeningQueryChain;
+  eq: (column: string, value: unknown) => ScreeningQueryChain;
+  in?: (column: string, values: unknown[]) => ScreeningQueryChain;
+  order?: (
+    column: string,
+    options?: { ascending: boolean },
+  ) => ScreeningQueryChain;
+  then: <T1, T2 = never>(
+    onFulfilled: (
+      value: { data: unknown; error: unknown },
+    ) => T1 | PromiseLike<T1>,
+    onRejected?: (reason: unknown) => T2 | PromiseLike<T2>,
+  ) => Promise<T1 | T2>;
+};
+
 type ScreeningSupabaseClient = {
-  from: (table: string) => {
-    select: (columns: string) => unknown;
-  };
+  from: (table: string) => ScreeningQueryChain;
 };
 
 export type ScreeningEventLike = {
@@ -281,17 +298,17 @@ export async function fetchScreeningBundleFromTables(
 ): Promise<ScreeningBundle | null> {
   if (!options.placeId && !options.festivalId) return null;
 
-  let runsQuery: any = supabase
+  let runsQuery: ScreeningQueryChain = supabase
     .from("screening_runs")
     .select(
       "id, screening_title_id, place_id, festival_id, label, start_date, end_date, source_id, buy_url, info_url, is_special_event",
     );
 
   if (options.placeId) {
-    runsQuery = runsQuery.eq("place_id", options.placeId) as typeof runsQuery;
+    runsQuery = runsQuery.eq("place_id", options.placeId);
   }
   if (options.festivalId) {
-    runsQuery = runsQuery.eq("festival_id", options.festivalId) as typeof runsQuery;
+    runsQuery = runsQuery.eq("festival_id", options.festivalId);
   }
   if (typeof runsQuery.order === "function") {
     runsQuery = runsQuery.order("start_date", { ascending: true });
@@ -312,7 +329,7 @@ export async function fetchScreeningBundleFromTables(
   const titleIds = Array.from(new Set(runs.map((run) => run.screening_title_id)));
   const runIds = runs.map((run) => run.id);
 
-  const titlesQuery: any = supabase
+  const titlesQuery: ScreeningQueryChain = supabase
     .from("screening_titles")
     .select(
       "id, canonical_title, slug, kind, poster_image_url, synopsis, genres, tmdb_id, imdb_id, festival_work_key, director, runtime_minutes, year, rating",
@@ -328,7 +345,7 @@ export async function fetchScreeningBundleFromTables(
     throw titlesResult.error;
   }
 
-  let timesQuery: any = supabase
+  let timesQuery: ScreeningQueryChain = supabase
     .from("screening_times")
     .select(
       "id, screening_run_id, event_id, start_date, start_time, end_time, ticket_url, source_url, format_labels, status",
