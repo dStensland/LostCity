@@ -85,26 +85,87 @@ interface RTScores {
   audience: number | null;
 }
 
+// Shape of the TMDB /movie/{id}?append_to_response=... response, with only
+// the fields this script reads. Everything is optional because TMDB often
+// omits fields for obscure titles.
+interface TmdbCrewMember {
+  job?: string;
+  name?: string;
+}
+interface TmdbVideo {
+  site?: string;
+  type?: string;
+  key?: string;
+}
+interface TmdbReleaseDateEntry {
+  certification?: string;
+}
+interface TmdbReleaseDatesResult {
+  iso_3166_1?: string;
+  release_dates?: TmdbReleaseDateEntry[];
+}
+interface TmdbKeyword {
+  name?: string;
+}
+interface TmdbGenre {
+  name?: string;
+}
+interface TmdbWatchProvider {
+  provider_name?: string;
+}
+interface TmdbWatchProviderRegion {
+  flatrate?: TmdbWatchProvider[];
+  rent?: TmdbWatchProvider[];
+  buy?: TmdbWatchProvider[];
+  ads?: TmdbWatchProvider[];
+  free?: TmdbWatchProvider[];
+}
+interface TmdbMovieDetail {
+  runtime?: number | null;
+  overview?: string | null;
+  backdrop_path?: string | null;
+  vote_average?: number | null;
+  vote_count?: number | null;
+  popularity?: number | null;
+  credits?: { crew?: TmdbCrewMember[] };
+  videos?: { results?: TmdbVideo[] };
+  release_dates?: { results?: TmdbReleaseDatesResult[] };
+  external_ids?: { imdb_id?: string | null };
+  keywords?: { keywords?: TmdbKeyword[] };
+  genres?: TmdbGenre[];
+  "watch/providers"?: { results?: Record<string, TmdbWatchProviderRegion> };
+}
+
+interface TmdbDiscoverResponse {
+  results: TmdbMovie[];
+  total_pages: number;
+}
+
+function isObject(v: unknown): v is Record<string, unknown> {
+  return typeof v === "object" && v !== null;
+}
+
 // --- TMDB helpers ---
 
 async function fetchAllMovieData(tmdbId: number): Promise<MovieEnrichment> {
   const url = `${TMDB_BASE}/movie/${tmdbId}?api_key=${TMDB_KEY}&append_to_response=credits,videos,release_dates,external_ids,keywords,watch/providers`;
   const res = await fetch(url);
-  const data = await res.json();
+  const raw: unknown = await res.json();
+  const data: TmdbMovieDetail = isObject(raw) ? (raw as TmdbMovieDetail) : {};
 
   // Director — first crew member with job "Director"
   const director: string | null =
-    data.credits?.crew?.find((c: any) => c.job === "Director")?.name ?? null;
+    data.credits?.crew?.find((c) => c.job === "Director")?.name ?? null;
 
   // Trailer — first YouTube trailer
   const trailer = data.videos?.results?.find(
-    (v: any) => v.site === "YouTube" && v.type === "Trailer"
+    (v) => v.site === "YouTube" && v.type === "Trailer"
   );
-  const trailer_url = trailer ? `https://www.youtube.com/watch?v=${trailer.key}` : null;
+  const trailer_url = trailer?.key ? `https://www.youtube.com/watch?v=${trailer.key}` : null;
 
   // MPAA rating — US certification
   const usRelease = data.release_dates?.results?.find(
-    (r: any) => r.iso_3166_1 === "US"
+    (r) => r.iso_3166_1 === "US"
   );
   const mpaa_rating: string | null =
     usRelease?.release_dates?.[0]?.certification || null;
@@ -114,17 +175,22 @@ async function fetchAllMovieData(tmdbId: number): Promise<MovieEnrichment> {
 
   // Keywords
   const keywords: string[] =
-    (data.keywords?.keywords ?? []).map((k: any) => k.name);
+    (data.keywords?.keywords ?? [])
+      .map((k) => k.name)
+      .filter((n): n is string => typeof n === "string");
 
   // Genres (from detail endpoint — full objects, not IDs)
   const genres: string[] =
-    (data.genres ?? []).map((g: any) => g.name);
+    (data.genres ?? [])
+      .map((g) => g.name)
+      .filter((n): n is string => typeof n === "string");
 
   // Streaming — same parsing logic as old fetchProviders
   const us = data["watch/providers"]?.results?.US;
   const streaming: StreamingInfo = {};
   if (us) {
-    const names = (arr?: any[]) => arr?.map((p: any) => p.provider_name) ?? [];
+    const names = (arr?: TmdbWatchProvider[]): string[] =>
+      arr?.map((p) => p.provider_name).filter((n): n is string => typeof n === "string") ?? [];
     const stream = names(us.flatrate);
     const rent = names(us.rent);
     const buy = names(us.buy);
@@ -162,7 +228,10 @@ async function fetchHorrorMovies(year: number): Promise<TmdbMovie[]> {
   while (page <= totalPages) {
     const url = `${TMDB_BASE}/discover/movie?api_key=${TMDB_KEY}&with_genres=27&primary_release_year=${year}&region=${US_REGION}&vote_count.gte=10&sort_by=primary_release_date.asc&page=${page}`;
     const res = await fetch(url);
-    const data = await res.json();
+    const raw: unknown = await res.json();
+    const data: TmdbDiscoverResponse = isObject(raw)
+      ? (raw as TmdbDiscoverResponse)
+      : { results: [], total_pages: 1 };
     totalPages = data.total_pages;
     movies.push(...data.results);
     page++;
