@@ -302,7 +302,8 @@ export interface SectionModule {
   component: React.FC<SectionProps>;
   trait: (data: EntityData) => boolean;
   label: string;
-  icon?: React.FC<{ size?: number; weight?: string }>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  icon?: React.FC<any>;
   allowedEntityTypes: EntityType[];
   getCount?: (data: EntityData) => number | null;
 }

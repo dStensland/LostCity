@@ -62,11 +62,11 @@ export function DetailLayout({
   const resolvedSections = useMemo(() => {
     const sections: SectionModule[] = [];
     for (const id of manifest) {
-      const module = sectionRegistry.get(id);
-      if (!module) continue;
-      if (!module.allowedEntityTypes.includes(entityType)) continue;
-      if (!module.trait(data)) continue;
-      sections.push(module);
+      const mod = sectionRegistry.get(id);
+      if (!mod) continue;
+      if (!mod.allowedEntityTypes.includes(entityType)) continue;
+      if (!mod.trait(data)) continue;
+      sections.push(mod);
     }
 
     // Thin state: if <3 sections, try injecting nearby and connections
