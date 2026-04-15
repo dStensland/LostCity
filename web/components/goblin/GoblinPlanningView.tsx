@@ -12,7 +12,7 @@ interface PlanningMember {
   avatar_url: string | null;
 }
 
-interface PlanningProposedMovie {
+export interface PlanningProposedMovie {
   id: number;
   title: string;
   poster_path: string | null;

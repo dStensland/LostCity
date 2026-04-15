@@ -145,7 +145,7 @@ export async function GET(
   const directEvents = (directEventsData || []) as SessionRow[];
 
   const rawSessions: SessionRow[] = [...programEvents];
-  const screeningsFromTables = await fetchScreeningBundleFromTables(supabase as any, {
+  const screeningsFromTables = await fetchScreeningBundleFromTables(supabase, {
     festivalId: festival.id,
   });
 

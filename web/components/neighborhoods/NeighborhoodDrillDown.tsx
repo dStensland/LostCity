@@ -239,6 +239,10 @@ export default function NeighborhoodDrillDown({ slug, name, portalSlug, activity
   const [events, setEvents] = useState<DrillDownEvent[]>([]);
   const [loading, setLoading] = useState(true);
 
+  /* eslint-disable react-hooks/set-state-in-effect --
+     Fetch-on-slug-change loading pattern: clears events, flips loading
+     on, fetches, resolves both to final values. Cascade bounded — none
+     of events/loading is in the dep array ([slug, name, portalSlug]). */
   useEffect(() => {
     setLoading(true);
     setEvents([]);
@@ -274,6 +278,7 @@ export default function NeighborhoodDrillDown({ slug, name, portalSlug, activity
       controller.abort();
     };
   }, [slug, name, portalSlug]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {

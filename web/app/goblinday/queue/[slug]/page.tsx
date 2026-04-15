@@ -6,6 +6,54 @@ interface PageProps {
   params: Promise<{ slug: string }>;
 }
 
+interface ProfileNameRow {
+  display_name: string | null;
+}
+
+interface ProfileRow {
+  id: string;
+  username: string;
+  display_name: string | null;
+  avatar_url: string | null;
+}
+
+interface QueueMovieRow {
+  id: number;
+  tmdb_id: number | null;
+  title: string;
+  poster_path: string | null;
+  release_date: string | null;
+  genres: string[] | null;
+  runtime_minutes: number | null;
+  director: string | null;
+  year: number | null;
+}
+
+interface QueueEntryRow {
+  id: number;
+  note: string | null;
+  sort_order: number | null;
+  added_at: string;
+  movie: QueueMovieRow;
+}
+
+interface RecommendationMovieRow {
+  id: number;
+  tmdb_id: number | null;
+  title: string;
+  poster_path: string | null;
+  release_date: string | null;
+  year: number | null;
+}
+
+interface RecommendationRow {
+  id: number;
+  recommender_name: string;
+  note: string | null;
+  created_at: string;
+  movie: RecommendationMovieRow;
+}
+
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params;
   const serviceClient = createServiceClient();
@@ -13,8 +61,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     .from("profiles")
     .select("display_name")
     .eq("username", slug)
-    .maybeSingle();
-  const name = (profile as any)?.display_name || slug;
+    .maybeSingle<ProfileNameRow>();
+  const name = profile?.display_name || slug;
 
   return {
     title: `${name}'s Queue — Goblin Day`,
@@ -41,7 +89,7 @@ export default async function PublicQueuePage({ params }: PageProps) {
     .from("profiles")
     .select("id, username, display_name, avatar_url")
     .eq("username", slug)
-    .maybeSingle();
+    .maybeSingle<ProfileRow>();
 
   if (!profile) {
     return (
@@ -51,7 +99,7 @@ export default async function PublicQueuePage({ params }: PageProps) {
     );
   }
 
-  const userId = (profile as any).id;
+  const userId = profile.id;
 
   // Fetch watchlist entries
   const { data: entries } = await serviceClient
@@ -64,7 +112,8 @@ export default async function PublicQueuePage({ params }: PageProps) {
       )
     `)
     .eq("user_id", userId)
-    .order("sort_order", { ascending: true, nullsFirst: false });
+    .order("sort_order", { ascending: true, nullsFirst: false })
+    .returns<QueueEntryRow[]>();
 
   // Fetch recommendations (service client bypasses RLS)
   const { data: recommendations } = await serviceClient
@@ -78,18 +127,19 @@ export default async function PublicQueuePage({ params }: PageProps) {
     .eq("target_user_id", userId)
     .in("status", ["pending", "added"])
     .order("recommender_name", { ascending: true })
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .returns<RecommendationRow[]>();
 
   return (
     <GoblinQueuePublicView
       user={{
-        username: (profile as any).username,
-        displayName: (profile as any).display_name,
-        avatarUrl: (profile as any).avatar_url,
+        username: profile.username,
+        displayName: profile.display_name,
+        avatarUrl: profile.avatar_url,
       }}
       slug={slug}
-      entries={(entries || []) as any}
-      recommendations={(recommendations || []) as any}
+      entries={entries || []}
+      recommendations={recommendations || []}
     />
   );
 }

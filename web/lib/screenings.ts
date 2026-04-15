@@ -53,11 +53,15 @@ export type ScreeningBundle = {
   times: ScreeningTime[];
 };
 
-type ScreeningSupabaseClient = {
-  from: (table: string) => {
-    select: (columns: string) => unknown;
-  };
-};
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Database } from "./types";
+
+// Accept the real Supabase client type directly. Earlier iterations used a
+// file-local shim which triggered TS2589 ("Type instantiation is excessively
+// deep and possibly infinite") at call sites, because the shim's structure
+// conflicted with SupabaseClient<Database>'s generic overloads. Using the
+// real type avoids the conflict.
+type ScreeningSupabaseClient = SupabaseClient<Database>;
 
 export type ScreeningEventLike = {
   id: number;
@@ -281,19 +285,22 @@ export async function fetchScreeningBundleFromTables(
 ): Promise<ScreeningBundle | null> {
   if (!options.placeId && !options.festivalId) return null;
 
-  let runsQuery: any = supabase
+  let runsQuery = supabase
     .from("screening_runs")
     .select(
       "id, screening_title_id, place_id, festival_id, label, start_date, end_date, source_id, buy_url, info_url, is_special_event",
     );
 
   if (options.placeId) {
-    runsQuery = runsQuery.eq("place_id", options.placeId) as typeof runsQuery;
+    runsQuery = runsQuery.eq("place_id", options.placeId);
   }
   if (options.festivalId) {
-    runsQuery = runsQuery.eq("festival_id", options.festivalId) as typeof runsQuery;
+    runsQuery = runsQuery.eq("festival_id", options.festivalId);
   }
-  if (typeof runsQuery.order === "function") {
+  // Defensive: tests pass minimal mocks whose `.eq` returns a plain Promise
+  // with no `.order` method. Keep the runtime check so the function works
+  // with both real supabase clients and those partial mocks.
+  if ("order" in runsQuery && typeof runsQuery.order === "function") {
     runsQuery = runsQuery.order("start_date", { ascending: true });
   }
 
@@ -312,31 +319,32 @@ export async function fetchScreeningBundleFromTables(
   const titleIds = Array.from(new Set(runs.map((run) => run.screening_title_id)));
   const runIds = runs.map((run) => run.id);
 
-  const titlesQuery: any = supabase
+  const titlesQuery = supabase
     .from("screening_titles")
     .select(
       "id, canonical_title, slug, kind, poster_image_url, synopsis, genres, tmdb_id, imdb_id, festival_work_key, director, runtime_minutes, year, rating",
     );
-  const titlesResult = typeof titlesQuery.in === "function"
-    ? ((await titlesQuery.in("id", titleIds)) as {
-        data: ScreeningTitle[] | null;
-        error: unknown;
-      })
-    : { data: null, error: null };
+  const titlesResult =
+    "in" in titlesQuery && typeof titlesQuery.in === "function"
+      ? ((await titlesQuery.in("id", titleIds)) as {
+          data: ScreeningTitle[] | null;
+          error: unknown;
+        })
+      : { data: null, error: null };
   if (titlesResult.error) {
     if (isMissingScreeningSchemaError(titlesResult.error)) return null;
     throw titlesResult.error;
   }
 
-  let timesQuery: any = supabase
+  let timesQuery = supabase
     .from("screening_times")
     .select(
       "id, screening_run_id, event_id, start_date, start_time, end_time, ticket_url, source_url, format_labels, status",
     );
-  if (typeof timesQuery.in === "function") {
+  if ("in" in timesQuery && typeof timesQuery.in === "function") {
     timesQuery = timesQuery.in("screening_run_id", runIds);
   }
-  if (typeof timesQuery.order === "function") {
+  if ("order" in timesQuery && typeof timesQuery.order === "function") {
     timesQuery = timesQuery.order("start_date", { ascending: true });
   }
   const timesResult = (await timesQuery) as {

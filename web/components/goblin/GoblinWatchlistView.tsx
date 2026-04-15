@@ -77,12 +77,17 @@ export default function GoblinWatchlistView({ isAuthenticated }: Props) {
   const [editSaving, setEditSaving] = useState(false);
 
   // Sync edit form when editEntry changes
+  /* eslint-disable react-hooks/set-state-in-effect --
+     Derived-state reset when editEntry prop changes: seeds the inline
+     edit form fields. Cascade bounded — editNote/editTagIds are not in
+     the dep array ([editEntry]). */
   useEffect(() => {
     if (editEntry) {
       setEditNote(editEntry.note ?? "");
       setEditTagIds(editEntry.tags.map((t) => t.id));
     }
   }, [editEntry]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const filteredEntries = useMemo(() => {
     if (!activeTag) return entries;

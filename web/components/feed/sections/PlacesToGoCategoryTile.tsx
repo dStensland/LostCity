@@ -35,10 +35,6 @@ const CATEGORY_ICONS: Record<string, PhosphorIcon> = {
   historic_sites: Compass,
 };
 
-function getCategoryIcon(key: string): PhosphorIcon {
-  return CATEGORY_ICONS[key] ?? Compass;
-}
-
 interface PlacesToGoCategoryTileProps {
   category: PlacesToGoCategory;
   isExpanded: boolean;
@@ -51,7 +47,7 @@ export const PlacesToGoCategoryTile = memo(function PlacesToGoCategoryTile({
   onToggle,
 }: PlacesToGoCategoryTileProps) {
   const accent = category.accent_color;
-  const Icon = getCategoryIcon(category.key);
+  const Icon: PhosphorIcon = CATEGORY_ICONS[category.key] ?? Compass;
 
   return (
     <div

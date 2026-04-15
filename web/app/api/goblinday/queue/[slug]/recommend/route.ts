@@ -19,32 +19,38 @@ export async function POST(
 
   const { slug } = await params;
 
-  let body: any;
+  let body: {
+    tmdb_id?: unknown;
+    note?: unknown;
+    recommender_name?: unknown;
+  };
   try {
-    body = await request.json();
+    body = (await request.json()) as typeof body;
   } catch {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  // Input validation
-  const { tmdb_id, note } = body;
-  let { recommender_name } = body;
-
-  if (!tmdb_id || typeof tmdb_id !== "number" || !Number.isInteger(tmdb_id) || tmdb_id <= 0) {
+  // Input validation — narrow every field from unknown to its runtime type
+  const tmdb_id_raw = body.tmdb_id;
+  if (!tmdb_id_raw || typeof tmdb_id_raw !== "number" || !Number.isInteger(tmdb_id_raw) || tmdb_id_raw <= 0) {
     return NextResponse.json({ error: "tmdb_id must be a positive integer" }, { status: 400 });
   }
+  const tmdb_id: number = tmdb_id_raw;
 
-  if (recommender_name !== undefined && recommender_name !== null) {
-    recommender_name = String(recommender_name).trim();
+  let recommender_name: string | null = null;
+  if (body.recommender_name !== undefined && body.recommender_name !== null) {
+    recommender_name = String(body.recommender_name).trim();
     if (recommender_name.length < 1 || recommender_name.length > 50) {
       return NextResponse.json({ error: "recommender_name must be 1-50 characters" }, { status: 400 });
     }
   }
 
-  if (note !== undefined && note !== null) {
-    if (typeof note !== "string" || note.length > 500) {
+  let note: string | null = null;
+  if (body.note !== undefined && body.note !== null) {
+    if (typeof body.note !== "string" || body.note.length > 500) {
       return NextResponse.json({ error: "note must be a string of max 500 characters" }, { status: 400 });
     }
+    note = body.note;
   }
 
   const serviceClient = createServiceClient();
@@ -108,7 +114,11 @@ export async function POST(
       return NextResponse.json({ error: "You have already recommended this movie" }, { status: 409 });
     }
   } else {
-    // Anonymous: check by (target_user_id, movie_id, recommender_name) where recommender_user_id IS NULL
+    // Anonymous: check by (target_user_id, movie_id, recommender_name) where recommender_user_id IS NULL.
+    // recommender_name is guaranteed non-empty here by the guard above, but narrow again for TS.
+    if (!recommender_name) {
+      return NextResponse.json({ error: "recommender_name is required for anonymous recommendations" }, { status: 400 });
+    }
     const { data: existing } = await serviceClient
       .from("goblin_watchlist_recommendations")
       .select("id")

@@ -46,6 +46,7 @@ export default function GoblinRankingCompare({ items, myEntries, participants, c
   const prevSelectedRef = useRef(selectedUserId);
   useEffect(() => {
     if (prevSelectedRef.current !== selectedUserId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- animation-reset trigger: bumps animKey when selectedUserId changes so entries re-animate. Cascade bounded — animKey is not in the dep array ([selectedUserId]).
       setAnimKey((k) => k + 1);
       prevSelectedRef.current = selectedUserId;
     }

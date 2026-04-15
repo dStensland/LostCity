@@ -31,12 +31,19 @@ export default function GoblinRankingGamePage({ gameId }: Props) {
   const scrollPositions = useRef<Map<number, number>>(new Map());
 
   // Set initial view once auth resolves — logged-in users get "mine", guests get "group"
+  /* eslint-disable react-hooks/set-state-in-effect --
+     One-shot initial-view selection once auth resolves. Bounded by the
+     hasSetInitialView guard: the second setState flips hasSetInitialView
+     true, so the next effect run short-circuits at the guard. Cannot live
+     in a useState initializer because auth loading state isn't known on
+     mount. */
   useEffect(() => {
     if (!hasSetInitialView && !loading) {
       setView(isAuthenticated ? "mine" : "group");
       setHasSetInitialView(true);
     }
   }, [isAuthenticated, loading, hasSetInitialView]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const activeCategory = game?.categories[activeCategoryIdx] ?? null;
 

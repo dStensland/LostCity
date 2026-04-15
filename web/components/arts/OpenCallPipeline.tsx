@@ -42,6 +42,7 @@ export function OpenCallPipeline({ portalSlug }: OpenCallPipelineProps) {
   }, [user, authFetch]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch-on-mount loading pattern: fetchTracked internally toggles loading + sets tracked. Cascade bounded — neither loading nor tracked is in the dep array ([fetchTracked]).
     fetchTracked();
   }, [fetchTracked]);
 

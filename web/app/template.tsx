@@ -14,6 +14,7 @@ export default function Template({ children }: { children: ReactNode }) {
   const [supportsVT, setSupportsVT] = useState(false);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- mount-once feature detection: supportsVT is not in deps ([]), so cascade is bounded. Must run in effect (not useState initializer) because document is undefined during SSR, and a lazy initializer would hydration-mismatch.
     setSupportsVT("startViewTransition" in document);
   }, []);
 

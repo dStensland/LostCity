@@ -31,15 +31,13 @@ function ExpandedOverlay({
   effect: EffectDef;
   onClose: () => void;
 }) {
-  const onCloseStable = useCallback(onClose, [onClose]);
-
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onCloseStable();
+      if (e.key === "Escape") onClose();
     };
     document.addEventListener("keydown", handler);
     return () => document.removeEventListener("keydown", handler);
-  }, [onCloseStable]);
+  }, [onClose]);
 
   return (
     <div className="fixed inset-0 z-50">

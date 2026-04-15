@@ -161,7 +161,8 @@ async function searchTMDB(title: string, year: number): Promise<TmdbSearchResult
   const data2 = await res2.json();
   if (data2.results?.length > 0) {
     // Pick the one closest to our year
-    const sorted = data2.results.sort((a: any, b: any) => {
+    type TmdbSearchResultLite = { release_date?: string | null };
+    const sorted = (data2.results as TmdbSearchResultLite[]).sort((a, b) => {
       const aYear = a.release_date ? parseInt(a.release_date.slice(0, 4)) : 9999;
       const bYear = b.release_date ? parseInt(b.release_date.slice(0, 4)) : 9999;
       return Math.abs(aYear - year) - Math.abs(bYear - year);

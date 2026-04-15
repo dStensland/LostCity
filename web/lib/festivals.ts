@@ -281,7 +281,7 @@ export async function getFestivalScreenings(
   // All cinema sources are screening-primary — screening tables are the source of truth.
   const supabase = await createClient();
   const screeningsFromTables = await fetchScreeningBundleFromTables(
-    supabase as any,
+    supabase,
     { festivalId },
   );
   return screeningsFromTables && screeningsFromTables.titles.length > 0

@@ -22,6 +22,10 @@ export function useGoblinGroups(isAuthenticated: boolean) {
     }
   }, []);
 
+  /* eslint-disable react-hooks/set-state-in-effect --
+     Fetch-on-auth-change loading pattern: short-circuits loading off for
+     unauth users, otherwise flips loading on, fetches, flips off. Cascade
+     bounded — loading is not in the dep array ([isAuthenticated, fetchGroups]). */
   useEffect(() => {
     if (!isAuthenticated) {
       setLoading(false);
@@ -30,6 +34,7 @@ export function useGoblinGroups(isAuthenticated: boolean) {
     setLoading(true);
     fetchGroups().finally(() => setLoading(false));
   }, [isAuthenticated, fetchGroups]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const createGroup = useCallback(
     async (data: {

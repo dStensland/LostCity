@@ -4,6 +4,7 @@ import {
   useRef,
   useState,
   useEffect,
+  useLayoutEffect,
   type ReactNode,
   type CSSProperties,
 } from "react";
@@ -40,9 +41,14 @@ export function ContentSwap({
   const [displayedChildren, setDisplayedChildren] = useState(children);
   const isFirstRender = useRef(true);
 
-  // Always track latest children and key to avoid stale closures in animation callbacks
-  latestChildrenRef.current = children;
-  latestKeyRef.current = swapKey;
+  // Always track latest children and key to avoid stale closures in animation
+  // callbacks. Written in useLayoutEffect so the refs are updated after commit
+  // (satisfies react-hooks/refs-during-render) but before any onfinish handler
+  // fires, since the animation duration is longer than the layout phase.
+  useLayoutEffect(() => {
+    latestChildrenRef.current = children;
+    latestKeyRef.current = swapKey;
+  });
 
   const isSwapping = displayedKey !== swapKey;
   const delayReady = useMinSkeletonDelay(isSwapping, minDisplayMs);
@@ -87,6 +93,11 @@ export function ContentSwap({
   }, [error]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Handle normal swap: wait for min delay, then crossfade
+  /* eslint-disable react-hooks/set-state-in-effect --
+     Fallback when containerRef.current is null (crossfade impossible):
+     synchronously swap displayedKey/displayedChildren to current props.
+     Cascade bounded — displayedKey/displayedChildren are not in the dep
+     array ([swapKey, delayReady]). */
   useEffect(() => {
     if (isFirstRender.current) {
       isFirstRender.current = false;
@@ -102,6 +113,7 @@ export function ContentSwap({
     const anim = crossfade(containerRef.current);
     return () => anim?.cancel();
   }, [swapKey, delayReady]); // eslint-disable-line react-hooks/exhaustive-deps
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const containerStyle: CSSProperties = {};
   if (minHeight) {

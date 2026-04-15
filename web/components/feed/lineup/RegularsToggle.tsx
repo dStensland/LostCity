@@ -76,6 +76,7 @@ export const RegularsToggle = memo(function RegularsToggle({
 
   // Reset day pill on tab switch, per spec
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- derived-state reset on activeTab change. Cascade bounded — activeDay not in deps ([activeTab]).
     setActiveDay(null);
   }, [activeTab]);
 

@@ -1,10 +1,29 @@
 import { Metadata } from "next";
 import { createServiceClient } from "@/lib/supabase/service";
 import GoblinLogPublicView from "./GoblinLogPublicView";
+import type { LogEntry, GoblinTag } from "@/lib/goblin-log-utils";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
   searchParams: Promise<{ year?: string }>;
+}
+
+interface ProfileNameRow {
+  display_name: string | null;
+}
+
+interface ProfileRow {
+  id: string;
+  username: string;
+  display_name: string | null;
+  avatar_url: string | null;
+}
+
+type LogEntryRow = Omit<LogEntry, "tags">;
+
+interface TagJoinRow {
+  entry_id: number;
+  tag: GoblinTag | null;
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
@@ -14,8 +33,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     .from("profiles")
     .select("display_name")
     .eq("username", slug)
-    .maybeSingle();
-  const name = (profile as any)?.display_name || slug;
+    .maybeSingle<ProfileNameRow>();
+  const name = profile?.display_name || slug;
 
   return {
     title: `${name}'s Film Log — Goblin Day`,
@@ -44,7 +63,7 @@ export default async function PublicLogPage({ params, searchParams }: PageProps)
     .from("profiles")
     .select("id, username, display_name, avatar_url")
     .eq("username", slug)
-    .maybeSingle();
+    .maybeSingle<ProfileRow>();
 
   if (!profile) {
     return (
@@ -65,31 +84,35 @@ export default async function PublicLogPage({ params, searchParams }: PageProps)
         tmdb_vote_average, tmdb_vote_count, mpaa_rating, imdb_id, synopsis, trailer_url
       )
     `)
-    .eq("user_id", (profile as any).id)
+    .eq("user_id", profile.id)
     .gte("watched_date", `${currentYear}-01-01`)
     .lte("watched_date", `${currentYear}-12-31`)
     .order("sort_order", { ascending: true, nullsFirst: false })
-    .order("watched_date", { ascending: false });
+    .order("watched_date", { ascending: false })
+    .returns<LogEntryRow[]>();
 
   // Fetch tags
-  const entryIds = (entries || []).map((e: any) => e.id);
-  const entryTags: Record<number, any[]> = {};
+  const entryIds = (entries || []).map((e) => e.id);
+  const entryTags: Record<number, GoblinTag[]> = {};
 
   if (entryIds.length > 0) {
     const { data: tagRows } = await serviceClient
       .from("goblin_log_entry_tags")
       .select("entry_id, tag:goblin_tags!tag_id (id, name, color)")
-      .in("entry_id", entryIds);
+      .in("entry_id", entryIds)
+      .returns<TagJoinRow[]>();
 
     for (const row of tagRows || []) {
-      const r = row as any;
-      if (!entryTags[r.entry_id]) entryTags[r.entry_id] = [];
-      if (r.tag) entryTags[r.entry_id].push(r.tag);
+      if (!entryTags[row.entry_id]) entryTags[row.entry_id] = [];
+      if (row.tag) entryTags[row.entry_id].push(row.tag);
     }
   }
 
-  const logEntries = (entries || []).map((e: any) => ({
+  const logEntries: LogEntry[] = (entries || []).map((e) => ({
     ...e,
+    created_at: "",
+    updated_at: "",
+    movie_id: e.movie.id,
     tags: entryTags[e.id] || [],
   }));
 
@@ -97,15 +120,16 @@ export default async function PublicLogPage({ params, searchParams }: PageProps)
   const { data: userTags } = await serviceClient
     .from("goblin_tags")
     .select("id, name, color")
-    .eq("user_id", (profile as any).id)
-    .order("created_at", { ascending: true });
+    .eq("user_id", profile.id)
+    .order("created_at", { ascending: true })
+    .returns<GoblinTag[]>();
 
   return (
     <GoblinLogPublicView
       user={{
-        username: (profile as any).username,
-        displayName: (profile as any).display_name,
-        avatarUrl: (profile as any).avatar_url,
+        username: profile.username,
+        displayName: profile.display_name,
+        avatarUrl: profile.avatar_url,
       }}
       entries={logEntries}
       tags={userTags || []}

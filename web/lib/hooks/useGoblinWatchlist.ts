@@ -99,6 +99,12 @@ export function useGoblinWatchlist(
   }, []);
 
   // Fetch on mount
+  /* eslint-disable react-hooks/set-state-in-effect --
+     Fetch-on-auth-change loading pattern: short-circuits loading off for
+     unauth users, otherwise flips loading on, fetches entries + tags +
+     recommendations in parallel, flips off. Cascade bounded — loading
+     is not in the dep array ([isAuthenticated, fetchEntries, fetchTags,
+     fetchRecommendations]). */
   useEffect(() => {
     if (!isAuthenticated) {
       setLoading(false);
@@ -107,6 +113,7 @@ export function useGoblinWatchlist(
     setLoading(true);
     Promise.all([fetchEntries(), fetchTags(), fetchRecommendations()]).finally(() => setLoading(false));
   }, [isAuthenticated, fetchEntries, fetchTags, fetchRecommendations]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const addEntry = useCallback(
     async (data: { tmdb_id: number; note?: string; tag_ids?: number[] }) => {

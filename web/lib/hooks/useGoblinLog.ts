@@ -70,6 +70,11 @@ export function useGoblinLog(
   }, []);
 
   // Fetch on mount + year change
+  /* eslint-disable react-hooks/set-state-in-effect --
+     Fetch-on-year-or-auth-change loading pattern: short-circuits loading
+     off for unauth users, otherwise flips loading on, fetches entries +
+     tags in parallel, flips off. Cascade bounded — loading is not in
+     the dep array ([isAuthenticated, year, fetchEntries, fetchTags]). */
   useEffect(() => {
     if (!isAuthenticated) {
       setLoading(false);
@@ -80,6 +85,7 @@ export function useGoblinLog(
       setLoading(false)
     );
   }, [isAuthenticated, year, fetchEntries, fetchTags]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const addEntry = useCallback(
     async (data: {
@@ -106,7 +112,17 @@ export function useGoblinLog(
   );
 
   const updateEntry = useCallback(
-    async (entryId: number, data: any) => {
+    async (
+      entryId: number,
+      data: Partial<{
+        watched_date: string;
+        note: string;
+        watched_with: string;
+        tag_ids: number[];
+        tier_name: string | null;
+        tier_color: string | null;
+      }>,
+    ) => {
       try {
         const res = await fetch(`/api/goblinday/me/log/${entryId}`, {
           method: "PATCH",

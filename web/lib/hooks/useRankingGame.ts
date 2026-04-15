@@ -53,12 +53,18 @@ export function useRankingGame(gameId: number, isAuthenticated: boolean) {
     setState((prev) => ({ ...prev, participants: data.participants || [] }));
   }, [gameId]);
 
+  /* eslint-disable react-hooks/set-state-in-effect --
+     Fetch-on-fetcher-change loading pattern: flips loading on, runs the
+     three parallel fetches, flips loading off on resolve. Cascade bounded
+     — loading is not in the dep array ([fetchGame, fetchMyEntries,
+     fetchParticipants]). */
   useEffect(() => {
     setState((prev) => ({ ...prev, loading: true }));
     Promise.all([fetchGame(), fetchMyEntries(), fetchParticipants()]).then(() => {
       setState((prev) => ({ ...prev, loading: false }));
     });
   }, [fetchGame, fetchMyEntries, fetchParticipants]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const saveRankings = useCallback(
     (categoryId: number, entries: RankingEntry[]) => {

@@ -198,6 +198,7 @@ export default function GoblinRankingList({
   const prevCategoryRef = useRef(categoryId);
   useEffect(() => {
     if (prevCategoryRef.current !== categoryId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- animation-reset trigger: bumps animKey when categoryId changes so rows re-animate. Cascade bounded — animKey is not in the dep array ([categoryId]).
       setAnimKey((k) => k + 1);
       prevCategoryRef.current = categoryId;
     }

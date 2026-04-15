@@ -4,8 +4,8 @@ import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import GoblinMovieCard, { type GoblinMovie, normalizeStreaming } from "./GoblinMovieCard";
-import GoblinSessionView from "./GoblinSessionView";
-import GoblinSessionHistory from "./GoblinSessionHistory";
+import GoblinSessionView, { type SessionData } from "./GoblinSessionView";
+import GoblinSessionHistory, { type SessionSummary } from "./GoblinSessionHistory";
 import { GoblinPlanningView } from "./GoblinPlanningView";
 import { GoblinAuthBar } from "./GoblinAuthBar";
 import { GoblinLoginPrompt } from "./GoblinLoginPrompt";
@@ -169,8 +169,8 @@ export default function GoblinDayPage({ initialMovies, activeSessionId }: Props)
     status: "planning" | "live";
     invite_code: string;
   } | null>(activeSessionId ? { id: activeSessionId, status: "live", invite_code: "" } : null);
-  const [sessionData, setSessionData] = useState<any>(null);
-  const [sessionsList, setSessionsList] = useState<any[]>([]);
+  const [sessionData, setSessionData] = useState<SessionData | null>(null);
+  const [sessionsList, setSessionsList] = useState<SessionSummary[]>([]);
   const [sessionsLoaded, setSessionsLoaded] = useState(false);
   const [sessionLoading, setSessionLoading] = useState(false);
 
@@ -213,7 +213,7 @@ export default function GoblinDayPage({ initialMovies, activeSessionId }: Props)
       setSessionsLoaded(true);
       // Re-surface any in-progress session from the list
       const inProgress = data.find(
-        (s: any) => s.status === "planning" || s.status === "live"
+        (s: SessionSummary) => s.status === "planning" || s.status === "live"
       );
       if (inProgress && !activeSession) {
         setActiveSession({
@@ -788,7 +788,17 @@ export default function GoblinDayPage({ initialMovies, activeSessionId }: Props)
                 sessionDate={sessionData.date ?? new Date().toISOString().slice(0, 10)}
                 inviteCode={activeSession.invite_code}
                 members={sessionData.members ?? []}
-                proposedMovies={sessionData.proposed_movies ?? sessionData.movies ?? []}
+                proposedMovies={
+                  sessionData.proposed_movies ??
+                  sessionData.movies.map((m) => ({
+                    id: m.id,
+                    title: m.title,
+                    poster_path: m.poster_path,
+                    rt_critics_score: m.rt_critics_score,
+                    rt_audience_score: m.rt_audience_score,
+                    proposed_by_name: null,
+                  }))
+                }
                 allMovies={movies.map((m) => ({ id: m.id, title: m.title, poster_path: m.poster_path }))}
                 isHost={true}
                 onPropose={handlePropose}

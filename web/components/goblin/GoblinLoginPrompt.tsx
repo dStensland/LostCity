@@ -14,6 +14,7 @@ export function GoblinLoginPrompt({ open, onClose, onSignIn }: GoblinLoginPrompt
 
   useEffect(() => {
     if (open) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- visibility toggle driven by open prop. Cascade bounded — visible is not in the dep array ([open]).
       setVisible(true);
       // Random flicker effect
       const interval = setInterval(() => {

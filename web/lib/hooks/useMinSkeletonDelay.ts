@@ -12,8 +12,16 @@ import { useState, useEffect, useRef } from "react";
  */
 export function useMinSkeletonDelay(isLoading: boolean, minMs = 250): boolean {
   const [showSkeleton, setShowSkeleton] = useState(isLoading);
-  const loadStartRef = useRef<number>(isLoading ? Date.now() : 0);
+  // Initialize to 0; the useEffect below sets it to Date.now() on the first
+  // isLoading=true render. Keeping Date.now() out of the initializer satisfies
+  // react-hooks/purity — the ref is only read inside the effect, never during
+  // render, so the brief render-to-effect gap where it's 0 is invisible.
+  const loadStartRef = useRef<number>(0);
 
+  /* eslint-disable react-hooks/set-state-in-effect --
+     Minimum-skeleton-display coordinator: flips showSkeleton true when
+     loading starts, false when elapsed >= minMs. Cascade bounded —
+     showSkeleton is not in the dep array ([isLoading, minMs]). */
   useEffect(() => {
     if (isLoading) {
       loadStartRef.current = Date.now();
@@ -33,6 +41,7 @@ export function useMinSkeletonDelay(isLoading: boolean, minMs = 250): boolean {
       }
     }
   }, [isLoading, minMs]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   return showSkeleton;
 }

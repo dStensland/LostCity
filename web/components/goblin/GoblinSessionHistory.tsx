@@ -11,7 +11,7 @@ interface SessionMember {
   avatar_url: string | null;
 }
 
-interface SessionSummary {
+export interface SessionSummary {
   id: number;
   name: string | null;
   date: string;

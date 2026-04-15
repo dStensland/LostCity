@@ -29,13 +29,22 @@ export async function GET(request: NextRequest) {
     if (!res.ok) return NextResponse.json({ error: "TMDB search failed" }, { status: 502 });
 
     const data = await res.json();
-    const results = (data.results || []).slice(0, 20).map((m: any) => ({
-      tmdb_id: m.id,
-      title: m.title,
-      poster_path: m.poster_path,
-      release_date: m.release_date || null,
-      overview: m.overview || null,
-    }));
+    type TmdbSearchResultLite = {
+      id: number;
+      title: string;
+      poster_path: string | null;
+      release_date?: string | null;
+      overview?: string | null;
+    };
+    const results = ((data.results as TmdbSearchResultLite[]) || [])
+      .slice(0, 20)
+      .map((m) => ({
+        tmdb_id: m.id,
+        title: m.title,
+        poster_path: m.poster_path,
+        release_date: m.release_date || null,
+        overview: m.overview || null,
+      }));
     return NextResponse.json({ results });
   } catch {
     clearTimeout(timeoutId);
