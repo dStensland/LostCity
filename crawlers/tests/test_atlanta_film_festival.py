@@ -15,9 +15,10 @@ def test_is_ancillary_outside_window_requires_no_linked_films() -> None:
 
 
 def test_is_ancillary_outside_window_flags_pre_festival_non_film_events() -> None:
+    # March 1 is 53 days before festival start (April 23), outside the 45-day lead window
     assert _is_ancillary_outside_window(
         films_linked=[],
-        start_date="2026-03-23",
+        start_date="2026-03-01",
     )
 
 
@@ -101,7 +102,7 @@ def test_get_or_cache_venue_marks_eventive_venues_active(monkeypatch) -> None:
     monkeypatch.setattr("sources.atlanta_film_festival.get_or_create_place", fake_get_or_create_place)
     monkeypatch.setattr("sources.atlanta_film_festival._VENUE_CACHE", {})
 
-    venue_id = _get_or_cache_venue(
+    venue_id, auditorium = _get_or_cache_venue(
         {
             "id": "venue-1",
             "name": "Plaza Theatre | LeFont Auditorium",
@@ -110,4 +111,5 @@ def test_get_or_cache_venue_marks_eventive_venues_active(monkeypatch) -> None:
     )
 
     assert venue_id == 123
+    assert auditorium == "LeFont Auditorium"
     assert captured["is_active"] is True
