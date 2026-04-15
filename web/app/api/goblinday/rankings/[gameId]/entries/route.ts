@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { parseIntParam } from "@/lib/api-utils";
+import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -8,6 +10,26 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ gameId: string }> }
 ) {
+  // Rate limit before auth
+  const rateLimitResult = await applyRateLimit(
+    request,
+    RATE_LIMITS.read,
+    getClientIdentifier(request),
+  );
+  if (rateLimitResult) return rateLimitResult;
+
+  // Require auth. This endpoint returns display_name + avatar_url of every
+  // ranking participant for a given gameId. Anonymous gameId enumeration
+  // was leaking participant identities — PII, not just aggregated data.
+  const supabase = await createClient();
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+  if (authError || !user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const { gameId: gameIdStr } = await params;
   const gameId = parseIntParam(gameIdStr);
   if (gameId === null) {
