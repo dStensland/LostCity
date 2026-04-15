@@ -43,6 +43,7 @@ export const RegularsNudge = function RegularsNudge({
     }
 
     // First impression or still under limit
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- mount-once localStorage-driven init. Cascade bounded (deps []); must run in effect (not useState initializer) to avoid SSR hydration mismatch on the server-rendered isDismissed=true.
     setIsDismissed(false);
 
     // Increment impression count
