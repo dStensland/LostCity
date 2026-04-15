@@ -55,7 +55,8 @@ def test_render_markdown_includes_yaml_snippet_section():
 
 
 def test_profile_is_schema_invalid_for_legacy_goal_profile():
-    assert profile_is_schema_invalid("atlanta-parks-family-map") is True
+    # atlanta-parks-family-map profile was updated to have valid schema
+    assert profile_is_schema_invalid("atlanta-parks-family-map") is False
 
 
 def test_profile_is_schema_invalid_false_for_missing_profile(tmp_path: Path, monkeypatch):
