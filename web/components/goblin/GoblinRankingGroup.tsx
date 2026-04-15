@@ -62,6 +62,7 @@ export default function GoblinRankingGroup({ items, myEntries, participants }: P
   const prevItemsRef = useRef(items);
   useEffect(() => {
     if (prevItemsRef.current !== items) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- animation-reset trigger: bumps animKey when the items prop identity changes so entries re-animate. Cascade bounded — animKey is not in the dep array ([items]).
       setAnimKey((k) => k + 1);
       prevItemsRef.current = items;
     }
