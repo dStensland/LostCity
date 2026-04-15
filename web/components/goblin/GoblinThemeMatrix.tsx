@@ -358,7 +358,7 @@ export default function GoblinThemeMatrix({
       <section>
         {sectionHeader}
         <p className="text-zinc-600 text-xs tracking-[0.15em] uppercase py-4 text-center mb-2">
-          // ADD A THEME TO START TRACKING
+          {"// ADD A THEME TO START TRACKING"}
         </p>
         <ThemeForm
           showForm={true}
@@ -391,7 +391,7 @@ export default function GoblinThemeMatrix({
           </div>
         )}
         <p className="text-zinc-600 text-xs tracking-[0.15em] uppercase py-3 text-center mb-3">
-          // MOVIE COLUMNS APPEAR WHEN MOVIES ARE ADDED
+          {"// MOVIE COLUMNS APPEAR WHEN MOVIES ARE ADDED"}
         </p>
         <ThemeForm
           showForm={showThemeForm}

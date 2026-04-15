@@ -404,7 +404,7 @@ export default function GoblinQueuePublicView({ user, slug, entries, recommendat
         ) : (
           <div className="flex flex-col items-center justify-center py-20 mb-12">
             <p className="text-zinc-600 font-mono text-sm tracking-widest uppercase">
-              // Queue is empty
+              {"// Queue is empty"}
             </p>
           </div>
         )}

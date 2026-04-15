@@ -847,7 +847,7 @@ export default function GoblinDayPage({ initialMovies, activeSessionId }: Props)
 
             {filteredMovies.length === 0 && !activeSession && (
               <p className="text-center text-zinc-600 py-10 text-sm tracking-widest uppercase">
-                // NOTHING SAVED YET — GO TO CONTENDERS AND SAVE SOME
+                {"// NOTHING SAVED YET — GO TO CONTENDERS AND SAVE SOME"}
               </p>
             )}
           </>

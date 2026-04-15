@@ -177,7 +177,7 @@ export default function GoblinGroupSection({
           {group.movies.length === 0 ? (
             <div className="py-6 text-center">
               <p className="text-zinc-600 font-mono text-xs tracking-widest uppercase mb-3">
-                // No movies yet
+                {"// No movies yet"}
               </p>
               <button
                 onClick={onAddMovie}

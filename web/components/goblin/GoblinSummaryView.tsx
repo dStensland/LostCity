@@ -492,7 +492,7 @@ export default function GoblinSummaryView({
         {/* Empty state */}
         {sortedMovies.length === 0 && themes.length === 0 && timeline.length === 0 && (
           <p className="text-zinc-700 text-xs tracking-widest uppercase text-center py-8">
-            // NO DATA RECORDED
+            {"// NO DATA RECORDED"}
           </p>
         )}
       </div>
