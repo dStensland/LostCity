@@ -54,7 +54,8 @@ export const POST = withAuthAndParams<{ id: string }>(
           .limit(1)
           .maybeSingle();
 
-        const nextSortOrder = ((maxRow as any)?.sort_order ?? 0) + 1;
+        const nextSortOrder =
+          ((maxRow as { sort_order?: number | null } | null)?.sort_order ?? 0) + 1;
 
         const { data: created } = await serviceClient
           .from("goblin_lists")
@@ -82,7 +83,8 @@ export const POST = withAuthAndParams<{ id: string }>(
           .limit(1)
           .maybeSingle();
 
-        const nextMovieOrder = ((maxMovie as any)?.sort_order ?? 0) + 1;
+        const nextMovieOrder =
+          ((maxMovie as { sort_order?: number | null } | null)?.sort_order ?? 0) + 1;
 
         await serviceClient
           .from("goblin_list_movies")
