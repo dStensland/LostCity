@@ -92,7 +92,7 @@ export function DetailHero({
       />
 
       {/* Gradient overlay */}
-      <div className="absolute inset-0" style={{ background: 'linear-gradient(to bottom, transparent 30%, #09090BEE 100%)' }} />
+      <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, transparent 30%, #09090BEE 100%)' }} /* #09090BEE tracks --void at ~93% opacity */ />
 
       {/* LIVE badge */}
       {isLive && (

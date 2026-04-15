@@ -82,7 +82,7 @@ export function RichArtistCard({ artist }: RichArtistCardProps) {
       <div className="flex-1 min-w-0 space-y-1">
         {/* Row 1: name + role badge */}
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-sm font-semibold text-[var(--cream)] leading-tight">
+          <span className={`leading-tight text-[var(--cream)] ${isHeadliner ? "text-[14px] font-semibold" : "text-sm font-medium"}`}>
             {displayName}
           </span>
           {isHeadliner ? (

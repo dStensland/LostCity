@@ -98,10 +98,10 @@ function FilmShowtimes({
               <button
                 key={dateStr}
                 onClick={() => setSelectedDateKey(dateStr)}
-                className={`flex-shrink-0 flex flex-col items-center gap-0.5 rounded-lg transition-all px-3 py-2 min-w-[44px] focus-ring ${
+                className={`flex-shrink-0 flex flex-col items-center gap-0.5 rounded-[10px] transition-all px-3 py-2 min-w-[44px] border focus-ring ${
                   isActive
                     ? "bg-[var(--coral)] border-transparent"
-                    : "bg-[var(--dusk)] border border-[var(--twilight)] hover:border-[var(--coral)]/30"
+                    : "bg-[var(--dusk)] border-[var(--twilight)] hover:border-[var(--coral)]/30"
                 }`}
               >
                 <span
