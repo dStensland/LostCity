@@ -19,7 +19,7 @@ Pencil design comps are created but never translated into specs that implementat
 
 - `/design-handoff extract <node-id-or-name>` — Extract a Pencil comp into a visual spec document
 - `/design-handoff verify <spec-or-node-id> <url>` — Compare a live page against a Pencil comp or spec
-- `/design-handoff extract --all` — Extract all comps matching a name pattern (e.g., "v2 /")
+- `/design-handoff extract --all <pattern>` — Extract all comps matching a name pattern (e.g., "v2 /"). Iterates each match through the single-node extract flow sequentially.
 
 ### Arguments
 
@@ -41,9 +41,17 @@ Pencil design comps are created but never translated into specs that implementat
 
 2. **Screenshot the comp.** Use `get_screenshot(nodeId)` to capture the visual reference. Save the screenshot image to `docs/design-specs/screenshots/{name}.png`.
 
-3. **Read the node tree.** Use `batch_get(nodeIds: [id], readDepth: 4)` to get the full component hierarchy with all properties.
+3. **Read the node tree.** Use `batch_get(nodeIds: [id], readDepth: 4)` to get the component hierarchy. **Check for truncation:** if any children in the result are `"..."`, issue follow-up `batch_get` calls with those specific node IDs at `readDepth: 3` to get the deeper content. Repeat until no truncation remains. For page-level comps (>5 levels deep), start with `readDepth: 2` to get section IDs, then `batch_get` each section individually at `readDepth: 3`.
 
-4. **Read design variables.** Use `get_variables()` to get the Pencil variable → value mapping (e.g., `$surface/night` → `#0F0F14`).
+4. **Read design variables.** Use `get_variables()` to get the Pencil variable → value mapping (e.g., `$surface/night` → `#0F0F14`). Note: some Pencil variables are aliases that don't map by name transformation — `$semantic/card-bg` maps to `var(--night)`, not `var(--card-bg)`. Use this alias table for known exceptions:
+
+   | Pencil Variable | CSS Token |
+   |----------------|-----------|
+   | `$semantic/card-bg` | `var(--night)` |
+   | `$semantic/card-bg-hover` | `var(--dusk)` |
+   | `$semantic/action-primary` | `var(--coral)` |
+
+   For themed variables (where `get_variables` returns multiple values across the `portal` theme axis), flag the property as `(themed: varies by portal)` so implementation agents use the CSS custom property, not the hardcoded hex.
 
 5. **Walk the tree and extract CSS.** For each node in the tree, extract:
 
@@ -57,8 +65,19 @@ Pencil design comps are created but never translated into specs that implementat
    **Size:**
    - `width` / `height` → numeric: `width: {n}px`, `fill_container`: `width: 100%`, `fit_content`: `width: fit-content`
 
+   **Positioning:**
+   - `layoutPosition: "absolute"` → `position: absolute` with `x`/`y` mapped to `left`/`top`
+   - For absolute nodes, note the positioning context: `{absolute, relative to: [parent name]}`
+   - `layoutPosition: "auto"` or absent → normal flow (no position property needed)
+
    **Visual:**
-   - `fill` → resolve variable via variable map, output `background: var(--token) (#hex)`
+   - `fill` (string/variable) → resolve via variable map, output `background: var(--token) (#hex)`
+   - `fill` (gradient object) → map to CSS gradient:
+     - `gradientType: "linear"` → `background: linear-gradient({rotation}deg, {color1} {pos1*100}%, {color2} {pos2*100}%, ...)`
+     - `gradientType: "radial"` → `background: radial-gradient(...)`
+     - Include ALL color stops, not just first and last
+   - `fill` (image object) → `background: image-fill ({mode})` where mode is stretch/fill/fit
+   - Multiple fills (array) → list each on its own line, in order (last paints on top)
    - `stroke` → `border: {thickness}px solid {color}` with align (inside/outside/center)
    - `cornerRadius` → `border-radius: {n}px` (or per-corner)
    - `opacity` → `opacity: {n}`
@@ -85,13 +104,22 @@ Pencil design comps are created but never translated into specs that implementat
    - `effect` with `type: "blur"` → `filter: blur({radius}px)`
    - `effect` with `type: "background_blur"` → `backdrop-filter: blur({radius}px)`
 
-6. **Generate the spec document.** Markdown format with:
+6. **Detect component instances.** When the tree contains `ref` nodes (Pencil component instances), check if the `ref` ID matches a known design system component (see Pencil Component IDs table in `web/.claude/rules/figma-design-system.md`). If it matches, emit a component reference instead of inlining the subtree:
+
+   ```
+   [ref → Badge (I7NUV)] LiveBadge
+     overrides: content="LIVE NOW", fill=#FF6B7A
+   ```
+
+   This tells the implementation agent to use `<Badge>` rather than rebuild the component from raw elements.
+
+7. **Generate the spec document.** Markdown format with:
    - Title + screenshot reference
    - Component tree with indentation showing hierarchy
    - Per-element CSS properties
    - Variable resolution showing both token name and hex fallback
 
-7. **Save.** Write to `docs/design-specs/{kebab-name}.md`
+8. **Save.** Write to `docs/design-specs/{kebab-name}.md`
 
 ### Output Format
 
@@ -230,16 +258,19 @@ The comp is extracted at {width}px. Note any known breakpoint behavior:
    - `get_screenshot` or use the computer tool to capture
    - For mobile comparison, `resize_window` to 375px width first
 
-3. **Compare visually.** The agent (itself) receives both images and analyzes differences. This is prose-based visual comparison, not pixel-diffing.
+3. **Capture full page.** For pages longer than one viewport, scroll down and capture additional screenshots at each viewport-height increment. Label each: "viewport 1 (top)", "viewport 2 (middle)", "viewport 3 (bottom)". Compare each viewport segment against the corresponding region of the Pencil comp.
 
-4. **Output a structured diff.** Categorized by severity:
+4. **Compare visually.** The agent (itself) receives both images and analyzes differences. This is prose-based visual comparison, not pixel-diffing. Note: visual comparison is reliable for structural and typography differences, reasonably accurate for spacing >4px, and unreliable for subtle color differences or sub-4px spacing. Flag uncertain comparisons as "needs manual check" rather than guessing.
+
+5. **Output a structured diff.** Categorized by severity:
 
    - **Critical:** Wrong font, wrong color, missing element, wrong layout direction, broken hierarchy
    - **Major:** Wrong spacing (>4px off), wrong icon, wrong border treatment, wrong border-radius
    - **Minor:** Slightly different spacing (<4px), opacity differences, animation differences
+   - **Needs manual check:** Subtle color differences, sub-4px spacing, shadow presence
    - **Match:** Elements that are correct
 
-5. **Save the report.** Write to `docs/design-specs/verify/{name}-{date}.md` with both screenshots embedded.
+6. **Save the report.** Write to `docs/design-specs/verify/{name}-{date}.md` with both screenshots embedded.
 
 ### Output Format
 
