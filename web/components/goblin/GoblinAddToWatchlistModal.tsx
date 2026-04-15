@@ -48,6 +48,7 @@ export default function GoblinAddToWatchlistModal({
       setTimeout(() => inputRef.current?.focus(), 100);
     } else {
       // Reset state on close
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- modal close-reset: none of the reset fields are in deps ([open]), cascade bounded.
       setQuery("");
       setResults([]);
       setSelected(null);
@@ -57,6 +58,11 @@ export default function GoblinAddToWatchlistModal({
   }, [open]);
 
   // Debounced TMDB search
+  /* eslint-disable react-hooks/set-state-in-effect --
+     Debounced async search loading pattern: empty query resets results;
+     non-empty flips searching on, setTimeout fetches, flips searching off
+     on resolve. Cascade bounded — none of searching/results appears in
+     the dep array ([query, searchTMDB]). */
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     if (query.length < 2) {
@@ -73,6 +79,7 @@ export default function GoblinAddToWatchlistModal({
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
   }, [query, searchTMDB]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   // Escape to close
   useEffect(() => {

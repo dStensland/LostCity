@@ -53,6 +53,7 @@ export default function GoblinCreateGroupModal({
       setTimeout(() => nameRef.current?.focus(), 100);
     } else {
       // Reset all state
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- modal close-reset: none of the reset fields are in deps ([open]), cascade bounded.
       setName("");
       setDescription("");
       setSeedMode("none");
@@ -65,6 +66,11 @@ export default function GoblinCreateGroupModal({
   }, [open]);
 
   // Debounced person search
+  /* eslint-disable react-hooks/set-state-in-effect --
+     Debounced async search loading pattern: empty query resets results;
+     non-empty flips personSearching on, setTimeout fetches, flips off on
+     resolve. Cascade bounded — none of personSearching/personResults
+     appears in the dep array ([personQuery, searchPerson]). */
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     if (personQuery.length < 2) {
@@ -81,6 +87,7 @@ export default function GoblinCreateGroupModal({
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
   }, [personQuery, searchPerson]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   // Escape to close
   useEffect(() => {
