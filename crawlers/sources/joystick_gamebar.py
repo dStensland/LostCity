@@ -22,6 +22,54 @@ logger = logging.getLogger(__name__)
 BASE_URL = "https://www.joystickgamebar.com"
 EVENTS_URL = f"{BASE_URL}/events"
 
+# Recurring-type detection: these keywords in the title imply the event is a
+# weekly standing-order at Joystick (every-Thursday trivia, every-Monday bingo,
+# etc.). Events matching these get grouped into a single series so the feed
+# shows "Trivia Night" once with a schedule instead of 8 separate cards.
+_RECURRING_TITLE_KEYWORDS = (
+    "bingo",
+    "trivia",
+    "quiz",
+    "karaoke",
+)
+
+
+def _is_joystick_recurring_type(title: str) -> bool:
+    t = (title or "").lower()
+    return any(k in t for k in _RECURRING_TITLE_KEYWORDS)
+
+
+_JOYSTICK_SPONSOR_SUFFIX_RE = re.compile(
+    r"\s+(?:sponsored|presented|hosted)\s+by\b.*$",
+    re.IGNORECASE,
+)
+_JOYSTICK_ISSUE_NUMBER_RE = re.compile(r"\s*#\s*\d+\s*$")
+_JOYSTICK_DATE_SUFFIX_RE = re.compile(
+    r"\s*(?:-|–|—|:)\s*"
+    r"(?:"
+    r"\d{1,2}/\d{1,2}(?:/\d{2,4})?"
+    r"|"
+    r"(?:(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun)[a-z]*\s+)?"
+    r"(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{1,2}(?:,?\s*\d{4})?"
+    r")"
+    r"\s*$",
+    re.IGNORECASE,
+)
+
+
+def _normalize_series_title(title: str) -> str:
+    """Strip instance-specific suffixes so every weekly instance shares a series.
+
+    "Trivia Night #42"       → "Trivia Night"
+    "Bingo Night - March 15" → "Bingo Night"
+    "Karaoke Thursday - 3/7" → "Karaoke Thursday"
+    """
+    cleaned = (title or "").strip()
+    cleaned = _JOYSTICK_ISSUE_NUMBER_RE.sub("", cleaned)
+    cleaned = _JOYSTICK_DATE_SUFFIX_RE.sub("", cleaned)
+    cleaned = _JOYSTICK_SPONSOR_SUFFIX_RE.sub("", cleaned)
+    return cleaned.strip(" -:–—") or (title or "").strip()
+
 PLACE_DATA = {
     "name": "Joystick Gamebar",
     "slug": "joystick-gamebar",
@@ -236,6 +284,21 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     else:
                         tags.append("bar-games")
 
+                    # Joystick runs weekly standing-orders for bingo/trivia/karaoke.
+                    # When the title matches a recurring type, flag is_recurring
+                    # and pass a normalized series_hint so all weekly instances
+                    # aggregate under one series (shows as "Trivia Night — every
+                    # Thursday" instead of 8 duplicate cards).
+                    is_recurring_type = _is_joystick_recurring_type(title)
+                    series_hint: Optional[dict] = None
+                    if is_recurring_type:
+                        series_title = _normalize_series_title(title)
+                        series_hint = {
+                            "series_type": "recurring_show",
+                            "series_title": series_title,
+                            "frequency": "weekly",
+                        }
+
                     event_record = {
                         "source_id": source_id,
                         "place_id": venue_id,
@@ -259,8 +322,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "image_url": image_map.get(title),
                         "raw_text": f"{title} - {start_date}",
                         "extraction_confidence": 0.80,
-                        "is_recurring": False,
-                        "recurrence_rule": None,
+                        "is_recurring": is_recurring_type,
+                        "recurrence_rule": "FREQ=WEEKLY" if is_recurring_type else None,
                         "content_hash": content_hash,
                     }
 
@@ -272,7 +335,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         continue
 
                     try:
-                        insert_event(event_record)
+                        insert_event(event_record, series_hint=series_hint)
                         events_new += 1
                         logger.info(f"Added: {title} on {start_date}")
                     except Exception as e:
