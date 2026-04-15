@@ -58,18 +58,72 @@ def normalize_artist_name(name: str) -> str:
 
 
 # ---------------------------------------------------------------------------
+# Validation
+# ---------------------------------------------------------------------------
+
+# Blocklist of known non-person strings
+_ARTIST_BLOCKLIST = frozenset(s.lower() for s in [
+    "ARTISTS", "Various Artists", "Group Exhibition", "TBD", "TBA",
+    "Unknown", "Unknown Artist", "Anonymous", "N/A", "None",
+    "Staff", "Volunteer", "View fullsize", "Read More",
+])
+
+
+def validate_artist_name(name: str) -> bool:
+    """Check whether a string is a plausible artist name.
+
+    Returns True if valid, False if it should be rejected.
+    Rejects: blocklist matches, pipe chars, purely numeric,
+    all-caps single words, too short (<3), too long (>200).
+    """
+    name = name.strip()
+
+    # Length checks
+    if len(name) < 3 or len(name) > 200:
+        return False
+
+    # Blocklist (case-insensitive)
+    if name.lower() in _ARTIST_BLOCKLIST:
+        return False
+
+    # Pipe characters (concatenated lists)
+    if "|" in name:
+        return False
+
+    # Purely numeric
+    if name.isdigit():
+        return False
+
+    # All-caps single word (generic labels like "ARTISTS", "GALLERY")
+    words = name.split()
+    if len(words) == 1 and name.isupper():
+        return False
+
+    return True
+
+
+# ---------------------------------------------------------------------------
 # Core CRUD
 # ---------------------------------------------------------------------------
 
 def get_or_create_artist(
     name: str,
     discipline: str = "musician",
+    extra_fields: dict | None = None,
 ) -> dict:
     """Find artist by slug or create a new record.
+
+    extra_fields: optional dict merged into insert payload (e.g., bio, image_url, website).
+    On the "get" path: updates null fields with extra_fields values (backfill-safe).
+    Discipline collision: if existing record has discipline='musician' and caller
+    passes 'visual_artist', overwrites — resolves slug collisions from event pipeline.
 
     Returns the full artist row dict (id, name, slug, ...).
     """
     from db import get_client
+
+    if not validate_artist_name(name):
+        raise ValueError(f"Invalid artist name rejected by validation: {name!r}")
 
     slug = slugify_artist(name)
     if not slug:
@@ -80,7 +134,29 @@ def get_or_create_artist(
     # Try to find existing
     result = client.table("artists").select("*").eq("slug", slug).execute()
     if result.data:
-        return result.data[0]
+        artist = result.data[0]
+        updates: dict = {}
+
+        # Discipline collision: musician → visual_artist upgrade
+        if (
+            artist.get("discipline") == "musician"
+            and discipline == "visual_artist"
+        ):
+            updates["discipline"] = "visual_artist"
+
+        # Backfill null fields from extra_fields
+        if extra_fields:
+            for key, value in extra_fields.items():
+                if value and not artist.get(key):
+                    updates[key] = value
+
+        if updates:
+            from datetime import datetime, timezone
+            updates["updated_at"] = datetime.now(timezone.utc).isoformat()
+            client.table("artists").update(updates).eq("id", artist["id"]).execute()
+            artist.update(updates)
+
+        return artist
 
     # Create new
     payload = {
@@ -88,6 +164,11 @@ def get_or_create_artist(
         "slug": slug,
         "discipline": discipline,
     }
+    if extra_fields:
+        for key, value in extra_fields.items():
+            if value:
+                payload[key] = value
+
     result = client.table("artists").insert(payload).execute()
     return result.data[0]
 
