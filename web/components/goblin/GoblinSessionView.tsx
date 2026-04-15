@@ -52,6 +52,15 @@ export interface SessionData {
   movies: SessionMovie[];
   themes: SessionTheme[];
   timeline: TimelineEntry[];
+  /** Populated during the "planning" phase before movies are finalized. */
+  proposed_movies?: Array<{
+    id: number;
+    title: string;
+    poster_path: string | null;
+    rt_critics_score: number | null;
+    rt_audience_score: number | null;
+    proposed_by_name: string | null;
+  }>;
 }
 
 interface ProposedMovie {
