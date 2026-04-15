@@ -98,15 +98,26 @@ function FilmShowtimes({
               <button
                 key={dateStr}
                 onClick={() => setSelectedDateKey(dateStr)}
-                className={`flex-shrink-0 flex flex-col items-center rounded-lg border transition-all px-2 py-1.5 min-w-[44px] focus-ring ${
+                className={`flex-shrink-0 flex flex-col items-center gap-0.5 rounded-lg transition-all px-3 py-2 min-w-[44px] focus-ring ${
                   isActive
-                    ? "bg-[var(--coral)]/20 border-[var(--coral)]/50 text-[var(--coral)]"
-                    : "bg-[var(--dusk)] border-[var(--twilight)] text-[var(--soft)] hover:border-[var(--coral)]/30"
+                    ? "bg-[var(--coral)] border-transparent"
+                    : "bg-[var(--dusk)] border border-[var(--twilight)] hover:border-[var(--coral)]/30"
                 }`}
               >
-                <span className="font-mono uppercase tracking-wider text-2xs">{dayLabel}</span>
-                <span className="font-mono font-bold leading-tight text-sm">{format(date, "d")}</span>
-                <span className="font-mono text-[var(--muted)] uppercase text-2xs">{format(date, "MMM")}</span>
+                <span
+                  className={`font-mono uppercase tracking-[0.5px] text-[9px] font-medium ${
+                    isActive ? "text-white" : "text-[var(--muted)]"
+                  }`}
+                >
+                  {dayLabel}
+                </span>
+                <span
+                  className={`font-[Outfit] text-[16px] leading-tight ${
+                    isActive ? "font-bold text-white" : "font-semibold text-[var(--cream)]"
+                  }`}
+                >
+                  {format(date, "d")}
+                </span>
               </button>
             );
           })}

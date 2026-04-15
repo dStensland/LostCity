@@ -103,7 +103,7 @@ export function ShowtimesTheaterCard({
                 key={st.event_id}
                 href={`/${portalSlug}?event=${st.event_id}`}
                 scroll={false}
-                className="bg-[var(--dusk)] rounded-md px-3 py-1.5 font-mono text-sm font-semibold text-[var(--cream)] hover:bg-[var(--twilight)] hover:text-[var(--coral)] transition-colors focus-ring"
+                className="border border-[var(--coral)] rounded-[6px] px-3 py-1.5 font-mono text-xs font-medium text-[var(--coral)] hover:bg-[var(--coral)]/10 transition-colors focus-ring"
               >
                 {formatted}
               </Link>
