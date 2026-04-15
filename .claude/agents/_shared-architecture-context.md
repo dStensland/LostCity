@@ -25,7 +25,7 @@ The platform models four first-class nouns. All agent work should respect these 
 
 - **`content_kind='exhibit'` is deprecated.** The `events.exhibition_id` FK shipped 2026-04-14 (commit `838b9052`); exhibitions are now first-class end-to-end. The feed-query filter on `content_kind='exhibit'` remains as protection for legacy rows, but **new code must never set this flag**. Link exhibition-related events via `exhibition_id`. New exhibitions — whether arts, family, adventure, or civic/historic — go directly in the `exhibitions` table.
 - **`exhibition_type` enum supports both arts and non-arts exhibitions.** Full list: `solo`, `group`, `installation`, `retrospective`, `popup`, `permanent`, `seasonal`, `special-exhibit`, `attraction` (expanded 2026-04-10 via `20260410010002_exhibitions_expansion.sql`). Arts portal uses `solo`/`group`/`installation`/`retrospective`/`popup`/`permanent`; non-arts portals (aquarium, zoo, historic site, park) should use `attraction`, `seasonal`, `special-exhibit`, or `permanent`. No enum gap today.
-- **TECH_DEBT.md** was last audited 2026-03-05 and may be partially stale. Verify before treating any item as current.
+- **TECH_DEBT.md** was re-audited 2026-04-14 (PR #20) with per-item status markers: `✅ FIXED` / `🟡 PARTIALLY FIXED` / `⚫ OBSOLETE` / `🟢 STILL OPEN`. 19 of 34 items are STILL OPEN; several are flagged NEEDS VERIFICATION. Notable: `globals.css` grew from 5495 → 7602 lines (getting worse, not better); migration count is now 802 `database/` + 741 `supabase/` files with no tracking table. Treat the markers as a starting point, not ground truth.
 
 ## Where to look
 

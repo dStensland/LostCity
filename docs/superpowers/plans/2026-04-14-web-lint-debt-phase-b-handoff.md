@@ -1,23 +1,27 @@
 # Phase B Handoff — Web Lint Debt Cleanup (Session 2)
 
-**Status as of 2026-04-14 23:21Z:** Phase A complete and merged via PR #21 (`56b0b73f`). Phase B pending.
+**Status as of 2026-04-14 (late session):** Phase A merged via PR #21 (`56b0b73f`); post-merge hotfix for stripped eslint-disable directives landed in the same session. Phase B pending.
 
 ## Situation
 
-The LostCity `web/` directory has **122 remaining ESLint errors** blocking CI. Phase A (auto-fix + goblin `<a>`→`<Link>` + jsx comment wrapping) shipped in PR #21 and dropped the count from 220 → 122. Phase B tackles the remaining categories — all real code work, not mechanical cleanup.
+The LostCity `web/` directory has **~111 remaining ESLint errors** blocking CI (down from 220 at session start; Phase A + hotfix removed 109). Phase A (auto-fix + goblin `<a>`→`<Link>` + jsx comment wrapping) shipped in PR #21 and dropped the count to 122. The hotfix restored 16 design-intentional `eslint-disable-next-line` directives that Phase 1's `eslint --fix` accidentally stripped (commit `e6128fd4`), removing 11 more errors from the count. Phase B tackles the remaining categories — all real code work, not mechanical cleanup.
 
-## Remaining error distribution
+## Remaining error distribution (post-hotfix baseline)
 
-| Rule | Count | Nature |
-|---|---|---|
-| `@typescript-eslint/no-explicit-any` | 79 | Per-call-site typing |
-| `react-hooks/set-state-in-effect` | ~25 | Loading-state patterns (usually disable-with-justification) OR real cascade bugs (case-by-case) |
-| `react-hooks/refs-during-render` | ~2 | Usually means the code should be `useState` or `useMemo` |
-| `react-hooks/purity` | ~1 | Impure function in render (`Date.now()`, etc.) |
-| `react-hooks/render-purity` | ~1 | Component created during render |
-| `react-hooks/rules-of-hooks` | 1 | Almost certainly a real bug |
-| Misc stragglers | ~13 | Mix of the above + a few others |
-| **Total** | **~122** | |
+| Rule | Count | Nature | Phase B priority |
+|---|---|---|---|
+| `@typescript-eslint/no-explicit-any` | 79 | Per-call-site typing | **SECOND** — type debt, not runtime risk |
+| `react-hooks/rules-of-hooks` | 1 | Almost certainly a real bug | **FIRST** — production render risk |
+| `react-hooks/refs-during-render` | ~2 | Usually means the code should be `useState` or `useMemo` | **FIRST** — production render risk |
+| `react-hooks/purity` | ~1 | Impure function in render (`Date.now()`, etc.) | **FIRST** — production render risk |
+| `react-hooks/render-purity` | ~1 | Component created during render | **FIRST** — production render risk |
+| `react-hooks/set-state-in-effect` | ~14 | Loading-state patterns (usually disable-with-justification) OR real cascade bugs (case-by-case) | **FIRST** — apply cascade test per case |
+| Misc stragglers | ~13 | Mix of the above + a few others | Case-by-case |
+| **Total** | **~111** | | |
+
+**Priority reorder (from strategist post-merge review):** the React hook rule errors ship to production as real render risk; the `any` type errors are type safety debt. **Fix the hook rule category first, then sweep the `any` types.** This closes the production-risk window before tackling the volume work.
+
+**Baseline recount:** The original plan budgeted Phase 6 at "~32 errors" for React hook rules, but 11 of those were PR #21 regressions that have now been restored to suppressed state via the hotfix. Real Phase 6 work is approximately 19 errors, not 32. Phase 5 (`any` types) count is unchanged at 79.
 
 **File hotspots:**
 - `app/goblinday/log/[slug]/page.tsx` — 10 `any`
@@ -77,22 +81,29 @@ grep -A 1 'useUnknownInCatchVariables' tsconfig.json
 ```
 Record whether it's `true`/`false`/unset. Affects `catch (e)` vs `catch (e: unknown)` guidance.
 
-## Execution strategy (reminder from plan)
+## Execution strategy (reminder from plan — WITH POST-MERGE REORDER)
 
-**Phase 5 — `no-explicit-any` (79 errors):**
+**IMPORTANT ORDER CHANGE:** The original plan ran Phase 5 (`any` types) before Phase 6 (React hook rules). **Run Phase 6 FIRST.** The strategist's retrospective review argued that React hook rule violations are production render risk while `any` types are type safety debt — fix the dangerous category before the volume category. This handoff applies that reorder.
+
+**Phase 6 first — React hook rules (~19 errors, post-hotfix):**
+- **Start with the `rules-of-hooks` error** — almost certainly a real bug. Fix it, don't disable. May require restructuring the component.
+- **Then the `purity` / `refs-during-render` / `render-purity` cases** — per-case refactor. Usually means moving `Date.now()` out of a `useRef` initializer, or converting a `useRef` to `useState`/`useMemo`. `useMinSkeletonDelay.ts:15` is in the plan as a worked example.
+- **Then `set-state-in-effect` cases** — apply the cascade test: "Does the state the setState modifies appear in the effect dependency array?"
+  - YES → real cascade bug → fix the logic
+  - NO → loading-state pattern → `// eslint-disable-next-line react-hooks/set-state-in-effect -- [one-line justification]`
+- **Do NOT refactor to Suspense / `use()` patterns** — out of scope for a lint cleanup.
+- **Guardrail against the PR #21 regression:** after any `eslint --fix` in this phase, run `git diff --unified=0 | grep -E '^-\s*// eslint-disable'` to catch stripped directives before committing.
+
+**Phase 5 second — `no-explicit-any` (79 errors):**
 - Per-file subagent. One commit per file.
 - Each subagent: read file → identify each `any` → determine real type (check actual usage, not memory) → apply fix → lint+tsc per file → commit
 - Hard rule: never `as SomeType` on `unknown`. Use type guard functions. If guard needs >5 lines, construct a real interface.
 - No shared `lib/types.ts` additions in this phase — keep types file-local to minimize revert conflicts.
 - **Checkpoint with the user after every 3 files** — the user's feedback memory explicitly requires this ("After first 2-3 subagent tasks, run tsc + browser-test BEFORE dispatching more").
 
-**Phase 6 — React hook rules (~32 errors):**
-- Per-case analysis. For each error, apply the cascade test: "Does the state the setState modifies appear in the effect dependency array?"
-  - YES → real cascade bug → fix the logic
-  - NO → loading-state pattern → `// eslint-disable-next-line react-hooks/set-state-in-effect -- [one-line justification]`
-- `useMinSkeletonDelay.ts:15` — move `Date.now()` out of the `useRef` initializer (already in the plan)
-- The `rules-of-hooks` error is almost certainly a real bug — fix it, don't disable
-- **Do NOT refactor to Suspense / `use()` patterns** — that's out of scope for a lint cleanup
+## Admin-merge tripwire
+
+This session has now shipped **5 admin-merges in a row** because of the pre-existing lint debt blocking CI (PRs #19, #20, #21, #22, and the directive-restoration hotfix). That is acceptable **only through Phase B completion** — once lint errors are at zero and CI is a real gate again, admin-merge reverts to exceptional use. **If this Phase B PR also lands via admin-merge, the NEXT PR touching `web/` that isn't explicitly unblocking CI should go through normal CI.** If you can't get normal CI to pass post-Phase-B, stop and escalate — CI is either broken or the debt isn't fully fixed.
 
 **Phase 7 — Final verification and PR:**
 - Lint: 0 errors

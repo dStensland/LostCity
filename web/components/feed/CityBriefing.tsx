@@ -723,7 +723,7 @@ export default function CityBriefing({
   const initialHeroUrl = serverHeroUrl ?? atmosphericImageUrl;
   const [heroImageUrl, setHeroImageUrl] = useState(initialHeroUrl);
   useEffect(() => {
-     
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setHeroImageUrl(atmosphericImageUrl);
   }, [atmosphericImageUrl]);
 
