@@ -53,28 +53,15 @@ export type ScreeningBundle = {
   times: ScreeningTime[];
 };
 
-// File-local chain-builder type. Models just the subset of the Supabase
-// query builder that fetchScreeningBundleFromTables actually calls — select,
-// eq, in, order — plus thenable so the chain is awaitable.
-type ScreeningQueryChain = {
-  select: (columns: string) => ScreeningQueryChain;
-  eq: (column: string, value: unknown) => ScreeningQueryChain;
-  in?: (column: string, values: unknown[]) => ScreeningQueryChain;
-  order?: (
-    column: string,
-    options?: { ascending: boolean },
-  ) => ScreeningQueryChain;
-  then: <T1, T2 = never>(
-    onFulfilled: (
-      value: { data: unknown; error: unknown },
-    ) => T1 | PromiseLike<T1>,
-    onRejected?: (reason: unknown) => T2 | PromiseLike<T2>,
-  ) => Promise<T1 | T2>;
-};
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Database } from "./types";
 
-type ScreeningSupabaseClient = {
-  from: (table: string) => ScreeningQueryChain;
-};
+// Accept the real Supabase client type directly. Earlier iterations used a
+// file-local shim which triggered TS2589 ("Type instantiation is excessively
+// deep and possibly infinite") at call sites, because the shim's structure
+// conflicted with SupabaseClient<Database>'s generic overloads. Using the
+// real type avoids the conflict.
+type ScreeningSupabaseClient = SupabaseClient<Database>;
 
 export type ScreeningEventLike = {
   id: number;
@@ -298,7 +285,7 @@ export async function fetchScreeningBundleFromTables(
 ): Promise<ScreeningBundle | null> {
   if (!options.placeId && !options.festivalId) return null;
 
-  let runsQuery: ScreeningQueryChain = supabase
+  let runsQuery = supabase
     .from("screening_runs")
     .select(
       "id, screening_title_id, place_id, festival_id, label, start_date, end_date, source_id, buy_url, info_url, is_special_event",
@@ -310,9 +297,7 @@ export async function fetchScreeningBundleFromTables(
   if (options.festivalId) {
     runsQuery = runsQuery.eq("festival_id", options.festivalId);
   }
-  if (typeof runsQuery.order === "function") {
-    runsQuery = runsQuery.order("start_date", { ascending: true });
-  }
+  runsQuery = runsQuery.order("start_date", { ascending: true });
 
   const runsResult = (await runsQuery) as {
     data: ScreeningRun[] | null;
@@ -329,33 +314,27 @@ export async function fetchScreeningBundleFromTables(
   const titleIds = Array.from(new Set(runs.map((run) => run.screening_title_id)));
   const runIds = runs.map((run) => run.id);
 
-  const titlesQuery: ScreeningQueryChain = supabase
+  const titlesQuery = supabase
     .from("screening_titles")
     .select(
       "id, canonical_title, slug, kind, poster_image_url, synopsis, genres, tmdb_id, imdb_id, festival_work_key, director, runtime_minutes, year, rating",
     );
-  const titlesResult = typeof titlesQuery.in === "function"
-    ? ((await titlesQuery.in("id", titleIds)) as {
-        data: ScreeningTitle[] | null;
-        error: unknown;
-      })
-    : { data: null, error: null };
+  const titlesResult = (await titlesQuery.in("id", titleIds)) as {
+    data: ScreeningTitle[] | null;
+    error: unknown;
+  };
   if (titlesResult.error) {
     if (isMissingScreeningSchemaError(titlesResult.error)) return null;
     throw titlesResult.error;
   }
 
-  let timesQuery: ScreeningQueryChain = supabase
+  let timesQuery = supabase
     .from("screening_times")
     .select(
       "id, screening_run_id, event_id, start_date, start_time, end_time, ticket_url, source_url, format_labels, status",
     );
-  if (typeof timesQuery.in === "function") {
-    timesQuery = timesQuery.in("screening_run_id", runIds);
-  }
-  if (typeof timesQuery.order === "function") {
-    timesQuery = timesQuery.order("start_date", { ascending: true });
-  }
+  timesQuery = timesQuery.in("screening_run_id", runIds);
+  timesQuery = timesQuery.order("start_date", { ascending: true });
   const timesResult = (await timesQuery) as {
     data: ScreeningTime[] | null;
     error: unknown;

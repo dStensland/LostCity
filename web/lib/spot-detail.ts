@@ -453,7 +453,7 @@ export async function getSpotDetail(slug: string): Promise<SpotDetailPayload | n
     getYonderAccommodationInventorySource(spotSlug);
   const yonderRuntimeInventorySnapshotPromise =
     getYonderRuntimeInventorySnapshot(spotSlug);
-  const screeningsFromTablesPromise = fetchScreeningBundleFromTables(supabase as any, {
+  const screeningsFromTablesPromise = fetchScreeningBundleFromTables(supabase, {
     placeId: typeof spot.id === "number" ? spot.id : null,
   });
   const today = getLocalDateString();
