@@ -18,6 +18,10 @@ export function useMinSkeletonDelay(isLoading: boolean, minMs = 250): boolean {
   // render, so the brief render-to-effect gap where it's 0 is invisible.
   const loadStartRef = useRef<number>(0);
 
+  /* eslint-disable react-hooks/set-state-in-effect --
+     Minimum-skeleton-display coordinator: flips showSkeleton true when
+     loading starts, false when elapsed >= minMs. Cascade bounded —
+     showSkeleton is not in the dep array ([isLoading, minMs]). */
   useEffect(() => {
     if (isLoading) {
       loadStartRef.current = Date.now();
@@ -37,6 +41,7 @@ export function useMinSkeletonDelay(isLoading: boolean, minMs = 250): boolean {
       }
     }
   }, [isLoading, minMs]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   return showSkeleton;
 }
