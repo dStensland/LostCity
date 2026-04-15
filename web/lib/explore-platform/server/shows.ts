@@ -317,7 +317,7 @@ async function loadStoredShowtimeEvents(
   if (times.length === 0) return [];
 
   const runIds = Array.from(new Set(times.map((time) => time.screening_run_id)));
-  let runsQuery: any = supabase
+  let runsQuery = supabase
     .from("screening_runs")
     .select("id, screening_title_id, place_id, source_id, festival_id, is_special_event")
     .in("id", runIds);
