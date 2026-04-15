@@ -1,8 +1,53 @@
 const TMDB_BASE = "https://api.themoviedb.org/3";
 
+// File-local shim for the subset of Supabase service client methods this
+// file uses. Keeping it file-local per the Phase 5 rule.
+type GoblinMovieServiceClient = {
+  from: (table: "goblin_movies") => {
+    select: (cols: string) => {
+      eq: (col: string, val: number) => {
+        maybeSingle: () => Promise<{
+          data: { id: number } | null;
+          error: unknown;
+        }>;
+      };
+    };
+    insert: (data: never) => {
+      select: (cols: string) => {
+        single: () => Promise<{
+          data: { id: number } | null;
+          error: unknown;
+        }>;
+      };
+    };
+  };
+};
+
+// Only the TMDB movie-detail fields this function actually reads. Do not
+// add fields from memory — confirm each is accessed in the code below.
+type TmdbMovieCredit = { job: string; name: string };
+type TmdbGenre = { name: string };
+type TmdbMovieDetail = {
+  title: string;
+  release_date: string | null;
+  poster_path: string | null;
+  backdrop_path: string | null;
+  overview: string | null;
+  genres?: TmdbGenre[];
+  runtime: number | null;
+  vote_average: number | null;
+  vote_count: number | null;
+  popularity: number | null;
+  credits?: { crew?: TmdbMovieCredit[] };
+};
+
+function isTmdbMovieDetail(v: unknown): v is TmdbMovieDetail {
+  return typeof v === "object" && v !== null && "title" in v;
+}
+
 /** Ensure a movie exists in goblin_movies by TMDB ID, fetching from TMDB if needed */
 export async function ensureMovie(
-  serviceClient: any,
+  serviceClient: GoblinMovieServiceClient,
   tmdbId: number
 ): Promise<{ id: number } | null> {
   // Check if already exists
@@ -12,7 +57,7 @@ export async function ensureMovie(
     .eq("tmdb_id", tmdbId)
     .maybeSingle();
 
-  if (existing) return existing as { id: number };
+  if (existing) return existing;
 
   // Fetch from TMDB
   const tmdbKey = process.env.TMDB_API_KEY;
@@ -28,9 +73,11 @@ export async function ensureMovie(
     clearTimeout(timeoutId);
     if (!res.ok) return null;
 
-    const m = await res.json();
+    const raw: unknown = await res.json();
+    if (!isTmdbMovieDetail(raw)) return null;
+    const m = raw;
     const director =
-      m.credits?.crew?.find((c: any) => c.job === "Director")?.name || null;
+      m.credits?.crew?.find((c) => c.job === "Director")?.name || null;
     const releaseYear = m.release_date
       ? parseInt(m.release_date.split("-")[0])
       : null;
@@ -45,7 +92,7 @@ export async function ensureMovie(
         backdrop_path: m.backdrop_path || null,
         year: releaseYear,
         synopsis: m.overview || null,
-        genres: m.genres?.map((g: any) => g.name) || null,
+        genres: m.genres?.map((g) => g.name) || null,
         runtime_minutes: m.runtime || null,
         director,
         tmdb_vote_average: m.vote_average || null,
@@ -56,7 +103,7 @@ export async function ensureMovie(
       .single();
 
     if (error || !inserted) return null;
-    return inserted as { id: number };
+    return inserted;
   } catch {
     clearTimeout(timeoutId);
     return null;
