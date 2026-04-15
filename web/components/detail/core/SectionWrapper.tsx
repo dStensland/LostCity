@@ -12,11 +12,12 @@ export function SectionWrapper({ module, data, children }: SectionWrapperProps) 
   const count = module.getCount?.(data) ?? null;
 
   return (
-    <section className="border-t border-[var(--twilight)]">
-      <div className="px-4 lg:px-8 pt-5 pb-1">
+    <section>
+      <div className="w-full h-2 bg-[var(--night)]" />
+      <div className="px-4 lg:px-8 py-4 flex flex-col gap-3">
         <SectionHeader label={module.label} count={count} icon={module.icon} />
+        <div>{children}</div>
       </div>
-      <div className="px-4 lg:px-8 pb-5">{children}</div>
     </section>
   );
 }
