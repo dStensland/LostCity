@@ -580,7 +580,8 @@ def screenings_support_tables() -> bool:
         _HAS_SCREENING_TABLES = True
     except Exception as e:
         error_str = str(e).lower()
-        if "does not exist" in error_str or "relation" in error_str:
+        # Handle both local DB and PostgREST schema cache miss errors
+        if "does not exist" in error_str or "relation" in error_str or "PGRST205" in str(e):
             _HAS_SCREENING_TABLES = False
             logger.warning(
                 "screening storage tables missing; run migration 602_screening_storage.sql"

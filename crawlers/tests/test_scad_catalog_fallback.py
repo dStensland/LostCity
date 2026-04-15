@@ -35,7 +35,7 @@ def test_extract_catalog_destination_fields_builds_destination_first_notes():
     updates = _extract_catalog_destination_fields_from_text(SAMPLE_TEXT)
 
     assert updates is not None
-    assert updates["website"] == "https://scadfash.org"
+    assert updates["website"] == "https://www.scadfash.org"
     assert "fashion as a universal language" in updates["short_description"].lower()
     assert "Cloudflare-blocked" in updates["planning_notes"]
     assert "Christian Dior: Jardins Rêvés" in updates["planning_notes"]

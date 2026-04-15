@@ -130,7 +130,9 @@ def generate_html_report(crawl_results: dict = None) -> str:
 
     # Calculate crawl stats
     successful_crawls = [c for c in recent_crawls if c.get("status") == "success"]
-    failed_crawls = [c for c in recent_crawls if c.get("status") == "error"]
+    failed_crawls = [c for c in recent_crawls if c.get("status") in ("error", "cancelled")]
+    running_crawls = [c for c in recent_crawls if c.get("status") == "running"]
+    completed_crawls = successful_crawls + failed_crawls
 
     now = datetime.now()
 
@@ -199,7 +201,7 @@ def generate_html_report(crawl_results: dict = None) -> str:
             <div class="card">
                 <div class="card-title">Crawls (24h)</div>
                 <div class="card-value">{len(successful_crawls)} <span class="success">✓</span> / {len(failed_crawls)} <span class="error">✗</span></div>
-                <div class="card-subtitle">{len(successful_crawls) / max(len(recent_crawls), 1) * 100:.0f}% success rate</div>
+                <div class="card-subtitle">{len(successful_crawls) / max(len(completed_crawls), 1) * 100:.0f}% completed success rate{f", {len(running_crawls)} running" if running_crawls else ""}</div>
             </div>
             <div class="card">
                 <div class="card-title">Source Health</div>

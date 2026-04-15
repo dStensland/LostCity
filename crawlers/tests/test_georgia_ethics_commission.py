@@ -6,11 +6,11 @@ def test_extract_meeting_events_parses_future_commission_meeting() -> None:
     <rss version="2.0">
       <channel>
         <item>
-          <title>COMMISSION MEETING: March 30, 2026</title>
-          <link>https://ethics.ga.gov/commission-meeting-march-30-2026/</link>
+          <title>COMMISSION MEETING: May 1, 2026</title>
+          <link>https://ethics.ga.gov/commission-meeting-may-1-2026/</link>
           <pubDate>Wed, 25 Feb 2026 19:34:56 +0000</pubDate>
           <description><![CDATA[
-            The State Ethics Commission will hold their Commission Meeting on Monday, March 30, 2026.
+            The State Ethics Commission will hold their Commission Meeting on Thursday, May 1, 2026.
             The meeting is scheduled to start at 10:00 am in the Georgia Board of Pardons and Paroles Board Room.
           ]]></description>
         </item>
@@ -21,8 +21,8 @@ def test_extract_meeting_events_parses_future_commission_meeting() -> None:
     events = _extract_meeting_events(feed_xml)
 
     assert len(events) == 1
-    assert events[0]["title"] == "COMMISSION MEETING: March 30, 2026"
-    assert events[0]["start_date"] == "2026-03-30"
+    assert events[0]["title"] == "COMMISSION MEETING: May 1, 2026"
+    assert events[0]["start_date"] == "2026-05-01"
     assert events[0]["start_time"] == "10:00"
     assert "public-meeting" in events[0]["tags"]
 
