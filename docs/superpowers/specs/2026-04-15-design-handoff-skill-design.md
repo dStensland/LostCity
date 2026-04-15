@@ -79,6 +79,12 @@ Pencil design comps are created but never translated into specs that implementat
    - `width`/`height` → `size: {n}px`
    - `fill` → `color: var(--token) (#hex)`
 
+   **Effects/Shadows:**
+   - `effect` with `type: "shadow"` → `box-shadow: {offset.x}px {offset.y}px {blur}px {spread}px {color}`
+   - `shadowType: "inner"` → `box-shadow: inset ...`
+   - `effect` with `type: "blur"` → `filter: blur({radius}px)`
+   - `effect` with `type: "background_blur"` → `backdrop-filter: blur({radius}px)`
+
 6. **Generate the spec document.** Markdown format with:
    - Title + screenshot reference
    - Component tree with indentation showing hierarchy
@@ -88,6 +94,8 @@ Pencil design comps are created but never translated into specs that implementat
 7. **Save.** Write to `docs/design-specs/{kebab-name}.md`
 
 ### Output Format
+
+Uses indented block format (not markdown headings) to handle deep component trees without hitting the 6-level heading limit.
 
 ```markdown
 # {Comp Name}
@@ -101,62 +109,107 @@ Pencil design comps are created but never translated into specs that implementat
 
 ## Component Tree
 
-### Root: {name} (frame)
-- width: 375px
-- background: var(--void) (#09090B)
-- layout: vertical
-- overflow: hidden
+[frame] Root: {name}
+  width: 375px
+  background: var(--void) (#09090B)
+  layout: vertical
+  overflow: hidden
 
-  ### Hero (frame)
-  - width: 100%
-  - height: 220px
-  - background: image-fill
-  - position: relative
+  [frame] Hero
+    width: 100%; height: 220px
+    background: image-fill
+    position: relative
 
-    #### Gradient Overlay (frame)
-    - width: 100%; height: 100%
-    - background: linear-gradient(0deg, transparent 30%, #09090BEE 100%)
+    [frame] GradientOverlay  {absolute, fills parent}
+      background: linear-gradient(0deg, transparent 30%, #09090BEE 100%)
 
-    #### Live Badge (frame)
-    - position: absolute; top: 12px; left: 16px
-    - background: var(--coral) (#FF6B7A)
-    - border-radius: 4px
-    - padding: 3px 8px
-    - layout: horizontal; gap: 4px; align-items: center
+    [frame] LiveBadge  {absolute, top: 12px, left: 16px}
+      background: var(--coral) (#FF6B7A)
+      border-radius: 4px
+      padding: 3px 8px
+      layout: horizontal; gap: 4px; align-items: center
 
-      ##### Dot (ellipse)
-      - width: 6px; height: 6px
-      - background: #FFFFFF
+      [ellipse] Dot
+        width: 6px; height: 6px
+        background: #FFFFFF
 
-      ##### Label (text)
-      - content: "LIVE NOW"
-      - font-family: JetBrains Mono; font-size: 9px; font-weight: 700
-      - letter-spacing: 1px
-      - color: #FFFFFF
+      [text] Label
+        content: "LIVE NOW"
+        font-family: JetBrains Mono; font-size: 9px; font-weight: 700
+        letter-spacing: 1px
+        color: #FFFFFF
 
-  ### Identity (frame)
-  - width: 100%
-  - padding: 16px 16px 12px 16px
-  - layout: vertical; gap: 8px
+  [frame] Identity
+    width: 100%
+    padding: 16px 16px 12px 16px
+    layout: vertical; gap: 8px
 
-    #### Title (text)
-    - content: "Khruangbin"
-    - font-family: Outfit; font-size: 26px; font-weight: 700
-    - color: var(--cream) (#F5F5F3)
+    [text] Title
+      content: "Khruangbin"
+      font-family: Outfit; font-size: 26px; font-weight: 700
+      color: var(--cream) (#F5F5F3)
 
     ...
+
+---
+
+## States
+
+Interactive elements need explicit state definitions. Extract from Pencil if variants exist, otherwise annotate manually.
+
+### CTA Button (Get Tickets)
+- default: background: var(--coral); color: #FFFFFF
+- hover: background: var(--coral)/90; transform: translateY(-1px)
+- active: background: var(--coral)/80; transform: none
+- disabled: opacity: 0.5; pointer-events: none
+
+### Secondary Action Button (Save, Share, etc.)
+- default: border: 1px solid var(--twilight); color: var(--soft)
+- hover: background: var(--twilight)/50; color: var(--cream)
+
+---
+
+## Shadows
+
+Extract any shadow/effect properties from nodes. Map to the design system shadow tokens.
+
+- Card surfaces: box-shadow: 0 2px 8px rgba(0,0,0,0.3)
+- Elevated surfaces: box-shadow: 0 8px 24px rgba(0,0,0,0.5)
+- (Use shadow-card-sm/md/lg utility classes when available)
+
+---
+
+## Responsive Notes
+
+The comp is extracted at {width}px. Note any known breakpoint behavior:
+
+- Desktop (≥1024px): sidebar + content two-column layout via DetailShell
+- Mobile (<1024px): stacks vertically, sidebar above content
+- (Manual annotation — Pencil comps are single-breakpoint)
+
+---
+
+## Implementation Constraint
+
+**Do not add any CSS property not listed in this spec.** If an element needs a property that is not documented here (hover state, shadow, transition, z-index), stop and ask rather than improvising. The spec is the ceiling, not the floor.
 ```
 
 ### Conventions
 
-- Indent nested elements with 2 spaces per level
-- Use `###` headings for each node, increasing depth with hierarchy
+- Use indented block format with `[type] Name` for each node
+- Indent 2 spaces per tree level — handles arbitrary depth without heading limits
+- `{absolute, ...}` annotations after the name for positioning context
 - Show resolved variable values inline: `var(--token) (#hex)`
 - For `fill_container` sizing, output `width: 100%`
 - For `fit_content` sizing, output `width: fit-content`
 - Omit default/zero values (don't list `opacity: 1` or `border-radius: 0`)
 - For image fills, output `background: image-fill` (don't embed the URL)
-- For gradient fills, output the full gradient spec
+- For gradient fills, output the full gradient spec with all stops
+- For shadow/effects, extract the full `box-shadow` or `filter` spec
+- Include a `## States` section for interactive elements (hover, active, focus, disabled)
+- Include a `## Shadows` section listing all shadow values used
+- Include a `## Responsive Notes` section (manual annotation, Pencil is single-breakpoint)
+- Include the implementation constraint ("do not improvise") at the bottom of every spec
 
 ---
 
@@ -291,3 +344,19 @@ The skill maintains a mapping from Pencil variable names to CSS custom propertie
 | `$spacing/base` | `16px` | — |
 
 This mapping is derived at runtime from `get_variables()` — not hardcoded. The table above is for reference only.
+
+---
+
+## 8. Verify-Blocks-Ship Rule
+
+The verify flow is not optional documentation — it is a quality gate.
+
+**The rule:** No implementation is "done" until `/design-handoff verify` produces a report with zero Critical and zero Major discrepancies. Minor discrepancies are acceptable and can be tracked for later cleanup.
+
+This should be enforced in the implementation workflow:
+1. Implementation agent builds from the extracted spec
+2. `/design-handoff verify` runs against the live page
+3. If Critical or Major issues → implementation agent fixes → verify again
+4. Only when verify passes → mark task complete
+
+Without this gate, the extract flow produces specs that get ignored the same way the Pencil comps did.
