@@ -36,7 +36,7 @@ export const GET = withAuth(async (request: NextRequest, { user, serviceClient }
 
   // Fetch tags for all entries in one query
   const entryIds = (entries || []).map((e: any) => e.id);
-  let entryTags: Record<number, { id: number; name: string; color: string | null }[]> = {};
+  const entryTags: Record<number, { id: number; name: string; color: string | null }[]> = {};
 
   if (entryIds.length > 0) {
     const { data: tagRows } = await serviceClient

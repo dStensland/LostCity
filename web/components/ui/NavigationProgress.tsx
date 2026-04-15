@@ -23,7 +23,7 @@ export function NavigationProgress() {
     prevPathnameRef.current = pathname;
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps, react-hooks/set-state-in-effect
+   
   useEffect(() => {
     if (pathname === prevPathnameRef.current) return;
 
@@ -34,10 +34,10 @@ export function NavigationProgress() {
 
     if (timerRef.current) clearTimeout(timerRef.current);
 
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+     
     setState("completing");
     timerRef.current = setTimeout(() => {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
+       
       setState("idle");
     }, 400);
   }, [pathname]);

@@ -647,7 +647,7 @@ export function FamilyFeed({ portalId, portalSlug }: FamilyFeedProps) {
   // Read initial tab from URL param — used by deep links.
   // Only applies on first mount; tab state is purely client-side after that.
   // Old "weekend" and "calendar" deep links are redirected to their merged homes.
-  // eslint-disable-next-line react-hooks/exhaustive-deps, react-hooks/set-state-in-effect
+   
   useEffect(() => {
     const tabParam = searchParams.get("tab");
     if (!tabParam) return;

@@ -344,7 +344,7 @@ async function loadStoredShowtimeEvents(
   const runs = (runsResult.data as StoredScreeningRun[] | null) ?? [];
   if (runs.length === 0) return [];
 
-  let screenNameMap = new Map<string, string>();
+  const screenNameMap = new Map<string, string>();
   try {
     const screenResult = await supabase
       .from("screening_runs")

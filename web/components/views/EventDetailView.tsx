@@ -66,7 +66,7 @@ import { DETAIL_HERO_SKELETON_HEIGHT } from "@/components/skeletons/DetailHeroSk
  */
 function cleanDescription(desc: string | null | undefined): string | null {
   if (!desc) return null;
-  let cleaned = desc
+  const cleaned = desc
     // Strip "Event name [anything] Description " prefix from crawler key-value artifacts
     .replace(/^Event name\s+.+?\s+Description\s+/i, "")
     // Strip trailing "[...]\n" truncation markers

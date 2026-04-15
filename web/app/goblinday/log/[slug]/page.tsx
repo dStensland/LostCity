@@ -73,7 +73,7 @@ export default async function PublicLogPage({ params, searchParams }: PageProps)
 
   // Fetch tags
   const entryIds = (entries || []).map((e: any) => e.id);
-  let entryTags: Record<number, any[]> = {};
+  const entryTags: Record<number, any[]> = {};
 
   if (entryIds.length > 0) {
     const { data: tagRows } = await serviceClient

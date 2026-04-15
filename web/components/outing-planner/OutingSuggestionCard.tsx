@@ -76,7 +76,7 @@ export default function OutingSuggestionCard({
   const wasAddingRef = useRef(false);
 
   // Detect when adding transitions from true → false (add completed)
-  // eslint-disable-next-line react-hooks/exhaustive-deps, react-hooks/set-state-in-effect
+   
   useEffect(() => {
     if (wasAddingRef.current && !adding) {
       setJustAdded(true);
