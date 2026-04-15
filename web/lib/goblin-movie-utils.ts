@@ -1,27 +1,7 @@
-const TMDB_BASE = "https://api.themoviedb.org/3";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Database } from "./types";
 
-// File-local shim for the subset of Supabase service client methods this
-// file uses. Keeping it file-local per the Phase 5 rule.
-type GoblinMovieServiceClient = {
-  from: (table: "goblin_movies") => {
-    select: (cols: string) => {
-      eq: (col: string, val: number) => {
-        maybeSingle: () => Promise<{
-          data: { id: number } | null;
-          error: unknown;
-        }>;
-      };
-    };
-    insert: (data: never) => {
-      select: (cols: string) => {
-        single: () => Promise<{
-          data: { id: number } | null;
-          error: unknown;
-        }>;
-      };
-    };
-  };
-};
+const TMDB_BASE = "https://api.themoviedb.org/3";
 
 // Only the TMDB movie-detail fields this function actually reads. Do not
 // add fields from memory — confirm each is accessed in the code below.
@@ -47,7 +27,7 @@ function isTmdbMovieDetail(v: unknown): v is TmdbMovieDetail {
 
 /** Ensure a movie exists in goblin_movies by TMDB ID, fetching from TMDB if needed */
 export async function ensureMovie(
-  serviceClient: GoblinMovieServiceClient,
+  serviceClient: SupabaseClient<Database>,
   tmdbId: number
 ): Promise<{ id: number } | null> {
   // Check if already exists
@@ -57,7 +37,7 @@ export async function ensureMovie(
     .eq("tmdb_id", tmdbId)
     .maybeSingle();
 
-  if (existing) return existing;
+  if (existing) return existing as { id: number };
 
   // Fetch from TMDB
   const tmdbKey = process.env.TMDB_API_KEY;
@@ -103,7 +83,7 @@ export async function ensureMovie(
       .single();
 
     if (error || !inserted) return null;
-    return inserted;
+    return inserted as { id: number };
   } catch {
     clearTimeout(timeoutId);
     return null;
