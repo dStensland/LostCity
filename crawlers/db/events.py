@@ -1341,16 +1341,30 @@ def _step_set_flags(event_data: dict, ctx: InsertContext) -> dict:
             event_data.get("price_min") is not None
             and float(event_data.get("price_min") or 0) > 0
         )
-        # Only promote source_url to ticket_url if it looks like an actual ticket/checkout page
         source_url = event_data.get("source_url")
+        # Promote source_url to ticket_url if:
+        # 1. It looks like an explicit ticket/checkout page, OR
+        # 2. It has a specific path (not just domain) or query string for showtimes
         if (
             (category_value == "film"
             or "showtime" in tags_value
             or "showtime" in genres_value
             or is_paid)
-            and _looks_like_explicit_ticket_url(source_url)
         ):
-            event_data["ticket_url"] = source_url
+            if _looks_like_explicit_ticket_url(source_url):
+                event_data["ticket_url"] = source_url
+            # For showtimes, also allow URLs with specific paths or query strings
+            elif "showtime" in tags_value or "showtime" in genres_value or category_value == "film":
+                try:
+                    parsed = urlparse(source_url)
+                    path = (parsed.path or "").lower().rstrip("/")
+                    query = (parsed.query or "").lower()
+                    # Block only generic pages without specific indicators
+                    generic_pages = {"", "/now-showing", "/home", "/showtimes", "/schedule", "/movies"}
+                    if path not in generic_pages and (path or query):
+                        event_data["ticket_url"] = source_url
+                except Exception:
+                    pass
 
     # Final is_free normalization — price_min=0 with no paid tiers is definitively free,
     # even if the crawler explicitly said is_free=False (common crawler default bug)
