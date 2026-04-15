@@ -233,11 +233,41 @@ async function backfill() {
   //   2. festival_id set but importance is 'standard'
   // These are the clearest signals — the event was already tagged, just
   // the importance column wasn't backfilled yet.
+  //
+  // IMPORTANT: Do NOT auto-promote events from large festivals (>20 linked events).
+  // When a festival has 20+ events, the festival ROW is the tentpole — not each
+  // individual screening. Auto-promoting 285 ATLFF events to flagship would blow
+  // out The Lineup with hero cards. For large festivals, curation must be explicit
+  // (set is_tentpole=true on specific events via a migration, not this script).
+  // This rule generalizes to any large festival, not just ATLFF.
+
+  // Count events per festival_id so we can skip large-festival auto-promotion.
+  const festivalEventCounts = new Map<string, number>();
+  for (const e of allEvents) {
+    if (e.festival_id != null) {
+      festivalEventCounts.set(e.festival_id, (festivalEventCounts.get(e.festival_id) ?? 0) + 1);
+    }
+  }
+  const LARGE_FESTIVAL_THRESHOLD = 20;
+  const largeFestivalIds = new Set(
+    [...festivalEventCounts.entries()]
+      .filter(([, count]) => count > LARGE_FESTIVAL_THRESHOLD)
+      .map(([id]) => id)
+  );
+  if (largeFestivalIds.size > 0) {
+    console.log(`\nSkipping auto-flagship-promotion for large festivals (>${LARGE_FESTIVAL_THRESHOLD} events): ${[...largeFestivalIds].join(", ")}`);
+    console.log("  → For these festivals, curate tentpoles explicitly with is_tentpole=true via a DB migration.");
+  }
 
   const flagshipCandidates = allEvents.filter(
     (e) =>
       e.importance === "standard" &&
-      (e.is_tentpole === true || e.festival_id != null)
+      (
+        e.is_tentpole === true ||
+        // Only auto-promote festival events if the festival is small enough that
+        // individual events are the draw, not the festival as a whole.
+        (e.festival_id != null && !largeFestivalIds.has(e.festival_id))
+      )
   );
 
   let flagshipSet = 0;

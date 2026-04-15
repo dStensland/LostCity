@@ -53,6 +53,7 @@ import { ContentSwap } from "@/components/ui/ContentSwap";
 import ActiveContestSection from "./sections/ActiveContestSection";
 import { TodayInAtlantaSection } from "./sections/TodayInAtlantaSection";
 import RegularHangsSection from "./sections/RegularHangsSection";
+import FestivalsSection from "./sections/FestivalsSection";
 import HolidayHero from "./HolidayHero";
 import type { FeedEventData } from "@/components/EventCard";
 import type {
@@ -375,42 +376,15 @@ export default function CityPulseShell({ portalSlug, serverHeroUrl, serverFeedDa
         return null;
 
       case "cinema":
-        return (
-          <div
-            key="city-pulse-cinema"
-            id="city-pulse-cinema"
-            data-feed-anchor="true"
-            data-index-label="Now Showing"
-            data-block-id="cinema"
-            className="mt-8 scroll-mt-28"
-          >
-            <div className="h-px bg-[var(--twilight)]" />
-            <div className="pt-6">
-              <LazySection minHeight={300}>
-                <NowShowingSection portalSlug={portalSlug} />
-              </LazySection>
-            </div>
-          </div>
-        );
+        // Now Showing is hard-coded in JSX (above PlacesToGo) so users cannot
+        // hide or reorder it. Return null here to prevent double-rendering for
+        // users who have "cinema" in their legacy visible_blocks preference.
+        return null;
 
       case "live_music":
-        return (
-          <div
-            key="city-pulse-live-music"
-            id="city-pulse-live-music"
-            data-feed-anchor="true"
-            data-index-label="Live Music"
-            data-block-id="live_music"
-            className="mt-8 scroll-mt-28"
-          >
-            <div className="h-px bg-[var(--twilight)]" />
-            <div className="pt-6">
-              <LazySection minHeight={300}>
-                <LiveMusicSection portalSlug={portalSlug} />
-              </LazySection>
-            </div>
-          </div>
-        );
+        // Live Music is hard-coded in JSX (above PlacesToGo) — same rationale
+        // as cinema. Null here prevents duplicate rendering.
+        return null;
 
       case "sports":
         return (
@@ -538,7 +512,58 @@ export default function CityPulseShell({ portalSlug, serverHeroUrl, serverFeedDa
         </ContentSwap>
       </div>
 
-      {/* Regular Hangs — recurring weekly events (trivia, run clubs, karaoke, etc.) */}
+      {/* The Big Stuff — upcoming festivals and tentpole events. Hard-coded so
+           users cannot hide or reorder it — the festival is always surfaced. */}
+      {portal?.id && (
+        <div
+          id="city-pulse-festivals"
+          data-feed-anchor="true"
+          data-index-label="The Big Stuff"
+          data-block-id="festivals"
+          className="scroll-mt-28"
+        >
+          <FestivalsSection portalSlug={portalSlug} portalId={portal.id} />
+        </div>
+      )}
+
+      {/* Now Showing — film showtimes by theater (carousel). Hard-coded so users
+           cannot hide or reorder it — cinema is part of the core Atlanta experience.
+           Position: after The Big Stuff, before Live Music (spec 1.1 pos 4). */}
+      <div
+        id="city-pulse-cinema"
+        data-feed-anchor="true"
+        data-index-label="Now Showing"
+        data-block-id="cinema"
+        className="mt-8 scroll-mt-28"
+      >
+        <div className="h-px bg-[var(--twilight)]" />
+        <div className="pt-6">
+          <LazySection minHeight={300}>
+            <NowShowingSection portalSlug={portalSlug} />
+          </LazySection>
+        </div>
+      </div>
+
+      {/* Live Music — tonight's shows + venue directory with genre filter. Hard-coded
+           so users cannot hide or reorder it — live music is part of the core experience.
+           Position: after Now Showing, before Regular Hangs (spec 1.1 pos 5). */}
+      <div
+        id="city-pulse-live-music"
+        data-feed-anchor="true"
+        data-index-label="Live Music"
+        data-block-id="live_music"
+        className="mt-8 scroll-mt-28"
+      >
+        <div className="h-px bg-[var(--twilight)]" />
+        <div className="pt-6">
+          <LazySection minHeight={300}>
+            <LiveMusicSection portalSlug={portalSlug} />
+          </LazySection>
+        </div>
+      </div>
+
+      {/* Regular Hangs — recurring weekly events (trivia, run clubs, karaoke, etc.)
+           Position: after Live Music, before Places to Go (spec 1.1 pos 6). */}
       <RegularHangsSection portalSlug={portalSlug} />
 
       {/* Places to Go — category-based venue discovery */}

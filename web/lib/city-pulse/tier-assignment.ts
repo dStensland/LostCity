@@ -37,7 +37,7 @@ export function computeIntrinsicScore(event: TierableEvent): number {
   if (event.importance === "flagship") score += 40;
   if (event.importance === "major") score += 20;
   if (event.is_featured || event.featured_blurb) score += 15;
-  if (event.festival_id) score += 30;
+  if (event.festival_id) score += 10;
   if (event.venue_has_editorial) score += 15;
   if (event.image_url) score += 10;
   return score;
@@ -54,7 +54,7 @@ export function getCardTier(
   friendsGoingCount = 0,
 ): CardTier {
   const intrinsic = computeIntrinsicScore(event);
-  if (intrinsic >= 30 || event.is_tentpole || event.festival_id) return "hero";
+  if (intrinsic >= 30 || event.is_tentpole) return "hero";
   if (intrinsic >= 15 || friendsGoingCount > 0) return "featured";
   return "standard";
 }

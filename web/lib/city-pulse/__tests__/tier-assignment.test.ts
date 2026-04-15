@@ -48,8 +48,8 @@ describe("computeIntrinsicScore", () => {
     expect(computeIntrinsicScore(makeEvent({ is_featured: true, featured_blurb: "blurb" }))).toBe(15);
   });
 
-  it("adds 30 for festival_id", () => {
-    expect(computeIntrinsicScore(makeEvent({ festival_id: "dragon-con" }))).toBe(30);
+  it("adds 10 for festival_id", () => {
+    expect(computeIntrinsicScore(makeEvent({ festival_id: "dragon-con" }))).toBe(10);
   });
 
   it("adds 15 for venue_has_editorial", () => {
@@ -61,7 +61,7 @@ describe("computeIntrinsicScore", () => {
   });
 
   it("stacks all signals correctly", () => {
-    // flagship(40) + festival(30) + featured_blurb(15) + editorial(15) + image(10) = 110
+    // flagship(40) + festival(10) + featured_blurb(15) + editorial(15) + image(10) = 90
     expect(
       computeIntrinsicScore(
         makeEvent({
@@ -72,13 +72,13 @@ describe("computeIntrinsicScore", () => {
           image_url: "https://example.com/img.jpg",
         }),
       ),
-    ).toBe(110);
+    ).toBe(90);
   });
 });
 
 describe("getCardTier", () => {
-  it("festival event (festival_id set) → hero", () => {
-    expect(getCardTier(makeEvent({ festival_id: "dragon-con" }))).toBe("hero");
+  it("festival event (festival_id set) → standard", () => {
+    expect(getCardTier(makeEvent({ festival_id: "dragon-con" }))).toBe("standard");
   });
 
   it("tentpole event → hero", () => {

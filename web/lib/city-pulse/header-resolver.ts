@@ -216,7 +216,7 @@ function resolveFlagshipEvent(
 
   const candidates = todayEvents.filter(
     (e) =>
-      (e.importance === "flagship" || e.is_tentpole || !!e.festival_id) &&
+      (e.importance === "flagship" || e.is_tentpole) &&
       !!getEffectiveEventImageUrl(e),
   );
 

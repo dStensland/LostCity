@@ -232,23 +232,29 @@ export async function fetchEventPoolsFromReady(
   );
 
   const [todayResult, trendingResult, horizonResult, festivalResult] = await Promise.all([
-    // Today's events — the primary feed pool
+    // Today's events — the primary feed pool.
+    // Mirrors the festival_id exclusion from fetch-events.ts: festival-linked
+    // events live in The Big Stuff + festival detail page, not The Lineup,
+    // unless explicitly curator-elevated (is_tentpole / flagship / major).
     supabase
       .from("feed_events_ready")
       .select("*")
       .eq("portal_id", portalId)
       .eq("start_date", ctx.today)
+      .or("festival_id.is.null,is_tentpole.eq.true,importance.eq.flagship,importance.eq.major")
       .order("data_quality", { ascending: false, nullsFirst: false })
       .order("start_time", { ascending: true, nullsFirst: false })
       .limit(300),
 
-    // Trending: high social proof / featured, 2-week window
+    // Trending: high social proof / featured, 2-week window.
+    // Same festival_id exclusion — Lineup stays focused on non-festival life.
     supabase
       .from("feed_events_ready")
       .select("*")
       .eq("portal_id", portalId)
       .gte("start_date", ctx.today)
       .lte("start_date", ctx.twoWeeksAhead)
+      .or("festival_id.is.null,is_tentpole.eq.true,importance.eq.flagship,importance.eq.major")
       .order("is_featured", { ascending: false, nullsFirst: false })
       .order("attendee_count", { ascending: false, nullsFirst: false })
       .order("start_date", { ascending: true })
