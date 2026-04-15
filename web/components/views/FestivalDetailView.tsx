@@ -6,8 +6,7 @@ import { Ticket, ShareNetwork, BookmarkSimple } from "@phosphor-icons/react";
 import { DetailLayout } from "@/components/detail/core/DetailLayout";
 import { FestivalIdentity } from "@/components/detail/identity/FestivalIdentity";
 import { festivalManifest } from "@/components/detail/manifests/festival";
-import { useDetailFetch } from "@/lib/hooks/useDetailFetch";
-import { usePortal } from "@/lib/portal-context";
+import { useDetailData } from "@/lib/detail/use-detail-data";
 import type { FestivalApiResponse, HeroConfig, ActionConfig, EntityData } from "@/lib/detail/types";
 
 // ── Props ────────────────────────────────────────────────────────────────────
@@ -73,15 +72,10 @@ export default function FestivalDetailView({
   portalSlug,
   onClose,
 }: FestivalDetailViewProps) {
-  const { portal } = usePortal();
-
-  const fetchUrl = useMemo(() => {
-    if (!portal?.id) return null;
-    return `/api/festivals/${slug}?portal_id=${portal.id}`;
-  }, [slug, portal?.id]);
-
-  const { data, status } = useDetailFetch<FestivalApiResponse>(fetchUrl, {
-    entityLabel: "festival",
+  const { data, status } = useDetailData<FestivalApiResponse>({
+    entityType: "festival",
+    identifier: slug,
+    portalSlug,
   });
 
   const festival = data?.festival ?? null;

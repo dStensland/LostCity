@@ -6,9 +6,9 @@ import type { EntityType } from "./types";
 const API_ROUTES: Record<EntityType, string> = {
   event: "/api/events",
   place: "/api/places/by-slug",
-  series: "/api/series/by-slug",
-  festival: "/api/festivals/by-slug",
-  org: "/api/producers/by-slug",
+  series: "/api/series",
+  festival: "/api/festivals",
+  org: "/api/organizations/by-slug",
 };
 
 interface UseDetailDataConfig<T> {
@@ -21,9 +21,11 @@ interface UseDetailDataConfig<T> {
 export function useDetailData<T>(config: UseDetailDataConfig<T>) {
   const { entityType, identifier, portalSlug, initialData } = config;
 
+  const needsPortal = entityType === "event" || entityType === "series" || entityType === "festival";
+  const portalParam = needsPortal ? `?portal=${portalSlug}` : "";
   const url = initialData
     ? null
-    : `${API_ROUTES[entityType]}/${identifier}${entityType === "event" ? `?portal_id=${portalSlug}` : ""}`;
+    : `${API_ROUTES[entityType]}/${identifier}${portalParam}`;
 
   const { data: fetchedData, status, error, retry } = useDetailFetch<T>(url, {
     entityLabel: entityType,

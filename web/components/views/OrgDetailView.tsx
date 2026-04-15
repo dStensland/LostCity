@@ -5,7 +5,7 @@ import { ShareNetwork, UserPlus } from "@phosphor-icons/react";
 import { DetailLayout } from "@/components/detail/core/DetailLayout";
 import { OrgIdentity } from "@/components/detail/identity/OrgIdentity";
 import { orgManifest } from "@/components/detail/manifests/org";
-import { useDetailFetch } from "@/lib/hooks/useDetailFetch";
+import { useDetailData } from "@/lib/detail/use-detail-data";
 import { getCategoryColor } from "@/lib/category-config";
 import type { OrgApiResponse, HeroConfig, ActionConfig, EntityData } from "@/lib/detail/types";
 
@@ -37,10 +37,11 @@ export default function OrgDetailView({
   portalSlug,
   onClose,
 }: OrgDetailViewProps) {
-  const { data, status } = useDetailFetch<OrgApiResponse>(
-    `/api/organizations/by-slug/${slug}`,
-    { entityLabel: "organization" },
-  );
+  const { data, status } = useDetailData<OrgApiResponse>({
+    entityType: "org",
+    identifier: slug,
+    portalSlug,
+  });
 
   const organization = data?.organization ?? null;
   const events = useMemo(() => data?.events ?? [], [data]);

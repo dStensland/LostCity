@@ -33,6 +33,7 @@ export interface EventData {
   image_url: string | null;
   is_recurring: boolean;
   recurrence_rule: string | null;
+  is_adult?: boolean | null;
   is_live?: boolean;
   age_policy?: string | null;
   ticket_status?: string | null;
@@ -91,7 +92,7 @@ export interface EventData {
 export interface EventArtist {
   id: number;
   name: string;
-  billing_order: number;
+  billing_order: number | null;
   is_headliner: boolean;
   role?: string | null;
   image_url?: string | null;

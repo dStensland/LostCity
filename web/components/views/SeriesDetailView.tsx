@@ -5,9 +5,8 @@ import { Ticket, ShareNetwork, BookmarkSimple } from "@phosphor-icons/react";
 import { DetailLayout } from "@/components/detail/core/DetailLayout";
 import { SeriesIdentity } from "@/components/detail/identity/SeriesIdentity";
 import { getSeriesManifest } from "@/components/detail/manifests/series";
-import { useDetailFetch } from "@/lib/hooks/useDetailFetch";
+import { useDetailData } from "@/lib/detail/use-detail-data";
 import { getSeriesTypeColor } from "@/lib/series-utils";
-import { usePortal } from "@/lib/portal-context";
 import type { SeriesApiResponse, HeroConfig, ActionConfig, EntityData } from "@/lib/detail/types";
 
 // ── Props ────────────────────────────────────────────────────────────────────
@@ -25,15 +24,10 @@ export default function SeriesDetailView({
   portalSlug,
   onClose,
 }: SeriesDetailViewProps) {
-  const { portal } = usePortal();
-
-  const fetchUrl = useMemo(() => {
-    if (!portal?.id) return null;
-    return `/api/series/${slug}?portal_id=${portal.id}`;
-  }, [slug, portal?.id]);
-
-  const { data, status } = useDetailFetch<SeriesApiResponse>(fetchUrl, {
-    entityLabel: "series",
+  const { data, status } = useDetailData<SeriesApiResponse>({
+    entityType: "series",
+    identifier: slug,
+    portalSlug,
   });
 
   const series = data?.series ?? null;
