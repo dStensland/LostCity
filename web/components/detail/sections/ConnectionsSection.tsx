@@ -1,5 +1,14 @@
 "use client";
 
+import {
+  MapPin,
+  Repeat,
+  Buildings,
+  StarFour,
+  Compass,
+  MusicNote,
+  ArrowRight,
+} from "@phosphor-icons/react";
 import { resolveConnections } from "@/lib/detail/connections";
 import type { SectionProps } from "@/lib/detail/types";
 import SmartImage from "@/components/SmartImage";
@@ -9,25 +18,32 @@ export function ConnectionsSection({ data, portalSlug }: SectionProps) {
   if (connections.length === 0) return null;
 
   return (
-    <div className="space-y-2">
+    <div className="flex flex-col gap-[10px]">
       {connections.map((row) => (
         <a
           key={row.id}
           href={row.href}
-          className={`flex items-center gap-3 rounded-lg p-3 transition-colors duration-300 hover:bg-[var(--twilight)]/50 ${
+          className={`flex items-center gap-3 rounded-lg p-3 transition-colors duration-300 ${
             row.accent === "gold"
-              ? "bg-[var(--gold)]/5 border border-[var(--gold)]/20"
+              ? "hover:bg-[#FFD93D1A]"
               : row.accent === "coral"
-                ? "bg-[var(--coral)]/5 border border-[var(--coral)]/20"
-                : "bg-[var(--night)] border border-[var(--twilight)]/40"
+                ? "hover:bg-[#FF6B7A1A]"
+                : "hover:bg-[var(--twilight)]/50"
           }`}
+          style={
+            row.accent === "gold"
+              ? { background: "#FFD93D0D", border: "1px solid #FFD93D33", borderRadius: "8px" }
+              : row.accent === "coral"
+                ? { background: "#FF6B7A0D", border: "1px solid #FF6B7A33", borderRadius: "8px" }
+                : { background: "var(--night)", borderRadius: "8px" }
+          }
         >
           {row.avatars ? (
-            <div className="flex -space-x-1.5">
+            <div className="flex -space-x-1.5 flex-shrink-0">
               {row.avatars.slice(0, 3).map((url, i) => (
                 <div
                   key={i}
-                  className="w-[18px] h-[18px] rounded-full border-2 border-[var(--night)]"
+                  className="w-5 h-5 rounded-full border-2 border-[var(--void)]"
                   style={{ backgroundImage: `url(${url})`, backgroundSize: "cover" }}
                 />
               ))}
@@ -43,42 +59,62 @@ export function ConnectionsSection({ data, portalSlug }: SectionProps) {
                   className="w-full h-full object-cover"
                 />
               ) : (
-                <ConnectionTypeIcon type={row.type} />
+                <ConnectionTypeIcon
+                  type={row.type}
+                  accent={row.accent}
+                />
               )}
             </div>
           )}
           <div className="flex-1 min-w-0">
             <div
-              className={`text-sm font-medium truncate ${
-                row.accent === "gold"
-                  ? "text-[var(--gold)]"
-                  : "text-[var(--cream)]"
-              }`}
+              className="text-sm font-medium truncate"
+              style={{
+                color:
+                  row.accent === "gold"
+                    ? "#FFD93D"
+                    : "var(--cream)",
+              }}
             >
               {row.label}
             </div>
             <div className="text-xs text-[var(--muted)] truncate">{row.contextLine}</div>
           </div>
-          <span className="text-[var(--muted)] text-sm flex-shrink-0">→</span>
+          <ArrowRight
+            size={14}
+            style={{
+              color:
+                row.accent === "coral"
+                  ? "#FF6B7A66"
+                  : row.accent === "gold"
+                    ? "#FFD93D66"
+                    : "var(--twilight)",
+              flexShrink: 0,
+            }}
+          />
         </a>
       ))}
     </div>
   );
 }
 
-function ConnectionTypeIcon({ type }: { type: string }) {
-  const glyphs: Record<string, string> = {
-    venue: "📍",
-    festival: "🎪",
-    org: "🏢",
-    series: "🔄",
-    social: "👥",
-    proximity: "📍",
-    artist: "🎵",
-  };
-  return (
-    <span className="text-sm" role="img" aria-hidden="true">
-      {glyphs[type] ?? "⬡"}
-    </span>
-  );
+function ConnectionTypeIcon({ type, accent }: { type: string; accent?: "gold" | "coral" | null }) {
+  const iconProps = { size: 18, color: accent === "gold" ? "#FFD93D" : "var(--soft)" };
+
+  switch (type) {
+    case "venue":
+      return <MapPin {...iconProps} />;
+    case "series":
+      return <Repeat {...iconProps} />;
+    case "org":
+      return <Buildings {...iconProps} />;
+    case "festival":
+      return <StarFour {...iconProps} />;
+    case "proximity":
+      return <Compass {...iconProps} />;
+    case "artist":
+      return <MusicNote {...iconProps} />;
+    default:
+      return <MapPin {...iconProps} />;
+  }
 }
