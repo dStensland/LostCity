@@ -470,8 +470,8 @@ export interface FeedLayout {
 export const DEFAULT_FEED_ORDER: FeedBlockId[] = [
   "briefing",
   "events",
-  "cinema",
-  "live_music",
+  // "cinema" and "live_music" removed from the dynamic tier — they are now
+  // hard-coded in CityPulseShell JSX so users cannot hide or reorder them.
   "sports",
   "horizon",
   "browse",

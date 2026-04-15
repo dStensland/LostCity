@@ -713,7 +713,7 @@ export default function CityBriefing({
   // Flagship events disabled — tentpole data not curated enough.
   // "VIP Show Floor Early Access" was replacing the city hero content.
   // Re-enable when flagship_event is a curated list, not raw is_tentpole inference.
-  const flagship = null; // header.flagship_event ?? null;
+  const flagship = header.flagship_event ?? null;
 
   // ── Hero image with fallback ─────────────────────────────────────────────
   // CMS header photo or atmospheric city photo. Flagship events get hero cards

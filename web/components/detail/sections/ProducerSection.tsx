@@ -2,22 +2,22 @@
 
 import SmartImage from "@/components/SmartImage";
 import { Buildings } from "@phosphor-icons/react";
+import type { SectionProps } from "@/lib/detail/types";
 
-interface Producer {
-  id: string;
-  name: string;
-  slug: string;
-  org_type?: string | null;
-  logo_url?: string | null;
-  website?: string | null;
-}
+export function ProducerSection({ data, portalSlug }: SectionProps) {
+  let producer: {
+    id: string;
+    name: string;
+    slug: string;
+    org_type?: string | null;
+    logo_url?: string | null;
+    website?: string | null;
+  } | null = null;
 
-interface ProducerSectionProps {
-  producer: Producer | null;
-  portalSlug: string;
-}
-
-export function ProducerSection({ producer, portalSlug }: ProducerSectionProps) {
+  if (data.entityType === "event") {
+    producer = data.payload.event.producer;
+  }
+  // Festival: no direct producer in payload — skip for now
   if (!producer) return null;
 
   const href = `/${portalSlug}?org=${producer.slug}`;
@@ -37,11 +37,7 @@ export function ProducerSection({ producer, portalSlug }: ProducerSectionProps) 
             height={40}
             className="object-cover w-full h-full"
             fallback={
-              <Buildings
-                size={20}
-                weight="duotone"
-                className="text-[var(--muted)]"
-              />
+              <Buildings size={20} weight="duotone" className="text-[var(--muted)]" />
             }
           />
         ) : (
@@ -57,9 +53,12 @@ export function ProducerSection({ producer, portalSlug }: ProducerSectionProps) 
         <p className="text-sm font-semibold text-[var(--cream)] group-hover:text-[var(--coral)] transition-colors truncate">
           {producer.name}
         </p>
+        {producer.org_type && (
+          <p className="text-xs text-[var(--muted)] truncate">{producer.org_type}</p>
+        )}
       </div>
+
+      <span className="text-[var(--muted)] flex-shrink-0">→</span>
     </a>
   );
 }
-
-export type { ProducerSectionProps };

@@ -390,7 +390,13 @@ function buildEventQueryWithSelect(
     .is("canonical_event_id", null)
     .or("is_class.eq.false,is_class.is.null")
     .or("is_sensitive.eq.false,is_sensitive.is.null")
-    .neq("category_id", "film")
+    // Dedup rule 1.6: festival-linked events route to The Big Stuff card and
+    // the festival detail page, NOT The Lineup. The festival itself is the
+    // tentpole; individual sub-events (screenings, parties, panels, talks)
+    // are navigable via the festival surface so the Lineup stays focused on
+    // non-festival Atlanta life. The is_tentpole / flagship / major exception
+    // is an explicit curator override — not automatic per-event elevation.
+    .or("festival_id.is.null,is_tentpole.eq.true,importance.eq.flagship,importance.eq.major")
     .not("category_id", "in", "(recreation,unknown,support_group,religious,support,community,family,wellness,exercise,learning)");
   if (excludeSourceIds.length > 0) {
     q = q.not("source_id", "in", `(${excludeSourceIds.join(",")})`);
@@ -545,6 +551,9 @@ export async function fetchEventPools(
           .is("canonical_event_id", null)
           .or("is_class.eq.false,is_class.is.null")
           .or("is_sensitive.eq.false,is_sensitive.is.null")
+          // Mirror dedup rule from buildEventQueryWithSelect: festival-linked
+          // events live in The Big Stuff + festival detail page, not The Lineup.
+          .or("festival_id.is.null,is_tentpole.eq.true,importance.eq.flagship,importance.eq.major")
           .not("category_id", "in", "(recreation,unknown,support_group,religious,support,community,family,wellness,exercise,learning)")
           .neq("content_kind", "exhibit");
         if (ymcaSourceIds.length > 0) {
@@ -567,6 +576,8 @@ export async function fetchEventPools(
           .is("canonical_event_id", null)
           .or("is_class.eq.false,is_class.is.null")
           .or("is_sensitive.eq.false,is_sensitive.is.null")
+          // Mirror dedup rule: festival-linked events excluded from Lineup.
+          .or("festival_id.is.null,is_tentpole.eq.true,importance.eq.flagship,importance.eq.major")
           .not("category_id", "in", "(recreation,unknown,support_group,religious,support,community,family,wellness,exercise,learning)")
           .neq("content_kind", "exhibit");
         if (ymcaSourceIds.length > 0) {

@@ -1942,6 +1942,11 @@ def smart_update_existing_event(existing: dict, incoming: dict) -> bool:
     if incoming_place_id and not existing_place_id:
         updates["place_id"] = incoming_place_id
 
+    incoming_festival_id = incoming.get("festival_id")
+    existing_festival_id = existing.get("festival_id")
+    if incoming_festival_id and not existing_festival_id:
+        updates["festival_id"] = incoming_festival_id
+
     incoming_start_time = incoming.get("start_time")
     existing_start_time = existing.get("start_time")
     if incoming_start_time and not existing_start_time:

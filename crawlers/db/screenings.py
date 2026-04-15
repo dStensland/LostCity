@@ -210,6 +210,21 @@ def build_screening_bundle_from_event_rows(
 
         run_row = runs_by_key.get(run_source_key)
         if not run_row:
+            # Stash per-event category/subcategory/tags in metadata so
+            # derive_run_event_from_screening can propagate them to the event row
+            # instead of hardcoding "film". Crawlers that don't set these
+            # fields fall back to the film defaults.
+            run_metadata = {"source_slug": source_slug}
+            event_category = event.get("category_id") or event.get("category")
+            if event_category and event_category != "film":
+                run_metadata["category_id"] = event_category
+            event_subcategory = event.get("subcategory")
+            if event_subcategory and event_subcategory != "cinema":
+                run_metadata["subcategory"] = event_subcategory
+            event_tags_raw = event.get("tags")
+            if event_tags_raw:
+                run_metadata["tags"] = list(event_tags_raw)
+
             run_row = {
                 "source_key": run_source_key,
                 "title_source_key": title_source_key,
@@ -222,7 +237,7 @@ def build_screening_bundle_from_event_rows(
                 "buy_url": event.get("ticket_url"),
                 "info_url": event.get("source_url"),
                 "is_special_event": is_special_event,
-                "metadata": {"source_slug": source_slug},
+                "metadata": run_metadata,
                 "screen_name": screen_name,
             }
             runs_by_key[run_source_key] = run_row
@@ -604,7 +619,7 @@ def _select_screening_runs_with_context(source_id: int) -> list[dict[str, Any]]:
         .table("screening_runs")
         .select(
             "id,source_key,screening_title_id,place_id,festival_id,source_id,"
-            "label,start_date,end_date,buy_url,info_url,is_special_event,"
+            "label,start_date,end_date,buy_url,info_url,is_special_event,metadata,"
             "screening_titles(id,canonical_title,poster_image_url,synopsis,genres,slug)"
         )
         .eq("source_id", source_id)
@@ -713,25 +728,38 @@ def derive_run_event_from_screening(
         if first_day_times:
             earliest_time = min(t["start_time"] for t in first_day_times)
 
+    # Category/subcategory/tags can be overridden per-run via run.metadata.
+    # Crawlers that don't set them (all pure-cinema crawlers) get the film
+    # defaults. Crawlers that do (ATLFF with non-film events) carry through
+    # their own taxonomy and tag taxonomy.
+    run_meta = run.get("metadata") or {}
+    event_category = run_meta.get("category_id") or "film"
+    event_subcategory = run_meta.get("subcategory") or ("cinema" if event_category == "film" else None)
+    event_tags = run_meta.get("tags") or ["film", "cinema", "showtime"]
+
     event_record = {
         "title": canonical_title,
         "start_date": start_date,
         "end_date": run.get("end_date"),
         "start_time": earliest_time,
-        "category": "film",
-        "subcategory": "cinema",
-        "tags": ["film", "cinema", "showtime"],
+        "category": event_category,
+        "subcategory": event_subcategory,
+        "tags": list(event_tags),
         "image_url": title.get("poster_image_url"),
         "source_url": run.get("info_url"),
         "ticket_url": run.get("buy_url"),
         "place_id": place_id,
         "source_id": source_id,
+        "festival_id": run.get("festival_id"),
         "is_all_day": False,
         "content_hash": content_hash,
     }
 
+    # Film defaults to a film series; non-film events use "other" so they
+    # still cluster recurring instances (e.g., weekly Filmmaker Lounge) without
+    # claiming film-series semantics.
     series_hint = {
-        "series_type": "film",
+        "series_type": "film" if event_category == "film" else "other",
         "series_title": canonical_title,
     }
 

@@ -1,8 +1,10 @@
 "use client";
 
 /**
- * FestivalsSection — compact rail of upcoming festivals with urgency-colored
- * countdown badges for the City Pulse dashboard.
+ * FestivalsSection — compact horizontal reminder rail of upcoming festivals.
+ *
+ * Intentionally low-profile: users should glance and move on, not linger.
+ * Cards are 220px wide with a fixed-height image — no 16:9 hero treatment.
  *
  * Fetches from /api/festivals/upcoming, computes countdown urgency via
  * moments-utils, and hides entirely when no upcoming festivals exist.
@@ -155,7 +157,7 @@ export default function FestivalsSection({ portalSlug, portalId }: FestivalsSect
     return (
       <section>
         <SectionHeader portalSlug={portalSlug} />
-        <FeedSectionSkeleton accentColor="var(--gold)" minHeight={420} />
+        <FeedSectionSkeleton accentColor="var(--gold)" minHeight={160} />
       </section>
     );
   }
@@ -166,7 +168,8 @@ export default function FestivalsSection({ portalSlug, portalId }: FestivalsSect
     <section>
       <SectionHeader portalSlug={portalSlug} />
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+      {/* Horizontal snap-scroll rail — no grid, no hero treatment */}
+      <div className="flex flex-row gap-3 overflow-x-auto pb-2 snap-x snap-mandatory [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
         {displayItems.map((item) => {
           const dateStr = formatFestivalDates(item.start, item.end);
 
@@ -174,65 +177,55 @@ export default function FestivalsSection({ portalSlug, portalId }: FestivalsSect
             <Link
               key={item.id}
               href={item.href}
-              className="group rounded-xl overflow-hidden border border-[var(--twilight)]/40 bg-[var(--night)] transition-all hover:border-[var(--twilight)]/60 hover:shadow-card-sm"
+              className="group flex-shrink-0 w-[220px] snap-start rounded-card overflow-hidden border border-[var(--twilight)]/40 bg-[var(--night)] transition-all duration-200 hover:border-[var(--twilight)]/70 hover:-translate-y-0.5 hover:shadow-card-sm"
             >
-              {/* Image — 16:9, blurred fill + sharp contain so nothing gets cropped */}
-              <div className="relative aspect-video overflow-hidden bg-[var(--dusk)]">
+              {/* Image — fixed height, blurred fill + sharp contain */}
+              <div className="relative h-[116px] overflow-hidden bg-[var(--dusk)]">
                 {item.imageUrl ? (
                   <>
                     {/* Blurred background fill — covers letterbox areas */}
                     <img
                       src={item.imageUrl}
                       alt=""
-                      className="absolute inset-0 w-full h-full object-cover scale-110 blur-2xl opacity-40"
+                      className="absolute inset-0 w-full h-full object-cover scale-110 blur-xl opacity-35"
                       loading="lazy"
                       aria-hidden="true"
                     />
                     {/* Sharp contained image — full image visible, no crop */}
                     <img
                       src={item.imageUrl}
-                      alt=""
+                      alt={item.title}
                       className="absolute inset-0 w-full h-full object-contain transition-transform duration-500 group-hover:scale-105"
                       loading="lazy"
                     />
                   </>
                 ) : (
                   <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-[var(--gold)]/10 to-[var(--void)]">
-                    <Crown weight="duotone" className="w-10 h-10 text-[var(--gold)]/30" />
+                    <Crown weight="duotone" className="w-8 h-8 text-[var(--gold)]/30" />
                   </div>
                 )}
-                {/* Bottom gradient for badge readability */}
-                <div className="absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-black/60 to-transparent" />
-                {/* Countdown badge — bottom left over image */}
+                {/* Countdown badge — top right, solid surface, no blur */}
                 <span
-                  className="absolute bottom-2 left-2.5 inline-flex px-2 py-0.5 rounded-full text-2xs font-mono font-medium tracking-wide whitespace-nowrap backdrop-blur-sm"
+                  className="absolute top-2 right-2 inline-flex px-1.5 py-0.5 rounded text-2xs font-mono font-semibold tracking-wide whitespace-nowrap"
                   style={{
-                    backgroundColor: `color-mix(in srgb, ${item.urgencyColor} 25%, transparent)`,
+                    backgroundColor: `color-mix(in srgb, ${item.urgencyColor} 18%, var(--night))`,
                     color: item.urgencyColor,
-                    border: `1px solid color-mix(in srgb, ${item.urgencyColor} 35%, transparent)`,
+                    border: `1px solid color-mix(in srgb, ${item.urgencyColor} 40%, transparent)`,
                   }}
                 >
                   {item.countdownText}
                 </span>
               </div>
 
-              {/* Content below image */}
-              <div className="p-3">
-                <h3 className="text-sm font-semibold text-[var(--cream)] line-clamp-2 group-hover:text-white transition-colors">
+              {/* Content below image — title + date only, 1 line each */}
+              <div className="px-2.5 py-2">
+                <h3 className="text-sm font-semibold text-[var(--cream)] line-clamp-1 group-hover:text-white transition-colors leading-snug">
                   {item.title}
                 </h3>
-                {(dateStr || item.location) && (
-                  <div className="flex items-center gap-1.5 mt-0.5">
-                    {dateStr && (
-                      <span className="text-xs text-[var(--muted)]">{dateStr}</span>
-                    )}
-                    {dateStr && item.location && (
-                      <span className="text-[var(--muted)] text-xs">&middot;</span>
-                    )}
-                    {item.location && (
-                      <span className="text-xs text-[var(--muted)] truncate">{item.location}</span>
-                    )}
-                  </div>
+                {dateStr && (
+                  <p className="text-xs text-[var(--muted)] mt-0.5 truncate leading-tight">
+                    {dateStr}
+                  </p>
                 )}
               </div>
             </Link>
