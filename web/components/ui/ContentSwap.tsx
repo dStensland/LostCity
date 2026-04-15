@@ -4,6 +4,7 @@ import {
   useRef,
   useState,
   useEffect,
+  useLayoutEffect,
   type ReactNode,
   type CSSProperties,
 } from "react";
@@ -40,9 +41,14 @@ export function ContentSwap({
   const [displayedChildren, setDisplayedChildren] = useState(children);
   const isFirstRender = useRef(true);
 
-  // Always track latest children and key to avoid stale closures in animation callbacks
-  latestChildrenRef.current = children;
-  latestKeyRef.current = swapKey;
+  // Always track latest children and key to avoid stale closures in animation
+  // callbacks. Written in useLayoutEffect so the refs are updated after commit
+  // (satisfies react-hooks/refs-during-render) but before any onfinish handler
+  // fires, since the animation duration is longer than the layout phase.
+  useLayoutEffect(() => {
+    latestChildrenRef.current = children;
+    latestKeyRef.current = swapKey;
+  });
 
   const isSwapping = displayedKey !== swapKey;
   const delayReady = useMinSkeletonDelay(isSwapping, minDisplayMs);
