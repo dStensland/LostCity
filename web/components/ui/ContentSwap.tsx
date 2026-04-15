@@ -93,6 +93,11 @@ export function ContentSwap({
   }, [error]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Handle normal swap: wait for min delay, then crossfade
+  /* eslint-disable react-hooks/set-state-in-effect --
+     Fallback when containerRef.current is null (crossfade impossible):
+     synchronously swap displayedKey/displayedChildren to current props.
+     Cascade bounded — displayedKey/displayedChildren are not in the dep
+     array ([swapKey, delayReady]). */
   useEffect(() => {
     if (isFirstRender.current) {
       isFirstRender.current = false;
@@ -108,6 +113,7 @@ export function ContentSwap({
     const anim = crossfade(containerRef.current);
     return () => anim?.cancel();
   }, [swapKey, delayReady]); // eslint-disable-line react-hooks/exhaustive-deps
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const containerStyle: CSSProperties = {};
   if (minHeight) {

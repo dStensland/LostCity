@@ -32,6 +32,11 @@ export function SkeletonGroup({
   const [visible, setVisible] = useState(showSkeleton);
   const ref = useRef<HTMLDivElement>(null);
 
+  /* eslint-disable react-hooks/set-state-in-effect --
+     Skeleton visibility coordinator: flips visible true when showing,
+     false when fade-out animation completes (or immediately for reduced
+     motion). Cascade bounded — visible is not in the dep array
+     ([showSkeleton, fadeDuration]). */
   useEffect(() => {
     if (showSkeleton) {
       setVisible(true);
@@ -60,6 +65,7 @@ export function SkeletonGroup({
     };
     return () => anim.cancel();
   }, [showSkeleton, fadeDuration]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   if (!visible) return null;
 

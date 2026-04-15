@@ -21,6 +21,7 @@ export function TransitionContainer({
   const [reducedMotion, setReducedMotion] = useState(false);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- mount-once matchMedia detection. Cascade bounded — reducedMotion is not in the dep array ([]). A useState initializer is unsafe because window.matchMedia is undefined during SSR.
     setReducedMotion(
       window.matchMedia("(prefers-reduced-motion: reduce)").matches
     );
