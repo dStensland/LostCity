@@ -43,6 +43,10 @@ export default function GoblinWatchlistWatchedModal({
   const [submitting, setSubmitting] = useState(false);
 
   // Reset state on close
+  /* eslint-disable react-hooks/set-state-in-effect --
+     Modal close-reset: clears all form fields when open flips false.
+     Cascade bounded — none of the reset fields are in the dep array
+     ([open]). */
   useEffect(() => {
     if (!open) {
       setWatchedDate(toISODate(new Date()));
@@ -51,6 +55,7 @@ export default function GoblinWatchlistWatchedModal({
       setSelectedTagIds([]);
     }
   }, [open]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   // Escape to close
   useEffect(() => {

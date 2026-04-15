@@ -46,6 +46,10 @@ export default function GoblinEditEntryModal({
   const [tierColor, setTierColor] = useState<string>(TAG_COLORS[0]);
 
   // Populate form when entry changes
+  /* eslint-disable react-hooks/set-state-in-effect --
+     Derived-state reset when entry prop changes: seeds every form field
+     from the entry being edited. Cascade bounded — none of the form
+     state fields appear in the dep array ([entry]). */
   useEffect(() => {
     if (entry) {
       setWatchedDate(entry.watched_date);
@@ -58,6 +62,7 @@ export default function GoblinEditEntryModal({
       setTierColor(entry.tier_color || TAG_COLORS[0] as string);
     }
   }, [entry]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   useEffect(() => {
     if (!open) return;
