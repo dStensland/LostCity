@@ -31,7 +31,18 @@ vi.mock("@/lib/portal-scope", () => ({
 
 function createQuery(result: { data: unknown; error?: unknown }) {
   const resolved = { data: result.data, error: result.error ?? null };
-  const query: Record<string, any> = {
+  type MockFn = ReturnType<typeof vi.fn>;
+  const query: {
+    select: MockFn;
+    eq: MockFn;
+    maybeSingle: MockFn;
+    order: MockFn;
+    in: MockFn;
+    is: MockFn;
+    limit: MockFn;
+    then: (resolve: (value: typeof resolved) => unknown) => Promise<unknown>;
+    catch: () => Promise<unknown>;
+  } = {
     select: vi.fn(),
     eq: vi.fn(),
     maybeSingle: vi.fn(),
@@ -39,8 +50,7 @@ function createQuery(result: { data: unknown; error?: unknown }) {
     in: vi.fn(),
     is: vi.fn(),
     limit: vi.fn(),
-    then: (resolve: (value: typeof resolved) => unknown) =>
-      Promise.resolve(resolve(resolved)),
+    then: (resolve) => Promise.resolve(resolve(resolved)),
     catch: () => Promise.resolve(),
   };
   query.select.mockReturnValue(query);

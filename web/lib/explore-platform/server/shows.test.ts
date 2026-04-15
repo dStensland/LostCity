@@ -24,7 +24,18 @@ vi.mock("@/lib/shared-cache", () => ({
 }));
 
 function createThenableQuery(result: { data: unknown; error?: unknown }) {
-  const query: Record<string, any> = {
+  type MockFn = ReturnType<typeof vi.fn>;
+  const query: {
+    select: MockFn;
+    eq: MockFn;
+    gte: MockFn;
+    lte: MockFn;
+    not: MockFn;
+    order: MockFn;
+    in: MockFn;
+    limit: MockFn;
+    then: (resolve: (value: { data: unknown; error: unknown }) => unknown) => Promise<unknown>;
+  } = {
     select: vi.fn(),
     eq: vi.fn(),
     gte: vi.fn(),
@@ -33,7 +44,7 @@ function createThenableQuery(result: { data: unknown; error?: unknown }) {
     order: vi.fn(),
     in: vi.fn(),
     limit: vi.fn(),
-    then: (resolve: (value: { data: unknown; error: unknown }) => unknown) =>
+    then: (resolve) =>
       Promise.resolve(resolve({ data: result.data, error: result.error ?? null })),
   };
   query.select.mockReturnValue(query);
