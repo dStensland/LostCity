@@ -75,7 +75,8 @@ export function hasConnections(data: EntityData): boolean {
     case "event":
       return !!(data.payload.event.venue || data.payload.event.series || data.payload.event.producer);
     case "place":
-      return !!(data.payload.screenings || data.payload.upcomingEvents?.length > 0);
+      // Only screenings produce connection rows — upcomingEvents alone don't
+      return !!data.payload.screenings;
     case "series":
       return !!(data.payload.series.festival || data.payload.venueShowtimes?.length > 1);
     case "festival":
@@ -86,9 +87,9 @@ export function hasConnections(data: EntityData): boolean {
 }
 
 export function hasSocialData(data: EntityData): boolean {
-  // Social proof requires client-side fetch — trait always returns true for allowed types.
-  // The section component handles the empty state internally.
-  return data.entityType === "event" || data.entityType === "place";
+  // Social proof only works for events (needs eventId for attendance query).
+  // Place social proof is not yet implemented — don't over-promise.
+  return data.entityType === "event";
 }
 
 export function hasLocation(data: EntityData): boolean {
@@ -100,7 +101,8 @@ export function hasLocation(data: EntityData): boolean {
     case "series":
       return data.payload.venueShowtimes?.length === 1 && !!(data.payload.venueShowtimes[0].venue as Record<string, unknown>).address;
     case "festival":
-      return !!data.payload.festival.location;
+      // GettingThereSection doesn't render for festivals yet — don't over-promise
+      return false;
     default:
       return false;
   }
@@ -122,13 +124,27 @@ export function hasCoordinates(data: EntityData): boolean {
 export function hasAdmission(data: EntityData): boolean {
   if (data.entityType !== "place") return false;
   const profile = data.payload.placeProfile as Record<string, unknown> | null;
-  return !!(profile?.typical_price_min != null || profile?.typical_duration_minutes != null);
+  const google = data.payload.placeVerticalDetails?.google as Record<string, unknown> | null | undefined;
+  // Aligned with what PlanYourVisitSection actually checks
+  return !!(
+    profile?.planning_notes != null ||
+    profile?.planning_last_verified_at != null ||
+    google?.price_level != null
+  );
 }
 
 export function hasAccessibility(data: EntityData): boolean {
   if (data.entityType !== "place") return false;
-  const google = data.payload.placeVerticalDetails?.google as Record<string, unknown> | null | undefined;
-  return !!(google?.wheelchair_accessible_entrance != null);
+  const profile = data.payload.placeProfile as Record<string, unknown> | null;
+  // Aligned with what PlanYourVisitSection actually checks
+  return !!(
+    profile?.wheelchair_accessible != null ||
+    profile?.family_suitability != null ||
+    profile?.age_min != null ||
+    profile?.age_max != null ||
+    profile?.sensory_notes != null ||
+    profile?.accessibility_notes != null
+  );
 }
 
 export function hasSpecials(data: EntityData): boolean {
@@ -154,7 +170,8 @@ export function hasVolunteerOpportunities(data: EntityData): boolean {
 }
 
 export function hasProducer(data: EntityData): boolean {
+  // Only events have producer data in the payload. Festivals conceptually have
+  // a presenting org but ProducerSection doesn't handle that case yet.
   if (data.entityType === "event") return !!data.payload.event.producer;
-  if (data.entityType === "festival") return true; // festivals always have a presenting org conceptually
   return false;
 }

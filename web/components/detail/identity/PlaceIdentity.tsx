@@ -1,7 +1,7 @@
 "use client";
 
 import { memo } from "react";
-import { Globe, BookOpen, Phone, MapPin } from "@phosphor-icons/react";
+import { Globe, BookOpen, Phone, InstagramLogo } from "@phosphor-icons/react";
 import CategoryIcon, { getCategoryColor } from "@/components/CategoryIcon";
 import ScopedStyles from "@/components/ScopedStyles";
 import { createCssVarClass } from "@/lib/css-utils";
@@ -134,7 +134,7 @@ export const PlaceIdentity = memo(function PlaceIdentity({
         {typeof spot.instagram === "string" && spot.instagram && (
           <QuickActionLink
             href={`https://instagram.com/${(spot.instagram as string).replace("@", "")}`}
-            icon={<MapPin size={16} weight="light" aria-hidden="true" />}
+            icon={<InstagramLogo size={16} weight="light" aria-hidden="true" />}
             label="Instagram"
             compact
           />
