@@ -18,7 +18,7 @@ export const GET = withAuth(async (_request: NextRequest, { user, serviceClient 
 
   // Fetch movies for all lists in one query
   const listIds = (lists || []).map((l: any) => l.id);
-  let listMovies: Record<number, any[]> = {};
+  const listMovies: Record<number, any[]> = {};
 
   if (listIds.length > 0) {
     const { data: movieRows } = await serviceClient

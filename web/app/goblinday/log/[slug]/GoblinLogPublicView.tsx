@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useRef, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
+import Link from "next/link";
 import GoblinLogEntryCard from "@/components/goblin/GoblinLogEntryCard";
 import SmartImage from "@/components/SmartImage";
 import type { LogEntry, GoblinTag } from "@/lib/goblin-log-utils";
@@ -359,11 +360,11 @@ export default function GoblinLogPublicView({ user, entries, tags, year }: Props
         {/* Footer */}
         <div className="mt-20 pt-6 flex items-center justify-between"
           style={{ borderTop: "1px solid rgba(0,240,255,0.15)", boxShadow: "0 -1px 0 0 rgba(0,240,255,0.04)" }}>
-          <a href="/goblinday"
+          <Link href="/goblinday"
             className="text-2xs text-cyan-700 font-mono tracking-[0.2em] uppercase
               hover:text-cyan-400 transition-colors">
             Goblin Day
-          </a>
+          </Link>
           <span className="text-2xs text-zinc-600 font-mono tracking-[0.15em]">
             Lost City
           </span>

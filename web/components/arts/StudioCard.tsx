@@ -28,7 +28,7 @@ export function StudioCard({ studio, portalSlug }: StudioCardProps) {
       {/* Header: type + availability */}
       <div className="flex items-center justify-between gap-2">
         <span className="font-mono text-xs uppercase tracking-wider text-[var(--muted)]">
-          // {typeLabel.toLowerCase()}
+          {`// ${typeLabel.toLowerCase()}`}
         </span>
         {availLabel && (
           <span

@@ -205,7 +205,7 @@ export function GoblinPlanningView({
         </h3>
         {members.length === 0 ? (
           <p className="text-zinc-700 text-xs tracking-[0.2em] uppercase py-3 text-center">
-            // NO ONE YET — SHARE THE INVITE LINK
+            {"// NO ONE YET — SHARE THE INVITE LINK"}
           </p>
         ) : (
           <div className="flex flex-wrap gap-2">
@@ -249,7 +249,7 @@ export function GoblinPlanningView({
         </h3>
         {proposedMovies.length === 0 ? (
           <p className="text-zinc-700 text-xs tracking-[0.2em] uppercase py-3 text-center">
-            // NOTHING PROPOSED YET
+            {"// NOTHING PROPOSED YET"}
           </p>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 mb-3">
@@ -324,7 +324,7 @@ export function GoblinPlanningView({
             </div>
             {availableToPropose.length === 0 ? (
               <p className="text-zinc-700 text-xs tracking-[0.2em] uppercase py-6 text-center">
-                // ALL MOVIES ALREADY PROPOSED
+                {"// ALL MOVIES ALREADY PROPOSED"}
               </p>
             ) : (
               <div className="max-h-72 sm:max-h-64 overflow-y-auto divide-y divide-zinc-800/60">

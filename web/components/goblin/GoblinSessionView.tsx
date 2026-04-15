@@ -443,7 +443,7 @@ export default function GoblinSessionView({
               </h2>
               {sortedMovies.length === 0 ? (
                 <p className="text-zinc-700 text-xs tracking-[0.2em] uppercase py-6 text-center">
-                  // NO MOVIES YET — ADD ONE BELOW
+                  {"// NO MOVIES YET — ADD ONE BELOW"}
                 </p>
               ) : (
                 <div className="space-y-1">
@@ -561,7 +561,7 @@ export default function GoblinSessionView({
           <section>
             {sortedTimeline.length === 0 ? (
               <p className="text-zinc-700 text-xs tracking-[0.2em] uppercase py-6 text-center">
-                // NO ACTIVITY YET
+                {"// NO ACTIVITY YET"}
               </p>
             ) : (
               <div className="space-y-0">

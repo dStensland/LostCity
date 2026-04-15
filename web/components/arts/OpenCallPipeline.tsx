@@ -65,7 +65,7 @@ export function OpenCallPipeline({ portalSlug }: OpenCallPipelineProps) {
     <div className="space-y-4">
       {/* Header */}
       <div className="font-mono text-xs font-bold uppercase tracking-[0.14em] text-[var(--action-primary)]">
-        // your pipeline
+        {"// your pipeline"}
       </div>
 
       {/* Tabs */}

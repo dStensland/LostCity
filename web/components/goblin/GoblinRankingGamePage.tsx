@@ -132,7 +132,7 @@ export default function GoblinRankingGamePage({ gameId }: Props) {
           <div>
             {/* Classification label */}
             <p className="font-mono text-[9px] text-cyan-500/40 tracking-[0.3em] uppercase mb-2">
-              {isOpen ? "OPERATION ACTIVE" : "OPERATION CLOSED"} // RANKING PROTOCOL
+              {isOpen ? "OPERATION ACTIVE" : "OPERATION CLOSED"} {"// RANKING PROTOCOL"}
             </p>
             {!isOpen && (
               <p className="text-2xs text-amber-500 font-mono tracking-[0.3em] uppercase mb-1">

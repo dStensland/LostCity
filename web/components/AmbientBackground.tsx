@@ -57,7 +57,7 @@ export default function AmbientBackground({
     // --- Sizing ---
     let effectCleanup: (() => void) | null = null;
     let visible = true;
-    let animId = 0;
+    const animId = 0;
 
     function initEffect() {
       effectCleanup?.();
@@ -70,13 +70,13 @@ export default function AmbientBackground({
 
       // Wrap the effect's rAF loop with FPS throttling
       const frameDuration = 1000 / fps;
-      let lastFrame = 0;
+      const lastFrame = 0;
       let innerCleanup: (() => void) | null = null;
 
       // Intercept requestAnimationFrame to throttle
       const origRAF = window.requestAnimationFrame;
       const origCAF = window.cancelAnimationFrame;
-      let currentId = 0;
+      const currentId = 0;
 
       // We use a wrapper approach: let the effect run its own rAF loop,
       // but we pause/resume by cancelling when not visible.

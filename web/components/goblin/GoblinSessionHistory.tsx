@@ -603,7 +603,7 @@ function SessionDetailView({
         canceledThemes.length === 0 &&
         detail.timeline.length === 0 && (
           <p className="text-zinc-700 text-xs tracking-widest uppercase text-center py-2">
-            // EMPTY SESSION — NO DATA RECORDED
+            {"// EMPTY SESSION — NO DATA RECORDED"}
           </p>
         )}
     </div>

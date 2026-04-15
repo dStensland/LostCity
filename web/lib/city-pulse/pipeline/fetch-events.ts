@@ -584,7 +584,7 @@ export async function fetchEventPools(
       // Planning horizon: tentpoles, festivals, and flagship events, 7–180 days ahead
       // NOTE: This pool has its own category exclusions — do not modify them here.
       (() => {
-        let q = portalClient
+        const q = portalClient
           .from("events")
           .select(eventSelect)
           .or(buildHorizonPoolFilter(canonicalSourceIds))
