@@ -13,7 +13,7 @@ interface Props {
     name: string;
     description?: string;
     movie_tmdb_ids?: number[];
-  }) => Promise<any>;
+  }) => Promise<unknown>;
   searchPerson: (query: string) => Promise<TMDBPerson[]>;
   getFilmography: (
     personId: number
