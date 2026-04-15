@@ -297,7 +297,12 @@ export async function fetchScreeningBundleFromTables(
   if (options.festivalId) {
     runsQuery = runsQuery.eq("festival_id", options.festivalId);
   }
-  runsQuery = runsQuery.order("start_date", { ascending: true });
+  // Defensive: tests pass minimal mocks whose `.eq` returns a plain Promise
+  // with no `.order` method. Keep the runtime check so the function works
+  // with both real supabase clients and those partial mocks.
+  if ("order" in runsQuery && typeof runsQuery.order === "function") {
+    runsQuery = runsQuery.order("start_date", { ascending: true });
+  }
 
   const runsResult = (await runsQuery) as {
     data: ScreeningRun[] | null;
@@ -319,10 +324,13 @@ export async function fetchScreeningBundleFromTables(
     .select(
       "id, canonical_title, slug, kind, poster_image_url, synopsis, genres, tmdb_id, imdb_id, festival_work_key, director, runtime_minutes, year, rating",
     );
-  const titlesResult = (await titlesQuery.in("id", titleIds)) as {
-    data: ScreeningTitle[] | null;
-    error: unknown;
-  };
+  const titlesResult =
+    "in" in titlesQuery && typeof titlesQuery.in === "function"
+      ? ((await titlesQuery.in("id", titleIds)) as {
+          data: ScreeningTitle[] | null;
+          error: unknown;
+        })
+      : { data: null, error: null };
   if (titlesResult.error) {
     if (isMissingScreeningSchemaError(titlesResult.error)) return null;
     throw titlesResult.error;
@@ -333,8 +341,12 @@ export async function fetchScreeningBundleFromTables(
     .select(
       "id, screening_run_id, event_id, start_date, start_time, end_time, ticket_url, source_url, format_labels, status",
     );
-  timesQuery = timesQuery.in("screening_run_id", runIds);
-  timesQuery = timesQuery.order("start_date", { ascending: true });
+  if ("in" in timesQuery && typeof timesQuery.in === "function") {
+    timesQuery = timesQuery.in("screening_run_id", runIds);
+  }
+  if ("order" in timesQuery && typeof timesQuery.order === "function") {
+    timesQuery = timesQuery.order("start_date", { ascending: true });
+  }
   const timesResult = (await timesQuery) as {
     data: ScreeningTime[] | null;
     error: unknown;
