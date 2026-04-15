@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect, useRef, useMemo } from "react";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import GoblinMovieCard, { type GoblinMovie, normalizeStreaming } from "./GoblinMovieCard";
 import GoblinSessionView from "./GoblinSessionView";
@@ -603,7 +604,7 @@ export default function GoblinDayPage({ initialMovies, activeSessionId }: Props)
 
       {/* Ranking Game Link */}
       <div className="relative z-10 bg-black/90 px-3 pt-3">
-        <a
+        <Link
           href="/goblinday/rankings/1"
           className="block mb-4 p-3 border border-cyan-900/40 bg-cyan-950/10
             hover:bg-cyan-950/20 hover:border-cyan-800/50 transition-all group"
@@ -622,7 +623,7 @@ export default function GoblinDayPage({ initialMovies, activeSessionId }: Props)
             </div>
             <span className="text-zinc-600 text-lg">→</span>
           </div>
-        </a>
+        </Link>
       </div>
 
       {/* Tabs — brutalist rectangles */}
