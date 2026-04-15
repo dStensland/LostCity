@@ -136,20 +136,168 @@ Currently renders a 2x2 grid of festival cards with countdown badges. During an 
 
 Formalize dedup: events route to their highest-priority section only. Partially implemented via `suppressed_event_ids`. Make it systematic — an event in The Big Stuff doesn't also appear in The Lineup. A recurring event in Regular Hangs doesn't duplicate in The Lineup.
 
-### 1.7 ATLFF Crawler Readiness
+### 1.7 ATLFF Marquee Experience (revised 2026-04-15)
 
 **File:** `crawlers/sources/atlanta_film_festival.py`
 
-Crawler is healthy (updated April 9, two-phase design, 151+ films). Actions:
-- Run crawler on April 16, 20, 22 to capture late Eventive API additions
-- Verify Phase 2 screenings (specific times/venues) are being pulled as festival approaches
-- Audit top 20 Atlanta sources for geographic accuracy and stale data
+The original "crawler is healthy, just run it" framing was wrong. Audit found:
+- **Datascape:** 165 films + 158 scheduled events (116 film screenings + **42 non-film events** including Opening Night Party, filmmaker lounges, RZA appearance, Sustainability Summit, book signings) across 16 venues, date range 2026-03-23 → 2026-05-04.
+- **Festival row already exists** (`festivals.id='atlanta-film-festival'`, created 2026-02-27) with portal_id, announced_start/end, image_url, description, website, `primary_type='film_festival'`. **But the crawler hardcodes `festival_id: None` on every event** (lines 422, 517), so 285 active ATLFF rows in the DB are orphaned from their festival.
+- **No downstream consumer can find ATLFF content** until this link exists.
 
-### 1.8 Crawler Fixes for Regular Hangs
+Revised scope: four focused tasks (F1-F4) below. **Sections 1.8 crawler fixes are re-scoped separately** (see 1.9).
+
+#### F1 — Festival linkage (P0, ~1h)
+
+**F1a. Stamp `festival_id` on every event.**
+- `atlanta_film_festival.py:422`: `"festival_id": None` → `"festival_id": "atlanta-film-festival"`
+- `atlanta_film_festival.py:517`: same
+- Pipeline verified: `crawlers/db/screenings.py` threads `festival_id` through `persist_screening_bundle` → `sync_run_events_from_screenings` (lines 49, 121, 151, 183, 217, 606). No pipeline changes needed.
+
+**F1b. Upsert missing festival row fields on each run.**
+Current row is missing: `location`, `ticket_url`, `categories`. Add an idempotent update at the start of `crawl()`:
+```python
+client.table("festivals").update({
+    "location": "Multiple venues, Atlanta",
+    "ticket_url": f"{FRONTEND_ORIGIN}/schedule",
+    "categories": ["film", "festival"],
+}).eq("id", "atlanta-film-festival").execute()
+```
+
+**F1c. DO NOT stamp `is_tentpole` on sub-events.**
+Decision: the festival row is the tentpole. Individual screenings ride at standard importance and surface via normal feed paths. Avoid the noise of 258 events competing for flagship treatment. The "whole festival is a tentpole" principle means we elevate the festival card, not its sub-events.
+
+**F1d. Backfill existing 285 rows.**
+One-off UPDATE after F1a lands, before the next crawl run. Requires user approval (destructive DB write).
+
+#### F2 — Non-film event handling (P0, ~2-3h)
+
+**F2a. Drop operational "events".**
+"Headquarters Open!" (9 instances), "Badge Pickup", "Merch" are operational wayfinding, not discoverable events. Add `_OPERATIONAL_TITLE_PATTERNS` to filter at crawl time. Deactivate existing rows in DB.
+
+Capture operational info as **festival-level metadata**, not events:
+- Add/reuse festival fields: `notes` (TEXT, already exists) or new JSONB `practical_info` for: HQ location + hours, badge pickup schedule, merch location. This renders on the festival detail page as a "Plan Your Visit" peer section — sibling to event description and parking info, not sibling to events themselves.
+- Ensure "Headquarters" (535 Means St NW) gets created as a real `places` row with hours — the festival detail page links to it as a place.
+
+**F2b. Relax the ancillary-window filter.**
+`_is_ancillary_outside_window` currently drops everything outside 2026-04-23 → 2026-05-03. This rejects legit pre-festival hype: ATLFF Launch Party (Mar 23), FLASH Tattoo DAY (Apr 19), SEAT industry day (Apr 22).
+
+Change: accept non-film events within `[FESTIVAL_START - 45 days, FESTIVAL_END + 14 days]`. Preserves the spurious-noise guard while keeping marketing content.
+
+**F2c. Scannable tag taxonomy (replaces blanket `["film", "festival", "atlff"]`).**
+Every ATLFF event gets: `["atlff", "festival-2026"]` as its base, plus a scannable tag set derived from the Eventive signal. Tags drive filterable chips in the festival detail page and The Lineup.
+
+Detection → tags:
+| Eventive signal / title pattern | Added tags |
+|---|---|
+| `films_linked` non-empty | `film`, `screening` |
+| Eventive tag contains `Narrative Feature` | `narrative-feature` |
+| Eventive tag contains `Documentary Feature` | `documentary` |
+| Eventive tag contains `Shorts Block` | `shorts` |
+| Eventive tag contains `Legacy Screening` | `legacy-screening` |
+| Eventive tag contains `Special Presentation` | `special-presentation` |
+| Eventive tag contains `Marquee` | `marquee` |
+| Eventive tag contains `Talent in Attendance` | `talent-in-attendance`, `q-and-a` |
+| Title contains "Party" / "Afterparty" | `party`, `social` |
+| Title contains "Opening Night" | `opening-night`, `party` |
+| Title contains "Happy Hour" | `happy-hour`, `social` |
+| Title contains "Lounge" | `hangout`, `social` |
+| Title contains "Networking" | `networking`, `social` |
+| Title contains "Conversation", "Book Signing", "in Conversation" | `talk`, `author-event` |
+| Eventive tag in {`Producing`, `Directing`, `Screenwriting`, `Acting`, `Budgeting`, `Financing`, `Creative Conference`, `Storytelling`} | `panel`, `industry`, `conference` |
+
+Each ATLFF event ends up with 3-6 tags. The existing `events.tags` column handles this. The filter UI on the festival detail page consumes these as scannable chips. **Do not** hard-split non-film events into separate categories — they all live under ATLFF and are differentiated by tag.
+
+**F2d. Series grouping for recurring non-film sessions.**
+All 5 Filmmaker Lounge instances → 1 series. Same for Happy Hour (4), Creative Cocktails (2). Current pattern uses raw event name as series title, which breaks when sponsor suffixes vary (`"Happy Hour Sponsored by Television Academy"` ≠ `"Happy Hour"`). Normalize series title by stripping sponsor suffixes before passing to `series_hint`.
+
+#### F3 — Venue metadata quality (P0, ~1-1.5h)
+
+**F3a. Neighborhood + lat/lng map.**
+Stop defaulting every venue to "Midtown" (line 168). Hardcode the known ATLFF venues:
+```python
+_ATLFF_VENUE_METADATA = {
+    "Plaza Theatre":                {"neighborhood": "Poncey-Highland", "lat": 33.7718, "lng": -84.3527},
+    "The Green Room @ The Plaza":   {"neighborhood": "Poncey-Highland", "lat": 33.7718, "lng": -84.3527},
+    "Tara Theatre":                 {"neighborhood": "Buckhead",        "lat": 33.8104, "lng": -84.3462},
+    "Headquarters":                 {"neighborhood": "Castleberry Hill","lat": 33.7706, "lng": -84.4110},
+    "Oakland Cemetery":             {"neighborhood": "Old Fourth Ward", "lat": 33.7488, "lng": -84.3719},
+    "Hotel Clermont":               {"neighborhood": "Poncey-Highland", "lat": 33.7737, "lng": -84.3535},
+    "The Goat Farm":                {"neighborhood": "West Midtown",    "lat": 33.7806, "lng": -84.4158},
+    "Assembly Atlanta":             {"neighborhood": "Doraville",       "lat": 33.9026, "lng": -84.2843},
+}
+```
+(Coordinates need final verification — these are approximate.)
+
+**F3b. Auditorium rollup.**
+Currently creates 5 separate `places` rows for Tara (Eddie/Jack/Kenny/George/Lobby auditoriums) and 3 for Plaza (LeFont/Rej + Green Room). Strip the `" | <Auditorium>"` suffix before creating, and store the auditorium name in event metadata (use existing `events.raw_text` or add a note). Result: 1 Tara Theatre place, 1 Plaza Theatre place, 1 Green Room @ Plaza place.
+
+**F3c. Use existing venue records when available.**
+`plaza_theatre.py`, `tara_theatre.py`, `landmark_midtown.py` already exist and own those venue rows. ATLFF crawler should match by name/slug and attach, not create duplicates. `get_or_create_place` handles dedup by slug — ensure slugs are normalized (`plaza-theatre`, `tara-theatre`) to match what the venue crawlers use.
+
+#### F4 — Venue crawler dedup during festival window (P1, ~30min)
+
+During April 23 – May 3, Plaza/Tara/Landmark crawl their own calendars and will find ATLFF screenings listed there too. Two actions:
+1. **Test content-hash dedup first.** The content hash is `(title, venue_name, start_date)`. Same-film same-theater same-date should collide across sources. Run both crawlers in dry-run, confirm dedup fires.
+2. **If dedup doesn't catch it:** pause `plaza_theatre`, `tara_theatre`, `landmark_midtown` sources in the sources table (`is_active=false`) for the festival window. Cleanest. ~5 min change.
+
+---
+
+### 1.8 Cross-workstream callouts from F
+
+F1a (stamping festival_id) triggers over-promotion in 4 downstream feed consumers. **These need coordinated changes in Workstream A (feed agent) or F1 will make The Lineup worse, not better.**
+
+**Callout A1: `web/lib/city-pulse/tier-assignment.ts:57`**
+Current logic:
+```typescript
+if (intrinsic >= 30 || event.is_tentpole || event.festival_id) return "hero";
+```
+With F1a stamping 258 ATLFF events, ALL of them render as hero tier in The Lineup — exactly the noise we're trying to avoid.
+
+**Fix:** Change to `if (intrinsic >= 30 || event.is_tentpole) return "hero";` — drop the `event.festival_id` short-circuit. Also reduce the `computeIntrinsicScore` bonus at line 40 from `+30` → `+10`. Festival membership is a grouping signal, not automatic hero promotion.
+
+**Callout A2: `web/lib/city-pulse/header-resolver.ts:219`**
+Flagship binding currently treats any event with festival_id as a flagship hero candidate:
+```typescript
+(e.importance === "flagship" || e.is_tentpole || !!e.festival_id) &&
+```
+This is why `CityBriefing.tsx:716` is commented out (`const flagship = null;`) — the old auto-binding surfaced junk like "VIP Show Floor Early Access."
+
+**Fix:** Narrow flagship candidacy to `(e.importance === "flagship" || e.is_tentpole)` — drop festival_id from the criteria. Then re-enable `CityBriefing.tsx:716` flagship binding. This is how spec 1.4 actually unblocks.
+
+**Callout A3: `web/scripts/audit-elevation-readiness.ts:233-247`**
+Contains an offline promotion script that sets `importance='flagship'` on any event with `festival_id` and `importance='standard'`. **DO NOT RUN after F1a.** Would blanket-promote 258 ATLFF events to flagship. Either disable the script or gate it with a source whitelist.
+
+**Callout A4: `FestivalsSection` mounting (spec 1.5)**
+Feed agent must mount `FestivalsSection` in `CityPulseShell.tsx` — blocked in original spec, unblocked now. The festival row has the data needed:
+- `announced_start/end`: 2026-04-23 → 2026-05-03 (countdown badge)
+- `image_url`: ATLFF branded hero image
+- `description`: populated
+- `slug`: `atlanta-film-festival` (for festival detail page link)
+
+`/api/festivals/upcoming` already returns this row (tested — it's in the response). Section just needs to be imported and rendered.
+
+**Callout A5: `CityBriefing` flagship hero (spec 1.4)**
+After callout A2 narrows flagship candidacy, re-enable `CityBriefing.tsx:716`. Because ATLFF sub-events don't have is_tentpole set (F1c decision), the hero will only bind if the feed agent (or a future curation step) explicitly marks 1-3 events as `is_tentpole=true` or `importance='flagship'`. For the launch, recommend curating by hand:
+- Opening Night film + party (Apr 24)
+- Closing Night film (May 3)
+- RZA "One Spoon of Chocolate" appearance (Apr 25)
+
+Set via UPDATE on `events` after F1a lands. ~3 events, not 258.
+
+**Callout A6: Section dedup (spec 1.6)**
+Now urgent. Without F1c promoting sub-events, ATLFF film screenings will appear in **both** The Lineup AND Now Showing. Spec 1.6 must ship with F1 or users see duplicates.
+
+**Callout A7: Festival detail page**
+`buildFestivalUrl()` exists at `web/lib/entity-urls.ts`. `/api/festivals/[slug]/route.ts` exists. Feed agent should verify the festival detail page route renders for `/atlanta/festivals/atlanta-film-festival` and iterate if broken — this is the destination for the "Find out more" link on the FestivalsSection card.
+
+---
+
+### 1.9 Crawler Fixes for Regular Hangs (moved from 1.8)
 
 **Joystick Gamebar** (`crawlers/sources/joystick_gamebar.py`): Scrapes events but marks them `is_recurring: False` with no `series_hint`. Weekly bingo/trivia nights are invisible to Regular Hangs. Fix: when detected genres contain `bingo`, `trivia`, or `karaoke`, set `is_recurring: True` and pass `series_hint`.
 
-**Church Bar** (`crawlers/sources/church_bar.py`): Produces zero events. A nightclub running DJ nights 5 nights a week has nothing in the data layer. Add `WEEKLY_SCHEDULE` following the Mary's/Blake's pattern.
+**Church Bar** (`crawlers/sources/church_bar.py`): Produces zero events. A nightclub running DJ nights 5 nights a week has nothing in the data layer. Add `WEEKLY_SCHEDULE` following the Mary's/Blake's pattern. **Blocked on user supplying the actual schedule** — not in the spec and too easy to fabricate wrong.
 
 ---
 
@@ -517,8 +665,16 @@ Three sequential prompts after RSVP (`PostRsvpNeedsPrompt` → `PostRsvpSharePro
 - Post-RSVP share fallback for friendless users (5.1)
 - Save button on feed event cards (5.2)
 
-**Crawlers:**
-- ATLFF crawler runs (1.7)
+**Crawlers (revised — all P0 for marquee experience):**
+- F1: ATLFF festival_id linkage + row enrichment (1.7 F1)
+- F2: Non-film event handling (parties, panels, operational filter, tag taxonomy) (1.7 F2)
+- F3: Venue metadata (neighborhoods, lat/lng, auditorium rollup) (1.7 F3)
+- F4: Venue crawler dedup during festival window (1.7 F4)
+
+**Cross-workstream dependencies (1.8):**
+- A1 + A2: Tier-assignment + header-resolver narrowing (feed agent, unblocks 1.4 and 1.5)
+- A3: Disable audit-elevation-readiness auto-promotion for ATLFF
+- A5: Manual curation of 3 flagship events (Opening/Closing Night, RZA appearance)
 
 ### P1 — Quality Bar (should ship)
 
@@ -554,8 +710,8 @@ Three sequential prompts after RSVP (`PostRsvpNeedsPrompt` → `PostRsvpSharePro
 - Copy/tone improvements (3.6)
 
 **Crawlers:**
-- Joystick Gamebar recurring event fix (1.8)
-- Church Bar event coverage (1.8)
+- Joystick Gamebar recurring event fix (1.9)
+- Church Bar event coverage (1.9) — blocked on user supplying actual schedule
 
 **Feed:**
 - The Big Stuff hero treatment during active festivals (1.5)
