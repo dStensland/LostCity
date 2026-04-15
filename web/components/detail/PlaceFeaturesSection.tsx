@@ -206,6 +206,8 @@ export default function PlaceFeaturesSection({
   features,
   venueType,
 }: PlaceFeaturesSectionProps) {
+  const [expanded, setExpanded] = useState(false);
+
   if (!features || features.length === 0) return null;
 
   const config = getFeatureSectionConfig(venueType);
@@ -226,7 +228,6 @@ export default function PlaceFeaturesSection({
   const allSameType = sorted.length > 1 && sorted.every(f => f.feature_type === sorted[0].feature_type);
   const hasImages = sorted.some(f => f.image_url);
 
-  const [expanded, setExpanded] = useState(false);
   const needsCap = sorted.length > MAX_VISIBLE_FEATURES;
   const visible = needsCap && !expanded ? sorted.slice(0, MAX_VISIBLE_FEATURES) : sorted;
   const hiddenCount = sorted.length - MAX_VISIBLE_FEATURES;
