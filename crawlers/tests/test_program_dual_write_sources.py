@@ -139,13 +139,18 @@ def test_dancing_dogs_program_record_projects_workshop_lane() -> None:
 
 
 def test_clay_works_program_record_projects_class_lane() -> None:
+    row = {
+        "title": "Beginner Wheel Throwing",
+        "description": "Hands-on pottery class.",
+        "start_date": "2026-07-08",
+        "ticket_url": "https://www.atlclayworks.org/classes/beginner-wheel-throwing",
+        "source_url": "https://www.atlclayworks.org/classes/beginner-wheel-throwing",
+        "tags": ["pottery", "beginner-friendly"],
+    }
     program = build_clay_works_program(
         source_id=88,
         venue_id=99,
-        title="Beginner Wheel Throwing",
-        description="Hands-on pottery class.",
-        start_date="2026-07-08",
-        event_url="https://www.atlclayworks.org/classes/beginner-wheel-throwing",
+        row=row,
     )
 
     assert program["program_type"] == "class"
