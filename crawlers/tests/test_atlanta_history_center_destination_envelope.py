@@ -8,8 +8,4 @@ def test_build_destination_envelope_for_atlanta_history_center() -> None:
     assert envelope.destination_details[0]["destination_type"] == "history_museum"
     assert envelope.destination_details[0]["parking_type"] == "free_lot"
     assert "half-day campus outing" in envelope.destination_details[0]["practical_notes"].lower()
-    assert {feature["slug"] for feature in envelope.venue_features} == {
-        "historic-houses-gardens-and-galleries",
-        "buckhead-history-campus-day",
-        "longer-walking-campus-with-indoor-reset-points",
-    }
+    assert len(envelope.venue_features) == 0

@@ -1341,13 +1341,30 @@ def _step_set_flags(event_data: dict, ctx: InsertContext) -> dict:
             event_data.get("price_min") is not None
             and float(event_data.get("price_min") or 0) > 0
         )
+        source_url = event_data.get("source_url")
+        # Promote source_url to ticket_url if:
+        # 1. It looks like an explicit ticket/checkout page, OR
+        # 2. It has a specific path (not just domain) or query string for showtimes
         if (
-            category_value == "film"
+            (category_value == "film"
             or "showtime" in tags_value
             or "showtime" in genres_value
-            or is_paid
+            or is_paid)
         ):
-            event_data["ticket_url"] = event_data["source_url"]
+            if _looks_like_explicit_ticket_url(source_url):
+                event_data["ticket_url"] = source_url
+            # For showtimes, also allow URLs with specific paths or query strings
+            elif "showtime" in tags_value or "showtime" in genres_value or category_value == "film":
+                try:
+                    parsed = urlparse(source_url)
+                    path = (parsed.path or "").lower().rstrip("/")
+                    query = (parsed.query or "").lower()
+                    # Block only generic pages without specific indicators
+                    generic_pages = {"", "/now-showing", "/home", "/showtimes", "/schedule", "/movies"}
+                    if path not in generic_pages and (path or query):
+                        event_data["ticket_url"] = source_url
+                except Exception:
+                    pass
 
     # Final is_free normalization — price_min=0 with no paid tiers is definitively free,
     # even if the crawler explicitly said is_free=False (common crawler default bug)
@@ -2266,6 +2283,29 @@ def smart_update_existing_event(existing: dict, incoming: dict) -> bool:
                     f"for '{existing_title[:50]}'"
                 )
             except Exception as e:
+                # If the update fails due to a duplicate constraint,
+                # try to find the conflicting event and update it instead.
+                error_str = str(e).lower()
+                if "unique" in error_str or "duplicate" in error_str:
+                    conflicting = find_existing_event_by_natural_key(incoming)
+                    if conflicting:
+                        conflicting_id = conflicting.get("id")
+                        # Update the conflicting event with the incoming content_hash
+                        if incoming.get("content_hash") and conflicting.get("content_hash") != incoming.get("content_hash"):
+                            try:
+                                client = get_client()
+                                _update_event_record(
+                                    client,
+                                    conflicting_id,
+                                    {"content_hash": incoming["content_hash"]}
+                                )
+                                logger.info(
+                                    f"Smart-updated conflicting event {conflicting_id} with new content_hash"
+                                )
+                                return True
+                            except Exception as e2:
+                                logger.error(f"Failed to update conflicting event {conflicting_id}: {e2}")
+                                return False
                 logger.error(f"Failed to smart-update event {event_id}: {e}")
                 return False
 
@@ -2597,9 +2637,16 @@ def find_existing_event_for_insert(event_data: dict) -> Optional[dict]:
         hash_candidates = []
         if explicit_hash:
             hash_candidates.append(explicit_hash)
-        hash_candidates.extend(
-            generate_content_hash_candidates(title or "", venue_name, start_date)
-        )
+            # For timed events with an explicit hash, skip generating legacy candidates
+            # (the explicit hash is precise enough).
+            if not event_data.get("start_time"):
+                hash_candidates.extend(
+                    generate_content_hash_candidates(title or "", venue_name, start_date)
+                )
+        else:
+            hash_candidates.extend(
+                generate_content_hash_candidates(title or "", venue_name, start_date)
+            )
         hash_candidates = list(dict.fromkeys([h for h in hash_candidates if h]))
     except Exception:
         hash_candidates = [explicit_hash] if explicit_hash else []

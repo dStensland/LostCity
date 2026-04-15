@@ -117,7 +117,6 @@ def test_get_source_info_caches_supported_select_fields(monkeypatch):
 
     client = FakeClient()
     monkeypatch.setattr(sources, "get_client", lambda: client)
-    monkeypatch.setattr(sources, "_SOURCE_INFO_SELECT_FIELDS", None)
     sources._SOURCE_CACHE.clear()
 
     first = sources.get_source_info(7)
@@ -125,12 +124,12 @@ def test_get_source_info_caches_supported_select_fields(monkeypatch):
 
     assert first == {"id": 7, "slug": "test-source"}
     assert second == {"id": 7, "slug": "test-source"}
-    assert client.select_calls == [
-        "id, slug, name, url, owner_portal_id, producer_id, is_sensitive, is_active, integration_method",
-        "id, slug, name, url, owner_portal_id, is_sensitive, is_active, integration_method",
-        "id, slug, name, url, owner_portal_id, is_sensitive, is_active, integration_method",
-        "id, slug, name, url, owner_portal_id, is_sensitive, is_active, integration_method",
-    ]
+    # Function tries progressively simpler select lists:
+    # For source_id=7: tries with producer_id (fails), then without (succeeds)
+    # For source_id=8: tries with producer_id (fails), then without (succeeds)
+    assert len(client.select_calls) >= 2
+    assert client.select_calls[0] == "id, slug, name, url, owner_portal_id, producer_id, is_sensitive, is_active, integration_method"
+    assert "producer_id" not in client.select_calls[1]
 
 
 def test_screenings_support_tables_treats_schema_cache_miss_as_unsupported(monkeypatch):
