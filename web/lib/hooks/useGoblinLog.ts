@@ -112,7 +112,17 @@ export function useGoblinLog(
   );
 
   const updateEntry = useCallback(
-    async (entryId: number, data: any) => {
+    async (
+      entryId: number,
+      data: Partial<{
+        watched_date: string;
+        note: string;
+        watched_with: string;
+        tag_ids: number[];
+        tier_name: string | null;
+        tier_color: string | null;
+      }>,
+    ) => {
       try {
         const res = await fetch(`/api/goblinday/me/log/${entryId}`, {
           method: "PATCH",

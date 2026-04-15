@@ -106,7 +106,10 @@ export function useGoblinUser(): GoblinUserState & GoblinUserActions {
           if (!listRes.ok) throw new Error("Failed");
           const listData = await listRes.json();
           const entry = (listData.entries || []).find(
-            (e: any) => e.movie_id === movieId || e.movie?.id === movieId
+            (e: {
+              movie_id?: number | null;
+              movie?: { id?: number | null } | null;
+            }) => e.movie_id === movieId || e.movie?.id === movieId
           );
           if (entry) {
             const res = await fetch(`/api/goblinday/me/watchlist/${entry.id}`, {
