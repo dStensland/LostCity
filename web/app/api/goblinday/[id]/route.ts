@@ -17,7 +17,7 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   // Rate limit before auth so unauthenticated spam is bounced cheaply
-  const rateLimitResult = applyRateLimit(
+  const rateLimitResult = await applyRateLimit(
     request,
     RATE_LIMITS.write,
     getClientIdentifier(request),

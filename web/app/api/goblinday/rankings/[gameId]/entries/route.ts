@@ -11,7 +11,7 @@ export async function GET(
   { params }: { params: Promise<{ gameId: string }> }
 ) {
   // Rate limit before auth
-  const rateLimitResult = applyRateLimit(
+  const rateLimitResult = await applyRateLimit(
     request,
     RATE_LIMITS.read,
     getClientIdentifier(request),
