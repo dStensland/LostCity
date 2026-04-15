@@ -344,6 +344,7 @@ export interface ActionConfig {
     onClick?: () => void;
     variant: "filled" | "outlined";
     color?: string;
+    icon?: React.ReactNode;
   } | null;
   secondaryActions: ActionButton[];
   stickyBar: {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { BookmarkSimple, CalendarPlus, ShareNetwork, UserPlus } from "@phosphor-icons/react";
+import { BookmarkSimple, CalendarPlus, HandWaving, ShareNetwork, Ticket, UserPlus } from "@phosphor-icons/react";
 import { DetailLayout } from "@/components/detail/core/DetailLayout";
 import { EventIdentity } from "@/components/detail/identity/EventIdentity";
 import { eventManifest } from "@/components/detail/manifests/event";
@@ -50,7 +50,7 @@ export default function EventDetailView({
 
   const actionConfig = useMemo<ActionConfig>(() => {
     const primaryCTA: ActionConfig["primaryCTA"] = event?.ticket_url
-      ? { label: "Get Tickets", href: event.ticket_url, variant: "filled" }
+      ? { label: "Get Tickets", href: event.ticket_url, variant: "filled", icon: <Ticket size={18} weight="duotone" /> }
       : event?.source_url
         ? { label: "Learn More", href: event.source_url, variant: "outlined" }
         : null;
@@ -58,6 +58,7 @@ export default function EventDetailView({
     return {
       primaryCTA,
       secondaryActions: [
+        { icon: <HandWaving size={18} weight="duotone" />, label: "RSVP" },
         { icon: <BookmarkSimple size={18} weight="duotone" />, label: "Save" },
         { icon: <UserPlus size={18} weight="duotone" />, label: "Invite" },
         { icon: <CalendarPlus size={18} weight="duotone" />, label: "Add to Calendar" },
