@@ -41,4 +41,12 @@ jobs:
           pip install pytest pytest-timeout
 
       - name: Run pytest
+        env:
+          # Dummy values to satisfy the credential gate in db/client.py.
+          # Tests mock the supabase client, so they don't actually need
+          # a real connection — but the module-level credential check
+          # must pass at import time for the tests to load.
+          SUPABASE_URL: https://stub.supabase.co
+          SUPABASE_SERVICE_KEY: stub-service-key
+          SUPABASE_ANON_KEY: stub-anon-key
         run: python -m pytest --tb=short

@@ -52,6 +52,12 @@ jobs:
         run: npm run lint
 
       - name: Test
+        env:
+          # Several date/time tests hard-code ET-formatted expected values
+          # (e.g. "7:41 PM" for a timestamp that is 7 PM Eastern). CI runs
+          # in UTC by default which breaks them. Pin to ET so the suite
+          # behaves like a local developer's machine.
+          TZ: America/New_York
         run: npm test -- --run
 
       - name: Build
