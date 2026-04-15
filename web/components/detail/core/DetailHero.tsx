@@ -43,7 +43,7 @@ export function DetailHero({
   if (!currentImage) {
     return (
       <div
-        className={`relative ${aspectClass} ${mobileMaxHeight ?? ""} w-full overflow-hidden rounded-t-xl bg-gradient-to-b from-[var(--dusk)] to-[var(--night)]`}
+        className={`relative ${aspectClass} ${mobileMaxHeight ?? ""} w-full overflow-hidden bg-gradient-to-b from-[var(--dusk)] to-[var(--night)]`}
       >
         <div
           className="absolute inset-0"
@@ -72,7 +72,7 @@ export function DetailHero({
 
   return (
     <div
-      className={`relative ${aspectClass} ${mobileMaxHeight ?? ""} w-full overflow-hidden rounded-t-xl bg-[var(--night)]`}
+      className={`relative ${aspectClass} ${mobileMaxHeight ?? ""} w-full overflow-hidden bg-[var(--night)]`}
     >
       {/* Skeleton */}
       {!imgLoaded && (
@@ -84,16 +84,22 @@ export function DetailHero({
         src={currentImage}
         alt=""
         fill
-        className={`object-cover brightness-[0.85] transition-opacity duration-300 ${imgLoaded ? "opacity-100" : "opacity-0"}`}
+        className={`object-cover transition-opacity duration-300 ${imgLoaded ? "opacity-100" : "opacity-0"}`}
         onLoad={() => setImgLoaded(true)}
         onError={() => setImgError(true)}
         sizes="(max-width: 1024px) 100vw, 340px"
         priority
       />
 
-      {/* Live ring */}
+      {/* Gradient overlay */}
+      <div className="absolute inset-0" style={{ background: 'linear-gradient(to bottom, transparent 30%, #09090BEE 100%)' }} />
+
+      {/* LIVE badge */}
       {isLive && (
-        <div className="absolute inset-0 rounded-t-xl ring-2 ring-[var(--coral)] ring-inset" />
+        <div className="absolute top-3 left-4 flex items-center gap-1 bg-[var(--coral)] rounded px-2 py-[3px]">
+          <div className="w-1.5 h-1.5 rounded-full bg-white" />
+          <span className="font-mono text-[9px] font-bold tracking-[1px] text-white">LIVE NOW</span>
+        </div>
       )}
 
       {/* Gallery controls */}
