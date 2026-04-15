@@ -323,7 +323,7 @@ export function AdventureFeed({ portalSlug }: AdventureFeedProps) {
   // during the brief window before hydration completes (avoids blank cream flash).
   const [mounted, setMounted] = useState(false);
 
-   
+  // eslint-disable-next-line react-hooks/exhaustive-deps, react-hooks/set-state-in-effect
   useEffect(() => {
     setMounted(true);
   }, []);

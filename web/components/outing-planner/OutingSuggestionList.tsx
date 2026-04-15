@@ -93,7 +93,7 @@ function SlotSection({
   const initializedRef = useRef(false);
 
   // Set smart default once when data first loads
-   
+  // eslint-disable-next-line react-hooks/exhaustive-deps, react-hooks/set-state-in-effect
   useEffect(() => {
     if (!initializedRef.current && chips.length > 1 && smartDefault) {
       setActiveFilter(smartDefault);

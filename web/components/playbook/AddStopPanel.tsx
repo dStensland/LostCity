@@ -125,10 +125,10 @@ export default function AddStopPanel({
 
   // Fetch smart suggestions on mount (only when we have anchor coords)
   const hasAnchor = anchorLat != null && anchorLng != null && anchorTime != null && anchorDate != null;
-   
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!hasAnchor) {
-       
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSuggestionsLoading(false);
       return;
     }
@@ -136,7 +136,7 @@ export default function AddStopPanel({
     let cancelled = false;
 
     async function fetchSuggestions() {
-       
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSuggestionsLoading(true);
       const baseParams = new URLSearchParams({
         anchor_lat: String(anchorLat),

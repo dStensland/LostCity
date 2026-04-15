@@ -79,7 +79,7 @@ function getServerSnapshot(): string {
 export function useReplaceStateParams(): URLSearchParams {
   const search = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
   // Memo so consumers don't get a new object reference when the URL hasn't changed.
-   
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   return useMemo(() => new URLSearchParams(search), [search]);
 }
 

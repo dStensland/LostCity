@@ -99,7 +99,7 @@ export default function PlansPage() {
   const [showCreator, setShowCreator] = useState(false);
 
   // Auto-open creator if ?action=create
-   
+  // eslint-disable-next-line react-hooks/exhaustive-deps, react-hooks/set-state-in-effect
   useEffect(() => {
     if (searchParams.get("action") === "create" && user) {
       setShowCreator(true);

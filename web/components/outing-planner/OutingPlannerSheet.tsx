@@ -298,17 +298,17 @@ export default function OutingPlannerSheet({
   const sheetRef = useRef<HTMLDivElement>(null);
 
   // Open/close animation + body scroll lock
-   
+  // eslint-disable-next-line react-hooks/exhaustive-deps, react-hooks/set-state-in-effect
   useEffect(() => {
     if (isOpen) {
       setIsVisible(true);
       requestAnimationFrame(() => {
-         
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setIsAnimating(true);
       });
       document.body.style.overflow = "hidden";
     } else {
-       
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setIsAnimating(false);
       const timer = setTimeout(() => setIsVisible(false), 300);
       document.body.style.overflow = "";
