@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import Link from "next/link";
 import SmartImage from "@/components/SmartImage";
 import { TMDB_POSTER_W342, TMDB_POSTER_W185, TMDBSearchResult } from "@/lib/goblin-log-utils";
 
@@ -651,13 +652,13 @@ export default function GoblinQueuePublicView({ user, slug, entries, recommendat
             boxShadow: "0 -1px 0 0 rgba(120,53,15,0.05)",
           }}
         >
-          <a
+          <Link
             href="/goblinday"
             className="text-2xs text-amber-700 font-mono tracking-[0.2em] uppercase
               hover:text-amber-500 transition-colors"
           >
             Goblin Day
-          </a>
+          </Link>
           <span className="text-2xs text-zinc-600 font-mono tracking-[0.15em]">
             Lost City
           </span>
