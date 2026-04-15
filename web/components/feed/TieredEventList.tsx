@@ -62,6 +62,7 @@ export function TieredEventList({
 
   // Collapse when the event list changes (tab/chip switch)
   const eventFingerprint = events.length > 0 ? `${events[0].id}-${events.length}` : "empty";
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- derived-state reset when fingerprint changes (tab/chip switch). Cascade bounded — expanded is not in the dep array.
   useEffect(() => { setExpanded(false); }, [eventFingerprint]);
 
   if (events.length === 0) return null;
