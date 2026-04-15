@@ -16,7 +16,7 @@ interface RichArtistCardProps {
 /** First letter of display name, used as photo fallback */
 function InitialFallback({ name, size }: { name: string; size: number }) {
   const letter = name.trim().charAt(0).toUpperCase();
-  const textClass = size >= 64 ? "text-2xl" : "text-base";
+  const textClass = size >= 48 ? "text-2xl" : "text-base";
   return (
     <div
       className={`w-full h-full flex items-center justify-center ${textClass} font-bold text-white/70 bg-[var(--dusk)] select-none`}
@@ -51,10 +51,10 @@ export function RichArtistCard({ artist }: RichArtistCardProps) {
 
   const hasSocialLinks = Boolean(spotifyUrl || instagramUrl || website);
 
-  const photoSize = isHeadliner ? 64 : 40;
+  const photoSize = isHeadliner ? 48 : 36;
   const photoClass = isHeadliner
-    ? "w-16 h-16 flex-shrink-0 rounded-full overflow-hidden bg-[var(--dusk)]"
-    : "w-10 h-10 flex-shrink-0 rounded-full overflow-hidden bg-[var(--dusk)]";
+    ? "w-12 h-12 flex-shrink-0 rounded-full overflow-hidden bg-[var(--dusk)]"
+    : "w-9 h-9 flex-shrink-0 rounded-full overflow-hidden bg-[var(--dusk)]";
 
   const containerPadding = isHeadliner ? "p-3" : "px-3 py-2";
 
@@ -86,33 +86,28 @@ export function RichArtistCard({ artist }: RichArtistCardProps) {
             {displayName}
           </span>
           {isHeadliner ? (
-            <span className="inline-flex items-center px-1.5 py-0.5 rounded font-mono text-2xs font-bold uppercase tracking-wide bg-[#FF6B7A1A] text-[#FF6B7A] border border-[#FF6B7A]/20">
+            <span className="inline-flex items-center px-1.5 py-0.5 rounded font-mono text-[8px] font-bold uppercase tracking-wide bg-[#FF6B7A33] text-[#FF6B7A]">
               Headliner
             </span>
           ) : (
-            <span className="inline-flex items-center px-1.5 py-0.5 rounded font-mono text-2xs font-bold uppercase tracking-wide bg-[var(--dusk)] text-[var(--muted)] border border-[var(--twilight)]">
+            <span className="inline-flex items-center px-1.5 py-0.5 rounded font-mono text-[8px] font-bold uppercase tracking-wide bg-[var(--dusk)] text-[var(--muted)]">
               Support
             </span>
           )}
         </div>
 
-        {/* Row 2: hometown */}
-        {hometown && (
-          <p className="text-xs text-[var(--muted)]">{hometown}</p>
-        )}
-
-        {/* Row 3: genre chips */}
-        {genres.length > 0 && (
-          <div className="flex flex-wrap gap-1">
-            {genres.map((genre) => (
-              <span
-                key={genre}
-                className="px-2 py-0.5 rounded-full text-xs bg-[var(--dusk)] text-[var(--soft)] border border-[var(--twilight)]"
-              >
-                {genre.replace(/-/g, " ")}
-              </span>
-            ))}
-          </div>
+        {/* Row 2: meta line — hometown · Genre, Genre, Genre */}
+        {(hometown || genres.length > 0) && (
+          <p className="text-[11px] text-[var(--muted)] leading-tight" style={{ fontFamily: "Outfit, sans-serif" }}>
+            {[
+              hometown,
+              genres.length > 0
+                ? genres.map((g) => g.replace(/-/g, " ")).join(", ")
+                : null,
+            ]
+              .filter(Boolean)
+              .join(" · ")}
+          </p>
         )}
 
         {/* Row 4: social links */}
