@@ -6,7 +6,7 @@ interface PlansPageClientProps {
 }
 
 export function PlansPageClient({
-  portalSlug: _portalSlug,
+  portalSlug,
   isAuthenticated,
 }: PlansPageClientProps) {
   if (!isAuthenticated) {
