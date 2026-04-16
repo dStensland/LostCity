@@ -5,6 +5,7 @@ import Link from "next/link";
 import { MusicNote, MaskHappy, SmileyWink, Ticket } from "@phosphor-icons/react";
 import { formatTime } from "@/lib/formats";
 import SmartImage from "@/components/SmartImage";
+import FeedSectionReveal from "@/components/feed/FeedSectionReveal";
 import { buildExploreUrl } from "@/lib/find-url";
 
 // ── Types ────────────────────────────────────────────────────────────
@@ -162,8 +163,9 @@ export function PlaceGroupedShowsList({
 
   if (venues.length === 0 && restOfWeekCount > 0) {
     return (
-      <div
-        className="feed-section-enter px-1 py-4"
+      <FeedSectionReveal
+        as="div"
+        className="px-1 py-4"
         style={{ "--show-accent": accentColor } as React.CSSProperties}
       >
         <p className="text-sm text-[var(--soft)]">
@@ -179,15 +181,16 @@ export function PlaceGroupedShowsList({
             {restOfWeekCount} more this week →
           </Link>
         </p>
-      </div>
+      </FeedSectionReveal>
     );
   }
 
   if (venues.length === 0) return null;
 
   return (
-    <div
-      className="relative feed-section-enter"
+    <FeedSectionReveal
+      as="div"
+      className="relative"
       style={{ "--show-accent": accentColor } as React.CSSProperties}
     >
       <div
@@ -251,7 +254,7 @@ export function PlaceGroupedShowsList({
           )}
         </div>
       )}
-    </div>
+    </FeedSectionReveal>
   );
 }
 

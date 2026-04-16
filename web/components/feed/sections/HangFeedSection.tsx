@@ -14,6 +14,7 @@ import {
 } from "@/lib/hooks/useHangs";
 import { ActiveHangBanner } from "@/components/hangs/ActiveHangBanner";
 import FeedSectionHeader from "@/components/feed/FeedSectionHeader";
+import FeedSectionReveal from "@/components/feed/FeedSectionReveal";
 import type { HotVenue, FriendHang, HangVisibility } from "@/lib/types/hangs";
 import { buildExploreUrl } from "@/lib/find-url";
 
@@ -257,7 +258,7 @@ export const HangFeedSection = memo(function HangFeedSection({
   }
 
   return (
-    <section className="pb-2 feed-section-enter">
+    <FeedSectionReveal className="pb-2">
       <FeedSectionHeader
         title="Hangs"
         priority="secondary"
@@ -314,7 +315,7 @@ export const HangFeedSection = memo(function HangFeedSection({
           <HangsEmptyState portalSlug={portalSlug} />
         )}
       </div>
-    </section>
+    </FeedSectionReveal>
   );
 });
 

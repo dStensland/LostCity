@@ -4756,7 +4756,22 @@ body:has([data-vertical="hospital"]) .rain-overlay {
 }
 
 .feed-section-enter {
-  animation: feed-section-fade-in 0.3s ease-out both;
+  opacity: 0;
+  transform: translateY(4px);
+  will-change: opacity, transform;
+}
+
+.feed-section-enter.is-visible {
+  animation: feed-section-fade-in 0.4s ease-out forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .feed-section-enter,
+  .feed-section-enter.is-visible {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
 }
 
 /* Subtle backdrop for hero overlay text — ensures readability when gradients are light */

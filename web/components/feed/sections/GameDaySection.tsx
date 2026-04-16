@@ -29,6 +29,7 @@ import {
 } from "@phosphor-icons/react";
 import { useAuth } from "@/lib/auth-context";
 import FeedSectionHeader from "@/components/feed/FeedSectionHeader";
+import FeedSectionReveal from "@/components/feed/FeedSectionReveal";
 import SmartImage from "@/components/SmartImage";
 import { formatTime, getLocalDateString } from "@/lib/formats";
 import {
@@ -292,7 +293,7 @@ export default function GameDaySection({ portalSlug }: GameDaySectionProps) {
   if (failed || displayedTeams.length === 0) return null;
 
   return (
-    <section className="pb-2 feed-section-enter">
+    <FeedSectionReveal className="pb-2">
       {/* Section header */}
       <FeedSectionHeader
         title="Game Day"
@@ -372,7 +373,7 @@ export default function GameDaySection({ portalSlug }: GameDaySectionProps) {
           }}
         />
       )}
-    </section>
+    </FeedSectionReveal>
   );
 }
 

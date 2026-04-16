@@ -32,6 +32,7 @@ import { isSceneEvent } from "@/lib/city-pulse/section-builders";
 
 import { ENABLE_LINEUP_RECURRING } from "@/lib/launch-flags";
 import FeedSectionHeader from "./FeedSectionHeader";
+import FeedSectionReveal from "./FeedSectionReveal";
 import { TieredEventList } from "@/components/feed/TieredEventList";
 import { useAuth } from "@/lib/auth-context";
 import {
@@ -538,7 +539,7 @@ export default function LineupSection({
   if (!hasAnyContent) return null;
 
   return (
-    <section className="pb-2 feed-section-enter">
+    <FeedSectionReveal className="pb-2">
       {/* Section header */}
       <FeedSectionHeader
         title={sectionTitle}
@@ -781,7 +782,7 @@ export default function LineupSection({
           </Link>
         );
       })()}
-    </section>
+    </FeedSectionReveal>
   );
 }
 

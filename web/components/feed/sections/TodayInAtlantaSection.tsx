@@ -15,6 +15,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Broadcast } from "@phosphor-icons/react";
 import Dot from "@/components/ui/Dot";
 import FeedSectionHeader from "@/components/feed/FeedSectionHeader";
+import FeedSectionReveal from "@/components/feed/FeedSectionReveal";
 import type { NetworkPost } from "./NetworkFeedSection";
 import {
   getCategoryColor,
@@ -190,7 +191,7 @@ export function TodayInAtlantaSection({ portalSlug }: TodayInAtlantaSectionProps
   if (tabs.length === 0) return null;
 
   return (
-    <div className="mt-6 feed-section-enter">
+    <FeedSectionReveal as="div" className="mt-6">
       {/* Section header */}
       <FeedSectionHeader
         title="Today in Atlanta"
@@ -243,6 +244,6 @@ export function TodayInAtlantaSection({ portalSlug }: TodayInAtlantaSectionProps
           ))}
         </div>
       )}
-    </div>
+    </FeedSectionReveal>
   );
 }

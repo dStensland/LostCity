@@ -4,6 +4,7 @@ import { useState, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { MapPin } from "@phosphor-icons/react";
 import FeedSectionHeader from "@/components/feed/FeedSectionHeader";
+import FeedSectionReveal from "@/components/feed/FeedSectionReveal";
 import FeedSectionSkeleton from "@/components/feed/FeedSectionSkeleton";
 import { PlacesToGoCategoryTile } from "./PlacesToGoCategoryTile";
 import type { PlacesToGoResponse } from "@/lib/places-to-go/types";
@@ -59,7 +60,7 @@ export function PlacesToGoSection({ portalSlug }: PlacesToGoSectionProps) {
   }
 
   return (
-    <section className="pb-2 feed-section-enter">
+    <FeedSectionReveal className="pb-2">
       <FeedSectionHeader
         title="Places to Go"
         priority="secondary"
@@ -79,7 +80,7 @@ export function PlacesToGoSection({ portalSlug }: PlacesToGoSectionProps) {
           />
         ))}
       </div>
-    </section>
+    </FeedSectionReveal>
   );
 }
 

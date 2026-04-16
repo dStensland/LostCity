@@ -14,6 +14,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Crown } from "@phosphor-icons/react";
 import FeedSectionHeader from "@/components/feed/FeedSectionHeader";
+import FeedSectionReveal from "@/components/feed/FeedSectionReveal";
 import FeedSectionSkeleton from "@/components/feed/FeedSectionSkeleton";
 import type { Festival } from "@/lib/festivals";
 import {
@@ -165,7 +166,7 @@ export default function FestivalsSection({ portalSlug, portalId }: FestivalsSect
   if (displayItems.length === 0) return null;
 
   return (
-    <section className="pb-2 feed-section-enter">
+    <FeedSectionReveal className="pb-2">
       <SectionHeader portalSlug={portalSlug} />
 
       {/* Horizontal snap-scroll rail — no grid, no hero treatment */}
@@ -232,7 +233,7 @@ export default function FestivalsSection({ portalSlug, portalId }: FestivalsSect
           );
         })}
       </div>
-    </section>
+    </FeedSectionReveal>
   );
 }
 

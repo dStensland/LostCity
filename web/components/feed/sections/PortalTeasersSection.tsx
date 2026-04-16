@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { Globe } from "@phosphor-icons/react";
 import FeedSectionHeader from "@/components/feed/FeedSectionHeader";
+import FeedSectionReveal from "@/components/feed/FeedSectionReveal";
 import ScopedStyles from "@/components/ScopedStyles";
 import { createCssVarClass } from "@/lib/css-utils";
 
@@ -136,7 +137,7 @@ export function PortalTeasersSection({ portalSlug }: PortalTeasersSectionProps) 
   if (!data?.headlines || data.headlines.length === 0) return null;
 
   return (
-    <section className="pb-2 feed-section-enter">
+    <FeedSectionReveal className="pb-2">
       <FeedSectionHeader
         title="Around the City"
         priority="secondary"
@@ -153,7 +154,7 @@ export function PortalTeasersSection({ portalSlug }: PortalTeasersSectionProps) 
           </div>
         ))}
       </div>
-    </section>
+    </FeedSectionReveal>
   );
 }
 
