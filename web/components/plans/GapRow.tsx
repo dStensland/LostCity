@@ -10,7 +10,10 @@ interface GapRowProps {
 
 export function GapRow({ date, portalSlug }: GapRowProps) {
   const dayLabel = date.toLocaleDateString("en-US", { weekday: "long" });
-  const dateParam = date.toISOString().split("T")[0];
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  const dateParam = `${y}-${m}-${d}`;
   const isToday = new Date().toDateString() === date.toDateString();
   const label = isToday ? "Tonight is open" : `${dayLabel} is open`;
   const cta = isToday

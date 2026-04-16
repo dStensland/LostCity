@@ -1,7 +1,6 @@
 "use client";
 
 import { CalendarBlank, ListBullets, Plus, UsersThree } from "@phosphor-icons/react";
-import Link from "next/link";
 
 interface PlansHeaderProps {
   portalSlug: string;
@@ -38,13 +37,13 @@ export function PlansHeader({
             <ListBullets size={18} weight="duotone" />
           )}
         </button>
-        <Link
-          href={`/${portalSlug}/plans/new`}
+        <button
           className="h-9 px-3 rounded-lg bg-[var(--coral)] text-[var(--void)] text-sm font-medium flex items-center gap-1.5 hover:brightness-110 transition-all duration-200"
+          aria-label="Create new plan"
         >
           <Plus size={14} weight="bold" />
           New Plan
-        </Link>
+        </button>
       </div>
     </div>
   );

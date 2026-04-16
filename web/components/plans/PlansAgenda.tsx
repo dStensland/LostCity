@@ -99,7 +99,7 @@ export function PlansAgenda({ portalSlug }: PlansAgendaProps) {
 
         return (
           <div key={dateKey} id={`day-${dateKey}`}>
-            <div className="font-mono text-2xs uppercase tracking-wider text-[var(--muted)]/60 font-semibold mt-4 mb-1.5 px-1 sticky top-0 z-10 bg-[var(--void)] py-1.5">
+            <div className="font-mono text-2xs uppercase tracking-wider text-[var(--muted)]/60 font-semibold mt-4 mb-1.5 px-1">
               {dayLabel}
             </div>
             {!hasContent && (
