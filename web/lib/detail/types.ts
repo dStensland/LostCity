@@ -362,6 +362,9 @@ export interface ActionConfig {
     enabled: boolean;
     scrollThreshold?: number;
   };
+  // Rail-specific
+  posterUrl?: string | null;
+  heroTier?: HeroTier;
 }
 
 // ─── Connection Types ───────────────────────────────────────────
