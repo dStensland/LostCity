@@ -48,7 +48,7 @@ MARTA_STATIONS = [
     {"name": "Chamblee", "lat": 33.887929, "lon": -84.305556, "lines": ["gold"]},
     {"name": "Civic Center", "lat": 33.766111, "lon": -84.387504, "lines": ["red", "gold"]},
     {"name": "College Park", "lat": 33.650577, "lon": -84.448656, "lines": ["red", "gold"]},
-    {"name": "Decatur", "lat": 33.774699, "lon": -84.295417, "lines": ["blue"]},
+    {"name": "Decatur", "lat": 33.774859, "lon": -84.297518, "lines": ["blue"]},
     {"name": "Doraville", "lat": 33.902411, "lon": -84.281166, "lines": ["gold"]},
     {"name": "Dunwoody", "lat": 33.920862, "lon": -84.344213, "lines": ["red"]},
     {"name": "East Lake", "lat": 33.765241, "lon": -84.312937, "lines": ["blue"]},
