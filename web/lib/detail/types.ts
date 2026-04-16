@@ -2,6 +2,9 @@
 
 import type React from "react";
 
+// ─── Hero Tier ──────────────────────────────────────────────────
+export type HeroTier = 'expanded' | 'compact' | 'typographic';
+
 // ─── Entity Types ───────────────────────────────────────────────
 // Re-export existing response types used by each detail view.
 // These are the shapes returned by the API routes.
@@ -31,6 +34,8 @@ export interface EventData {
   ticket_url: string | null;
   source_url: string | null;
   image_url: string | null;
+  image_width: number | null;
+  image_height: number | null;
   is_recurring: boolean;
   recurrence_rule: string | null;
   is_adult?: boolean | null;
@@ -100,6 +105,7 @@ export interface EventArtist {
 
 export interface EventApiResponse {
   event: EventData;
+  heroTier: HeroTier;
   eventArtists: EventArtist[];
   venueEvents: unknown[];
   nearbyEvents: unknown[];
