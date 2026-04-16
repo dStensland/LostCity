@@ -5,6 +5,7 @@ import { parseISO, format } from "date-fns";
 import { MapPin, CalendarBlank, Ticket } from "@phosphor-icons/react";
 import { formatEventTime, formatPriceRange } from "@/lib/detail/format";
 import { buildSpotUrl } from "@/lib/entity-urls";
+import { getCategoryColor } from "@/lib/category-config";
 import type { EventData } from "@/lib/detail/types";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -51,8 +52,10 @@ export const EventIdentity = memo(function EventIdentity({
   const dateLabel = [dateDisplay, timeDisplay].filter(Boolean).join(" · ");
 
   // ── Elevated variant ────────────────────────────────────────────────────────
+  // Typography and pill styling matches TypographicHero for consistency.
 
   if (variant === "elevated") {
+    const categoryColor = getCategoryColor(event.category);
     const metaParts: string[] = [];
     if (event.start_date) metaParts.push(formatDateShort(event.start_date));
     if (event.venue?.name) metaParts.push(event.venue.name.toUpperCase());
@@ -64,9 +67,9 @@ export const EventIdentity = memo(function EventIdentity({
     ].slice(0, 5);
 
     return (
-      <div className="flex flex-col gap-2">
-        {/* Title */}
-        <h1 className="text-2xl lg:text-3xl font-bold text-[var(--cream)] leading-tight">
+      <div className="flex flex-col gap-3">
+        {/* Title — matches TypographicHero: text-3xl */}
+        <h1 className="text-3xl font-bold text-[var(--cream)] leading-tight">
           {event.title}
         </h1>
 
@@ -77,13 +80,18 @@ export const EventIdentity = memo(function EventIdentity({
           </p>
         )}
 
-        {/* Genre/tag pills */}
+        {/* Genre/tag pills — dynamic category color (matches TypographicHero) */}
         {pills.length > 0 && (
-          <div className="flex flex-wrap gap-1.5 mt-0.5">
+          <div className="flex flex-wrap gap-1.5">
             {pills.map((pill) => (
               <span
                 key={pill}
-                className="px-2 py-0.5 rounded-full bg-[var(--twilight)] font-mono text-xs text-[var(--muted)] border border-[var(--twilight)]"
+                className="px-2.5 py-1 rounded-full text-xs font-mono border"
+                style={{
+                  backgroundColor: `${categoryColor}15`,
+                  borderColor: `${categoryColor}30`,
+                  color: `${categoryColor}CC`,
+                }}
               >
                 {pill}
               </span>

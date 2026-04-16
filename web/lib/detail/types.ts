@@ -367,6 +367,16 @@ export interface ActionConfig {
   heroTier?: HeroTier;
 }
 
+// ─── Quick Facts (elevated rail) ────────────────────────────────
+
+export interface QuickFactsData {
+  date: string;
+  venueName: string | null;
+  venueSlug: string | null;
+  priceText: string | null;
+  agePolicy: string | null;
+}
+
 // ─── Connection Types ───────────────────────────────────────────
 
 export interface ConnectionRow {

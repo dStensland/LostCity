@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo } from "react";
-import { parseISO, format } from "date-fns";
 import DetailShell from "@/components/detail/DetailShell";
 import { ElevatedShell } from "@/components/detail/ElevatedShell";
 import { DetailHero } from "./DetailHero";
@@ -15,10 +14,10 @@ import NeonBackButton from "@/components/detail/NeonBackButton";
 import ScopedStyles from "@/components/ScopedStyles";
 import { createCssVarClass } from "@/lib/css-utils";
 import { sectionRegistry } from "@/components/detail/sections";
-import { formatEventTime, formatPriceRange } from "@/lib/detail/format";
 import type {
   HeroConfig,
   ActionConfig,
+  QuickFactsData,
   SectionId,
   EntityData,
   EntityType,
@@ -37,6 +36,7 @@ interface DetailLayoutProps {
   onClose?: () => void;
   accentColorSecondary?: string;
   shellVariant?: "sidebar" | "elevated";
+  quickFacts?: QuickFactsData;
 }
 
 export function DetailLayout({
@@ -51,6 +51,7 @@ export function DetailLayout({
   onClose,
   accentColorSecondary,
   shellVariant = "sidebar",
+  quickFacts,
 }: DetailLayoutProps) {
   // Resolve accent color CSS
   const accentClass = useMemo(
@@ -157,41 +158,21 @@ export function DetailLayout({
   // ── Elevated shell path ─────────────────────────────────────────────────────
 
   if (shellVariant === "elevated") {
-    // Build quick facts from event data
-    let quickFactsDate = "";
-    let quickFactsVenueName: string | null = null;
-    let quickFactsVenueSlug: string | null = null;
-    let quickFactsPriceText: string | null = null;
-    let quickFactsAgePolicy: string | null = null;
-
-    if (data.entityType === "event") {
-      const event = data.payload.event;
-      const dateObj = parseISO(event.start_date);
-      const datePart =
-        event.end_date && event.end_date !== event.start_date
-          ? `${format(dateObj, "MMM d")} – ${format(parseISO(event.end_date), "MMM d")}`
-          : format(dateObj, "EEE, MMM d");
-      const timePart = formatEventTime(event.is_all_day, event.start_time, event.end_time);
-      quickFactsDate = timePart ? `${datePart} · ${timePart}` : datePart;
-      quickFactsVenueName = event.venue?.name ?? null;
-      quickFactsVenueSlug = event.venue?.slug ?? null;
-      quickFactsPriceText = formatPriceRange(event.is_free, event.price_min, event.price_max);
-      quickFactsAgePolicy = event.age_policy ?? null;
-    }
-
     const rail = (
       <>
         <DetailActions config={actionConfig} accentColor={accentColor} variant="rail" />
-        <div className="mt-4">
-          <QuickFactsCard
-            date={quickFactsDate}
-            venueName={quickFactsVenueName}
-            venueSlug={quickFactsVenueSlug}
-            portalSlug={portalSlug}
-            priceText={quickFactsPriceText}
-            agePolicy={quickFactsAgePolicy}
-          />
-        </div>
+        {quickFacts && (
+          <div className="mt-4">
+            <QuickFactsCard
+              date={quickFacts.date}
+              venueName={quickFacts.venueName}
+              venueSlug={quickFacts.venueSlug}
+              portalSlug={portalSlug}
+              priceText={quickFacts.priceText}
+              agePolicy={quickFacts.agePolicy}
+            />
+          </div>
+        )}
       </>
     );
 

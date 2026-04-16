@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useCallback } from "react";
 import { ArrowLeft, ArrowRight } from "@phosphor-icons/react";
 import SmartImage from "@/components/SmartImage";
 import CategoryIcon from "@/components/CategoryIcon";
 import { getCategoryColor } from "@/lib/category-config";
+import { useGallery } from "@/lib/detail/use-gallery";
 import type { HeroConfig } from "@/lib/detail/types";
 
 type DetailHeroProps = HeroConfig;
@@ -22,26 +22,11 @@ function LegacyHero({
   overlaySlot,
   mobileMaxHeight,
 }: DetailHeroProps) {
-  const [imgError, setImgError] = useState(false);
-  const [galleryIndex, setGalleryIndex] = useState(0);
-  const [imgLoaded, setImgLoaded] = useState(false);
-
-  const images = galleryEnabled && galleryUrls?.length
-    ? galleryUrls
-    : imageUrl && !imgError
-      ? [imageUrl]
-      : [];
-
-  const currentImage = images[galleryIndex];
+  const {
+    images, currentImage, galleryIndex, imgLoaded,
+    setImgLoaded, setImgError, handlePrev, handleNext, setGalleryIndex,
+  } = useGallery({ imageUrl, galleryEnabled, galleryUrls });
   const categoryColor = getCategoryColor(category);
-
-  const handlePrev = useCallback(() => {
-    setGalleryIndex((i) => (i > 0 ? i - 1 : images.length - 1));
-  }, [images.length]);
-
-  const handleNext = useCallback(() => {
-    setGalleryIndex((i) => (i < images.length - 1 ? i + 1 : 0));
-  }, [images.length]);
 
   // Fallback: no image
   if (!currentImage) {
@@ -151,26 +136,11 @@ function ExpandedHero({
   isLive,
   overlaySlot,
 }: DetailHeroProps) {
-  const [imgError, setImgError] = useState(false);
-  const [galleryIndex, setGalleryIndex] = useState(0);
-  const [imgLoaded, setImgLoaded] = useState(false);
-
-  const images = galleryEnabled && galleryUrls?.length
-    ? galleryUrls
-    : imageUrl && !imgError
-      ? [imageUrl]
-      : [];
-
-  const currentImage = images[galleryIndex];
+  const {
+    images, currentImage, galleryIndex, imgLoaded,
+    setImgLoaded, setImgError, handlePrev, handleNext, setGalleryIndex,
+  } = useGallery({ imageUrl, galleryEnabled, galleryUrls });
   const categoryColor = getCategoryColor(category);
-
-  const handlePrev = useCallback(() => {
-    setGalleryIndex((i) => (i > 0 ? i - 1 : images.length - 1));
-  }, [images.length]);
-
-  const handleNext = useCallback(() => {
-    setGalleryIndex((i) => (i < images.length - 1 ? i + 1 : 0));
-  }, [images.length]);
 
   return (
     <div className="relative w-full h-[55vh] min-h-[400px] max-h-[700px] overflow-hidden bg-[var(--night)] motion-fade-in">

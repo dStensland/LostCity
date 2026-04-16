@@ -7,9 +7,10 @@ import { DetailLayout } from "@/components/detail/core/DetailLayout";
 import { EventIdentity } from "@/components/detail/identity/EventIdentity";
 import { eventManifest } from "@/components/detail/manifests/event";
 import { useDetailData } from "@/lib/detail/use-detail-data";
+import { formatEventTime, formatPriceRange } from "@/lib/detail/format";
 import { getCategoryColor } from "@/lib/category-config";
 import { ENABLE_ELEVATED_DETAIL } from "@/lib/launch-flags";
-import type { EventApiResponse, EventData, HeroConfig, ActionConfig, EntityData } from "@/lib/detail/types";
+import type { EventApiResponse, EventData, HeroConfig, ActionConfig, QuickFactsData, EntityData } from "@/lib/detail/types";
 
 // ── Re-export EventApiResponse so callers (EventDetailWrapper) can still import it ──
 export type { EventApiResponse };
@@ -113,6 +114,23 @@ export default function EventDetailView({
     return config;
   }, [event, data?.heroTier]);
 
+  const quickFacts = useMemo<QuickFactsData | undefined>(() => {
+    if (!event) return undefined;
+    const dateObj = parseISO(event.start_date);
+    const datePart =
+      event.end_date && event.end_date !== event.start_date
+        ? `${format(dateObj, "MMM d")} – ${format(parseISO(event.end_date), "MMM d")}`
+        : format(dateObj, "EEE, MMM d");
+    const timePart = formatEventTime(event.is_all_day, event.start_time, event.end_time);
+    return {
+      date: timePart ? `${datePart} · ${timePart}` : datePart,
+      venueName: event.venue?.name ?? null,
+      venueSlug: event.venue?.slug ?? null,
+      priceText: formatPriceRange(event.is_free, event.price_min, event.price_max),
+      agePolicy: event.age_policy ?? null,
+    };
+  }, [event]);
+
   const entityData = useMemo<EntityData | null>(
     () => (data ? { entityType: "event", payload: data } : null),
     [data],
@@ -142,6 +160,7 @@ export default function EventDetailView({
       entityType="event"
       onClose={onClose}
       shellVariant={ENABLE_ELEVATED_DETAIL ? "elevated" : "sidebar"}
+      quickFacts={quickFacts}
     />
   );
 }
