@@ -229,9 +229,8 @@ export function mapEventServerDataToViewData(
 
   // Tier classification uses event.image_url specifically (not the
   // series/venue fallback chain). An event without its own image should
-  // render the typographic treatment even if a venue fallback is available
-  // — that's the design intent. The resolved fallback still flows to the
-  // hero component as a backdrop, but it doesn't bump the tier.
+  // render the typographic treatment even if a venue fallback is
+  // available — that's the design intent.
   const heroTier = computeHeroTier(
     event.image_url,
     (event as { image_width?: number | null }).image_width ?? null,
@@ -239,18 +238,21 @@ export function mapEventServerDataToViewData(
     [],
   );
 
-  // Tier-distribution telemetry — catch silent fall-through to any one
-  // tier after a flag flip. Keep at info so it's noisy enough to sample.
-  logger.info(`hero tier resolved: ${heroTier}`, {
-    component: "event-detail-mapper",
-    eventId: event.id,
-    heroTier,
-    hasImage: !!resolvedImageUrl,
-    hasImageDimensions: !!(
-      (event as { image_width?: number | null }).image_width &&
-      (event as { image_height?: number | null }).image_height
-    ),
-  });
+  // Tier-distribution telemetry — sampled at 5% to keep log volume
+  // bounded. Intent is catching silent tier fall-through after a flag
+  // flip; ~1 in 20 renders is enough signal for distribution.
+  if (Math.random() < 0.05) {
+    logger.info(`hero tier resolved: ${heroTier}`, {
+      component: "event-detail-mapper",
+      eventId: event.id,
+      heroTier,
+      hasImage: !!event.image_url,
+      hasImageDimensions: !!(
+        (event as { image_width?: number | null }).image_width &&
+        (event as { image_height?: number | null }).image_height
+      ),
+    });
+  }
 
   return {
     event: mappedEvent,
