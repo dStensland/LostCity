@@ -62,7 +62,7 @@ export function useSeriesSubscription(seriesId: string | null | undefined) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey });
-      queryClient.invalidateQueries({ queryKey: ["calendar"] });
+      queryClient.invalidateQueries({ queryKey: ["events", "calendar"] });
     },
   });
 
@@ -79,7 +79,7 @@ export function useSeriesSubscription(seriesId: string | null | undefined) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey });
-      queryClient.invalidateQueries({ queryKey: ["calendar"] });
+      queryClient.invalidateQueries({ queryKey: ["events", "calendar"] });
     },
   });
 

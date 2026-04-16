@@ -206,7 +206,8 @@ export async function DELETE(request: NextRequest, { params }: RouteContext) {
       .from("events")
       .select("id")
       .eq("series_id", seriesId)
-      .gte("start_date", today);
+      .gte("start_date", today)
+      .eq("is_active", true);
 
     const futureEventIds = (futureEvents ?? []).map((e: { id: number }) => e.id);
     let removedRsvps = 0;
