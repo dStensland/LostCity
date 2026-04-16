@@ -132,7 +132,10 @@ export function DetailLayout({
   );
 
   // Build bottom bar (sticky on mobile) — shared by both variants
-  const bottomBar = actionConfig.stickyBar.enabled ? (
+  // Render sticky bar unconditionally on mobile. Share + Save are always
+  // useful even when there's no primary CTA (free events, RSVP-only, etc.).
+  // The bar itself scroll-gates its visibility.
+  const bottomBar = (
     <DetailStickyBar
       primaryAction={
         actionConfig.primaryCTA
@@ -148,7 +151,7 @@ export function DetailLayout({
       scrollThreshold={actionConfig.stickyBar.scrollThreshold}
       showShareButton
     />
-  ) : undefined;
+  );
 
   // ── Elevated shell path ─────────────────────────────────────────────────────
 
