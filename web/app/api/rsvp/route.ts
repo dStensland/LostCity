@@ -139,6 +139,17 @@ export const GET = withAuth(async (request, { user, serviceClient }) => {
 
   try {
     const { searchParams } = new URL(request.url);
+
+    // Check if user has ever RSVPed (for empty state detection)
+    if (searchParams.get("check") === "ever_rsvped") {
+      const { count } = await serviceClient
+        .from("event_rsvps")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", user.id)
+        .limit(1);
+      return NextResponse.json({ hasRsvped: (count ?? 0) > 0 });
+    }
+
     const eventId = parseIntParam(searchParams.get("event_id"));
 
     if (eventId === null || eventId <= 0) {

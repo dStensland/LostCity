@@ -1,7 +1,8 @@
 "use client";
 
 import { useMemo } from "react";
-import { Ticket, ShareNetwork, BookmarkSimple } from "@phosphor-icons/react";
+import { ShareNetwork, BookmarkSimple, BellRinging } from "@phosphor-icons/react";
+import { useSeriesSubscription } from "@/lib/hooks/useSeriesSubscription";
 import { DetailLayout } from "@/components/detail/core/DetailLayout";
 import { SeriesIdentity } from "@/components/detail/identity/SeriesIdentity";
 import { getSeriesManifest } from "@/components/detail/manifests/series";
@@ -36,6 +37,11 @@ export default function SeriesDetailView({
   const series = data?.series ?? null;
   const venueShowtimes = useMemo(() => data?.venueShowtimes ?? [], [data]);
   const isFilm = series?.series_type === "film";
+
+  const isSubscribable = ["recurring_show", "class_series"].includes(series?.series_type ?? "");
+  const { isSubscribed, subscribe, unsubscribe } = useSeriesSubscription(
+    isSubscribable ? series?.id : null
+  );
 
   // Derive next event ticket URL for CTA
   const nextTicketUrl = useMemo(() => {
@@ -77,15 +83,31 @@ export default function SeriesDetailView({
         }
       : null;
 
+    const secondaryActions: ActionConfig["secondaryActions"] = [
+      { icon: <BookmarkSimple size={18} weight="duotone" />, label: "Save" },
+      { icon: <ShareNetwork size={18} weight="duotone" />, label: "Share" },
+    ];
+
+    if (isSubscribable) {
+      secondaryActions.unshift({
+        icon: <BellRinging size={18} weight={isSubscribed ? "fill" : "duotone"} />,
+        label: isSubscribed ? "Subscribed" : "Subscribe",
+        onClick: () => {
+          if (isSubscribed) {
+            unsubscribe.mutate();
+          } else {
+            subscribe.mutate();
+          }
+        },
+      });
+    }
+
     return {
       primaryCTA,
-      secondaryActions: [
-        { icon: <BookmarkSimple size={18} weight="duotone" />, label: "Save" },
-        { icon: <ShareNetwork size={18} weight="duotone" />, label: "Share" },
-      ],
+      secondaryActions,
       stickyBar: { enabled: !!nextTicketUrl },
     };
-  }, [nextTicketUrl, isFilm]);
+  }, [nextTicketUrl, isFilm, isSubscribable, isSubscribed, subscribe, unsubscribe]);
 
   const manifest = useMemo(
     () => getSeriesManifest(isFilm),

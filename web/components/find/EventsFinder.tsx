@@ -13,25 +13,10 @@ import EventList from "@/components/EventList";
 import { ActiveFiltersRow } from "@/components/filters";
 import type { TimelineResponse } from "@/lib/explore-platform/lane-data";
 
-type DisplayMode = "list" | "map" | "calendar";
+type DisplayMode = "list" | "map";
 const EventsMapMode = dynamic(() => import("./EventsMapMode"), {
   loading: () => (
     <div className="h-[420px] rounded-xl border border-[var(--twilight)]/60 bg-[var(--night)]/60 animate-pulse" />
-  ),
-});
-const EventsCalendarMode = dynamic(() => import("./EventsCalendarMode"), {
-  loading: () => (
-    <div className="p-4 sm:p-6 animate-pulse">
-      <div className="flex items-center justify-between mb-4">
-        <div className="h-5 w-32 bg-[var(--twilight)] rounded" />
-        <div className="h-8 w-20 bg-[var(--twilight)] rounded" />
-      </div>
-      <div className="grid grid-cols-7 gap-1">
-        {Array.from({ length: 42 }).map((_, index) => (
-          <div key={index} className="aspect-square bg-[var(--twilight)]/50 rounded" />
-        ))}
-      </div>
-    </div>
   ),
 });
 
@@ -88,7 +73,7 @@ function EventsFinderFiltersInner({
 
       <FindFilterBar
         variant={displayMode === "map" ? "compact" : "full"}
-        hideDate={displayMode === "calendar"}
+        hideDate={false}
         portalId={portalId}
         portalExclusive={portalExclusive}
         portalSlug={portalSlug}
@@ -170,15 +155,6 @@ export default function EventsFinder({
             initialPage={initialTimelinePage}
           />
         </TransitionContainer>
-      )}
-
-      {/* Calendar mode */}
-      {displayMode === "calendar" && (
-        <EventsCalendarMode
-          portalId={portalId}
-          portalSlug={portalSlug}
-          portalExclusive={portalExclusive}
-        />
       )}
 
       {/* Map mode */}

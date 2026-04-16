@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import EventsFinder from "@/components/find/EventsFinder";
 import { useExploreUrlState } from "@/lib/explore-platform/url-state";
-import type { ExploreLaneComponentProps } from "@/lib/explore-platform/types";
+import type { ExploreLaneComponentProps, ExploreUtilityView } from "@/lib/explore-platform/types";
 import { hasActiveFindFilters } from "@/lib/find-filter-schema";
 import type { EventsLaneInitialData } from "@/lib/explore-platform/lane-data";
 
@@ -19,7 +19,7 @@ export function ExploreEventsLane({
     () => hasActiveFindFilters(state.params, "events"),
     [state.params],
   );
-  const displayMode = state.display === "map" ? "map" : state.display === "calendar" ? "calendar" : "list";
+  const displayMode = state.display === "map" ? "map" : "list";
 
   return (
     <div className="space-y-3">
@@ -33,14 +33,13 @@ export function ExploreEventsLane({
           {[
             { id: "list", label: "List" },
             { id: "map", label: "Map" },
-            { id: "calendar", label: "Calendar" },
           ].map((view) => (
             <button
               key={view.id}
               type="button"
               onClick={() =>
                 state.setDisplay(
-                  view.id as "list" | "map" | "calendar",
+                  view.id as ExploreUtilityView,
                   "replace",
                 )
               }
