@@ -12,7 +12,7 @@ import {
 import { ArtistExhibitionTimeline } from "@/components/arts/ArtistExhibitionTimeline";
 import { ArtistClaimBanner } from "@/components/arts/ArtistClaimBanner";
 import {
-  DetailHero,
+  LegacyDetailHero,
   InfoCard,
   MetadataGrid,
   SectionHeader,
@@ -177,7 +177,7 @@ export default async function PortalArtistPage({ params }: Props) {
       <div className={`min-h-screen ${accentClass?.className ?? ""}`}>
         <main className="max-w-3xl mx-auto px-4 py-4 sm:py-6 pb-28 space-y-5 sm:space-y-8">
           {/* Hero */}
-          <DetailHero
+          <LegacyDetailHero
             mode={artist.image_url ? "image" : "fallback"}
             imageUrl={artist.image_url}
             title={artist.name}

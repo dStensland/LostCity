@@ -4,48 +4,16 @@ Shared components for detail pages across events, spots, series, and community.
 
 ## Components
 
-### DetailHero
+### DetailHero (core)
 
-Hero section with three display modes:
+Tier-aware hero lives in `core/DetailHero.tsx` and is orchestrated by `DetailLayout`. It renders one of four tiers based on `heroTier` from the server:
 
-```tsx
-import { DetailHero } from "@/components/detail";
-import CategoryIcon from "@/components/CategoryIcon";
+- `LegacyHero` — current sidebar shell path (flag off)
+- `ExpandedHero` — full-bleed image, 55vh desktop
+- `CompactHero` — smaller hero for thin imagery
+- `TypographicHero` — no-image events, category-color atmospheric gradient
 
-// Image mode (full 16:9)
-<DetailHero
-  mode="image"
-  imageUrl="/event.jpg"
-  title="Event Name"
-  subtitle="Venue Name · Neighborhood"
-  categoryColor="var(--cat-music)"
-  categoryIcon={<CategoryIcon type="music" size={14} />}
-  badge={<CategoryBadge />}
-  isLive={true}
-/>
-
-// Poster mode (side-by-side)
-<DetailHero
-  mode="poster"
-  imageUrl="/series.jpg"
-  title="Series Name"
-  subtitle="Organization Name"
-  categoryColor="var(--cat-theater)"
->
-  <div className="mt-4">
-    {/* Additional content */}
-  </div>
-</DetailHero>
-
-// Fallback mode (gradient + icon)
-<DetailHero
-  mode="fallback"
-  title="Spot Name"
-  subtitle="Bar · Eastside"
-  categoryColor="var(--spot-bar)"
-  categoryIcon={<CategoryIcon type="bar" size={64} />}
-/>
-```
+Do not import `DetailHero` directly — use `DetailLayout` with a `HeroConfig`.
 
 ### InfoCard
 

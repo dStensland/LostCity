@@ -1,4 +1,4 @@
-export { DetailHero, type DetailHeroProps } from "./DetailHero";
+export { LegacyDetailHero, type LegacyDetailHeroProps } from "./LegacyDetailHero";
 export { InfoCard, type InfoCardProps } from "./InfoCard";
 export { MetadataGrid, type MetadataGridProps, type MetadataItem } from "./MetadataGrid";
 export { SectionHeader, type SectionHeaderProps } from "./SectionHeader";

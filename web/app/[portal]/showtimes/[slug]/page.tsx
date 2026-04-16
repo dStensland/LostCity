@@ -13,7 +13,7 @@ import {
 import { buildFilmCapsule } from "@/lib/film-capsule";
 import { getRelatedSeries } from "@/lib/series-related";
 import {
-  DetailHero,
+  LegacyDetailHero,
   InfoCard,
   MetadataGrid,
   SectionHeader,
@@ -296,7 +296,7 @@ export default async function PortalFilmPage({ params }: Props) {
           className="max-w-5xl mx-auto px-4 py-4 sm:py-6 pb-32 md:pb-16 space-y-6 sm:space-y-9"
         >
           {/* Hero Section - Poster Mode */}
-          <DetailHero
+          <LegacyDetailHero
             mode="poster"
             entityId={series.id}
             viewTransitionPrefix="series-hero"
@@ -329,7 +329,7 @@ export default async function PortalFilmPage({ params }: Props) {
                 {buildFilmCapsule(series)}
               </p>
             )}
-          </DetailHero>
+          </LegacyDetailHero>
 
           {/* Festival context — a film can be part of a festival program */}
           {series.festival && (
