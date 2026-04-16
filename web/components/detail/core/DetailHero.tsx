@@ -61,7 +61,7 @@ function LegacyHero({
 
   return (
     <div
-      className={`relative ${aspectClass ?? ""} ${mobileMaxHeight ?? ""} w-full overflow-hidden bg-[var(--night)] motion-fade-in`}
+      className={`group relative ${aspectClass ?? ""} ${mobileMaxHeight ?? ""} w-full overflow-hidden bg-[var(--night)] motion-fade-in`}
     >
       {/* Skeleton */}
       {!imgLoaded && (
@@ -96,14 +96,14 @@ function LegacyHero({
         <>
           <button
             onClick={handlePrev}
-            className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/40 flex items-center justify-center text-white/80 hover:bg-black/60 transition-colors"
+            className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/40 flex items-center justify-center text-white/80 hover:bg-black/60 opacity-0 group-hover:opacity-100 transition-all duration-200"
             aria-label="Previous image"
           >
             ‹
           </button>
           <button
             onClick={handleNext}
-            className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/40 flex items-center justify-center text-white/80 hover:bg-black/60 transition-colors"
+            className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/40 flex items-center justify-center text-white/80 hover:bg-black/60 opacity-0 group-hover:opacity-100 transition-all duration-200"
             aria-label="Next image"
           >
             ›
@@ -143,7 +143,7 @@ function ExpandedHero({
   const categoryColor = getCategoryColor(category);
 
   return (
-    <div className="relative w-full h-[300px] lg:h-[55vh] lg:min-h-[400px] lg:max-h-[700px] overflow-hidden bg-[var(--night)] motion-fade-in">
+    <div className="group relative w-full h-[300px] lg:h-[55vh] lg:min-h-[400px] lg:max-h-[700px] overflow-hidden bg-[var(--night)] motion-fade-in">
       {/* Skeleton */}
       {!imgLoaded && currentImage && (
         <div className="absolute inset-0 bg-[var(--twilight)] animate-pulse" />
@@ -194,14 +194,14 @@ function ExpandedHero({
         <>
           <button
             onClick={handlePrev}
-            className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center text-white/80 hover:bg-black/60 transition-colors"
+            className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center text-white/80 hover:bg-black/60 opacity-0 group-hover:opacity-100 transition-all duration-200"
             aria-label="Previous image"
           >
             <ArrowLeft size={16} weight="bold" />
           </button>
           <button
             onClick={handleNext}
-            className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center text-white/80 hover:bg-black/60 transition-colors"
+            className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center text-white/80 hover:bg-black/60 opacity-0 group-hover:opacity-100 transition-all duration-200"
             aria-label="Next image"
           >
             <ArrowRight size={16} weight="bold" />
