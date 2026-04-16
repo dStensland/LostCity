@@ -83,56 +83,75 @@ MARTA_STATIONS = [
 
 BELTLINE_SEGMENTS = [
     {
+        # ~2.25 mi from Piedmont Park south to Reynoldstown along the old railroad corridor.
+        # Passes: Piedmont Park (west edge), 10th & Monroe, Ponce City Market,
+        # Historic Fourth Ward Park, Krog Street Tunnel, Inman Park, Reynoldstown.
         "name": "Eastside Trail",
         "points": [
-            (33.7927, -84.3695),
-            (33.7892, -84.3665),
-            (33.7850, -84.3640),
-            (33.7810, -84.3625),
-            (33.7780, -84.3630),
-            (33.7740, -84.3625),
-            (33.7700, -84.3620),
-            (33.7655, -84.3605),
-            (33.7610, -84.3590),
+            (33.7895, -84.3688),  # Northern terminus near Monroe Dr & 10th St
+            (33.7853, -84.3672),  # Trail crossing at Park Dr / near Piedmont Park west edge
+            (33.7817, -84.3654),  # Trail at 10th St overpass
+            (33.7771, -84.3649),  # Trail at North Ave, approaching PCM
+            (33.7715, -84.3633),  # Trail behind Ponce City Market
+            (33.7673, -84.3630),  # Historic Fourth Ward Park / Irwin St
+            (33.7632, -84.3631),  # Trail at Freedom Pkwy overpass
+            (33.7588, -84.3633),  # Krog Street Tunnel / Krog Street Market
+            (33.7547, -84.3636),  # Inman Park, near Hurt St
+            (33.7496, -84.3635),  # Reynoldstown / Memorial Dr / Bill Kennedy Way
         ],
     },
     {
+        # ~3 mi from Washington Park south through Adair Park to University Ave.
+        # Follows the old railroad corridor on the west side of the loop.
+        # Passes: Washington Park, Lee + White, Monday Night Garage, Adair Park.
         "name": "Westside Trail",
         "points": [
-            (33.7520, -84.4105),
-            (33.7470, -84.4090),
-            (33.7420, -84.4075),
-            (33.7360, -84.4050),
-            (33.7290, -84.4020),
-            (33.7230, -84.3995),
+            (33.7530, -84.4098),  # Northern end near Washington Park / RDA Blvd
+            (33.7480, -84.4105),  # Near Murphy Ave crossing
+            (33.7430, -84.4112),  # Westview area
+            (33.7375, -84.4118),  # Lee + White / Monday Night Garage complex
+            (33.7320, -84.4123),  # Adair Park
+            (33.7260, -84.4108),  # Near Allene Ave SW
+            (33.7205, -84.4085),  # University Ave terminus
         ],
     },
     {
+        # ~3 mi partial segment connecting Eastside and Westside trails through the south.
+        # Runs through Pittsburgh, Capitol View, D.H. Stanton Park area.
+        # Follows the old railroad bed southwest from Reynoldstown toward Pittsburgh.
         "name": "Southside Trail",
         "points": [
-            (33.7610, -84.3590),
-            (33.7560, -84.3550),
-            (33.7510, -84.3520),
-            (33.7460, -84.3500),
-            (33.7400, -84.3480),
+            (33.7496, -84.3635),  # Eastern junction — connects to Eastside Trail at Memorial Dr
+            (33.7470, -84.3720),  # Near Boulevard SE / D.H. Stanton Park
+            (33.7440, -84.3810),  # Near Pryor Rd / Capitol View area
+            (33.7410, -84.3890),  # Trail crossing at McDonough Blvd
+            (33.7385, -84.3960),  # Pittsburgh neighborhood
+            (33.7370, -84.4030),  # Near Langhorn St
+            (33.7375, -84.4118),  # Western junction — connects to Westside Trail at Lee + White
         ],
     },
     {
+        # ~4 mi from Piedmont Park northeast toward Lindbergh / Armour area.
+        # Follows the old railroad corridor through Piedmont Heights, past Ansley Mall.
         "name": "Northeast Trail",
         "points": [
-            (33.7927, -84.3695),
-            (33.7970, -84.3700),
-            (33.8020, -84.3700),
-            (33.8070, -84.3690),
-            (33.8120, -84.3680),
+            (33.7895, -84.3688),  # Southern junction — connects to Eastside Trail at Monroe Dr
+            (33.7935, -84.3695),  # Trail crossing at Virginia Ave / Amsterdam Walk
+            (33.7975, -84.3698),  # Trail near Ansley Mall area
+            (33.8020, -84.3693),  # Piedmont Heights / Clear Creek
+            (33.8070, -84.3688),  # Trail near Monroe Dr NE / Armour Dr approach
+            (33.8115, -84.3677),  # Near Lindbergh / Armour Dr area
+            (33.8165, -84.3665),  # Trail near Plaster Ave / Armour Yards
+            (33.8210, -84.3660),  # Northern extent near Lindbergh Center area
         ],
     },
     {
+        # Short built segments near Bankhead area.
         "name": "Northwest Trail",
         "points": [
-            (33.7730, -84.4140),
-            (33.7780, -84.4180),
-            (33.7830, -84.4200),
+            (33.7660, -84.4250),  # Near Hollowell Pkwy / Bankhead area
+            (33.7700, -84.4285),  # Trail heading northwest
+            (33.7745, -84.4310),  # Near Maddox Park area
         ],
     },
 ]
@@ -339,6 +358,11 @@ def backfill(
             update["beltline_segment"] = beltline["beltline_segment"]
             update["beltline_walk_minutes"] = beltline["beltline_walk_minutes"]
             stats["beltline"] += 1
+        else:
+            # Clear stale beltline tags from prior runs with incorrect coordinates
+            update["beltline_adjacent"] = False
+            update["beltline_segment"] = None
+            update["beltline_walk_minutes"] = None
 
         stats["scored"] += 1
 
