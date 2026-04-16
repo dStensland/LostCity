@@ -147,7 +147,7 @@ export function DetailLayout({
           : undefined
       }
       primaryVariant={actionConfig.primaryCTA?.variant}
-      primaryColor={accentColor}
+      primaryColor={actionConfig.primaryCTA?.color ?? accentColor}
       scrollThreshold={actionConfig.stickyBar.scrollThreshold}
       showShareButton
     />

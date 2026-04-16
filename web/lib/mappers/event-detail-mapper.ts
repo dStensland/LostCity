@@ -227,8 +227,13 @@ export function mapEventServerDataToViewData(
     recommendation_count: 0,
   }));
 
+  // Tier classification uses event.image_url specifically (not the
+  // series/venue fallback chain). An event without its own image should
+  // render the typographic treatment even if a venue fallback is available
+  // — that's the design intent. The resolved fallback still flows to the
+  // hero component as a backdrop, but it doesn't bump the tier.
   const heroTier = computeHeroTier(
-    resolvedImageUrl,
+    event.image_url,
     (event as { image_width?: number | null }).image_width ?? null,
     (event as { image_height?: number | null }).image_height ?? null,
     [],
