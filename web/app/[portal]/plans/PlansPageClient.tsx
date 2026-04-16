@@ -1,8 +1,10 @@
 "use client";
 
+import { useState } from "react";
 import { CalendarProvider } from "@/lib/calendar/CalendarProvider";
 import { PlansHeader } from "@/components/plans/PlansHeader";
 import { PlansAgenda } from "@/components/plans/PlansAgenda";
+import { MonthMinimap } from "@/components/plans/MonthMinimap";
 
 interface PlansPageClientProps {
   portalSlug: string;
@@ -13,6 +15,22 @@ export function PlansPageClient({
   portalSlug,
   isAuthenticated,
 }: PlansPageClientProps) {
+  const [view, setView] = useState<"agenda" | "month">("agenda");
+
+  const handleSelectDate = (date: Date) => {
+    setView("agenda");
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, "0");
+    const d = String(date.getDate()).padStart(2, "0");
+    const dateKey = `${y}-${m}-${d}`;
+    setTimeout(() => {
+      document.getElementById(`day-${dateKey}`)?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    }, 100);
+  };
+
   if (!isAuthenticated) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] px-4">
@@ -32,7 +50,12 @@ export function PlansPageClient({
   return (
     <CalendarProvider>
       <div className="max-w-2xl mx-auto px-4 py-6">
-        <PlansHeader portalSlug={portalSlug} />
+        <PlansHeader
+          portalSlug={portalSlug}
+          view={view}
+          onToggleView={() => setView(view === "agenda" ? "month" : "agenda")}
+        />
+        {view === "month" && <MonthMinimap onSelectDate={handleSelectDate} />}
         <PlansAgenda portalSlug={portalSlug} />
       </div>
     </CalendarProvider>
