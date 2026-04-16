@@ -13,6 +13,9 @@ interface QuickFactsCardProps {
   portalSlug: string;
   priceText: string | null;   // Pre-formatted (e.g., "$25 – $45" or "Free")
   agePolicy: string | null;   // e.g., "21+", "All Ages"
+  /** "card" = vertical stack for desktop rail (default).
+   *  "inline" = horizontal pill row for mobile below identity. */
+  variant?: "card" | "inline";
 }
 
 export function QuickFactsCard({
@@ -22,6 +25,7 @@ export function QuickFactsCard({
   portalSlug,
   priceText,
   agePolicy,
+  variant = "card",
 }: QuickFactsCardProps) {
   const facts: { icon: React.ReactNode; text: React.ReactNode }[] = [];
 
@@ -56,6 +60,19 @@ export function QuickFactsCard({
   }
 
   if (facts.length === 0) return null;
+
+  if (variant === "inline") {
+    return (
+      <div className="flex flex-wrap gap-x-4 gap-y-2 text-xs text-[var(--muted)]">
+        {facts.map((fact, i) => (
+          <div key={i} className="flex items-center gap-1.5">
+            <span className="flex-shrink-0 text-[var(--soft)]">{fact.icon}</span>
+            <span>{fact.text}</span>
+          </div>
+        ))}
+      </div>
+    );
+  }
 
   return (
     <div className="rounded-xl bg-[var(--night)] border border-[var(--twilight)]/40 p-3.5 flex flex-col gap-2.5">

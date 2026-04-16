@@ -171,6 +171,27 @@ export function DetailLayout({
       </>
     );
 
+    // Rail is hidden on mobile. Surface quickFacts inline between identity
+    // and first section so price/venue/age don't disappear on phones.
+    const elevatedContent = (
+      <>
+        {quickFacts && (
+          <div className="lg:hidden px-4 pt-1 pb-4">
+            <QuickFactsCard
+              date={quickFacts.date}
+              venueName={quickFacts.venueName}
+              venueSlug={quickFacts.venueSlug}
+              portalSlug={portalSlug}
+              priceText={quickFacts.priceText}
+              agePolicy={quickFacts.agePolicy}
+              variant="inline"
+            />
+          </div>
+        )}
+        {contentSections}
+      </>
+    );
+
     const elevatedHeroConfig = {
       ...heroConfig,
       // Inject back-navigation overlay for the elevated hero
@@ -184,7 +205,7 @@ export function DetailLayout({
           hero={<DetailHero {...elevatedHeroConfig} />}
           identity={identity}
           rail={rail}
-          content={contentSections}
+          content={elevatedContent}
           bottomBar={bottomBar}
         />
       </>
