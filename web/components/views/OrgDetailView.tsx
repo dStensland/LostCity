@@ -95,6 +95,9 @@ export default function OrgDetailView({
     );
   }
 
+  // NOTE: intentionally no shellVariant prop — orgs stay on the sidebar
+  // shell for now. Elevated shell is events-only in this landing; org
+  // elevation is not currently scoped.
   return (
     <DetailLayout
       heroConfig={heroConfig}

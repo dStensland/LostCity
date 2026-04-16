@@ -144,6 +144,9 @@ export default function PlaceDetailView({
     );
   }
 
+  // NOTE: intentionally no shellVariant prop — places stay on the sidebar
+  // shell for now. Elevated shell is events-only in this landing; place
+  // elevation is a tracked follow-up.
   return (
     <DetailLayout
       heroConfig={heroConfig}

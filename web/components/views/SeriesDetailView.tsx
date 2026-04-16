@@ -105,6 +105,9 @@ export default function SeriesDetailView({
     );
   }
 
+  // NOTE: intentionally no shellVariant prop — series stay on the sidebar
+  // shell for now. Elevated shell is events-only in this landing; series
+  // elevation is a tracked follow-up.
   return (
     <DetailLayout
       heroConfig={heroConfig}
