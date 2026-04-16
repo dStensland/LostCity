@@ -11,16 +11,14 @@ export function useInViewOnce<T extends HTMLElement = HTMLDivElement>(
   { rootMargin = "0px 0px -10% 0px", threshold = 0.15 }: Options = {},
 ) {
   const ref = useRef<T | null>(null);
-  const [inView, setInView] = useState(false);
+  // Lazy-init handles the legacy/SSR fallback where IntersectionObserver is
+  // unavailable — revealing immediately is the safer default. This avoids a
+  // synchronous setState in the effect body (flagged by react-hooks rules).
+  const [inView, setInView] = useState(() => typeof IntersectionObserver === "undefined");
 
   useEffect(() => {
     const node = ref.current;
     if (!node || inView) return;
-
-    if (typeof IntersectionObserver === "undefined") {
-      setInView(true);
-      return;
-    }
 
     const observer = new IntersectionObserver(
       (entries) => {
