@@ -86,10 +86,12 @@ export function hasConnections(data: EntityData): boolean {
   }
 }
 
-export function hasSocialData(data: EntityData): boolean {
-  // Social proof only works for events (needs eventId for attendance query).
-  // Place social proof is not yet implemented — don't over-promise.
-  return data.entityType === "event";
+export function hasSocialData(_data: EntityData): boolean {
+  // Social proof requires client-side async fetch — we can't know at trait-check
+  // time whether data exists. This causes orphaned section headers when the
+  // component fetches and finds nothing. Disabled until SocialProofSection
+  // renders its own empty state instead of returning null.
+  return false;
 }
 
 export function hasLocation(data: EntityData): boolean {
