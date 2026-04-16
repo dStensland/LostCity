@@ -5,7 +5,6 @@ import { ArrowLeft, ArrowRight } from "@phosphor-icons/react";
 import SmartImage from "@/components/SmartImage";
 import CategoryIcon from "@/components/CategoryIcon";
 import { getCategoryColor } from "@/lib/category-config";
-import { HeroOverlayNav } from "./HeroOverlayNav";
 import type { HeroConfig } from "@/lib/detail/types";
 
 type DetailHeroProps = HeroConfig;
@@ -212,9 +211,6 @@ function ExpandedHero({
         style={{ background: 'linear-gradient(to bottom, transparent, var(--void))' }}
       />
 
-      {/* Overlay nav */}
-      <HeroOverlayNav />
-
       {/* LIVE badge */}
       {isLive && (
         <div className="absolute top-14 left-4 flex items-center gap-1 bg-[var(--coral)] rounded px-2 py-[3px]">
@@ -278,9 +274,6 @@ function CompactHero({
         style={{ background: 'linear-gradient(to bottom, transparent, var(--void))' }}
       />
 
-      {/* Overlay nav */}
-      <HeroOverlayNav />
-
       {/* LIVE badge */}
       {isLive && (
         <div className="absolute top-14 left-4 flex items-center gap-1 bg-[var(--coral)] rounded px-2 py-[3px]">
@@ -319,8 +312,7 @@ function TypographicHero({
         style={{ background: 'linear-gradient(to bottom, transparent, var(--void))' }}
       />
 
-      {/* Overlay nav */}
-      <HeroOverlayNav />
+      {overlaySlot}
 
       {/* Content — staggered fade-up */}
       <div className="relative z-10 flex flex-col items-start gap-3 px-5 pb-6 pt-16">
