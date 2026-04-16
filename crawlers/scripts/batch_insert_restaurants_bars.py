@@ -1027,7 +1027,7 @@ VENUES_TO_CREATE = [
         "name": "Eclipse di Luna",
         "slug": "eclipse-di-luna",
         "address": "764 Miami Cir NE",
-        "neighborhood": "Virginia-Highland",
+        "neighborhood": "Cheshire Bridge",
         "city": "Atlanta",
         "state": "GA",
         "zip": "30324",
@@ -1036,7 +1036,7 @@ VENUES_TO_CREATE = [
         "place_type": "restaurant",
         "spot_type": "restaurant",
         "website": "https://www.eclipsediluna.com/",
-        "vibes": ["spanish", "tapas", "beltline"],
+        "vibes": ["spanish", "tapas"],
     },
     {
         "name": "Toast on Lenox",

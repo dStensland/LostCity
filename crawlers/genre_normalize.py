@@ -1076,7 +1076,6 @@ GENRE_NORMALIZATION: dict[str, str] = {
     "outdoor market": "market",
     "maker fair": "market",
     "craft fair": "market",
-    "beltline": "sightseeing",
     "scenic": "sightseeing",
     "kayak": "water",
     "paddle": "water",

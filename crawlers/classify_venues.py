@@ -6,6 +6,7 @@ Venue classification and cleanup script.
 3. Classifies untyped and 'venue' typed entries using rules + LLM
 """
 
+import logging
 import re
 import time
 import argparse
@@ -14,6 +15,8 @@ from dotenv import load_dotenv
 from db import get_client
 from config import get_config
 from llm_client import generate_text
+
+logger = logging.getLogger(__name__)
 
 load_dotenv()
 
@@ -92,7 +95,12 @@ NAME_TYPE_RULES = [
     (r'\b(Church|Chapel|Cathedral|Mosque|Synagogue|Temple)\b', 'church'),
     (r'\b(Library)\b', 'library'),
     (r'\b(Recreation Center|Rec Center|Community Center)\b', 'community_center'),
-    (r'\b(Park|Garden|Gardens|Nature Center|Botanical)\b', 'park'),
+    # Park-named bars/restaurants must match before the generic park rule.
+    # "Park Tavern", "Park Bar", "Park Grill", etc. are bars or restaurants,
+    # not parks, even though "Park" appears in the name.
+    (r'\bPark\s+(Tavern|Bar|Grill|Café|Cafe|Lounge|Pub|Bistro|Restaurant|Kitchen|Eatery|Cantina)\b', 'bar'),
+    # Generic park rule — excludes the venue-word cases handled above.
+    (r'\b(Park(?!\s+(?:Tavern|Bar|Grill|Café|Cafe|Lounge|Pub|Bistro|Restaurant|Kitchen|Eatery|Cantina))|Garden|Gardens|Nature Center|Botanical)\b', 'park'),
     # Education/Orgs
     (r'\b(University|College|School)\b', 'organization'),
     (r'\b(Foundation|Alliance|Coalition|Association|Society|Council|Running Club|Run Club)\b', 'organization'),
@@ -322,9 +330,12 @@ def run_cleanup(dry_run: bool = False, use_llm: bool = True):
                     if vid in results:
                         new_type = results[vid]
                         if new_type == "deactivate":
-                            print(f"    DEACTIVATE [{vid}] {v['name'][:50]}")
-                            if not dry_run:
-                                client.table("places").update({"is_active": False}).eq("id", vid).execute()
+                            logger.warning(
+                                "LLM suggested deactivating %s (id=%s) — skipping, requires manual review",
+                                v["name"][:50],
+                                vid,
+                            )
+                            print(f"    SKIP (manual review needed) [{vid}] {v['name'][:50]}")
                             stats["llm_deactivated"] += 1
                         else:
                             print(f"    CLASSIFY [{vid}] {v['name'][:50]} → {new_type}")

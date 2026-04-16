@@ -145,16 +145,9 @@ BELTLINE_SEGMENTS = [
             (33.8210, -84.3660),  # Northern extent near Lindbergh Center area
         ],
     },
-    {
-        # Short built segments near Bankhead area.
-        "name": "Northwest Trail",
-        "points": [
-            (33.7660, -84.4250),  # Near Hollowell Pkwy / Bankhead area
-            (33.7700, -84.4285),  # Trail heading northwest
-            (33.7745, -84.4310),  # Near Maddox Park area
-        ],
-    },
 ]
+# NOTE: Northwest Trail omitted — largely unbuilt/planned as of 2026.
+# Re-add when confirmed open: ~Hollowell Pkwy / Bankhead area toward Maddox Park.
 
 # Maximum walk distance to show MARTA info (miles)
 MARTA_MAX_MILES = 0.95  # ~15 min walk
