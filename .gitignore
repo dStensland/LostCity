@@ -147,3 +147,4 @@ artifacts/
 
 # Git worktrees
 .worktrees/
+.worktrees/
