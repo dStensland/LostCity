@@ -1,5 +1,9 @@
 "use client";
 
+import { CalendarProvider } from "@/lib/calendar/CalendarProvider";
+import { PlansHeader } from "@/components/plans/PlansHeader";
+import { PlansAgenda } from "@/components/plans/PlansAgenda";
+
 interface PlansPageClientProps {
   portalSlug: string;
   isAuthenticated: boolean;
@@ -26,11 +30,11 @@ export function PlansPageClient({
   }
 
   return (
-    <div className="max-w-2xl mx-auto px-4 py-6">
-      <h1 className="text-lg font-semibold text-[var(--cream)] mb-6">Plans</h1>
-      <p className="text-sm text-[var(--muted)]">
-        Your committed events, series subscriptions, and group plans will appear here.
-      </p>
-    </div>
+    <CalendarProvider>
+      <div className="max-w-2xl mx-auto px-4 py-6">
+        <PlansHeader portalSlug={portalSlug} />
+        <PlansAgenda portalSlug={portalSlug} />
+      </div>
+    </CalendarProvider>
   );
 }
