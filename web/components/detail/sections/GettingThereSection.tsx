@@ -106,7 +106,7 @@ export function GettingThereSection({ data }: SectionProps) {
 
   return (
     <div
-      className="w-full rounded-[12px] border border-[var(--twilight)] bg-[var(--night)] p-3"
+      className="w-full rounded-[12px] border border-[var(--twilight)] bg-[var(--night)] p-3 motion-hover-lift"
       style={{ display: "flex", flexDirection: "column", gap: "10px" }}
     >
       {address && (

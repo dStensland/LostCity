@@ -18,12 +18,12 @@ export function ConnectionsSection({ data, portalSlug }: SectionProps) {
   if (connections.length === 0) return null;
 
   return (
-    <div className="flex flex-col gap-[10px]">
+    <div className="flex flex-col gap-[10px] motion-stagger">
       {connections.map((row) => (
         <a
           key={row.id}
           href={row.href}
-          className={`flex items-center gap-3 rounded-lg p-3 transition-colors duration-300 ${
+          className={`flex items-center gap-3 rounded-lg p-3 transition-colors duration-300 motion-hover-lift motion-press ${
             row.accent === "gold"
               ? "hover:bg-[#FFD93D1A]"
               : row.accent === "coral"

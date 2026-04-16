@@ -115,10 +115,10 @@ export function DetailLayout({
           </p>
         </div>
       ) : (
-        resolvedSections.map((module) => {
+        resolvedSections.map((module, index) => {
           const Section = module.component;
           return (
-            <SectionWrapper key={module.id} module={module} data={data}>
+            <SectionWrapper key={module.id} module={module} data={data} index={index}>
               <Section
                 data={data}
                 portalSlug={portalSlug}

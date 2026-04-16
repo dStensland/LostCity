@@ -1212,10 +1212,19 @@ button:not(:disabled),
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-in: cubic-bezier(0.55, 0, 1, 0.45);
   --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
   --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
 
   --stagger-item: 40ms;
   --stagger-section: 200ms;
+
+  /* Motion Design System — detail page polish */
+  --motion-instant: 100ms;
+  --motion-fast: 200ms;
+  --motion-slow: 400ms;
+  --motion-dramatic: 600ms;
+  --motion-shift-sm: 4px;
+  --motion-shift-md: 8px;
 }
 
 /* ============================================
@@ -2949,6 +2958,62 @@ html {
   100% { transform: translate(0, 0); }
 }
 
+/* ============================================
+   MOTION UTILITIES — detail page system
+   ============================================ */
+
+@keyframes motion-fadeUp {
+  from { opacity: 0; transform: translateY(var(--motion-shift-md, 8px)); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes motion-fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.motion-fade-up {
+  animation: motion-fadeUp var(--motion-slow, 400ms) var(--ease-out) both;
+}
+
+.motion-fade-in {
+  animation: motion-fadeIn 300ms var(--ease-out) both;
+}
+
+.motion-hover-lift {
+  transition: transform var(--motion-fast, 200ms) var(--ease-out),
+              box-shadow var(--motion-fast, 200ms) var(--ease-out);
+}
+.motion-hover-lift:hover {
+  transform: translateY(-4px);
+}
+
+.motion-hover-glow {
+  transition: box-shadow var(--motion-fast, 200ms) var(--ease-out),
+              transform var(--motion-fast, 200ms) var(--ease-out);
+}
+.motion-hover-glow:hover {
+  box-shadow: 0 0 24px rgba(255, 107, 122, 0.25);
+  transform: translateY(-1px);
+}
+
+.motion-press:active {
+  transform: scale(0.97);
+  transition: transform 100ms ease-in;
+}
+
+.motion-stagger > * {
+  animation: motion-fadeUp var(--motion-slow, 400ms) var(--ease-out) both;
+}
+.motion-stagger > *:nth-child(1) { animation-delay: 0ms; }
+.motion-stagger > *:nth-child(2) { animation-delay: 60ms; }
+.motion-stagger > *:nth-child(3) { animation-delay: 120ms; }
+.motion-stagger > *:nth-child(4) { animation-delay: 180ms; }
+.motion-stagger > *:nth-child(5) { animation-delay: 240ms; }
+.motion-stagger > *:nth-child(6) { animation-delay: 300ms; }
+.motion-stagger > *:nth-child(7) { animation-delay: 360ms; }
+.motion-stagger > *:nth-child(n+8) { animation-delay: 420ms; }
+
 /* Reduced motion support */
 @media (prefers-reduced-motion: reduce) {
   :root {
@@ -2993,6 +3058,18 @@ html {
   .bookmark-animate,
   .pulse-live {
     animation: none !important;
+  }
+
+  .motion-fade-up,
+  .motion-fade-in,
+  .motion-hover-lift,
+  .motion-hover-glow,
+  .motion-press,
+  .motion-stagger > * {
+    animation: none !important;
+    transition: none !important;
+    transform: none !important;
+    opacity: 1 !important;
   }
 }
 

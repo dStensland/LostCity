@@ -110,7 +110,7 @@ export function DetailStickyBar({
     <>
       {ctaColorClass && <ScopedStyles css={ctaColorClass.css} />}
       <div
-        className={`fixed bottom-3 sm:bottom-5 left-0 right-0 z-50 px-4 transition-all duration-300 ${
+        className={`lg:hidden fixed bottom-3 sm:bottom-5 left-0 right-0 z-50 px-4 transition-all duration-300 ${
           isVisible ? "translate-y-0 opacity-100" : "translate-y-[calc(100%+2rem)] opacity-0"
         } ${ctaColorClass?.className ?? ""} ${className}`}
       >

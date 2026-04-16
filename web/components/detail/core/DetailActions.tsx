@@ -15,7 +15,7 @@ export function DetailActions({ config }: DetailActionsProps) {
   const actionsRowButtons = secondaryActions.slice(1);
 
   return (
-    <div className="space-y-0">
+    <div className="space-y-0 motion-fade-up" style={{ animationDelay: "200ms" }}>
       {/* CTA Row */}
       {primaryCTA && (
         <div className="flex items-center gap-2.5 px-4 pb-3">
@@ -24,9 +24,9 @@ export function DetailActions({ config }: DetailActionsProps) {
               href={primaryCTA.href}
               target="_blank"
               rel="noopener noreferrer"
-              className={`flex-1 flex items-center justify-center gap-2 h-[44px] rounded-[22px] text-sm font-semibold transition-colors duration-300 ${
+              className={`flex-1 flex items-center justify-center gap-2 h-[44px] rounded-[22px] text-sm font-semibold transition-colors duration-300 motion-hover-glow motion-press ${
                 primaryCTA.variant === "filled"
-                  ? "bg-[var(--coral)] text-white hover:opacity-90"
+                  ? "bg-[var(--coral)] text-white"
                   : "border border-[var(--twilight)] text-[var(--cream)] hover:bg-[var(--twilight)]/50"
               }`}
             >
@@ -36,9 +36,9 @@ export function DetailActions({ config }: DetailActionsProps) {
           ) : (
             <button
               onClick={primaryCTA.onClick}
-              className={`flex-1 flex items-center justify-center gap-2 h-[44px] rounded-[22px] text-sm font-semibold transition-colors duration-300 ${
+              className={`flex-1 flex items-center justify-center gap-2 h-[44px] rounded-[22px] text-sm font-semibold transition-colors duration-300 motion-hover-glow motion-press ${
                 primaryCTA.variant === "filled"
-                  ? "bg-[var(--coral)] text-white hover:opacity-90"
+                  ? "bg-[var(--coral)] text-white"
                   : "border border-[var(--twilight)] text-[var(--cream)] hover:bg-[var(--twilight)]/50"
               }`}
             >
@@ -51,7 +51,7 @@ export function DetailActions({ config }: DetailActionsProps) {
           {ctaRowSecondary && (
             <button
               onClick={ctaRowSecondary.onClick}
-              className="w-[44px] h-[44px] rounded-[22px] border border-[var(--twilight)] flex items-center justify-center text-[var(--soft)] hover:bg-[var(--twilight)]/50 transition-colors duration-300 flex-shrink-0"
+              className="w-[44px] h-[44px] rounded-[22px] border border-[var(--twilight)] flex items-center justify-center text-[var(--soft)] hover:bg-[var(--twilight)]/50 transition-colors duration-300 flex-shrink-0 motion-hover-lift motion-press"
               title={ctaRowSecondary.label}
             >
               {ctaRowSecondary.icon}
@@ -67,7 +67,7 @@ export function DetailActions({ config }: DetailActionsProps) {
             <button
               key={i}
               onClick={action.onClick}
-              className="w-10 h-10 rounded-xl border border-[var(--twilight)] flex items-center justify-center text-[var(--soft)] hover:text-[var(--cream)] hover:bg-[var(--twilight)]/50 transition-colors duration-300"
+              className="w-10 h-10 rounded-xl border border-[var(--twilight)] flex items-center justify-center text-[var(--soft)] hover:text-[var(--cream)] hover:bg-[var(--twilight)]/50 hover:scale-110 transition-all duration-200 motion-press"
               title={action.label}
             >
               {action.icon}

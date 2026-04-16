@@ -43,7 +43,7 @@ export function DetailHero({
   if (!currentImage) {
     return (
       <div
-        className={`relative ${aspectClass} ${mobileMaxHeight ?? ""} w-full overflow-hidden bg-gradient-to-b from-[var(--dusk)] to-[var(--night)]`}
+        className={`relative ${aspectClass} ${mobileMaxHeight ?? ""} w-full overflow-hidden bg-gradient-to-b from-[var(--dusk)] to-[var(--night)] motion-fade-in`}
       >
         <div
           className="absolute inset-0"
@@ -72,7 +72,7 @@ export function DetailHero({
 
   return (
     <div
-      className={`relative ${aspectClass} ${mobileMaxHeight ?? ""} w-full overflow-hidden bg-[var(--night)]`}
+      className={`relative ${aspectClass} ${mobileMaxHeight ?? ""} w-full overflow-hidden bg-[var(--night)] motion-fade-in`}
     >
       {/* Skeleton */}
       {!imgLoaded && (

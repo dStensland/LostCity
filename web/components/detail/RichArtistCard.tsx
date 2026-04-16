@@ -60,7 +60,7 @@ export function RichArtistCard({ artist }: RichArtistCardProps) {
 
   return (
     <div
-      className={`flex items-start gap-3 rounded-card border border-[var(--twilight)] bg-[var(--night)] ${containerPadding}`}
+      className={`flex items-start gap-3 rounded-card border border-[var(--twilight)] bg-[var(--night)] ${containerPadding} motion-hover-lift motion-press`}
     >
       {/* Circular photo */}
       <div className={photoClass}>
