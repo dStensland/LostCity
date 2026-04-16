@@ -227,6 +227,7 @@ function ExpandedHero({
 // ─── Compact Tier (~200px) ───────────────────────────────────────────────────
 
 function CompactHero({
+  imageUrl,
   accentColor,
   isLive,
   overlaySlot,
@@ -238,6 +239,23 @@ function CompactHero({
       className="relative w-full h-[200px] lg:h-[340px] overflow-hidden motion-fade-in"
       style={{ background: `linear-gradient(135deg, ${bandColor}40 0%, var(--dusk) 60%, var(--void) 100%)` }}
     >
+      {/* Blurred poster backdrop — fills hero with atmospheric color
+          pulled from the image itself. Portrait/square images that
+          don't qualify for ExpandedHero still get visual presence. */}
+      {imageUrl && (
+        <>
+          <SmartImage
+            src={imageUrl}
+            alt=""
+            fill
+            className="object-cover scale-110 blur-2xl opacity-60"
+            sizes="100vw"
+            priority
+          />
+          <div className="absolute inset-0 bg-[var(--void)]/40" />
+        </>
+      )}
+
       {/* Bottom gradient fade to --void */}
       <div
         className="absolute inset-x-0 bottom-0 h-[40%] pointer-events-none"
