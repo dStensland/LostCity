@@ -40,7 +40,7 @@ export function PlansHeader({
         </button>
         <Link
           href={`/${portalSlug}/plans/new`}
-          className="h-9 px-3 rounded-lg bg-[var(--coral)] text-[var(--night)] text-sm font-medium flex items-center gap-1.5 hover:brightness-110 transition-all duration-200"
+          className="h-9 px-3 rounded-lg bg-[var(--coral)] text-[var(--void)] text-sm font-medium flex items-center gap-1.5 hover:brightness-110 transition-all duration-200"
         >
           <Plus size={14} weight="bold" />
           New Plan

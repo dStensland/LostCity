@@ -32,7 +32,7 @@ export function PlansEmptyState({
         </p>
         <a
           href={exploreUrl}
-          className="h-10 rounded-xl bg-[var(--coral)] text-[var(--night)] text-sm font-medium flex items-center justify-center gap-2 px-5 hover:brightness-110 transition-all duration-200"
+          className="h-10 rounded-xl bg-[var(--coral)] text-[var(--void)] text-sm font-medium flex items-center justify-center gap-2 px-5 hover:brightness-110 transition-all duration-200"
         >
           <MagnifyingGlass size={16} weight="bold" />
           Explore what&apos;s happening
