@@ -1,16 +1,21 @@
 "use client";
 
 import { useMemo } from "react";
+import { parseISO, format } from "date-fns";
 import DetailShell from "@/components/detail/DetailShell";
+import { ElevatedShell } from "@/components/detail/ElevatedShell";
 import { DetailHero } from "./DetailHero";
 import { DetailIdentity } from "./DetailIdentity";
 import { DetailActions } from "./DetailActions";
+import { QuickFactsCard } from "./QuickFactsCard";
+import { HeroOverlayNav } from "./HeroOverlayNav";
 import { SectionWrapper } from "./SectionWrapper";
 import { DetailStickyBar } from "@/components/detail/DetailStickyBar";
 import NeonBackButton from "@/components/detail/NeonBackButton";
 import ScopedStyles from "@/components/ScopedStyles";
 import { createCssVarClass } from "@/lib/css-utils";
 import { sectionRegistry } from "@/components/detail/sections";
+import { formatEventTime, formatPriceRange } from "@/lib/detail/format";
 import type {
   HeroConfig,
   ActionConfig,
@@ -31,6 +36,7 @@ interface DetailLayoutProps {
   entityType: EntityType;
   onClose?: () => void;
   accentColorSecondary?: string;
+  shellVariant?: "sidebar" | "elevated";
 }
 
 export function DetailLayout({
@@ -44,6 +50,7 @@ export function DetailLayout({
   entityType,
   onClose,
   accentColorSecondary,
+  shellVariant = "sidebar",
 }: DetailLayoutProps) {
   // Resolve accent color CSS
   const accentClass = useMemo(
@@ -80,8 +87,13 @@ export function DetailLayout({
       }
     }
 
+    // Elevated shell: remove socialProof from content (to be shown in rail instead)
+    if (shellVariant === "elevated") {
+      return sections.filter((s) => s.id !== "socialProof");
+    }
+
     return sections;
-  }, [manifest, data, entityType]);
+  }, [manifest, data, entityType, shellVariant]);
 
   // Combine CSS for scoped styles (filter out null/empty)
   const scopedCss = useMemo(() => {
@@ -89,17 +101,8 @@ export function DetailLayout({
     return parts.length > 0 ? parts.join("\n") : null;
   }, [accentClass?.css, secondaryAccentClass?.css]);
 
-  // Build sidebar
-  const sidebar = (
-    <>
-      <DetailHero {...heroConfig} />
-      <DetailIdentity>{identity}</DetailIdentity>
-      <DetailActions config={actionConfig} accentColor={accentColor} />
-    </>
-  );
-
-  // Build content
-  const content = (
+  // Build shared content sections (used by both shell variants)
+  const contentSections = (
     <>
       {resolvedSections.length === 0 ? (
         // Empty state
@@ -132,14 +135,7 @@ export function DetailLayout({
     </>
   );
 
-  // Build top bar — NeonBackButton requires onClose; only render if provided
-  const topBar = onClose ? (
-    <div className="flex items-center justify-between w-full px-4 py-3">
-      <NeonBackButton onClose={onClose} floating={false} />
-    </div>
-  ) : undefined;
-
-  // Build bottom bar (sticky on mobile)
+  // Build bottom bar (sticky on mobile) — shared by both variants
   const bottomBar = actionConfig.stickyBar.enabled ? (
     <DetailStickyBar
       primaryAction={
@@ -158,13 +154,91 @@ export function DetailLayout({
     />
   ) : undefined;
 
+  // ── Elevated shell path ─────────────────────────────────────────────────────
+
+  if (shellVariant === "elevated") {
+    // Build quick facts from event data
+    let quickFactsDate = "";
+    let quickFactsVenueName: string | null = null;
+    let quickFactsVenueSlug: string | null = null;
+    let quickFactsPriceText: string | null = null;
+    let quickFactsAgePolicy: string | null = null;
+
+    if (data.entityType === "event") {
+      const event = data.payload.event;
+      const dateObj = parseISO(event.start_date);
+      const datePart =
+        event.end_date && event.end_date !== event.start_date
+          ? `${format(dateObj, "MMM d")} – ${format(parseISO(event.end_date), "MMM d")}`
+          : format(dateObj, "EEE, MMM d");
+      const timePart = formatEventTime(event.is_all_day, event.start_time, event.end_time);
+      quickFactsDate = timePart ? `${datePart} · ${timePart}` : datePart;
+      quickFactsVenueName = event.venue?.name ?? null;
+      quickFactsVenueSlug = event.venue?.slug ?? null;
+      quickFactsPriceText = formatPriceRange(event.is_free, event.price_min, event.price_max);
+      quickFactsAgePolicy = event.age_policy ?? null;
+    }
+
+    const rail = (
+      <>
+        <DetailActions config={actionConfig} accentColor={accentColor} variant="rail" />
+        <div className="mt-4">
+          <QuickFactsCard
+            date={quickFactsDate}
+            venueName={quickFactsVenueName}
+            venueSlug={quickFactsVenueSlug}
+            portalSlug={portalSlug}
+            priceText={quickFactsPriceText}
+            agePolicy={quickFactsAgePolicy}
+          />
+        </div>
+      </>
+    );
+
+    const elevatedHeroConfig = {
+      ...heroConfig,
+      // Inject back-navigation overlay for the elevated hero
+      overlaySlot: <HeroOverlayNav onClose={onClose} portalSlug={portalSlug} />,
+    };
+
+    return (
+      <>
+        <ScopedStyles css={scopedCss} />
+        <ElevatedShell
+          hero={<DetailHero {...elevatedHeroConfig} />}
+          identity={identity}
+          rail={rail}
+          content={contentSections}
+          bottomBar={bottomBar}
+        />
+      </>
+    );
+  }
+
+  // ── Sidebar shell path (default — unchanged) ────────────────────────────────
+
+  const sidebar = (
+    <>
+      <DetailHero {...heroConfig} />
+      <DetailIdentity>{identity}</DetailIdentity>
+      <DetailActions config={actionConfig} accentColor={accentColor} />
+    </>
+  );
+
+  // Build top bar — NeonBackButton requires onClose; only render if provided
+  const topBar = onClose ? (
+    <div className="flex items-center justify-between w-full px-4 py-3">
+      <NeonBackButton onClose={onClose} floating={false} />
+    </div>
+  ) : undefined;
+
   return (
     <>
       <ScopedStyles css={scopedCss} />
       <DetailShell
         topBar={topBar}
         sidebar={sidebar}
-        content={content}
+        content={contentSections}
         bottomBar={bottomBar}
         onClose={onClose}
       />
