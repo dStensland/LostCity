@@ -15,7 +15,7 @@ import { getCategoryAccentColor } from "@/lib/moments-utils";
 import { buildBreadcrumbSchema } from "@/lib/breadcrumb-schema";
 import { buildExploreUrl } from "@/lib/find-url";
 import { resolveDetailPageRequest } from "../../_surfaces/detail/resolve-detail-page-request";
-import FestivalDetailView from "@/components/views/FestivalDetailView";
+import FestivalDetailWrapper from "./FestivalDetailWrapper";
 import type { FestivalApiResponse } from "@/lib/detail/types";
 
 export const revalidate = 120;
@@ -242,7 +242,7 @@ export default async function PortalFestivalPage({ params }: Props) {
 
       <ScopedStylesServer css={festivalAccentClass?.css || ""} />
 
-      <FestivalDetailView
+      <FestivalDetailWrapper
         slug={slug}
         portalSlug={activePortalSlug}
         initialData={initialData}
