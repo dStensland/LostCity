@@ -25,7 +25,7 @@ export function HeroOverlayNav({ onClose, portalSlug }: HeroOverlayNavProps) {
     <button
       onClick={handleBack}
       aria-label="Go back"
-      className="absolute top-4 left-4 z-20 flex h-10 w-10 items-center justify-center rounded-full bg-black/40 backdrop-blur-sm text-white/70 transition-colors hover:bg-black/60 hover:text-white"
+      className="absolute top-4 left-4 z-20 flex h-10 w-10 items-center justify-center rounded-full bg-black/50 backdrop-blur-md border border-white/10 text-white/80 transition-colors hover:bg-black/70 hover:text-white"
     >
       <ArrowLeft size={20} weight="bold" />
     </button>
