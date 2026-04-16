@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import { BookmarkSimple, ShareNetwork, UserPlus } from "@phosphor-icons/react";
 import { DetailLayout } from "@/components/detail/core/DetailLayout";
+import { DetailLoadingSkeleton } from "@/components/detail/core/DetailLoadingSkeleton";
 import { PlaceIdentity } from "@/components/detail/identity/PlaceIdentity";
 import { getPlaceManifest } from "@/components/detail/manifests/place";
 import { useDetailFetch } from "@/lib/hooks/useDetailFetch";
@@ -137,11 +138,7 @@ export default function PlaceDetailView({
   );
 
   if (status === "loading" || !entityData || !spot) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="w-8 h-8 rounded-full border-2 border-[var(--coral)] border-t-transparent animate-spin" />
-      </div>
-    );
+    return <DetailLoadingSkeleton />;
   }
 
   // NOTE: intentionally no shellVariant prop — places stay on the sidebar

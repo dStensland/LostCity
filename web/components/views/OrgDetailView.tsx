@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import { ShareNetwork, UserPlus } from "@phosphor-icons/react";
 import { DetailLayout } from "@/components/detail/core/DetailLayout";
+import { DetailLoadingSkeleton } from "@/components/detail/core/DetailLoadingSkeleton";
 import { OrgIdentity } from "@/components/detail/identity/OrgIdentity";
 import { orgManifest } from "@/components/detail/manifests/org";
 import { useDetailData } from "@/lib/detail/use-detail-data";
@@ -88,11 +89,7 @@ export default function OrgDetailView({
   );
 
   if (status === "loading" || !entityData || !organization) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="w-8 h-8 rounded-full border-2 border-[var(--coral)] border-t-transparent animate-spin" />
-      </div>
-    );
+    return <DetailLoadingSkeleton />;
   }
 
   // NOTE: intentionally no shellVariant prop — orgs stay on the sidebar

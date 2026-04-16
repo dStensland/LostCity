@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import { differenceInCalendarDays, parseISO } from "date-fns";
 import { Ticket, ShareNetwork, BookmarkSimple } from "@phosphor-icons/react";
 import { DetailLayout } from "@/components/detail/core/DetailLayout";
+import { DetailLoadingSkeleton } from "@/components/detail/core/DetailLoadingSkeleton";
 import { FestivalIdentity } from "@/components/detail/identity/FestivalIdentity";
 import { festivalManifest } from "@/components/detail/manifests/festival";
 import { useDetailData } from "@/lib/detail/use-detail-data";
@@ -123,11 +124,7 @@ export default function FestivalDetailView({
   );
 
   if (status === "loading" || !entityData || !festival) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="w-8 h-8 rounded-full border-2 border-[var(--coral)] border-t-transparent animate-spin" />
-      </div>
-    );
+    return <DetailLoadingSkeleton />;
   }
 
   // NOTE: intentionally no shellVariant prop — festivals stay on the sidebar

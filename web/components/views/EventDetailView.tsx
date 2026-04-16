@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import { parseISO, format } from "date-fns";
 import { BookmarkSimple, CalendarPlus, HandWaving, ShareNetwork, Ticket, UserPlus } from "@phosphor-icons/react";
 import { DetailLayout } from "@/components/detail/core/DetailLayout";
+import { DetailLoadingSkeleton } from "@/components/detail/core/DetailLoadingSkeleton";
 import { EventIdentity } from "@/components/detail/identity/EventIdentity";
 import { eventManifest } from "@/components/detail/manifests/event";
 import { useDetailData } from "@/lib/detail/use-detail-data";
@@ -151,11 +152,7 @@ export default function EventDetailView({
   );
 
   if (status === "loading" || !entityData || !event) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="w-8 h-8 rounded-full border-2 border-[var(--coral)] border-t-transparent animate-spin" />
-      </div>
-    );
+    return <DetailLoadingSkeleton />;
   }
 
   return (
