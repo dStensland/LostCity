@@ -5,7 +5,7 @@ import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-lim
 import { logger } from "@/lib/logger";
 
 type RouteContext = {
-  params: Promise<{ id: string }>;
+  params: Promise<{ slug: string }>;
 };
 
 const SUPPORTED_SERIES_TYPES = ["recurring_show", "class_series"] as const;
@@ -19,7 +19,7 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.read, getClientIdentifier(request));
   if (rateLimitResult) return rateLimitResult;
 
-  const { id: seriesId } = await params;
+  const { slug: seriesId } = await params;
 
   const supabase = await createClient();
   const {
@@ -59,7 +59,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write, getClientIdentifier(request));
   if (rateLimitResult) return rateLimitResult;
 
-  const { id: seriesId } = await params;
+  const { slug: seriesId } = await params;
 
   const supabase = await createClient();
   const {
@@ -186,7 +186,7 @@ export async function DELETE(request: NextRequest, { params }: RouteContext) {
   const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write, getClientIdentifier(request));
   if (rateLimitResult) return rateLimitResult;
 
-  const { id: seriesId } = await params;
+  const { slug: seriesId } = await params;
 
   const supabase = await createClient();
   const {
