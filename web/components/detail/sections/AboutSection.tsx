@@ -1,6 +1,20 @@
 import LinkifyText from "@/components/LinkifyText";
 import type { SectionProps } from "@/lib/detail/types";
 
+// Crawler/template placeholder patterns that leaked into events.description.
+// Guard is defensive — the crawler-side fix is the primary remediation.
+const PLACEHOLDER_PATTERNS = [
+  /^overall description of/i,
+  /^lorem ipsum/i,
+  /^description goes here/i,
+  /^\[placeholder\]/i,
+];
+
+function isPlaceholder(description: string): boolean {
+  const trimmed = description.trim();
+  return PLACEHOLDER_PATTERNS.some((pattern) => pattern.test(trimmed));
+}
+
 export function AboutSection({ data }: SectionProps) {
   let description: string | null = null;
 
@@ -22,7 +36,7 @@ export function AboutSection({ data }: SectionProps) {
       break;
   }
 
-  if (!description) return null;
+  if (!description || isPlaceholder(description)) return null;
 
   return (
     <div className="text-sm text-[var(--soft)] leading-relaxed">
