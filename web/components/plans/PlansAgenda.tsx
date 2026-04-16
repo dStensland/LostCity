@@ -1,12 +1,14 @@
 "use client";
 
 import { useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useCalendarEvents, useFriendCalendarEvents } from "@/lib/calendar/useCalendarData";
 import { useEventsByDate, useFriendEventsByDate, usePlansByDate } from "@/lib/calendar/useCalendarDerived";
 import { AgendaEntryRow } from "./AgendaEntryRow";
 import { FriendEntryRow } from "./FriendEntryRow";
 import { GapRow } from "./GapRow";
 import { PlanExpandableRow } from "./PlanExpandableRow";
+import { PlansEmptyState } from "./PlansEmptyState";
 
 interface PlansAgendaProps {
   portalSlug: string;
@@ -28,6 +30,16 @@ export function PlansAgenda({ portalSlug }: PlansAgendaProps) {
     );
   }, [calendarData]);
 
+  const { data: rsvpHistory } = useQuery({
+    queryKey: ["rsvp-history-check"],
+    queryFn: async () => {
+      const res = await fetch("/api/rsvp?check=ever_rsvped");
+      if (!res.ok) return { hasRsvped: false };
+      return res.json() as Promise<{ hasRsvped: boolean }>;
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
   // Generate 28 days starting from today
   const days = useMemo(() => {
     const today = new Date();
@@ -45,13 +57,7 @@ export function PlansAgenda({ portalSlug }: PlansAgendaProps) {
   }
 
   if (!hasAnyCommitments) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[40vh] px-4 text-center">
-        <p className="text-sm text-[var(--muted)]">
-          No plans yet. RSVP to events or subscribe to series to see them here.
-        </p>
-      </div>
-    );
+    return <PlansEmptyState portalSlug={portalSlug} hasEverRsvped={rsvpHistory?.hasRsvped ?? false} />;
   }
 
   return (
