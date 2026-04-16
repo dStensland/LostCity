@@ -61,6 +61,20 @@ export default function EventDetailView({
     [event?.category],
   );
 
+  // heroTier should be populated server-side by computeHeroTier. Default to
+  // 'compact' if missing so we don't silently fall back to LegacyHero — that
+  // would bypass the entire elevated shell for events with no image metadata.
+  const resolvedHeroTier = useMemo(() => {
+    if (data?.heroTier) return data.heroTier;
+    if (data && process.env.NODE_ENV !== "production") {
+      console.warn(
+        `[EventDetailView] heroTier missing for event ${eventId}; defaulting to 'compact'. ` +
+          `Check that computeHeroTier() ran server-side and image_width/image_height are populated.`,
+      );
+    }
+    return data ? ("compact" as const) : undefined;
+  }, [data, eventId]);
+
   const heroConfig = useMemo<HeroConfig>(() => ({
     imageUrl: event?.image_url ?? null,
     aspectClass: "aspect-video lg:aspect-[16/10]",
@@ -68,12 +82,12 @@ export default function EventDetailView({
     galleryEnabled: false,
     category: event?.category ?? null,
     isLive: event?.is_live ?? false,
-    tier: data?.heroTier,
+    tier: resolvedHeroTier,
     title: event?.title,
     metadataLine: event ? buildMetadataLine(event) : undefined,
     tags: [...(event?.genres ?? []), ...(event?.tags ?? [])].slice(0, 5),
     accentColor,
-  }), [event, data?.heroTier, accentColor]);
+  }), [event, resolvedHeroTier, accentColor]);
 
   const actionConfig = useMemo<ActionConfig>(() => {
     const ctaColor = event?.is_free ? "var(--neon-green)" : undefined;
@@ -108,11 +122,11 @@ export default function EventDetailView({
       ],
       stickyBar: { enabled: !!event?.ticket_url },
       posterUrl: event?.image_url ?? null,
-      heroTier: data?.heroTier,
+      heroTier: resolvedHeroTier,
     };
 
     return config;
-  }, [event, data?.heroTier]);
+  }, [event, resolvedHeroTier]);
 
   const quickFacts = useMemo<QuickFactsData | undefined>(() => {
     if (!event) return undefined;
@@ -148,7 +162,7 @@ export default function EventDetailView({
     <DetailLayout
       heroConfig={heroConfig}
       identity={
-        data?.heroTier !== "typographic" ? (
+        resolvedHeroTier !== "typographic" ? (
           <EventIdentity event={event} portalSlug={portalSlug} variant="elevated" />
         ) : null
       }
