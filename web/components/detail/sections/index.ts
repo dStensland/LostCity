@@ -14,7 +14,6 @@ import {
   hasDiningProfile,
   hasExhibitions,
   hasFeatures,
-  hasCoordinates,
   hasNearbyContent,
   hasPrograms,
   hasUpcomingEvents,
