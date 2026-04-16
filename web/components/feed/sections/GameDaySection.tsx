@@ -323,9 +323,9 @@ export default function GameDaySection({ portalSlug }: GameDaySectionProps) {
           ))}
         </div>
 
-        {/* Mobile scroll indicator */}
+        {/* Scroll indicator */}
         {totalCards > 1 && (
-          <div className="flex sm:hidden justify-center items-center gap-1.5 mt-3">
+          <div className="flex justify-center items-center gap-1.5 mt-3">
             {totalCards <= 7 ? (
               Array.from({ length: totalCards }).map((_, idx) => (
                 <button

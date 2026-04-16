@@ -165,7 +165,7 @@ export default function FestivalsSection({ portalSlug, portalId }: FestivalsSect
   if (displayItems.length === 0) return null;
 
   return (
-    <section>
+    <section className="pb-2 feed-section-enter">
       <SectionHeader portalSlug={portalSlug} />
 
       {/* Horizontal snap-scroll rail — no grid, no hero treatment */}

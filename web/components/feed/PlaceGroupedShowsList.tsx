@@ -221,9 +221,9 @@ export function PlaceGroupedShowsList({
         </div>
       )}
 
-      {/* Mobile scroll indicator — dots for small sets, counter for large */}
+      {/* Scroll indicator — dots for small sets, counter for large */}
       {totalCards > 1 && (
-        <div className="flex sm:hidden justify-center items-center gap-1.5 mt-3">
+        <div className="flex justify-center items-center gap-1.5 mt-3">
           {totalCards <= MAX_DOTS ? (
             Array.from({ length: totalCards }).map((_, idx) => (
               <button

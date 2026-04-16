@@ -230,11 +230,6 @@ export function TodayInAtlantaSection({ portalSlug }: TodayInAtlantaSectionProps
             >
               <CatIcon weight="duotone" className="w-3 h-3" style={isActive ? { color: tab.color } : undefined} />
               {tab.label}
-              <span
-                className="text-2xs opacity-60"
-              >
-                {tab.posts.length}
-              </span>
             </button>
           );
         })}

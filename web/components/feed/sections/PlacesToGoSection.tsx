@@ -59,7 +59,7 @@ export function PlacesToGoSection({ portalSlug }: PlacesToGoSectionProps) {
   }
 
   return (
-    <section>
+    <section className="pb-2 feed-section-enter">
       <FeedSectionHeader
         title="Places to Go"
         priority="secondary"

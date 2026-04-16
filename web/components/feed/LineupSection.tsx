@@ -538,7 +538,7 @@ export default function LineupSection({
   if (!hasAnyContent) return null;
 
   return (
-    <section>
+    <section className="pb-2 feed-section-enter">
       {/* Section header */}
       <FeedSectionHeader
         title={sectionTitle}

@@ -558,6 +558,13 @@ _IMAGE_SKIP_PATTERNS = (
     "tracking",
     "badge",
     "button",
+    # Venue schedule/promotional graphics that are not event-specific.
+    # Pattern: masqueradeatlanta.com/wp-content/uploads/**/weeklyservice_*slider*.jpg
+    # These are weekly-schedule posters (e.g. "weeklyservice_0202slider-360x555.jpg")
+    # that appear on the Masquerade events listing page and can be incorrectly mapped
+    # to individual events via image_map text-matching. The compound token "weeklyservice"
+    # is specific enough to not false-positive on real event image paths.
+    "weeklyservice",
 )
 
 
