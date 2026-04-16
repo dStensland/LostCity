@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import React, { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useCalendarEvents, useFriendCalendarEvents } from "@/lib/calendar/useCalendarData";
 import { useEventsByDate, useFriendEventsByDate, usePlansByDate } from "@/lib/calendar/useCalendarDerived";
@@ -91,66 +91,88 @@ export function PlansAgenda({ portalSlug }: PlansAgendaProps) {
           ? `${day.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })} · Tonight`
           : day.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
 
+        // Running index for stagger animation within this day group
+        let entryIndex = 0;
+
         return (
           <div key={dateKey} id={`day-${dateKey}`}>
-            <div className="font-mono text-[10px] uppercase tracking-wider text-[var(--muted)]/60 font-semibold mt-4 mb-1.5 px-1">
+            <div className="font-mono text-[10px] uppercase tracking-wider text-[var(--muted)]/60 font-semibold mt-4 mb-1.5 px-1 sticky top-0 z-10 bg-[var(--void)] py-1.5">
               {dayLabel}
             </div>
             {!hasContent && (
-              <GapRow date={day} portalSlug={portalSlug} />
+              <StaggeredEntry index={entryIndex++}>
+                <GapRow date={day} portalSlug={portalSlug} />
+              </StaggeredEntry>
             )}
             {myPlans.map((plan) => (
-              <div key={`plan-${plan.id}`} className="mb-1">
-                <PlanExpandableRow
-                  plan={{
-                    id: plan.id,
-                    title: plan.title,
-                    plan_time: plan.plan_time ?? undefined,
-                    stops: [],
-                    participants: plan.participants?.map((p) => ({
-                      initials: p.user?.display_name?.slice(0, 1) ?? "?",
-                      color: "rgba(140,160,255,0.3)",
-                    })) ?? [],
-                  }}
-                  portalSlug={portalSlug}
-                />
-              </div>
+              <StaggeredEntry key={`plan-${plan.id}`} index={entryIndex++}>
+                <div className="mb-1">
+                  <PlanExpandableRow
+                    plan={{
+                      id: plan.id,
+                      title: plan.title,
+                      plan_time: plan.plan_time ?? undefined,
+                      stops: [],
+                      participants: plan.participants?.map((p) => ({
+                        initials: p.user?.display_name?.slice(0, 1) ?? "?",
+                        color: "rgba(140,160,255,0.3)",
+                      })) ?? [],
+                    }}
+                    portalSlug={portalSlug}
+                  />
+                </div>
+              </StaggeredEntry>
             ))}
             {myEvents.map((event) => (
-              <div key={`event-${event.id}`} className="mb-1">
-                <AgendaEntryRow
-                  event={{
-                    id: event.id,
-                    title: event.title,
-                    start_time: event.start_time ?? undefined,
-                    venue: event.venue ? { name: event.venue.name, slug: event.venue.slug ?? "" } : undefined,
-                  }}
-                  friendAvatars={sharedFriendMap.get(event.id)}
-                  portalSlug={portalSlug}
-                />
-              </div>
+              <StaggeredEntry key={`event-${event.id}`} index={entryIndex++}>
+                <div className="mb-1">
+                  <AgendaEntryRow
+                    event={{
+                      id: event.id,
+                      title: event.title,
+                      start_time: event.start_time ?? undefined,
+                      venue: event.venue ? { name: event.venue.name, slug: event.venue.slug ?? "" } : undefined,
+                    }}
+                    friendAvatars={sharedFriendMap.get(event.id)}
+                    portalSlug={portalSlug}
+                  />
+                </div>
+              </StaggeredEntry>
             ))}
             {friendOnlyEvents.map((fe) => (
-              <div key={`friend-${fe.id}-${fe.friend?.id}`} className="mb-1">
-                <FriendEntryRow
-                  event={{
-                    id: fe.id,
-                    title: fe.title,
-                    start_time: fe.start_time ?? undefined,
-                    venue: undefined,
-                  }}
-                  friend={{
-                    display_name: fe.friend?.display_name ?? "Friend",
-                    initials: fe.friend?.display_name?.slice(0, 1) ?? "?",
-                    avatar_url: fe.friend?.avatar_url ?? undefined,
-                  }}
-                  portalSlug={portalSlug}
-                />
-              </div>
+              <StaggeredEntry key={`friend-${fe.id}-${fe.friend?.id}`} index={entryIndex++}>
+                <div className="mb-1">
+                  <FriendEntryRow
+                    event={{
+                      id: fe.id,
+                      title: fe.title,
+                      start_time: fe.start_time ?? undefined,
+                      venue: undefined,
+                    }}
+                    friend={{
+                      display_name: fe.friend?.display_name ?? "Friend",
+                      initials: fe.friend?.display_name?.slice(0, 1) ?? "?",
+                      avatar_url: fe.friend?.avatar_url ?? undefined,
+                    }}
+                    portalSlug={portalSlug}
+                  />
+                </div>
+              </StaggeredEntry>
             ))}
           </div>
         );
       })}
+    </div>
+  );
+}
+
+function StaggeredEntry({ children, index }: { children: React.ReactNode; index: number }) {
+  return (
+    <div
+      className="animate-fade-slide-up"
+      style={{ animationDelay: `${index * 60}ms`, animationFillMode: "backwards" }}
+    >
+      {children}
     </div>
   );
 }

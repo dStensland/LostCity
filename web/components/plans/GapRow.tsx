@@ -26,7 +26,7 @@ export function GapRow({ date, portalSlug }: GapRowProps) {
       role="listitem"
       aria-label={`${dayLabel} ${dateParam} is open. Explore events.`}
     >
-      <div className="w-7 h-7 rounded-lg bg-[var(--coral)]/8 flex items-center justify-center flex-shrink-0">
+      <div className="w-7 h-7 rounded-lg bg-[var(--coral)]/8 flex items-center justify-center flex-shrink-0 animate-pulse-subtle">
         <Sparkle size={14} weight="duotone" className="text-[var(--coral)]/60" />
       </div>
       <div>

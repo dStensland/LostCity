@@ -30,7 +30,7 @@ export function PlanExpandableRow({ plan, portalSlug }: PlanExpandableRowProps) 
 
   return (
     <div
-      className="rounded-xl bg-[var(--night)] border border-[var(--twilight)] transition-colors duration-300"
+      className="rounded-xl bg-[var(--night)] border border-[var(--twilight)] transition-all duration-200 hover:-translate-y-px"
       role="listitem"
       aria-label={`Plan: ${plan.title}, ${plan.stops.length} stops`}
     >
@@ -73,7 +73,10 @@ export function PlanExpandableRow({ plan, portalSlug }: PlanExpandableRowProps) 
           )}
         </div>
       </div>
-      {expanded && isMultiStop && (
+      <div
+        className="overflow-hidden transition-all duration-200 ease-out"
+        style={{ maxHeight: expanded && isMultiStop ? `${plan.stops.length * 28 + 16}px` : "0px" }}
+      >
         <div className="px-3 pb-2.5 ml-[11px] border-t border-[var(--twilight)]/50">
           {plan.stops.map((stop, i) => (
             <div key={i} className="flex items-center gap-2 py-1 text-xs text-[var(--muted)]">
@@ -84,7 +87,7 @@ export function PlanExpandableRow({ plan, portalSlug }: PlanExpandableRowProps) 
             </div>
           ))}
         </div>
-      )}
+      </div>
     </div>
   );
 }

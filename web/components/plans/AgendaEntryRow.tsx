@@ -24,7 +24,7 @@ export function AgendaEntryRow({ event, friendAvatars, portalSlug }: AgendaEntry
   return (
     <a
       href={url}
-      className="flex items-start gap-2.5 px-3 py-2.5 rounded-xl bg-[var(--night)] border border-[var(--twilight)] transition-colors duration-300 hover:border-[var(--coral)]/20"
+      className="flex items-start gap-2.5 px-3 py-2.5 rounded-xl bg-[var(--night)] border border-[var(--twilight)] transition-all duration-200 hover:border-[var(--coral)]/20 hover:-translate-y-px"
       role="listitem"
       aria-label={`${event.title}, ${event.start_time ?? ""}, ${event.venue?.name ?? ""}`}
     >
