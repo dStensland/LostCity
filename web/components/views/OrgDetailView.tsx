@@ -27,7 +27,8 @@ const ORG_TYPE_COLORS: Record<string, string> = {
 interface OrgDetailViewProps {
   slug: string;
   portalSlug: string;
-  onClose: () => void;
+  onClose?: () => void;
+  initialData?: OrgApiResponse;
 }
 
 // ── Component ────────────────────────────────────────────────────────────────
@@ -36,11 +37,13 @@ export default function OrgDetailView({
   slug,
   portalSlug,
   onClose,
+  initialData,
 }: OrgDetailViewProps) {
   const { data, status } = useDetailData<OrgApiResponse>({
     entityType: "org",
     identifier: slug,
     portalSlug,
+    initialData,
   });
 
   const organization = data?.organization ?? null;

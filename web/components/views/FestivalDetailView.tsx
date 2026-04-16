@@ -14,8 +14,9 @@ import type { FestivalApiResponse, HeroConfig, ActionConfig, EntityData } from "
 interface FestivalDetailViewProps {
   slug: string;
   portalSlug: string;
-  onClose: () => void;
+  onClose?: () => void;
   showOpenPageLink?: boolean;
+  initialData?: FestivalApiResponse;
 }
 
 // ── Temporal helpers ─────────────────────────────────────────────────────────
@@ -71,11 +72,13 @@ export default function FestivalDetailView({
   slug,
   portalSlug,
   onClose,
+  initialData,
 }: FestivalDetailViewProps) {
   const { data, status } = useDetailData<FestivalApiResponse>({
     entityType: "festival",
     identifier: slug,
     portalSlug,
+    initialData,
   });
 
   const festival = data?.festival ?? null;

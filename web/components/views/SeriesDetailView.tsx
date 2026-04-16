@@ -14,7 +14,8 @@ import type { SeriesApiResponse, HeroConfig, ActionConfig, EntityData } from "@/
 interface SeriesDetailViewProps {
   slug: string;
   portalSlug: string;
-  onClose: () => void;
+  onClose?: () => void;
+  initialData?: SeriesApiResponse;
 }
 
 // ── Component ────────────────────────────────────────────────────────────────
@@ -23,11 +24,13 @@ export default function SeriesDetailView({
   slug,
   portalSlug,
   onClose,
+  initialData,
 }: SeriesDetailViewProps) {
   const { data, status } = useDetailData<SeriesApiResponse>({
     entityType: "series",
     identifier: slug,
     portalSlug,
+    initialData,
   });
 
   const series = data?.series ?? null;
