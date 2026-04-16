@@ -17,11 +17,16 @@ function formatDateDisplay(startDate: string, endDate: string | null): string {
   return format(dateObj, "EEE, MMM d");
 }
 
+function formatDateShort(startDate: string): string {
+  return format(parseISO(startDate), "MMM d").toUpperCase();
+}
+
 // ── Props ─────────────────────────────────────────────────────────────────────
 
 interface EventIdentityProps {
   event: EventData;
   portalSlug: string;
+  variant?: "sidebar" | "elevated";
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -29,6 +34,7 @@ interface EventIdentityProps {
 export const EventIdentity = memo(function EventIdentity({
   event,
   portalSlug,
+  variant = "sidebar",
 }: EventIdentityProps) {
   const dateDisplay = formatDateDisplay(event.start_date, event.end_date);
   const timeDisplay = formatEventTime(event.is_all_day, event.start_time, event.end_time);
@@ -43,6 +49,52 @@ export const EventIdentity = memo(function EventIdentity({
     : null;
 
   const dateLabel = [dateDisplay, timeDisplay].filter(Boolean).join(" · ");
+
+  // ── Elevated variant ────────────────────────────────────────────────────────
+
+  if (variant === "elevated") {
+    const metaParts: string[] = [];
+    if (event.start_date) metaParts.push(formatDateShort(event.start_date));
+    if (event.venue?.name) metaParts.push(event.venue.name.toUpperCase());
+    const metadataLine = metaParts.join(" · ");
+
+    const pills = [
+      ...(event.genres ?? []),
+      ...(event.tags ?? []),
+    ].slice(0, 5);
+
+    return (
+      <div className="flex flex-col gap-2">
+        {/* Title */}
+        <h1 className="text-2xl lg:text-3xl font-bold text-[var(--cream)] leading-tight">
+          {event.title}
+        </h1>
+
+        {/* Single metadata line — no icons */}
+        {metadataLine && (
+          <p className="font-mono text-xs uppercase tracking-[0.14em] text-[var(--muted)]">
+            {metadataLine}
+          </p>
+        )}
+
+        {/* Genre/tag pills */}
+        {pills.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 mt-0.5">
+            {pills.map((pill) => (
+              <span
+                key={pill}
+                className="px-2 py-0.5 rounded-full bg-[var(--twilight)] font-mono text-xs text-[var(--muted)] border border-[var(--twilight)]"
+              >
+                {pill}
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // ── Sidebar variant (default — preserve exactly) ────────────────────────────
 
   return (
     <div className="flex flex-col gap-2">
