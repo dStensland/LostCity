@@ -3014,11 +3014,14 @@ html {
 .motion-stagger > *:nth-child(7) { animation-delay: 360ms; }
 .motion-stagger > *:nth-child(n+8) { animation-delay: 420ms; }
 
-/* CTA pulse glow — single-fire attention draw on page load */
+/* CTA pulse glow — single-fire attention draw on page load.
+ * Color is driven by --cta-pulse-color (set per-element by the CTA);
+ * falls back to coral when unset. color-mix() gives us alpha without
+ * needing rgb() triplets. */
 @keyframes cta-pulse-glow {
-  0% { box-shadow: 0 0 0 0 rgba(232, 93, 74, 0); }
-  50% { box-shadow: 0 0 20px 4px rgba(232, 93, 74, 0.15); }
-  100% { box-shadow: 0 0 0 0 rgba(232, 93, 74, 0); }
+  0% { box-shadow: 0 0 0 0 transparent; }
+  50% { box-shadow: 0 0 20px 4px color-mix(in oklab, var(--cta-pulse-color, var(--coral)) 30%, transparent); }
+  100% { box-shadow: 0 0 0 0 transparent; }
 }
 
 .cta-pulse-glow {

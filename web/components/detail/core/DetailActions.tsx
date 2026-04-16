@@ -53,8 +53,11 @@ export function DetailActions({
                 }`}
                 style={
                   primaryCTA.variant === "filled"
-                    ? { backgroundColor: primaryCTA.color ?? "var(--coral)" }
-                    : undefined
+                    ? {
+                        backgroundColor: primaryCTA.color ?? "var(--coral)",
+                        ["--cta-pulse-color" as string]: primaryCTA.color ?? "var(--coral)",
+                      }
+                    : { ["--cta-pulse-color" as string]: primaryCTA.color ?? "var(--coral)" }
                 }
               >
                 {primaryCTA.icon}
@@ -70,8 +73,11 @@ export function DetailActions({
                 }`}
                 style={
                   primaryCTA.variant === "filled"
-                    ? { backgroundColor: primaryCTA.color ?? "var(--coral)" }
-                    : undefined
+                    ? {
+                        backgroundColor: primaryCTA.color ?? "var(--coral)",
+                        ["--cta-pulse-color" as string]: primaryCTA.color ?? "var(--coral)",
+                      }
+                    : { ["--cta-pulse-color" as string]: primaryCTA.color ?? "var(--coral)" }
                 }
               >
                 {primaryCTA.icon}
