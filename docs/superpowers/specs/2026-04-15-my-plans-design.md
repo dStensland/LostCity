@@ -19,7 +19,7 @@
 | Plan rendering | Single row, expandable | Multi-stop plans collapsed by default; 1-stop plans render flat |
 | Friends overlay | Avatar-stack shared events, dimmer standalone rows | Dedup on shared; friend-only rows at 70% opacity below yours |
 | Navigation | 4th top tab: Discover / Explore / Plans / People | Funnel ordering: discover → explore → commit → connect |
-| Empty state | Seeded suggestions from feed | Ghost rows with real events teach the surface shape |
+| Empty state | Honest first-session, sparse-week suggestions | First visit: CTA to Explore. After first RSVP: ghost rows for thin weeks |
 | /saved page | Simplified to bookmarks only | Strip RSVPs and Invites tabs; flat stash, not a planning surface |
 
 ---
