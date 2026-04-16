@@ -1,6 +1,9 @@
 "use client";
 
 import React, { useMemo } from "react";
+
+// --vibe (#A78BFA) at 0.3 opacity — maps to the vibe design token
+const VIBE_AVATAR_BG = "rgba(167,139,250,0.3)";
 import { useQuery } from "@tanstack/react-query";
 import { useCalendarEvents, useFriendCalendarEvents } from "@/lib/calendar/useCalendarData";
 import { useEventsByDate, useFriendEventsByDate, usePlansByDate } from "@/lib/calendar/useCalendarDerived";
@@ -79,7 +82,7 @@ export function PlansAgenda({ portalSlug }: PlansAgendaProps) {
             const existing = sharedFriendMap.get(fe.id) ?? [];
             existing.push({
               initials: fe.friend?.display_name?.slice(0, 1) ?? "?",
-              color: "rgba(140,160,255,0.3)",
+              color: VIBE_AVATAR_BG,
             });
             sharedFriendMap.set(fe.id, existing);
           }
@@ -96,7 +99,7 @@ export function PlansAgenda({ portalSlug }: PlansAgendaProps) {
 
         return (
           <div key={dateKey} id={`day-${dateKey}`}>
-            <div className="font-mono text-[10px] uppercase tracking-wider text-[var(--muted)]/60 font-semibold mt-4 mb-1.5 px-1 sticky top-0 z-10 bg-[var(--void)] py-1.5">
+            <div className="font-mono text-2xs uppercase tracking-wider text-[var(--muted)]/60 font-semibold mt-4 mb-1.5 px-1 sticky top-0 z-10 bg-[var(--void)] py-1.5">
               {dayLabel}
             </div>
             {!hasContent && (
@@ -112,10 +115,11 @@ export function PlansAgenda({ portalSlug }: PlansAgendaProps) {
                       id: plan.id,
                       title: plan.title,
                       plan_time: plan.plan_time ?? undefined,
-                      stops: [],
+                      // CalendarPlan doesn't include items — plan detail requires separate fetch
+                    stops: [],
                       participants: plan.participants?.map((p) => ({
                         initials: p.user?.display_name?.slice(0, 1) ?? "?",
-                        color: "rgba(140,160,255,0.3)",
+                        color: VIBE_AVATAR_BG,
                       })) ?? [],
                     }}
                     portalSlug={portalSlug}

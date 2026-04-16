@@ -1,6 +1,7 @@
 "use client";
 
 import { buildEventUrl } from "@/lib/entity-urls";
+import { formatTime } from "./utils";
 
 interface AgendaEntryRowProps {
   event: {
@@ -40,7 +41,7 @@ export function AgendaEntryRow({ event, friendAvatars, portalSlug }: AgendaEntry
       </div>
       <div className="flex items-center gap-1.5 flex-shrink-0">
         {isSeriesEntry && (
-          <span className="text-[9px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded bg-[var(--coral)]/10 text-[var(--coral)]/80">
+          <span className="text-2xs font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded bg-[var(--coral)]/10 text-[var(--coral)]/80">
             {frequencyLabel}
           </span>
         )}
@@ -49,7 +50,7 @@ export function AgendaEntryRow({ event, friendAvatars, portalSlug }: AgendaEntry
             {friendAvatars.slice(0, 3).map((a, i) => (
               <div
                 key={i}
-                className="w-5 h-5 rounded-full border-2 border-[var(--night)] flex items-center justify-center text-[9px] font-semibold text-[var(--cream)]/80"
+                className="w-5 h-5 rounded-full border-2 border-[var(--night)] flex items-center justify-center text-2xs font-semibold text-[var(--cream)]/80"
                 style={{ backgroundColor: a.color }}
               >
                 {a.initials}
@@ -62,10 +63,3 @@ export function AgendaEntryRow({ event, friendAvatars, portalSlug }: AgendaEntry
   );
 }
 
-function formatTime(time: string): string {
-  const [h, m] = time.split(":");
-  const hour = parseInt(h, 10);
-  const ampm = hour >= 12 ? "PM" : "AM";
-  const display = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour;
-  return `${display}:${m} ${ampm}`;
-}

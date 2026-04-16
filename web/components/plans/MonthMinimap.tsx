@@ -74,7 +74,7 @@ export function MonthMinimap({ onSelectDate }: MonthMinimapProps) {
       </div>
       <div className="grid grid-cols-7 gap-0.5 text-center">
         {["S", "M", "T", "W", "T", "F", "S"].map((d, i) => (
-          <div key={i} className="text-[10px] text-[var(--muted)]/40 font-mono py-1">
+          <div key={i} className="text-2xs text-[var(--muted)]/40 font-mono py-1">
             {d}
           </div>
         ))}

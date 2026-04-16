@@ -45,7 +45,7 @@ export function MiniDayCell({
               />
             ))
           ) : (
-            <span className="text-[8px] text-[var(--cream)]/60">{commitmentCount}</span>
+            <span className="text-2xs text-[var(--cream)]/60">{commitmentCount}</span>
           )}
         </div>
       )}
