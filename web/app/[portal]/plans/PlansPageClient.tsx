@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { CalendarProvider } from "@/lib/calendar/CalendarProvider";
 import { PlansHeader } from "@/components/plans/PlansHeader";
 import { PlansAgenda } from "@/components/plans/PlansAgenda";
@@ -37,12 +38,12 @@ export function PlansPageClient({
         <p className="text-base font-semibold text-[var(--cream)]">
           Sign in to see your plans
         </p>
-        <a
+        <Link
           href="/auth/signin"
           className="mt-4 text-sm text-[var(--coral)] hover:underline"
         >
           Sign in →
-        </a>
+        </Link>
       </div>
     );
   }
