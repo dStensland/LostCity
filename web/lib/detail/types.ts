@@ -326,14 +326,19 @@ export interface SectionProps {
 
 export interface HeroConfig {
   imageUrl: string | null;
-  aspectClass: string;
-  fallbackMode: "category-icon" | "type-icon" | "logo" | "banner";
+  tier?: HeroTier;                   // when set, uses tier-based rendering
+  aspectClass?: string;              // kept for sidebar shell backward compat
+  fallbackMode?: "category-icon" | "type-icon" | "logo" | "banner";
   galleryEnabled: boolean;
   galleryUrls?: string[];
   category?: string | null;
   isLive?: boolean;
   overlaySlot?: React.ReactNode;
-  mobileMaxHeight?: string; // e.g., "max-h-[280px]" for film posters
+  mobileMaxHeight?: string;          // e.g., "max-h-[280px]" for film posters
+  title?: string;                    // for typographic tier
+  metadataLine?: string;             // for typographic tier (e.g., "APR 18 · TERMINAL WEST")
+  tags?: string[];                   // for typographic tier
+  accentColor?: string;              // for tier gradient coloring
 }
 
 export interface ActionButton {
