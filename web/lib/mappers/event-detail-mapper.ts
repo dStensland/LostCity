@@ -4,6 +4,7 @@ import type { Event, EventWithProducer } from "@/lib/supabase";
 import { getDisplayParticipants } from "@/lib/artists-utils";
 import type { EventArtist } from "@/lib/artists-utils";
 import { buildDisplayDescription } from "@/lib/event-description";
+import { logger } from "@/lib/logger";
 import {
   suppressEventImagesIfVenueFlagged,
 } from "@/lib/image-quality-suppression";
@@ -226,14 +227,29 @@ export function mapEventServerDataToViewData(
     recommendation_count: 0,
   }));
 
+  const heroTier = computeHeroTier(
+    resolvedImageUrl,
+    (event as { image_width?: number | null }).image_width ?? null,
+    (event as { image_height?: number | null }).image_height ?? null,
+    [],
+  );
+
+  // Tier-distribution telemetry — catch silent fall-through to any one
+  // tier after a flag flip. Keep at info so it's noisy enough to sample.
+  logger.info(`hero tier resolved: ${heroTier}`, {
+    component: "event-detail-mapper",
+    eventId: event.id,
+    heroTier,
+    hasImage: !!resolvedImageUrl,
+    hasImageDimensions: !!(
+      (event as { image_width?: number | null }).image_width &&
+      (event as { image_height?: number | null }).image_height
+    ),
+  });
+
   return {
     event: mappedEvent,
-    heroTier: computeHeroTier(
-      resolvedImageUrl,
-      (event as { image_width?: number | null }).image_width ?? null,
-      (event as { image_height?: number | null }).image_height ?? null,
-      [],
-    ),
+    heroTier,
     eventArtists: displayParticipants,
     venueEvents: mappedVenueEvents,
     nearbyEvents: mappedNearbyEvents,
