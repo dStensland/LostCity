@@ -1,8 +1,19 @@
 # Shared Architecture Context
 
-**For all LostCity agents.** This file captures the load-bearing architectural realities every agent should know before starting work. Read this in addition to `.claude/north-star.md` and the relevant `CLAUDE.md` files.
+**For all LostCity agents.** This file captures the load-bearing architectural realities every agent should know before starting work.
 
-**Last refreshed:** 2026-04-14
+## Required reading order
+
+Before doing anything:
+
+1. **`docs/quality-bar.md`** — The elite-quality standards every piece of work must meet. Visual, motion, data, crawler, browser, process, and strategic standards synthesized into one living doc. If your output doesn't clear this bar, it isn't done.
+2. **`.claude/north-star.md`** — Mission, bets, decision filters, anti-patterns.
+3. **This file** — Architecture, entity types, canonical patterns, transitional state.
+4. **The relevant `CLAUDE.md`** — `web/`, `crawlers/`, or `database/` per your task domain.
+
+A gate failure (missing spec section, critical `/design-handoff verify` diff, browser memory overrun, crawler enrichment workaround) means the pipeline caught something before users did. Respect the gate, don't route around it.
+
+**Last refreshed:** 2026-04-16
 
 ## First-class entity types
 
@@ -29,6 +40,7 @@ The platform models four first-class nouns. All agent work should respect these 
 
 ## Where to look
 
+- **Quality standards:** `docs/quality-bar.md` (always check before starting work — elite-quality bar for every surface)
 - **Mission and priorities:** `.claude/north-star.md` (always check before starting work)
 - **Active execution status:** `DEV_PLAN.md`
 - **Strategic principles:** `STRATEGIC_PRINCIPLES.md`
