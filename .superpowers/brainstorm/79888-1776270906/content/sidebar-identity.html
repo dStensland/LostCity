@@ -1,0 +1,188 @@
+<h2>Sidebar Identity Zones</h2>
+<p class="subtitle">Each entity type owns its identity zone — the sidebar content between hero and actions. This is where types genuinely differ.</p>
+
+<div class="section">
+  <h3>Shared Sidebar Structure</h3>
+  <div style="max-width: 680px; margin: 0 auto; font-family: 'SF Mono', monospace; font-size: 12px;">
+    <div style="display: flex; gap: 24px; align-items: flex-start;">
+      <!-- Shared skeleton -->
+      <div style="width: 240px; flex-shrink: 0;">
+        <div style="color: #a1a1aa; font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px;">Sidebar Skeleton (shared)</div>
+        <div style="background: #0f0f14; border: 1px solid #252530; border-radius: 12px; overflow: hidden;">
+          <!-- Hero -->
+          <div style="background: linear-gradient(135deg, #18181f, #252530); padding: 24px; text-align: center; color: #525260; font-size: 11px; border-bottom: 1px solid #252530;">
+            HeroZone<br/><span style="font-size: 10px; color: #3a3a45;">config: aspect, fallback, gallery</span>
+          </div>
+          <!-- Identity -->
+          <div style="padding: 16px; border-bottom: 1px solid #252530;">
+            <div style="background: #18181f; border: 1px dashed #FFD93D30; border-radius: 8px; padding: 16px; text-align: center;">
+              <div style="color: #FFD93D; font-size: 11px; font-weight: 600;">IdentityZone</div>
+              <div style="color: #525260; font-size: 10px; margin-top: 4px;">ReactNode — per-type</div>
+            </div>
+          </div>
+          <!-- Actions -->
+          <div style="padding: 16px; text-align: center; color: #525260; font-size: 11px;">
+            ActionZone<br/><span style="font-size: 10px; color: #3a3a45;">config: primaryCTA, secondaries</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- What goes in each identity zone -->
+      <div style="flex: 1;">
+        <div style="color: #a1a1aa; font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px;">Identity Zone per Type</div>
+
+        <!-- Event -->
+        <div style="background: #0f0f14; border: 1px solid #FF6B7A20; border-radius: 8px; padding: 12px; margin-bottom: 8px;">
+          <div style="color: #FF6B7A; font-size: 11px; font-weight: 600; margin-bottom: 6px;">Event</div>
+          <div style="color: #f5f5f3; font-size: 11px; line-height: 1.6;">
+            Title · Venue link · Date + Time + Price<br/>
+            Genre pills · Taxonomy badges<br/>
+            Show signals (doors, age, reentry)
+          </div>
+        </div>
+
+        <!-- Place -->
+        <div style="background: #0f0f14; border: 1px solid #00D9A020; border-radius: 8px; padding: 12px; margin-bottom: 8px;">
+          <div style="color: #00D9A0; font-size: 11px; font-weight: 600; margin-bottom: 6px;">Place</div>
+          <div style="color: #f5f5f3; font-size: 11px; line-height: 1.6;">
+            Name · Type badge · Neighborhood<br/>
+            Price level · Rating<br/>
+            Quick actions (reserve, call, directions)<br/>
+            Hours summary
+          </div>
+        </div>
+
+        <!-- Series -->
+        <div style="background: #0f0f14; border: 1px solid #FFD93D20; border-radius: 8px; padding: 12px; margin-bottom: 8px;">
+          <div style="color: #FFD93D; font-size: 11px; font-weight: 600; margin-bottom: 6px;">Series</div>
+          <div style="color: #f5f5f3; font-size: 11px; line-height: 1.6;">
+            Title · Type badge (Film / Recurring)<br/>
+            Recurrence label · Venue link<br/>
+            Film metadata (year, rating, runtime)<br/>
+            Director + trailer (film only)<br/>
+            Genre pills
+          </div>
+        </div>
+
+        <!-- Festival -->
+        <div style="background: #0f0f14; border: 1px solid #E879F920; border-radius: 8px; padding: 12px; margin-bottom: 8px;">
+          <div style="color: #E879F9; font-size: 11px; font-weight: 600; margin-bottom: 6px;">Festival</div>
+          <div style="color: #f5f5f3; font-size: 11px; line-height: 1.6;">
+            Name · Type badge · Date range<br/>
+            Location · Status banner<br/>
+            Experience tags · Price/duration
+          </div>
+        </div>
+
+        <!-- Org -->
+        <div style="background: #0f0f14; border: 1px solid #22D3EE20; border-radius: 8px; padding: 12px;">
+          <div style="color: #22D3EE; font-size: 11px; font-weight: 600; margin-bottom: 6px;">Org</div>
+          <div style="color: #f5f5f3; font-size: 11px; line-height: 1.6;">
+            Logo · Name · Type · Location<br/>
+            Category tags<br/>
+            Links (website, Instagram, email)
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top: 32px;">
+  <h3>Hero Config per Type</h3>
+  <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; max-width: 720px; margin: 0 auto; font-family: 'SF Mono', monospace; font-size: 11px;">
+
+    <div style="background: #0f0f14; border: 1px solid #252530; border-radius: 8px; padding: 12px; text-align: center;">
+      <div style="color: #FF6B7A; font-weight: 600; margin-bottom: 8px;">Event</div>
+      <div style="background: #18181f; border-radius: 6px; aspect-ratio: 16/10; display: flex; align-items: center; justify-content: center; margin-bottom: 8px;">
+        <span style="color: #525260; font-size: 20px;">🖼️</span>
+      </div>
+      <div style="color: #8b8b94; font-size: 10px;">aspect: 16/10<br/>fallback: category icon<br/>gallery: no</div>
+    </div>
+
+    <div style="background: #0f0f14; border: 1px solid #252530; border-radius: 8px; padding: 12px; text-align: center;">
+      <div style="color: #00D9A0; font-weight: 600; margin-bottom: 8px;">Place</div>
+      <div style="background: #18181f; border-radius: 6px; aspect-ratio: 16/10; display: flex; align-items: center; justify-content: center; margin-bottom: 8px;">
+        <span style="color: #525260; font-size: 20px;">🖼️🖼️</span>
+      </div>
+      <div style="color: #8b8b94; font-size: 10px;">aspect: 16/10<br/>fallback: type icon<br/>gallery: yes</div>
+    </div>
+
+    <div style="background: #0f0f14; border: 1px solid #252530; border-radius: 8px; padding: 12px; text-align: center;">
+      <div style="color: #FFD93D; font-weight: 600; margin-bottom: 8px;">Series</div>
+      <div style="display: flex; gap: 4px; justify-content: center; margin-bottom: 8px;">
+        <div style="background: #18181f; border-radius: 6px; aspect-ratio: 2/3; width: 45%; display: flex; align-items: center; justify-content: center;">
+          <span style="color: #525260; font-size: 14px;">🎬</span>
+        </div>
+        <div style="background: #18181f; border-radius: 6px; aspect-ratio: 16/10; width: 45%; display: flex; align-items: center; justify-content: center;">
+          <span style="color: #525260; font-size: 14px;">🔄</span>
+        </div>
+      </div>
+      <div style="color: #8b8b94; font-size: 10px;">film: 2/3 poster<br/>non-film: 16/10<br/>gallery: no</div>
+    </div>
+
+    <div style="background: #0f0f14; border: 1px solid #252530; border-radius: 8px; padding: 12px; text-align: center;">
+      <div style="color: #E879F9; font-weight: 600; margin-bottom: 8px;">Festival</div>
+      <div style="background: #18181f; border-radius: 6px; height: 60px; display: flex; align-items: center; justify-content: center; margin-bottom: 8px;">
+        <span style="color: #525260; font-size: 20px;">🎪</span>
+      </div>
+      <div style="color: #8b8b94; font-size: 10px;">fixed h-[240px]<br/>gradient overlay<br/>gallery: no</div>
+    </div>
+
+    <div style="background: #0f0f14; border: 1px solid #252530; border-radius: 8px; padding: 12px; text-align: center;">
+      <div style="color: #22D3EE; font-weight: 600; margin-bottom: 8px;">Org</div>
+      <div style="background: #18181f; border-radius: 6px; height: 60px; display: flex; align-items: center; justify-content: center; margin-bottom: 8px;">
+        <span style="color: #525260; font-size: 28px;">◯</span>
+      </div>
+      <div style="color: #8b8b94; font-size: 10px;">mode: logo<br/>small centered<br/>gallery: no</div>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top: 32px;">
+  <h3>Action Config per Type</h3>
+  <div style="max-width: 680px; margin: 0 auto; font-family: 'SF Mono', monospace; font-size: 11px;">
+    <table style="width: 100%; border-collapse: collapse;">
+      <thead>
+        <tr style="border-bottom: 1px solid #252530;">
+          <th style="text-align: left; padding: 8px; color: #a1a1aa; font-size: 10px; text-transform: uppercase;">Type</th>
+          <th style="text-align: left; padding: 8px; color: #a1a1aa; font-size: 10px; text-transform: uppercase;">Primary CTA</th>
+          <th style="text-align: left; padding: 8px; color: #a1a1aa; font-size: 10px; text-transform: uppercase;">Secondary Actions</th>
+          <th style="text-align: left; padding: 8px; color: #a1a1aa; font-size: 10px; text-transform: uppercase;">Sticky Bar</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr style="border-bottom: 1px solid #18181f;">
+          <td style="padding: 8px; color: #FF6B7A;">Event</td>
+          <td style="padding: 8px; color: #f5f5f3;">Get Tickets / RSVP</td>
+          <td style="padding: 8px; color: #8b8b94;">Save, Invite, Calendar, Share</td>
+          <td style="padding: 8px; color: #00D9A0;">Yes (if ticket_url)</td>
+        </tr>
+        <tr style="border-bottom: 1px solid #18181f;">
+          <td style="padding: 8px; color: #00D9A0;">Place</td>
+          <td style="padding: 8px; color: #f5f5f3;">Reserve / Website / Directions</td>
+          <td style="padding: 8px; color: #8b8b94;">Save, Follow, Share</td>
+          <td style="padding: 8px; color: #00D9A0;">Yes (if reservation_url)</td>
+        </tr>
+        <tr style="border-bottom: 1px solid #18181f;">
+          <td style="padding: 8px; color: #FFD93D;">Series</td>
+          <td style="padding: 8px; color: #f5f5f3;">Get Showtimes / Next Date</td>
+          <td style="padding: 8px; color: #8b8b94;">Save, Share</td>
+          <td style="padding: 8px; color: #00D9A0;">Yes (if ticket_url)</td>
+        </tr>
+        <tr style="border-bottom: 1px solid #18181f;">
+          <td style="padding: 8px; color: #E879F9;">Festival</td>
+          <td style="padding: 8px; color: #f5f5f3;">Get Passes / Website</td>
+          <td style="padding: 8px; color: #8b8b94;">Save, Share, Calendar</td>
+          <td style="padding: 8px; color: #00D9A0;">Yes (temporal CTA)</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px; color: #22D3EE;">Org</td>
+          <td style="padding: 8px; color: #f5f5f3;">Follow / Website</td>
+          <td style="padding: 8px; color: #8b8b94;">Recommend, Share</td>
+          <td style="padding: 8px; color: #FF6B7A;">No</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>

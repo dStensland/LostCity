@@ -1,0 +1,187 @@
+<h2>Detail Page Architecture: Type Shell + Section Slots</h2>
+<p class="subtitle">How entity-type orchestrators compose shared section modules through a unified DetailLayout</p>
+
+<div class="section">
+  <h3>The Layer Cake</h3>
+  <div style="max-width: 720px; margin: 0 auto; font-family: 'SF Mono', monospace; font-size: 13px;">
+
+    <!-- Layer 1: Entity Orchestrators -->
+    <div style="margin-bottom: 8px;">
+      <div style="color: #8b8b94; font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 6px;">Layer 3 — Entity Orchestrators (thin, ~60-80 lines each)</div>
+      <div style="display: flex; gap: 6px;">
+        <div style="flex: 1; background: linear-gradient(135deg, #1a1a2e, #16213e); border: 1px solid #FF6B7A40; border-radius: 8px; padding: 12px; text-align: center;">
+          <div style="color: #FF6B7A; font-weight: 600; font-size: 14px;">EventDetail</div>
+          <div style="color: #8b8b94; font-size: 11px; margin-top: 4px;">temporal identity<br/>when + where</div>
+        </div>
+        <div style="flex: 1; background: linear-gradient(135deg, #1a1a2e, #16213e); border: 1px solid #00D9A040; border-radius: 8px; padding: 12px; text-align: center;">
+          <div style="color: #00D9A0; font-weight: 600; font-size: 14px;">PlaceDetail</div>
+          <div style="color: #8b8b94; font-size: 11px; margin-top: 4px;">spatial identity<br/>what + where</div>
+        </div>
+        <div style="flex: 1; background: linear-gradient(135deg, #1a1a2e, #16213e); border: 1px solid #FFD93D40; border-radius: 8px; padding: 12px; text-align: center;">
+          <div style="color: #FFD93D; font-weight: 600; font-size: 14px;">SeriesDetail</div>
+          <div style="color: #8b8b94; font-size: 11px; margin-top: 4px;">pattern identity<br/>recurrence + where</div>
+        </div>
+        <div style="flex: 1; background: linear-gradient(135deg, #1a1a2e, #16213e); border: 1px solid #E879F940; border-radius: 8px; padding: 12px; text-align: center;">
+          <div style="color: #E879F9; font-weight: 600; font-size: 14px;">FestivalDetail</div>
+          <div style="color: #8b8b94; font-size: 11px; margin-top: 4px;">temporal scope<br/>multi-day + multi-venue</div>
+        </div>
+        <div style="flex: 1; background: linear-gradient(135deg, #1a1a2e, #16213e); border: 1px solid #22D3EE40; border-radius: 8px; padding: 12px; text-align: center;">
+          <div style="color: #22D3EE; font-weight: 600; font-size: 14px;">OrgDetail</div>
+          <div style="color: #8b8b94; font-size: 11px; margin-top: 4px;">producer identity<br/>who + what they run</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Arrow -->
+    <div style="text-align: center; color: #525260; font-size: 18px; margin: 4px 0;">↓ compose ↓</div>
+
+    <!-- Layer 2: DetailLayout -->
+    <div style="margin-bottom: 8px;">
+      <div style="color: #8b8b94; font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 6px;">Layer 2 — DetailLayout (shared, handles skeleton + section pipeline)</div>
+      <div style="background: linear-gradient(135deg, #0f0f14, #18181f); border: 1px solid #252530; border-radius: 12px; padding: 20px;">
+        <div style="display: flex; gap: 16px;">
+          <!-- Sidebar -->
+          <div style="width: 200px; flex-shrink: 0;">
+            <div style="color: #a1a1aa; font-size: 12px; font-weight: 600; margin-bottom: 8px;">Sidebar</div>
+            <div style="background: #18181f; border: 1px solid #252530; border-radius: 8px; padding: 10px; margin-bottom: 6px;">
+              <div style="color: #f5f5f3; font-size: 11px;">HeroZone</div>
+              <div style="color: #8b8b94; font-size: 10px;">config → aspect, fallback, gallery</div>
+            </div>
+            <div style="background: #18181f; border: 1px solid #252530; border-radius: 8px; padding: 10px; margin-bottom: 6px;">
+              <div style="color: #f5f5f3; font-size: 11px;">IdentityZone</div>
+              <div style="color: #8b8b94; font-size: 10px;">ReactNode — per-type composition</div>
+            </div>
+            <div style="background: #18181f; border: 1px solid #252530; border-radius: 8px; padding: 10px;">
+              <div style="color: #f5f5f3; font-size: 11px;">ActionZone</div>
+              <div style="color: #8b8b94; font-size: 10px;">config → primary CTA, secondaries</div>
+            </div>
+          </div>
+          <!-- Content -->
+          <div style="flex: 1;">
+            <div style="color: #a1a1aa; font-size: 12px; font-weight: 600; margin-bottom: 8px;">Content — Section Pipeline</div>
+            <div style="background: #18181f; border: 1px solid #252530; border-radius: 8px; padding: 10px; margin-bottom: 4px; display: flex; align-items: center; gap: 8px;">
+              <span style="color: #FF6B7A; font-size: 11px; font-weight: 600; width: 20px;">01</span>
+              <span style="color: #f5f5f3; font-size: 11px;">About / Description</span>
+              <span style="color: #525260; font-size: 10px; margin-left: auto;">trait: hasDescription</span>
+            </div>
+            <div style="background: #18181f; border: 1px solid #252530; border-radius: 8px; padding: 10px; margin-bottom: 4px; display: flex; align-items: center; gap: 8px;">
+              <span style="color: #FF6B7A; font-size: 11px; font-weight: 600; width: 20px;">02</span>
+              <span style="color: #f5f5f3; font-size: 11px;">Type-priority section</span>
+              <span style="color: #525260; font-size: 10px; margin-left: auto;">from manifest order</span>
+            </div>
+            <div style="background: #18181f; border: 1px solid #252530; border-radius: 8px; padding: 10px; margin-bottom: 4px; display: flex; align-items: center; gap: 8px;">
+              <span style="color: #FF6B7A; font-size: 11px; font-weight: 600; width: 20px;">03</span>
+              <span style="color: #f5f5f3; font-size: 11px;">Connections</span>
+              <span style="color: #525260; font-size: 10px; margin-left: auto;">trait: hasConnections</span>
+            </div>
+            <div style="background: #18181f; border: 1px solid #252530; border-radius: 8px; padding: 10px; margin-bottom: 4px; display: flex; align-items: center; gap: 8px;">
+              <span style="color: #FF6B7A; font-size: 11px; font-weight: 600; width: 20px;">...</span>
+              <span style="color: #8b8b94; font-size: 11px; font-style: italic;">remaining sections by manifest order + trait filtering</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Arrow -->
+    <div style="text-align: center; color: #525260; font-size: 18px; margin: 4px 0;">↓ renders ↓</div>
+
+    <!-- Layer 1: Section Modules -->
+    <div>
+      <div style="color: #8b8b94; font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 6px;">Layer 1 — Section Modules (shared, self-contained, ~50-150 lines each)</div>
+      <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+        <div style="background: #18181f; border: 1px solid #252530; border-radius: 6px; padding: 8px 12px;">
+          <span style="color: #f5f5f3; font-size: 11px;">AboutSection</span>
+        </div>
+        <div style="background: #18181f; border: 1px solid #252530; border-radius: 6px; padding: 8px 12px;">
+          <span style="color: #FFD93D; font-size: 11px;">ShowtimesSection</span>
+        </div>
+        <div style="background: #18181f; border: 1px solid #252530; border-radius: 6px; padding: 8px 12px;">
+          <span style="color: #00D9A0; font-size: 11px;">DiningSection</span>
+        </div>
+        <div style="background: #18181f; border: 1px solid #252530; border-radius: 6px; padding: 8px 12px;">
+          <span style="color: #E879F9; font-size: 11px;">LineupSection</span>
+        </div>
+        <div style="background: #18181f; border: 1px solid #252530; border-radius: 6px; padding: 8px 12px;">
+          <span style="color: #22D3EE; font-size: 11px;">ConnectionsSection</span>
+        </div>
+        <div style="background: #18181f; border: 1px solid #252530; border-radius: 6px; padding: 8px 12px;">
+          <span style="color: #f5f5f3; font-size: 11px;">NearbySection</span>
+        </div>
+        <div style="background: #18181f; border: 1px solid #252530; border-radius: 6px; padding: 8px 12px;">
+          <span style="color: #f5f5f3; font-size: 11px;">GettingThereSection</span>
+        </div>
+        <div style="background: #18181f; border: 1px solid #252530; border-radius: 6px; padding: 8px 12px;">
+          <span style="color: #f5f5f3; font-size: 11px;">FeaturesSection</span>
+        </div>
+        <div style="background: #18181f; border: 1px solid #252530; border-radius: 6px; padding: 8px 12px;">
+          <span style="color: #f5f5f3; font-size: 11px;">ScheduleSection</span>
+        </div>
+        <div style="background: #18181f; border: 1px solid #252530; border-radius: 6px; padding: 8px 12px;">
+          <span style="color: #f5f5f3; font-size: 11px;">SocialProofSection</span>
+        </div>
+        <div style="background: #18181f; border: 1px solid #252530; border-radius: 6px; padding: 8px 12px;">
+          <span style="color: #f5f5f3; font-size: 11px;">AccessibilitySection</span>
+        </div>
+        <div style="background: #18181f; border: 1px solid #252530; border-radius: 6px; padding: 8px 12px;">
+          <span style="color: #f5f5f3; font-size: 11px;">EventsAtVenueSection</span>
+        </div>
+        <div style="background: #18181f; border: 1px solid #252530; border-radius: 6px; padding: 8px 12px;">
+          <span style="color: #f5f5f3; font-size: 11px;">AccoladesSection</span>
+        </div>
+        <div style="background: #18181f; border: 1px solid #252530; border-radius: 6px; padding: 8px 12px;">
+          <span style="color: #f5f5f3; font-size: 11px;">SpecialsSection</span>
+        </div>
+        <div style="background: #18181f; border: 1px solid #252530; border-radius: 6px; padding: 8px 12px;">
+          <span style="color: #f5f5f3; font-size: 11px;">PlanYourVisitSection</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top: 32px;">
+  <h3>How a Cinema Page Composes</h3>
+  <p class="subtitle">Type-specific ordering puts showtimes first. Trait-based inclusion adds connections, nearby, etc.</p>
+  <div style="max-width: 600px; margin: 0 auto; font-family: 'SF Mono', monospace; font-size: 12px;">
+    <div style="display: flex; gap: 16px;">
+      <div style="width: 180px; flex-shrink: 0;">
+        <div style="color: #a1a1aa; font-size: 11px; margin-bottom: 8px;">SIDEBAR</div>
+        <div style="border-left: 2px solid #FFD93D40; padding-left: 12px;">
+          <div style="color: #f5f5f3; margin-bottom: 6px;">🎬 Hero (gallery)</div>
+          <div style="color: #f5f5f3; margin-bottom: 6px;">Identity: theater name, neighborhood</div>
+          <div style="color: #f5f5f3; margin-bottom: 6px;">Quick Actions: website, phone, directions</div>
+          <div style="color: #f5f5f3; margin-bottom: 6px;">Hours</div>
+          <div style="color: #FFD93D; margin-bottom: 6px;">★ CTA: "Get Tickets"</div>
+        </div>
+      </div>
+      <div style="flex: 1;">
+        <div style="color: #a1a1aa; font-size: 11px; margin-bottom: 8px;">CONTENT (manifest order)</div>
+        <div style="border-left: 2px solid #FF6B7A40; padding-left: 12px;">
+          <div style="color: #FFD93D; margin-bottom: 8px; padding: 6px 10px; background: #FFD93D10; border-radius: 6px;">
+            <strong>① Now Playing</strong> — ShowtimesSection<br/>
+            <span style="color: #8b8b94; font-size: 10px;">type-priority: cinema leads with this</span>
+          </div>
+          <div style="color: #f5f5f3; margin-bottom: 8px; padding: 6px 10px; background: #ffffff06; border-radius: 6px;">
+            ② About — AboutSection
+          </div>
+          <div style="color: #E879F9; margin-bottom: 8px; padding: 6px 10px; background: #E879F910; border-radius: 6px;">
+            <strong>③ Part of ATLFF</strong> — ConnectionsSection<br/>
+            <span style="color: #8b8b94; font-size: 10px;">trait: venue has festival screenings</span>
+          </div>
+          <div style="color: #f5f5f3; margin-bottom: 8px; padding: 6px 10px; background: #ffffff06; border-radius: 6px;">
+            ④ Features — FeaturesSection<br/>
+            <span style="color: #8b8b94; font-size: 10px;">trait: has features (concessions, parking)</span>
+          </div>
+          <div style="color: #f5f5f3; margin-bottom: 8px; padding: 6px 10px; background: #ffffff06; border-radius: 6px;">
+            ⑤ Plan Your Visit — PlanYourVisitSection
+          </div>
+          <div style="color: #00D9A0; margin-bottom: 8px; padding: 6px 10px; background: #00D9A010; border-radius: 6px;">
+            <strong>⑥ Nearby Food & Drink</strong> — NearbySection<br/>
+            <span style="color: #8b8b94; font-size: 10px;">trait: has geo coordinates</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

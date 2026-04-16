@@ -1,0 +1,303 @@
+<h2>Section Module Inventory</h2>
+<p class="subtitle">Every section module, what triggers it, and which entity types mount it. Colored = type-priority (leads the page). Gray = trait-included (appears if data exists).</p>
+
+<div class="section">
+  <h3>Content Sections</h3>
+  <div style="overflow-x: auto;">
+    <table style="width: 100%; border-collapse: collapse; font-size: 12px; font-family: 'SF Mono', monospace;">
+      <thead>
+        <tr style="border-bottom: 1px solid #252530;">
+          <th style="text-align: left; padding: 10px 12px; color: #a1a1aa; font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; width: 200px;">Section Module</th>
+          <th style="text-align: center; padding: 10px 8px; color: #FF6B7A; font-size: 11px;">Event</th>
+          <th style="text-align: center; padding: 10px 8px; color: #00D9A0; font-size: 11px;">Place</th>
+          <th style="text-align: center; padding: 10px 8px; color: #FFD93D; font-size: 11px;">Series</th>
+          <th style="text-align: center; padding: 10px 8px; color: #E879F9; font-size: 11px;">Festival</th>
+          <th style="text-align: center; padding: 10px 8px; color: #22D3EE; font-size: 11px;">Org</th>
+          <th style="text-align: left; padding: 10px 12px; color: #8b8b94; font-size: 11px; width: 240px;">Trait / Trigger</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- About -->
+        <tr style="border-bottom: 1px solid #18181f;">
+          <td style="padding: 8px 12px; color: #f5f5f3; font-weight: 600;">AboutSection</td>
+          <td style="text-align: center; padding: 8px; color: #8b8b94;">●</td>
+          <td style="text-align: center; padding: 8px; color: #8b8b94;">●</td>
+          <td style="text-align: center; padding: 8px; color: #8b8b94;">●</td>
+          <td style="text-align: center; padding: 8px; color: #8b8b94;">●</td>
+          <td style="text-align: center; padding: 8px; color: #8b8b94;">●</td>
+          <td style="padding: 8px 12px; color: #525260; font-size: 11px;">hasDescription</td>
+        </tr>
+        <!-- Lineup -->
+        <tr style="border-bottom: 1px solid #18181f;">
+          <td style="padding: 8px 12px; color: #f5f5f3; font-weight: 600;">LineupSection</td>
+          <td style="text-align: center; padding: 8px; color: #FF6B7A; font-weight: bold;">★</td>
+          <td style="text-align: center; padding: 8px; color: #525260;">—</td>
+          <td style="text-align: center; padding: 8px; color: #525260;">—</td>
+          <td style="text-align: center; padding: 8px; color: #525260;">—</td>
+          <td style="text-align: center; padding: 8px; color: #525260;">—</td>
+          <td style="padding: 8px 12px; color: #525260; font-size: 11px;">hasArtists (music/comedy/theater events)</td>
+        </tr>
+        <!-- Showtimes -->
+        <tr style="border-bottom: 1px solid #18181f;">
+          <td style="padding: 8px 12px; color: #f5f5f3; font-weight: 600;">ShowtimesSection</td>
+          <td style="text-align: center; padding: 8px; color: #525260;">—</td>
+          <td style="text-align: center; padding: 8px; color: #00D9A0; font-weight: bold;">★ cinema</td>
+          <td style="text-align: center; padding: 8px; color: #FFD93D; font-weight: bold;">★ film</td>
+          <td style="text-align: center; padding: 8px; color: #E879F9;">●</td>
+          <td style="text-align: center; padding: 8px; color: #525260;">—</td>
+          <td style="padding: 8px 12px; color: #525260; font-size: 11px;">hasScreenings</td>
+        </tr>
+        <!-- Dining -->
+        <tr style="border-bottom: 1px solid #18181f;">
+          <td style="padding: 8px 12px; color: #f5f5f3; font-weight: 600;">DiningSection</td>
+          <td style="text-align: center; padding: 8px; color: #525260;">—</td>
+          <td style="text-align: center; padding: 8px; color: #00D9A0; font-weight: bold;">★ restaurant</td>
+          <td style="text-align: center; padding: 8px; color: #525260;">—</td>
+          <td style="text-align: center; padding: 8px; color: #525260;">—</td>
+          <td style="text-align: center; padding: 8px; color: #525260;">—</td>
+          <td style="padding: 8px 12px; color: #525260; font-size: 11px;">hasDiningProfile</td>
+        </tr>
+        <!-- Exhibitions -->
+        <tr style="border-bottom: 1px solid #18181f;">
+          <td style="padding: 8px 12px; color: #f5f5f3; font-weight: 600;">ExhibitionsSection</td>
+          <td style="text-align: center; padding: 8px; color: #525260;">—</td>
+          <td style="text-align: center; padding: 8px; color: #00D9A0; font-weight: bold;">★ museum</td>
+          <td style="text-align: center; padding: 8px; color: #525260;">—</td>
+          <td style="text-align: center; padding: 8px; color: #E879F9;">●</td>
+          <td style="text-align: center; padding: 8px; color: #525260;">—</td>
+          <td style="padding: 8px 12px; color: #525260; font-size: 11px;">hasExhibitions</td>
+        </tr>
+        <!-- Schedule -->
+        <tr style="border-bottom: 1px solid #18181f;">
+          <td style="padding: 8px 12px; color: #f5f5f3; font-weight: 600;">ScheduleSection</td>
+          <td style="text-align: center; padding: 8px; color: #525260;">—</td>
+          <td style="text-align: center; padding: 8px; color: #525260;">—</td>
+          <td style="text-align: center; padding: 8px; color: #525260;">—</td>
+          <td style="text-align: center; padding: 8px; color: #E879F9; font-weight: bold;">★</td>
+          <td style="text-align: center; padding: 8px; color: #525260;">—</td>
+          <td style="padding: 8px 12px; color: #525260; font-size: 11px;">hasPrograms (multi-day festivals)</td>
+        </tr>
+        <!-- Upcoming Dates -->
+        <tr style="border-bottom: 1px solid #18181f;">
+          <td style="padding: 8px 12px; color: #f5f5f3; font-weight: 600;">UpcomingDatesSection</td>
+          <td style="text-align: center; padding: 8px; color: #525260;">—</td>
+          <td style="text-align: center; padding: 8px; color: #525260;">—</td>
+          <td style="text-align: center; padding: 8px; color: #FFD93D; font-weight: bold;">★ non-film</td>
+          <td style="text-align: center; padding: 8px; color: #525260;">—</td>
+          <td style="text-align: center; padding: 8px; color: #525260;">—</td>
+          <td style="padding: 8px 12px; color: #525260; font-size: 11px;">hasUpcomingEvents + isRecurring</td>
+        </tr>
+        <!-- Events at Venue -->
+        <tr style="border-bottom: 1px solid #18181f;">
+          <td style="padding: 8px 12px; color: #f5f5f3; font-weight: 600;">EventsAtVenueSection</td>
+          <td style="text-align: center; padding: 8px; color: #525260;">—</td>
+          <td style="text-align: center; padding: 8px; color: #8b8b94;">●</td>
+          <td style="text-align: center; padding: 8px; color: #525260;">—</td>
+          <td style="text-align: center; padding: 8px; color: #525260;">—</td>
+          <td style="text-align: center; padding: 8px; color: #22D3EE;">●</td>
+          <td style="padding: 8px 12px; color: #525260; font-size: 11px;">hasUpcomingEvents (non-screening)</td>
+        </tr>
+        <!-- Features / What's Here -->
+        <tr style="border-bottom: 1px solid #18181f;">
+          <td style="padding: 8px 12px; color: #f5f5f3; font-weight: 600;">FeaturesSection</td>
+          <td style="text-align: center; padding: 8px; color: #525260;">—</td>
+          <td style="text-align: center; padding: 8px; color: #00D9A0; font-weight: bold;">★ park/zoo</td>
+          <td style="text-align: center; padding: 8px; color: #525260;">—</td>
+          <td style="text-align: center; padding: 8px; color: #525260;">—</td>
+          <td style="text-align: center; padding: 8px; color: #525260;">—</td>
+          <td style="padding: 8px 12px; color: #525260; font-size: 11px;">hasFeatures (attractions, not amenities)</td>
+        </tr>
+        <!-- Connections -->
+        <tr style="border-bottom: 1px solid #18181f; background: #FFD93D08;">
+          <td style="padding: 8px 12px; color: #FFD93D; font-weight: 600;">ConnectionsSection ✨</td>
+          <td style="text-align: center; padding: 8px; color: #FF6B7A;">●</td>
+          <td style="text-align: center; padding: 8px; color: #00D9A0;">●</td>
+          <td style="text-align: center; padding: 8px; color: #FFD93D;">●</td>
+          <td style="text-align: center; padding: 8px; color: #E879F9;">●</td>
+          <td style="text-align: center; padding: 8px; color: #22D3EE;">●</td>
+          <td style="padding: 8px 12px; color: #525260; font-size: 11px;">hasConnections (series, festival, org, venue, artists across events)</td>
+        </tr>
+        <!-- Social Proof -->
+        <tr style="border-bottom: 1px solid #18181f;">
+          <td style="padding: 8px 12px; color: #f5f5f3; font-weight: 600;">SocialProofSection</td>
+          <td style="text-align: center; padding: 8px; color: #8b8b94;">●</td>
+          <td style="text-align: center; padding: 8px; color: #8b8b94;">●</td>
+          <td style="text-align: center; padding: 8px; color: #525260;">—</td>
+          <td style="text-align: center; padding: 8px; color: #525260;">—</td>
+          <td style="text-align: center; padding: 8px; color: #525260;">—</td>
+          <td style="padding: 8px 12px; color: #525260; font-size: 11px;">hasSocialData (friends going, attendance)</td>
+        </tr>
+        <!-- Location / Getting There -->
+        <tr style="border-bottom: 1px solid #18181f;">
+          <td style="padding: 8px 12px; color: #f5f5f3; font-weight: 600;">GettingThereSection</td>
+          <td style="text-align: center; padding: 8px; color: #8b8b94;">●</td>
+          <td style="text-align: center; padding: 8px; color: #8b8b94;">●</td>
+          <td style="text-align: center; padding: 8px; color: #8b8b94;">●</td>
+          <td style="text-align: center; padding: 8px; color: #8b8b94;">●</td>
+          <td style="text-align: center; padding: 8px; color: #525260;">—</td>
+          <td style="padding: 8px 12px; color: #525260; font-size: 11px;">hasLocation (address, MARTA, parking, BeltLine)</td>
+        </tr>
+        <!-- Nearby -->
+        <tr style="border-bottom: 1px solid #18181f;">
+          <td style="padding: 8px 12px; color: #f5f5f3; font-weight: 600;">NearbySection</td>
+          <td style="text-align: center; padding: 8px; color: #8b8b94;">●</td>
+          <td style="text-align: center; padding: 8px; color: #8b8b94;">●</td>
+          <td style="text-align: center; padding: 8px; color: #525260;">—</td>
+          <td style="text-align: center; padding: 8px; color: #525260;">—</td>
+          <td style="text-align: center; padding: 8px; color: #525260;">—</td>
+          <td style="padding: 8px 12px; color: #525260; font-size: 11px;">hasCoordinates (food, drinks, nightlife nearby)</td>
+        </tr>
+        <!-- Plan Your Visit -->
+        <tr style="border-bottom: 1px solid #18181f;">
+          <td style="padding: 8px 12px; color: #f5f5f3; font-weight: 600;">PlanYourVisitSection</td>
+          <td style="text-align: center; padding: 8px; color: #525260;">—</td>
+          <td style="text-align: center; padding: 8px; color: #8b8b94;">●</td>
+          <td style="text-align: center; padding: 8px; color: #525260;">—</td>
+          <td style="text-align: center; padding: 8px; color: #525260;">—</td>
+          <td style="text-align: center; padding: 8px; color: #525260;">—</td>
+          <td style="padding: 8px 12px; color: #525260; font-size: 11px;">hasAdmission OR hasAccessibility</td>
+        </tr>
+        <!-- Specials -->
+        <tr style="border-bottom: 1px solid #18181f;">
+          <td style="padding: 8px 12px; color: #f5f5f3; font-weight: 600;">SpecialsSection</td>
+          <td style="text-align: center; padding: 8px; color: #525260;">—</td>
+          <td style="text-align: center; padding: 8px; color: #8b8b94;">●</td>
+          <td style="text-align: center; padding: 8px; color: #525260;">—</td>
+          <td style="text-align: center; padding: 8px; color: #525260;">—</td>
+          <td style="text-align: center; padding: 8px; color: #525260;">—</td>
+          <td style="padding: 8px 12px; color: #525260; font-size: 11px;">hasSpecials (daily deals, happy hour)</td>
+        </tr>
+        <!-- Occasions -->
+        <tr style="border-bottom: 1px solid #18181f;">
+          <td style="padding: 8px 12px; color: #f5f5f3; font-weight: 600;">OccasionsSection</td>
+          <td style="text-align: center; padding: 8px; color: #525260;">—</td>
+          <td style="text-align: center; padding: 8px; color: #8b8b94;">●</td>
+          <td style="text-align: center; padding: 8px; color: #525260;">—</td>
+          <td style="text-align: center; padding: 8px; color: #525260;">—</td>
+          <td style="text-align: center; padding: 8px; color: #525260;">—</td>
+          <td style="padding: 8px 12px; color: #525260; font-size: 11px;">hasOccasions (date night, groups, solo)</td>
+        </tr>
+        <!-- Accolades -->
+        <tr style="border-bottom: 1px solid #18181f;">
+          <td style="padding: 8px 12px; color: #f5f5f3; font-weight: 600;">AccoladesSection</td>
+          <td style="text-align: center; padding: 8px; color: #525260;">—</td>
+          <td style="text-align: center; padding: 8px; color: #8b8b94;">●</td>
+          <td style="text-align: center; padding: 8px; color: #525260;">—</td>
+          <td style="text-align: center; padding: 8px; color: #525260;">—</td>
+          <td style="text-align: center; padding: 8px; color: #525260;">—</td>
+          <td style="padding: 8px 12px; color: #525260; font-size: 11px;">hasEditorialMentions</td>
+        </tr>
+        <!-- Show Signals -->
+        <tr style="border-bottom: 1px solid #18181f;">
+          <td style="padding: 8px 12px; color: #f5f5f3; font-weight: 600;">ShowSignalsSection</td>
+          <td style="text-align: center; padding: 8px; color: #8b8b94;">●</td>
+          <td style="text-align: center; padding: 8px; color: #525260;">—</td>
+          <td style="text-align: center; padding: 8px; color: #525260;">—</td>
+          <td style="text-align: center; padding: 8px; color: #525260;">—</td>
+          <td style="text-align: center; padding: 8px; color: #525260;">—</td>
+          <td style="padding: 8px 12px; color: #525260; font-size: 11px;">hasShowSignals (doors, age, reentry, set times)</td>
+        </tr>
+        <!-- Volunteer -->
+        <tr style="border-bottom: 1px solid #18181f;">
+          <td style="padding: 8px 12px; color: #f5f5f3; font-weight: 600;">VolunteerSection</td>
+          <td style="text-align: center; padding: 8px; color: #525260;">—</td>
+          <td style="text-align: center; padding: 8px; color: #525260;">—</td>
+          <td style="text-align: center; padding: 8px; color: #525260;">—</td>
+          <td style="text-align: center; padding: 8px; color: #525260;">—</td>
+          <td style="text-align: center; padding: 8px; color: #22D3EE; font-weight: bold;">★</td>
+          <td style="padding: 8px 12px; color: #525260; font-size: 11px;">hasVolunteerOpportunities</td>
+        </tr>
+        <!-- Producer -->
+        <tr>
+          <td style="padding: 8px 12px; color: #f5f5f3; font-weight: 600;">ProducerSection</td>
+          <td style="text-align: center; padding: 8px; color: #8b8b94;">●</td>
+          <td style="text-align: center; padding: 8px; color: #525260;">—</td>
+          <td style="text-align: center; padding: 8px; color: #525260;">—</td>
+          <td style="text-align: center; padding: 8px; color: #8b8b94;">●</td>
+          <td style="text-align: center; padding: 8px; color: #525260;">—</td>
+          <td style="padding: 8px 12px; color: #525260; font-size: 11px;">hasProducer</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <div style="margin-top: 16px; display: flex; gap: 24px; justify-content: center; font-size: 11px; font-family: 'SF Mono', monospace;">
+    <span><span style="color: #FFD93D; font-weight: bold;">★</span> <span style="color: #a1a1aa;">= type-priority (leads content for this type)</span></span>
+    <span><span style="color: #8b8b94;">●</span> <span style="color: #a1a1aa;">= trait-included (renders if data exists)</span></span>
+    <span><span style="color: #525260;">—</span> <span style="color: #a1a1aa;">= never mounts</span></span>
+  </div>
+</div>
+
+<div class="section" style="margin-top: 32px;">
+  <h3>Place Subtype Manifests</h3>
+  <p class="subtitle">How section order changes by venue type. Position 1 is the type-priority section that defines the page's character.</p>
+  <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; max-width: 720px; margin: 0 auto; font-family: 'SF Mono', monospace; font-size: 11px;">
+
+    <!-- Cinema -->
+    <div style="background: #0f0f14; border: 1px solid #252530; border-radius: 10px; padding: 14px;">
+      <div style="color: #FFD93D; font-weight: 600; font-size: 13px; margin-bottom: 10px;">🎬 Cinema</div>
+      <div style="color: #FFD93D; margin-bottom: 4px;">1. ShowtimesSection</div>
+      <div style="color: #f5f5f3; margin-bottom: 4px;">2. AboutSection</div>
+      <div style="color: #E879F9; margin-bottom: 4px;">3. ConnectionsSection</div>
+      <div style="color: #f5f5f3; margin-bottom: 4px;">4. FeaturesSection</div>
+      <div style="color: #f5f5f3; margin-bottom: 4px;">5. PlanYourVisitSection</div>
+      <div style="color: #f5f5f3; margin-bottom: 4px;">6. NearbySection</div>
+    </div>
+
+    <!-- Restaurant -->
+    <div style="background: #0f0f14; border: 1px solid #252530; border-radius: 10px; padding: 14px;">
+      <div style="color: #00D9A0; font-weight: 600; font-size: 13px; margin-bottom: 10px;">🍽️ Restaurant</div>
+      <div style="color: #00D9A0; margin-bottom: 4px;">1. DiningSection</div>
+      <div style="color: #f5f5f3; margin-bottom: 4px;">2. AboutSection</div>
+      <div style="color: #f5f5f3; margin-bottom: 4px;">3. OccasionsSection</div>
+      <div style="color: #f5f5f3; margin-bottom: 4px;">4. SpecialsSection</div>
+      <div style="color: #f5f5f3; margin-bottom: 4px;">5. EventsAtVenueSection</div>
+      <div style="color: #f5f5f3; margin-bottom: 4px;">6. AccoladesSection</div>
+      <div style="color: #f5f5f3; margin-bottom: 4px;">7. NearbySection</div>
+    </div>
+
+    <!-- Museum -->
+    <div style="background: #0f0f14; border: 1px solid #252530; border-radius: 10px; padding: 14px;">
+      <div style="color: #E879F9; font-weight: 600; font-size: 13px; margin-bottom: 10px;">🏛️ Museum / Gallery</div>
+      <div style="color: #E879F9; margin-bottom: 4px;">1. ExhibitionsSection</div>
+      <div style="color: #f5f5f3; margin-bottom: 4px;">2. AboutSection</div>
+      <div style="color: #f5f5f3; margin-bottom: 4px;">3. FeaturesSection</div>
+      <div style="color: #f5f5f3; margin-bottom: 4px;">4. PlanYourVisitSection</div>
+      <div style="color: #f5f5f3; margin-bottom: 4px;">5. EventsAtVenueSection</div>
+      <div style="color: #f5f5f3; margin-bottom: 4px;">6. AccoladesSection</div>
+      <div style="color: #f5f5f3; margin-bottom: 4px;">7. NearbySection</div>
+    </div>
+
+    <!-- Bar / Nightclub -->
+    <div style="background: #0f0f14; border: 1px solid #252530; border-radius: 10px; padding: 14px;">
+      <div style="color: #FF6B7A; font-weight: 600; font-size: 13px; margin-bottom: 10px;">🍸 Bar / Nightclub</div>
+      <div style="color: #FF6B7A; margin-bottom: 4px;">1. EventsAtVenueSection</div>
+      <div style="color: #f5f5f3; margin-bottom: 4px;">2. AboutSection</div>
+      <div style="color: #f5f5f3; margin-bottom: 4px;">3. OccasionsSection</div>
+      <div style="color: #f5f5f3; margin-bottom: 4px;">4. SpecialsSection</div>
+      <div style="color: #E879F9; margin-bottom: 4px;">5. ConnectionsSection</div>
+      <div style="color: #f5f5f3; margin-bottom: 4px;">6. NearbySection</div>
+    </div>
+
+    <!-- Park / Outdoor -->
+    <div style="background: #0f0f14; border: 1px solid #252530; border-radius: 10px; padding: 14px;">
+      <div style="color: #22D3EE; font-weight: 600; font-size: 13px; margin-bottom: 10px;">🌳 Park / Garden</div>
+      <div style="color: #22D3EE; margin-bottom: 4px;">1. FeaturesSection</div>
+      <div style="color: #f5f5f3; margin-bottom: 4px;">2. AboutSection</div>
+      <div style="color: #f5f5f3; margin-bottom: 4px;">3. EventsAtVenueSection</div>
+      <div style="color: #f5f5f3; margin-bottom: 4px;">4. PlanYourVisitSection</div>
+      <div style="color: #f5f5f3; margin-bottom: 4px;">5. AccoladesSection</div>
+      <div style="color: #f5f5f3; margin-bottom: 4px;">6. NearbySection</div>
+    </div>
+
+    <!-- Music Venue -->
+    <div style="background: #0f0f14; border: 1px solid #252530; border-radius: 10px; padding: 14px;">
+      <div style="color: #FFD93D; font-weight: 600; font-size: 13px; margin-bottom: 10px;">🎵 Music Venue</div>
+      <div style="color: #FFD93D; margin-bottom: 4px;">1. EventsAtVenueSection</div>
+      <div style="color: #f5f5f3; margin-bottom: 4px;">2. AboutSection</div>
+      <div style="color: #f5f5f3; margin-bottom: 4px;">3. OccasionsSection</div>
+      <div style="color: #f5f5f3; margin-bottom: 4px;">4. FeaturesSection</div>
+      <div style="color: #E879F9; margin-bottom: 4px;">5. ConnectionsSection</div>
+      <div style="color: #f5f5f3; margin-bottom: 4px;">6. NearbySection</div>
+    </div>
+  </div>
+</div>

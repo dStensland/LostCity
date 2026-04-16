@@ -63364,16 +63364,26 @@
           "name": "hdr",
           "x": 16,
           "y": 16,
+          "height": "fit_content",
           "descendants": {
+            "7SEjs": {
+              "width": "fit_content",
+              "height": "fit_content"
+            },
             "Odoci": {
-              "fill": "$accent/coral"
+              "fill": "$accent/coral",
+              "y": 0.5
             },
             "2I4aA": {
               "content": "THE LINEUP",
-              "fill": "$accent/coral"
+              "fill": "$accent/coral",
+              "x": 22
             },
             "cwVjz": {
               "enabled": false
+            },
+            "cwVjz/5W1wh": {
+              "y": 3.5
             },
             "HvfI0": {
               "x": 283,
@@ -63634,10 +63644,14 @@
               "name": "chipMusic",
               "x": 70,
               "y": 8,
+              "width": "fit_content",
+              "height": "fit_content",
               "descendants": {
                 "SW4zs": {
                   "content": "Music 8",
-                  "fontSize": 10
+                  "fontSize": 10,
+                  "x": 14,
+                  "y": 10
                 }
               }
             },
@@ -63648,10 +63662,14 @@
               "name": "chipComedy",
               "x": 146,
               "y": 8,
+              "width": "fit_content",
+              "height": "fit_content",
               "descendants": {
                 "SW4zs": {
                   "content": "Comedy 6",
-                  "fontSize": 10
+                  "fontSize": 10,
+                  "x": 14,
+                  "y": 10
                 }
               }
             },
@@ -63662,10 +63680,14 @@
               "name": "chipArt",
               "x": 228,
               "y": 8,
+              "width": "fit_content",
+              "height": "fit_content",
               "descendants": {
                 "SW4zs": {
                   "content": "Art 5",
-                  "fontSize": 10
+                  "fontSize": 10,
+                  "x": 14,
+                  "y": 10
                 }
               }
             },
@@ -63676,10 +63698,14 @@
               "name": "chipFood",
               "x": 292,
               "y": 8,
+              "width": "fit_content",
+              "height": "fit_content",
               "descendants": {
                 "SW4zs": {
                   "content": "Food 4",
-                  "fontSize": 10
+                  "fontSize": 10,
+                  "x": 14,
+                  "y": 10
                 }
               }
             },
@@ -63690,10 +63716,14 @@
               "name": "chipFree",
               "x": 362,
               "y": 8,
+              "width": "fit_content",
+              "height": "fit_content",
               "descendants": {
                 "SW4zs": {
                   "content": "Free 11",
-                  "fontSize": 10
+                  "fontSize": 10,
+                  "x": 14,
+                  "y": 10
                 }
               }
             }
@@ -63887,22 +63917,28 @@
               "height": "fill_container"
             },
             "CY89c": {
-              "height": "fill_container"
+              "height": "fill_container",
+              "x": 2
             },
             "LXfKG": {
               "y": 36,
-              "content": "8:00"
+              "content": "8:00",
+              "x": 26
             },
             "Pm6yQ": {
-              "y": 64
+              "y": 64,
+              "x": 42.5
             },
             "4330M": {
               "width": "fill_container",
-              "height": "fit_content"
+              "height": "fit_content",
+              "x": 102
             },
             "Q4UBp": {
               "width": "fill_container",
-              "height": "fit_content"
+              "height": "fit_content",
+              "x": 12,
+              "y": 12
             },
             "ALbSH": {
               "y": 0
@@ -63910,24 +63946,39 @@
             "nPMzh": {
               "width": "fill_container",
               "y": 6.5,
-              "content": "SZA — The Lana Tour"
+              "content": "SZA — The Lana Tour",
+              "x": 40
             },
             "rCRLB": {
               "y": 54,
-              "content": "State Farm Arena"
+              "content": "State Farm Arena",
+              "x": 12
             },
             "OpV4P": {
               "width": "fill_container",
-              "y": 80
+              "y": 80,
+              "height": "fit_content",
+              "x": 12
             },
             "BgeLZ": {
-              "content": "8:00 PM"
+              "content": "8:00 PM",
+              "y": 3
+            },
+            "AKUlx": {
+              "y": 2.5
+            },
+            "ry3mK": {
+              "width": "fit_content",
+              "height": "fit_content",
+              "x": 60
             },
             "ry3mK/r9sS6": {
               "content": "$45+"
             },
             "jLgPH": {
-              "enabled": false
+              "enabled": false,
+              "width": "fit_content",
+              "height": "fit_content"
             }
           }
         },
@@ -63946,29 +63997,55 @@
           "name": "ev2",
           "x": 16,
           "y": 457,
+          "height": "fit_content",
           "descendants": {
+            "hUeSV": {
+              "height": "fill_container"
+            },
             "XGcii": {
-              "width": "fill_container"
+              "width": "fill_container",
+              "height": "fit_content",
+              "x": 2
             },
             "eBF1V": {
-              "width": "fill_container"
+              "width": "fill_container",
+              "height": "fit_content",
+              "x": 12,
+              "y": 8
             },
             "ybULP": {
               "width": "fill_container",
-              "content": "Atlanta BeltLine Night Market"
+              "content": "Atlanta BeltLine Night Market",
+              "x": 32,
+              "y": 3
             },
             "4qQfd": {
-              "x": 261
+              "x": 261,
+              "y": 4
             },
             "B90jo": {
               "x": 271,
-              "content": "6:00 PM"
+              "content": "6:00 PM",
+              "y": 4.5
             },
             "riWYP": {
-              "width": "fill_container"
+              "width": "fill_container",
+              "height": "fit_content",
+              "x": 12,
+              "y": 36
             },
             "GCYir": {
-              "content": "Ponce City Market"
+              "content": "Ponce City Market",
+              "y": 2.5
+            },
+            "lDaCH": {
+              "x": 104,
+              "y": 2
+            },
+            "xsfO3": {
+              "width": "fit_content",
+              "height": "fit_content",
+              "x": 112
             },
             "xsfO3/r9sS6": {
               "content": "FREE"
@@ -63990,29 +64067,55 @@
           "name": "ev3",
           "x": 16,
           "y": 525,
+          "height": "fit_content",
           "descendants": {
+            "hUeSV": {
+              "height": "fill_container"
+            },
             "XGcii": {
-              "width": "fill_container"
+              "width": "fill_container",
+              "height": "fit_content",
+              "x": 2
             },
             "eBF1V": {
-              "width": "fill_container"
+              "width": "fill_container",
+              "height": "fit_content",
+              "x": 12,
+              "y": 8
             },
             "ybULP": {
               "width": "fill_container",
-              "content": "Ramen Pop-Up at Hop City"
+              "content": "Ramen Pop-Up at Hop City",
+              "x": 32,
+              "y": 3
             },
             "4qQfd": {
-              "x": 263
+              "x": 263,
+              "y": 4
             },
             "B90jo": {
               "x": 273,
-              "content": "7:30 PM"
+              "content": "7:30 PM",
+              "y": 4.5
             },
             "riWYP": {
-              "width": "fill_container"
+              "width": "fill_container",
+              "height": "fit_content",
+              "x": 12,
+              "y": 36
             },
             "GCYir": {
-              "content": "Hop City · West End"
+              "content": "Hop City · West End",
+              "y": 2.5
+            },
+            "lDaCH": {
+              "x": 109,
+              "y": 2
+            },
+            "xsfO3": {
+              "width": "fit_content",
+              "height": "fit_content",
+              "x": 117
             },
             "xsfO3/r9sS6": {
               "content": "$20"
@@ -64324,16 +64427,26 @@
           "name": "hdr2",
           "x": 16,
           "y": 16,
+          "height": "fit_content",
           "descendants": {
+            "7SEjs": {
+              "width": "fit_content",
+              "height": "fit_content"
+            },
             "Odoci": {
-              "fill": "$accent/coral"
+              "fill": "$accent/coral",
+              "y": 0.5
             },
             "2I4aA": {
               "content": "THE LINEUP",
-              "fill": "$accent/coral"
+              "fill": "$accent/coral",
+              "x": 22
             },
             "cwVjz": {
               "enabled": false
+            },
+            "cwVjz/5W1wh": {
+              "y": 3.5
             },
             "HvfI0": {
               "x": 283,
@@ -64584,10 +64697,14 @@
               "name": "c2mus",
               "x": 70,
               "y": 8,
+              "width": "fit_content",
+              "height": "fit_content",
               "descendants": {
                 "SW4zs": {
                   "content": "Music 14",
-                  "fontSize": 10
+                  "fontSize": 10,
+                  "x": 14,
+                  "y": 10
                 }
               }
             },
@@ -64598,10 +64715,14 @@
               "name": "c2com",
               "x": 152,
               "y": 8,
+              "width": "fit_content",
+              "height": "fit_content",
               "descendants": {
                 "SW4zs": {
                   "content": "Comedy 9",
-                  "fontSize": 10
+                  "fontSize": 10,
+                  "x": 14,
+                  "y": 10
                 }
               }
             },
@@ -64612,10 +64733,14 @@
               "name": "c2art",
               "x": 234,
               "y": 8,
+              "width": "fit_content",
+              "height": "fit_content",
               "descendants": {
                 "SW4zs": {
                   "content": "Art 7",
-                  "fontSize": 10
+                  "fontSize": 10,
+                  "x": 14,
+                  "y": 10
                 }
               }
             },
@@ -64626,10 +64751,14 @@
               "name": "c2free",
               "x": 298,
               "y": 8,
+              "width": "fit_content",
+              "height": "fit_content",
               "descendants": {
                 "SW4zs": {
                   "content": "Free 18",
-                  "fontSize": 10
+                  "fontSize": 10,
+                  "x": 14,
+                  "y": 10
                 }
               }
             }
@@ -64667,29 +64796,57 @@
           "name": "twEv1",
           "x": 16,
           "y": 141,
+          "height": "fit_content",
           "descendants": {
+            "hUeSV": {
+              "height": "fill_container"
+            },
             "XGcii": {
-              "width": "fill_container"
+              "width": "fill_container",
+              "height": "fit_content",
+              "x": 2
             },
             "eBF1V": {
-              "width": "fill_container"
+              "width": "fill_container",
+              "height": "fit_content",
+              "x": 12,
+              "y": 8
+            },
+            "ILapm": {
+              "y": 6
             },
             "ybULP": {
               "width": "fill_container",
-              "content": "Gallery Opening: New Perspectives"
+              "content": "Gallery Opening: New Perspectives",
+              "x": 32
             },
             "4qQfd": {
-              "x": 261
+              "x": 261,
+              "y": 10
             },
             "B90jo": {
               "x": 271,
-              "content": "7:00 PM"
+              "content": "7:00 PM",
+              "y": 10.5
             },
             "riWYP": {
-              "width": "fill_container"
+              "width": "fill_container",
+              "height": "fit_content",
+              "x": 12,
+              "y": 48
             },
             "GCYir": {
-              "content": "High Museum of Art"
+              "content": "High Museum of Art",
+              "y": 2.5
+            },
+            "lDaCH": {
+              "x": 112,
+              "y": 2
+            },
+            "xsfO3": {
+              "width": "fit_content",
+              "height": "fit_content",
+              "x": 120
             },
             "xsfO3/r9sS6": {
               "content": "FREE"
@@ -64711,29 +64868,55 @@
           "name": "twEv2",
           "x": 16,
           "y": 221,
+          "height": "fit_content",
           "descendants": {
+            "hUeSV": {
+              "height": "fill_container"
+            },
             "XGcii": {
-              "width": "fill_container"
+              "width": "fill_container",
+              "height": "fit_content",
+              "x": 2
             },
             "eBF1V": {
-              "width": "fill_container"
+              "width": "fill_container",
+              "height": "fit_content",
+              "x": 12,
+              "y": 8
             },
             "ybULP": {
               "width": "fill_container",
-              "content": "Yacht Rock Revue"
+              "content": "Yacht Rock Revue",
+              "x": 32,
+              "y": 3
             },
             "4qQfd": {
-              "x": 261
+              "x": 261,
+              "y": 4
             },
             "B90jo": {
               "x": 271,
-              "content": "8:00 PM"
+              "content": "8:00 PM",
+              "y": 4.5
             },
             "riWYP": {
-              "width": "fill_container"
+              "width": "fill_container",
+              "height": "fit_content",
+              "x": 12,
+              "y": 36
             },
             "GCYir": {
-              "content": "Buckhead Theatre"
+              "content": "Buckhead Theatre",
+              "y": 2.5
+            },
+            "lDaCH": {
+              "x": 104,
+              "y": 2
+            },
+            "xsfO3": {
+              "width": "fit_content",
+              "height": "fit_content",
+              "x": 112
             },
             "xsfO3/r9sS6": {
               "content": "$35"
@@ -64994,16 +65177,26 @@
           "name": "hdr3",
           "x": 16,
           "y": 16,
+          "height": "fit_content",
           "descendants": {
+            "7SEjs": {
+              "width": "fit_content",
+              "height": "fit_content"
+            },
             "Odoci": {
-              "fill": "$accent/coral"
+              "fill": "$accent/coral",
+              "y": 0.5
             },
             "2I4aA": {
               "content": "THE LINEUP",
-              "fill": "$accent/coral"
+              "fill": "$accent/coral",
+              "x": 22
             },
             "cwVjz": {
               "enabled": false
+            },
+            "cwVjz/5W1wh": {
+              "y": 3.5
             },
             "HvfI0": {
               "x": 283,
@@ -65241,10 +65434,14 @@
               "name": "mApr",
               "x": 82,
               "y": 8,
+              "width": "fit_content",
+              "height": "fit_content",
               "descendants": {
                 "SW4zs": {
                   "content": "Apr (5)",
-                  "fontSize": 10
+                  "fontSize": 10,
+                  "x": 14,
+                  "y": 10
                 }
               }
             },
@@ -65255,10 +65452,14 @@
               "name": "mMay",
               "x": 158,
               "y": 8,
+              "width": "fit_content",
+              "height": "fit_content",
               "descendants": {
                 "SW4zs": {
                   "content": "May (3)",
-                  "fontSize": 10
+                  "fontSize": 10,
+                  "x": 14,
+                  "y": 10
                 }
               }
             },
@@ -65269,10 +65470,14 @@
               "name": "mJun",
               "x": 234,
               "y": 8,
+              "width": "fit_content",
+              "height": "fit_content",
               "descendants": {
                 "SW4zs": {
                   "content": "Jun (4)",
-                  "fontSize": 10
+                  "fontSize": 10,
+                  "x": 14,
+                  "y": 10
                 }
               }
             }
@@ -65298,6 +65503,7 @@
               "name": "c1",
               "x": 0,
               "y": 4,
+              "height": "fit_content",
               "descendants": {
                 "aVEOo": {
                   "width": "fill_container",
@@ -65309,17 +65515,25 @@
                   }
                 },
                 "rRP1N": {
-                  "width": "fill_container"
+                  "width": "fill_container",
+                  "height": "fit_content",
+                  "y": 128
                 },
                 "Witrn": {
                   "width": "fill_container",
-                  "content": "Music Midtown 2026"
+                  "content": "Music Midtown 2026",
+                  "x": 12,
+                  "y": 12
                 },
                 "R35iB": {
-                  "content": "Piedmont Park · Sep 18–19"
+                  "content": "Piedmont Park · Sep 18–19",
+                  "x": 12,
+                  "y": 35
                 },
                 "WIdVY": {
-                  "content": "Midtown"
+                  "content": "Midtown",
+                  "x": 12,
+                  "y": 55
                 }
               }
             },
@@ -65331,6 +65545,7 @@
               "name": "c2",
               "x": 272,
               "y": 4,
+              "height": "fit_content",
               "descendants": {
                 "aVEOo": {
                   "width": "fill_container",
@@ -65342,17 +65557,25 @@
                   }
                 },
                 "rRP1N": {
-                  "width": "fill_container"
+                  "width": "fill_container",
+                  "height": "fit_content",
+                  "y": 128
                 },
                 "Witrn": {
                   "width": "fill_container",
-                  "content": "Dragon Con 2026"
+                  "content": "Dragon Con 2026",
+                  "x": 12,
+                  "y": 12
                 },
                 "R35iB": {
-                  "content": "Downtown Hotels · Aug 28–Sep 1"
+                  "content": "Downtown Hotels · Aug 28–Sep 1",
+                  "x": 12,
+                  "y": 35
                 },
                 "WIdVY": {
-                  "content": "Downtown"
+                  "content": "Downtown",
+                  "x": 12,
+                  "y": 55
                 }
               }
             }
@@ -65407,16 +65630,26 @@
           "name": "hdr4",
           "x": 16,
           "y": 16,
+          "height": "fit_content",
           "descendants": {
+            "7SEjs": {
+              "width": "fit_content",
+              "height": "fit_content"
+            },
             "Odoci": {
-              "fill": "$accent/coral"
+              "fill": "$accent/coral",
+              "y": 0.5
             },
             "2I4aA": {
               "content": "THE LINEUP",
-              "fill": "$accent/coral"
+              "fill": "$accent/coral",
+              "x": 22
             },
             "cwVjz": {
               "enabled": false
+            },
+            "cwVjz/5W1wh": {
+              "y": 3.5
             },
             "HvfI0": {
               "x": 283,
@@ -65766,21 +65999,66 @@
           "name": "dayRow",
           "x": 16,
           "y": 108,
+          "height": "fit_content",
           "descendants": {
             "WCppG": {
               "width": "fill_container"
             },
+            "CU34S": {
+              "x": 12.785714285714285,
+              "y": 7
+            },
+            "qfyTf": {
+              "x": 19.785714285714285,
+              "y": 24
+            },
             "h5vVu": {
-              "width": "fill_container"
+              "width": "fill_container",
+              "x": 49.57142857142857
+            },
+            "pnzTu": {
+              "x": 12.785714285714285,
+              "y": 7
+            },
+            "5zGnY": {
+              "x": 16.785714285714285,
+              "y": 24
             },
             "aCVdV": {
-              "width": "fill_container"
+              "width": "fill_container",
+              "x": 99.14285714285714
+            },
+            "CuHxz": {
+              "x": 12.785714285714285,
+              "y": 7
+            },
+            "8562n": {
+              "x": 16.785714285714285,
+              "y": 24
             },
             "VEUh0": {
-              "width": "fill_container"
+              "width": "fill_container",
+              "x": 148.71428571428572
+            },
+            "mrgl0": {
+              "x": 12.785714285714285,
+              "y": 7
+            },
+            "vYB5J": {
+              "x": 19.785714285714285,
+              "y": 24
             },
             "Fgmen": {
-              "width": "fill_container"
+              "width": "fill_container",
+              "x": 198.28571428571428
+            },
+            "48eTn": {
+              "x": 12.785714285714285,
+              "y": 7
+            },
+            "nCY6q": {
+              "x": 16.785714285714285,
+              "y": 24
             },
             "G5Pti": {
               "width": "fill_container",
@@ -65788,11 +66066,24 @@
               "x": 247.85714285714283
             },
             "12tbz": {
-              "x": 12.785714285714285
+              "x": 12.785714285714285,
+              "y": 7
+            },
+            "QKWWN": {
+              "x": 16.785714285714285,
+              "y": 24
             },
             "oacPi": {
               "width": "fill_container",
               "x": 297.4285714285714
+            },
+            "pI1V7": {
+              "x": 12.785714285714285,
+              "y": 7
+            },
+            "QmFEG": {
+              "x": 19.785714285714285,
+              "y": 24
             }
           }
         },
@@ -81556,6 +81847,32 @@
           "x": 0,
           "y": 0,
           "descendants": {
+            "dv8DO": {
+              "width": "fit_content",
+              "height": "fit_content",
+              "x": 24,
+              "y": 19
+            },
+            "lHjUt": {
+              "width": "fit_content",
+              "height": "fit_content",
+              "x": 89,
+              "y": 1
+            },
+            "nRAHK": {
+              "x": 6,
+              "y": 2
+            },
+            "qWVGD": {
+              "width": "fit_content",
+              "height": "fit_content",
+              "x": 630.5,
+              "y": 20.5
+            },
+            "Q5rmc": {
+              "width": "fit_content",
+              "height": "fit_content"
+            },
             "byhAj": {
               "content": "FEED",
               "fill": "$text/soft"
@@ -81565,15 +81882,35 @@
             },
             "IUbux": {
               "content": "FIND",
-              "fill": "$accent/coral"
+              "fill": "$accent/coral",
+              "x": 56
             },
             "ddepC": {
               "content": "GOING OUT",
-              "fill": "$text/soft"
+              "fill": "$text/soft",
+              "x": 112
             },
             "aakCi": {
               "content": "",
               "enabled": false
+            },
+            "vk4mn": {
+              "width": "fit_content",
+              "height": "fit_content",
+              "x": 1302,
+              "y": 14.5
+            },
+            "nFg44": {
+              "y": 5.5
+            },
+            "Ywwg7": {
+              "width": "fit_content",
+              "height": "fit_content",
+              "x": 32
+            },
+            "nFpQw": {
+              "x": 14,
+              "y": 6
             }
           }
         },
@@ -82127,7 +82464,8 @@
                       "fill": "$text/muted",
                       "content": "Search events, places, showtimes...",
                       "fontFamily": "Outfit",
-                      "fontSize": 14
+                      "fontSize": 14,
+                      "fontWeight": "normal"
                     }
                   ]
                 },
@@ -83842,10 +84180,14 @@
                                   "type": "ref",
                                   "ref": "olqzW",
                                   "name": "pp1",
+                                  "width": "fit_content",
+                                  "height": "fit_content",
                                   "descendants": {
                                     "SW4zs": {
                                       "content": "Arts",
-                                      "fill": "$text/soft"
+                                      "fill": "$text/soft",
+                                      "x": 14,
+                                      "y": 10
                                     }
                                   }
                                 },
@@ -83855,10 +84197,14 @@
                                   "ref": "olqzW",
                                   "name": "pp2",
                                   "x": 63,
+                                  "width": "fit_content",
+                                  "height": "fit_content",
                                   "descendants": {
                                     "SW4zs": {
                                       "content": "Dining",
-                                      "fill": "$text/soft"
+                                      "fill": "$text/soft",
+                                      "x": 14,
+                                      "y": 10
                                     }
                                   }
                                 },
@@ -83868,10 +84214,14 @@
                                   "ref": "olqzW",
                                   "name": "pp3",
                                   "x": 139,
+                                  "width": "fit_content",
+                                  "height": "fit_content",
                                   "descendants": {
                                     "SW4zs": {
                                       "content": "Outdoors",
-                                      "fill": "$text/soft"
+                                      "fill": "$text/soft",
+                                      "x": 14,
+                                      "y": 10
                                     }
                                   }
                                 },
@@ -83881,10 +84231,14 @@
                                   "ref": "olqzW",
                                   "name": "pp4",
                                   "x": 228,
+                                  "width": "fit_content",
+                                  "height": "fit_content",
                                   "descendants": {
                                     "SW4zs": {
                                       "content": "Nightlife",
-                                      "fill": "$text/soft"
+                                      "fill": "$text/soft",
+                                      "x": 14,
+                                      "y": 10
                                     }
                                   }
                                 }
@@ -84081,8 +84435,30 @@
           "x": 0,
           "y": 0,
           "descendants": {
+            "qefqy": {
+              "width": "fit_content",
+              "height": "fit_content",
+              "x": 16,
+              "y": 20
+            },
+            "qIKpj": {
+              "width": "fit_content",
+              "height": "fit_content",
+              "x": 84,
+              "y": 0.5
+            },
+            "Aoeho": {
+              "x": 5,
+              "y": 2
+            },
             "RNmhv": {
-              "x": 322
+              "x": 322,
+              "width": "fit_content",
+              "height": "fit_content",
+              "y": 19
+            },
+            "pTO9a": {
+              "x": 34
             }
           }
         },
@@ -85244,11 +85620,15 @@
                       "type": "ref",
                       "ref": "olqzW",
                       "name": "mpp1",
+                      "width": "fit_content",
+                      "height": "fit_content",
                       "descendants": {
                         "SW4zs": {
                           "content": "Arts",
                           "fill": "$text/soft",
-                          "fontSize": 10
+                          "fontSize": 10,
+                          "x": 14,
+                          "y": 10
                         }
                       }
                     },
@@ -85258,11 +85638,15 @@
                       "ref": "olqzW",
                       "name": "mpp2",
                       "x": 58,
+                      "width": "fit_content",
+                      "height": "fit_content",
                       "descendants": {
                         "SW4zs": {
                           "content": "Dining",
                           "fill": "$text/soft",
-                          "fontSize": 10
+                          "fontSize": 10,
+                          "x": 14,
+                          "y": 10
                         }
                       }
                     },
@@ -85272,11 +85656,15 @@
                       "ref": "olqzW",
                       "name": "mpp3",
                       "x": 128,
+                      "width": "fit_content",
+                      "height": "fit_content",
                       "descendants": {
                         "SW4zs": {
                           "content": "Outdoors",
                           "fill": "$text/soft",
-                          "fontSize": 10
+                          "fontSize": 10,
+                          "x": 14,
+                          "y": 10
                         }
                       }
                     }
@@ -85315,53 +85703,69 @@
           "y": 1293,
           "descendants": {
             "xYodi": {
-              "width": "fill_container"
+              "width": "fill_container",
+              "height": "fit_content",
+              "x": 7.999999999999997,
+              "y": 10.5
             },
             "57bhH": {
               "x": 27.4
             },
             "xTnRC": {
-              "x": 19.9
+              "x": 19.9,
+              "y": 24
             },
             "qYYiT": {
               "width": "fill_container",
-              "x": 82.8
+              "x": 82.8,
+              "height": "fit_content",
+              "y": 10.5
             },
             "hXmua": {
               "x": 27.4
             },
             "oFEt6": {
-              "x": 15.899999999999999
+              "x": 15.899999999999999,
+              "y": 24
             },
             "y6a9R": {
               "width": "fill_container",
-              "x": 157.6
+              "x": 157.6,
+              "height": "fit_content",
+              "y": 10.5
             },
             "TTNBO": {
               "x": 27.4
             },
             "LZkSh": {
-              "x": 24.4
+              "x": 24.4,
+              "y": 24
             },
             "Y9xqJ": {
               "width": "fill_container",
-              "x": 232.39999999999998
+              "x": 232.39999999999998,
+              "height": "fit_content",
+              "y": 10.5
             },
             "TrQyo": {
               "x": 27.4
             },
             "Hb5nx": {
-              "x": 23.4
+              "x": 23.4,
+              "y": 24
             },
             "Cu2ME": {
               "width": "fill_container",
-              "x": 307.2
+              "x": 307.2,
+              "height": "fit_content",
+              "y": 10.5
             },
             "L5VbJ": {
               "x": 27.4
             },
             "s7zgN": {
-              "x": 23.9
+              "x": 23.9,
+              "y": 24
             }
           }
         }
@@ -85388,11 +85792,15 @@
           "descendants": {
             "qefqy": {
               "x": 16,
-              "y": 20
+              "y": 20,
+              "width": "fit_content",
+              "height": "fit_content"
             },
             "qIKpj": {
               "x": 84,
-              "y": 0.5
+              "y": 0.5,
+              "width": "fit_content",
+              "height": "fit_content"
             },
             "Aoeho": {
               "x": 5,
@@ -85400,7 +85808,9 @@
             },
             "RNmhv": {
               "x": 307,
-              "y": 19
+              "y": 19,
+              "width": "fit_content",
+              "height": "fit_content"
             },
             "pTO9a": {
               "x": 34
@@ -86917,17 +87327,74 @@
           "x": 0,
           "y": 1138,
           "descendants": {
+            "xYodi": {
+              "width": "fill_container",
+              "height": "fit_content",
+              "x": 7.999999999999997,
+              "y": 10.5
+            },
             "57bhH": {
-              "fill": "$text/muted"
+              "fill": "$text/muted",
+              "x": 25.9
             },
             "xTnRC": {
-              "fill": "$text/muted"
+              "fill": "$text/muted",
+              "x": 18.4,
+              "y": 24
+            },
+            "qYYiT": {
+              "width": "fill_container",
+              "height": "fit_content",
+              "x": 79.8,
+              "y": 10.5
+            },
+            "hXmua": {
+              "x": 25.9
+            },
+            "oFEt6": {
+              "x": 14.399999999999999,
+              "y": 24
+            },
+            "y6a9R": {
+              "width": "fill_container",
+              "height": "fit_content",
+              "x": 151.6,
+              "y": 10.5
+            },
+            "TTNBO": {
+              "x": 25.9
+            },
+            "LZkSh": {
+              "x": 22.9,
+              "y": 24
+            },
+            "Y9xqJ": {
+              "width": "fill_container",
+              "height": "fit_content",
+              "x": 223.39999999999998,
+              "y": 10.5
             },
             "TrQyo": {
-              "fill": "$accent/coral"
+              "fill": "$accent/coral",
+              "x": 25.9
             },
             "Hb5nx": {
-              "fill": "$accent/coral"
+              "fill": "$accent/coral",
+              "x": 21.9,
+              "y": 24
+            },
+            "Cu2ME": {
+              "width": "fill_container",
+              "height": "fit_content",
+              "x": 295.2,
+              "y": 10.5
+            },
+            "L5VbJ": {
+              "x": 25.9
+            },
+            "s7zgN": {
+              "x": 22.4,
+              "y": 24
             }
           }
         }
@@ -86952,14 +87419,65 @@
           "x": 0,
           "y": 0,
           "descendants": {
+            "dv8DO": {
+              "width": "fit_content",
+              "height": "fit_content",
+              "x": 24,
+              "y": 19
+            },
+            "lHjUt": {
+              "width": "fit_content",
+              "height": "fit_content",
+              "x": 89,
+              "y": 1
+            },
+            "nRAHK": {
+              "x": 6,
+              "y": 2
+            },
+            "qWVGD": {
+              "width": "fit_content",
+              "height": "fit_content",
+              "x": 552.5,
+              "y": 20.5
+            },
+            "Q5rmc": {
+              "width": "fit_content",
+              "height": "fit_content"
+            },
             "byhAj": {
               "fill": "$text/soft"
             },
             "CjYEW": {
               "enabled": false
             },
+            "IUbux": {
+              "x": 87
+            },
+            "ddepC": {
+              "x": 182
+            },
             "aakCi": {
-              "fill": "$accent/coral"
+              "fill": "$accent/coral",
+              "x": 253
+            },
+            "vk4mn": {
+              "width": "fit_content",
+              "height": "fit_content",
+              "x": 1302,
+              "y": 14.5
+            },
+            "nFg44": {
+              "y": 5.5
+            },
+            "Ywwg7": {
+              "width": "fit_content",
+              "height": "fit_content",
+              "x": 32
+            },
+            "nFpQw": {
+              "x": 14,
+              "y": 6
             }
           }
         },
@@ -88313,8 +88831,31 @@
           "x": 0,
           "y": 0,
           "descendants": {
+            "dv8DO": {
+              "width": "fit_content",
+              "height": "fit_content",
+              "x": 24,
+              "y": 19
+            },
+            "lHjUt": {
+              "width": "fit_content",
+              "height": "fit_content",
+              "x": 89,
+              "y": 1
+            },
+            "nRAHK": {
+              "x": 6,
+              "y": 2
+            },
             "qWVGD": {
-              "x": 270.5
+              "x": 270.5,
+              "width": "fit_content",
+              "height": "fit_content",
+              "y": 20.5
+            },
+            "Q5rmc": {
+              "width": "fit_content",
+              "height": "fit_content"
             },
             "byhAj": {
               "content": "FEED",
@@ -88325,17 +88866,34 @@
             },
             "IUbux": {
               "content": "FIND",
-              "fill": "$accent/coral"
+              "fill": "$accent/coral",
+              "x": 56
             },
             "ddepC": {
               "content": "GOING OUT",
-              "fill": "$text/soft"
+              "fill": "$text/soft",
+              "x": 112
             },
             "aakCi": {
               "enabled": false
             },
             "vk4mn": {
-              "x": 582
+              "x": 582,
+              "width": "fit_content",
+              "height": "fit_content",
+              "y": 14.5
+            },
+            "nFg44": {
+              "y": 5.5
+            },
+            "Ywwg7": {
+              "width": "fit_content",
+              "height": "fit_content",
+              "x": 32
+            },
+            "nFpQw": {
+              "x": 14,
+              "y": 6
             }
           }
         },
@@ -89277,8 +89835,31 @@
           "x": 0,
           "y": 0,
           "descendants": {
+            "dv8DO": {
+              "width": "fit_content",
+              "height": "fit_content",
+              "x": 24,
+              "y": 19
+            },
+            "lHjUt": {
+              "width": "fit_content",
+              "height": "fit_content",
+              "x": 89,
+              "y": 1
+            },
+            "nRAHK": {
+              "x": 6,
+              "y": 2
+            },
             "qWVGD": {
-              "x": 270.5
+              "x": 270.5,
+              "width": "fit_content",
+              "height": "fit_content",
+              "y": 20.5
+            },
+            "Q5rmc": {
+              "width": "fit_content",
+              "height": "fit_content"
             },
             "byhAj": {
               "content": "FEED",
@@ -89289,17 +89870,34 @@
             },
             "IUbux": {
               "content": "FIND",
-              "fill": "$accent/coral"
+              "fill": "$accent/coral",
+              "x": 56
             },
             "ddepC": {
               "content": "GOING OUT",
-              "fill": "$text/soft"
+              "fill": "$text/soft",
+              "x": 112
             },
             "aakCi": {
               "enabled": false
             },
             "vk4mn": {
-              "x": 582
+              "x": 582,
+              "width": "fit_content",
+              "height": "fit_content",
+              "y": 14.5
+            },
+            "nFg44": {
+              "y": 5.5
+            },
+            "Ywwg7": {
+              "width": "fit_content",
+              "height": "fit_content",
+              "x": 32
+            },
+            "nFpQw": {
+              "x": 14,
+              "y": 6
             }
           }
         },
@@ -89494,10 +90092,14 @@
                         "thickness": 1,
                         "fill": "#C9874F40"
                       },
+                      "width": "fit_content",
+                      "height": "fit_content",
                       "descendants": {
                         "SW4zs": {
                           "content": "This Week",
-                          "fill": "#C9874F"
+                          "fill": "#C9874F",
+                          "x": 14,
+                          "y": 10
                         }
                       }
                     },
@@ -89507,10 +90109,14 @@
                       "ref": "olqzW",
                       "name": "f2",
                       "x": 96,
+                      "width": "fit_content",
+                      "height": "fit_content",
                       "descendants": {
                         "SW4zs": {
                           "content": "Weekend",
-                          "fill": "$text/soft"
+                          "fill": "$text/soft",
+                          "x": 14,
+                          "y": 10
                         }
                       }
                     },
@@ -89520,10 +90126,14 @@
                       "ref": "olqzW",
                       "name": "f3",
                       "x": 179,
+                      "width": "fit_content",
+                      "height": "fit_content",
                       "descendants": {
                         "SW4zs": {
                           "content": "Next 2 Weeks",
-                          "fill": "$text/soft"
+                          "fill": "$text/soft",
+                          "x": 14,
+                          "y": 10
                         }
                       }
                     },
@@ -89541,10 +90151,14 @@
                       "ref": "olqzW",
                       "name": "f4",
                       "x": 304,
+                      "width": "fit_content",
+                      "height": "fit_content",
                       "descendants": {
                         "SW4zs": {
                           "content": "All Levels",
-                          "fill": "$text/soft"
+                          "fill": "$text/soft",
+                          "x": 14,
+                          "y": 10
                         }
                       }
                     },
@@ -89554,10 +90168,14 @@
                       "ref": "olqzW",
                       "name": "f5",
                       "x": 406,
+                      "width": "fit_content",
+                      "height": "fit_content",
                       "descendants": {
                         "SW4zs": {
                           "content": "Beginner",
-                          "fill": "$text/soft"
+                          "fill": "$text/soft",
+                          "x": 14,
+                          "y": 10
                         }
                       }
                     }
@@ -89949,6 +90567,648 @@
       "height": "fit_content(900)",
       "fill": "$surface/void",
       "layout": "vertical"
+    },
+    {
+      "type": "frame",
+      "id": "Zw538",
+      "x": 5000,
+      "y": 0,
+      "name": "Feed Section Headers — Variants",
+      "width": 800,
+      "fill": "$surface/void",
+      "layout": "vertical",
+      "gap": 48,
+      "padding": [
+        48,
+        40
+      ],
+      "children": [
+        {
+          "type": "text",
+          "id": "rHgnb",
+          "name": "title",
+          "fill": "$text/cream",
+          "content": "Section Header Variants",
+          "fontFamily": "Bricolage Grotesque",
+          "fontSize": 28,
+          "fontWeight": "700",
+          "letterSpacing": -0.5
+        },
+        {
+          "type": "text",
+          "id": "ws1Dq",
+          "name": "subtitle",
+          "fill": "$text/soft",
+          "content": "Each section type gets its own visual voice",
+          "fontFamily": "DM Sans",
+          "fontSize": 14,
+          "fontWeight": "normal"
+        },
+        {
+          "type": "rectangle",
+          "id": "S31FI",
+          "name": "sep1",
+          "fill": "$surface/twilight",
+          "width": "fill_container",
+          "height": 1
+        },
+        {
+          "type": "frame",
+          "id": "4nbkV",
+          "name": "1. The Lineup",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 8,
+          "children": [
+            {
+              "type": "text",
+              "id": "rOCFW",
+              "name": "h1label",
+              "fill": "$text/muted",
+              "content": "THE LINEUP — main events feed",
+              "fontFamily": "Space Mono",
+              "fontSize": 10,
+              "letterSpacing": 1.5
+            },
+            {
+              "type": "frame",
+              "id": "tchjv",
+              "name": "h1row",
+              "width": "fill_container",
+              "justifyContent": "space_between",
+              "alignItems": "end",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "HcxQo",
+                  "name": "h1title",
+                  "fill": "$text/cream",
+                  "content": "The Lineup",
+                  "fontFamily": "Bricolage Grotesque",
+                  "fontSize": 32,
+                  "fontWeight": "800",
+                  "letterSpacing": -0.5
+                },
+                {
+                  "type": "text",
+                  "id": "lXzeu",
+                  "name": "h1see",
+                  "fill": "$accent/coral",
+                  "content": "See all →",
+                  "fontFamily": "Space Mono",
+                  "fontSize": 11,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "rqlxq",
+              "name": "h1line",
+              "width": "fill_container",
+              "height": 3,
+              "children": [
+                {
+                  "type": "rectangle",
+                  "id": "kOl8R",
+                  "name": "h1lineAccent",
+                  "fill": "$accent/coral",
+                  "width": 80,
+                  "height": 3
+                },
+                {
+                  "type": "rectangle",
+                  "id": "DLV6s",
+                  "name": "h1lineFade",
+                  "fill": "$surface/twilight",
+                  "width": "fill_container",
+                  "height": 1
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "rectangle",
+          "id": "yZCoq",
+          "name": "sep2",
+          "fill": "$surface/twilight",
+          "width": "fill_container",
+          "height": 1
+        },
+        {
+          "type": "frame",
+          "id": "bAsDz",
+          "name": "2. Now Showing — Cinema",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 6,
+          "children": [
+            {
+              "type": "text",
+              "id": "Ljiuk",
+              "name": "h2label",
+              "fill": "$text/muted",
+              "content": "NOW SHOWING — cinema / film",
+              "fontFamily": "Space Mono",
+              "fontSize": 10,
+              "letterSpacing": 1.5
+            },
+            {
+              "type": "frame",
+              "id": "QonKc",
+              "name": "h2row",
+              "width": "fill_container",
+              "justifyContent": "space_between",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "bxAGz",
+                  "name": "h2title",
+                  "fill": "$accent/vibe",
+                  "content": "Now Showing",
+                  "fontFamily": "Fraunces",
+                  "fontSize": 26,
+                  "fontWeight": "500",
+                  "fontStyle": "italic"
+                },
+                {
+                  "type": "text",
+                  "id": "nGAcl",
+                  "name": "h2see",
+                  "fill": "$accent/vibe",
+                  "content": "All screenings →",
+                  "fontFamily": "Space Mono",
+                  "fontSize": 11,
+                  "fontWeight": "normal"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "rectangle",
+          "id": "k35yH",
+          "name": "sep3",
+          "fill": "$surface/twilight",
+          "width": "fill_container",
+          "height": 1
+        },
+        {
+          "type": "frame",
+          "id": "hQFSs",
+          "name": "3. Worth Checking Out — Destinations",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 6,
+          "children": [
+            {
+              "type": "text",
+              "id": "TqULZ",
+              "name": "h3label",
+              "fill": "$text/muted",
+              "content": "PLACES TO GO — destinations & venues",
+              "fontFamily": "Space Mono",
+              "fontSize": 10,
+              "letterSpacing": 1.5
+            },
+            {
+              "type": "frame",
+              "id": "cin8Z",
+              "name": "h3row",
+              "width": "fill_container",
+              "gap": 12,
+              "justifyContent": "space_between",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon_font",
+                  "id": "zvjkL",
+                  "name": "h3icon",
+                  "width": 18,
+                  "height": 18,
+                  "iconFontName": "compass",
+                  "iconFontFamily": "phosphor",
+                  "fill": "$accent/neon-green"
+                },
+                {
+                  "type": "text",
+                  "id": "M0Feh",
+                  "name": "h3title",
+                  "fill": "$text/cream",
+                  "content": "Worth Checking Out",
+                  "fontFamily": "DM Sans",
+                  "fontSize": 18,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "frame",
+                  "id": "8LM9K",
+                  "name": "h3spacer",
+                  "width": "fill_container",
+                  "height": 1
+                },
+                {
+                  "type": "text",
+                  "id": "iHvI8",
+                  "name": "h3see",
+                  "fill": "$accent/neon-green",
+                  "content": "Explore places →",
+                  "fontFamily": "Space Mono",
+                  "fontSize": 11,
+                  "fontWeight": "normal"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "rectangle",
+          "id": "PCwhH",
+          "name": "sep4",
+          "fill": "$surface/twilight",
+          "width": "fill_container",
+          "height": 1
+        },
+        {
+          "type": "frame",
+          "id": "uyHxj",
+          "name": "4. On the Horizon — Planning",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 4,
+          "children": [
+            {
+              "type": "text",
+              "id": "HrJYV",
+              "name": "h4label",
+              "fill": "$text/muted",
+              "content": "ON THE HORIZON — future planning",
+              "fontFamily": "Space Mono",
+              "fontSize": 10,
+              "letterSpacing": 1.5
+            },
+            {
+              "type": "frame",
+              "id": "4u8Hd",
+              "name": "h4row",
+              "width": "fill_container",
+              "justifyContent": "space_between",
+              "alignItems": "end",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "uqMsb",
+                  "name": "h4title",
+                  "fill": "$accent/gold",
+                  "content": "ON THE HORIZON",
+                  "fontFamily": "Bebas Neue",
+                  "fontSize": 36,
+                  "letterSpacing": 4
+                },
+                {
+                  "type": "text",
+                  "id": "SU5Pu",
+                  "name": "h4see",
+                  "fill": "$accent/gold",
+                  "content": "See all →",
+                  "fontFamily": "Space Mono",
+                  "fontSize": 11,
+                  "fontWeight": "normal"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "rectangle",
+          "id": "1BG2c",
+          "name": "sep5",
+          "fill": "$surface/twilight",
+          "width": "fill_container",
+          "height": 1
+        },
+        {
+          "type": "frame",
+          "id": "JHG0N",
+          "name": "5. Regular Hangs",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 6,
+          "children": [
+            {
+              "type": "text",
+              "id": "4p1Ij",
+              "name": "h5label",
+              "fill": "$text/muted",
+              "content": "REGULAR HANGS — recurring weekly spots",
+              "fontFamily": "Space Mono",
+              "fontSize": 10,
+              "letterSpacing": 1.5
+            },
+            {
+              "type": "frame",
+              "id": "fbXIF",
+              "name": "h5row",
+              "width": "fill_container",
+              "gap": 12,
+              "justifyContent": "space_between",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon_font",
+                  "id": "UbujS",
+                  "name": "h5icon",
+                  "width": 18,
+                  "height": 18,
+                  "iconFontName": "coffee",
+                  "iconFontFamily": "phosphor",
+                  "fill": "$accent/neon-cyan"
+                },
+                {
+                  "type": "text",
+                  "id": "JXlNL",
+                  "name": "h5title",
+                  "fill": "$text/cream",
+                  "content": "your regular hangs",
+                  "fontFamily": "DM Sans",
+                  "fontSize": 20,
+                  "fontWeight": "500",
+                  "letterSpacing": 0.3
+                },
+                {
+                  "type": "frame",
+                  "id": "5jBD3",
+                  "name": "h5spacer",
+                  "width": "fill_container",
+                  "height": 1
+                },
+                {
+                  "type": "text",
+                  "id": "NalDF",
+                  "name": "h5see",
+                  "fill": "$accent/neon-cyan",
+                  "content": "All regulars →",
+                  "fontFamily": "Space Mono",
+                  "fontSize": 11,
+                  "fontWeight": "normal"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "rectangle",
+          "id": "YGlze",
+          "name": "sep6",
+          "fill": "$surface/twilight",
+          "width": "fill_container",
+          "height": 1
+        },
+        {
+          "type": "frame",
+          "id": "9cxO3",
+          "name": "6. Around the City — Portal Teasers",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 8,
+          "children": [
+            {
+              "type": "text",
+              "id": "ZVoBK",
+              "name": "h6label",
+              "fill": "$text/muted",
+              "content": "AROUND THE CITY — cross-portal teasers",
+              "fontFamily": "Space Mono",
+              "fontSize": 10,
+              "letterSpacing": 1.5
+            },
+            {
+              "type": "rectangle",
+              "id": "BLdzE",
+              "name": "h6line",
+              "fill": "$surface/twilight",
+              "width": "fill_container",
+              "height": 1
+            },
+            {
+              "type": "frame",
+              "id": "DFTMu",
+              "name": "h6row",
+              "width": "fill_container",
+              "justifyContent": "space_between",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "bUwBT",
+                  "name": "h6title",
+                  "fill": "$text/soft",
+                  "content": "AROUND THE CITY",
+                  "fontFamily": "Space Mono",
+                  "fontSize": 12,
+                  "fontWeight": "700",
+                  "letterSpacing": 3
+                },
+                {
+                  "type": "text",
+                  "id": "Bxh9X",
+                  "name": "h6see",
+                  "fill": "$text/muted",
+                  "content": "All portals →",
+                  "fontFamily": "Space Mono",
+                  "fontSize": 11,
+                  "fontWeight": "normal"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "rectangle",
+          "id": "xXUcF",
+          "name": "sep7",
+          "fill": "$surface/twilight",
+          "width": "fill_container",
+          "height": 1
+        },
+        {
+          "type": "frame",
+          "id": "l7ESd",
+          "name": "7. Featured / The Big Stuff",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 6,
+          "children": [
+            {
+              "type": "text",
+              "id": "ShxO1",
+              "name": "h7label",
+              "fill": "$text/muted",
+              "content": "THE BIG STUFF — festivals & tentpoles",
+              "fontFamily": "Space Mono",
+              "fontSize": 10,
+              "letterSpacing": 1.5
+            },
+            {
+              "type": "frame",
+              "id": "g2j3M",
+              "name": "h7row",
+              "width": "fill_container",
+              "gap": 12,
+              "justifyContent": "space_between",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "ialjJ",
+                  "name": "h7badge",
+                  "fill": "#FFD93D22",
+                  "cornerRadius": 3,
+                  "stroke": {
+                    "thickness": 1,
+                    "fill": "#FFD93D44"
+                  },
+                  "gap": 6,
+                  "padding": [
+                    3,
+                    8
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon_font",
+                      "id": "IRQiH",
+                      "name": "h7badgeIcon",
+                      "width": 14,
+                      "height": 14,
+                      "iconFontName": "crown",
+                      "iconFontFamily": "phosphor",
+                      "fill": "$accent/gold"
+                    },
+                    {
+                      "type": "text",
+                      "id": "tp5BA",
+                      "name": "h7badgeText",
+                      "fill": "$accent/gold",
+                      "content": "FEATURED",
+                      "fontFamily": "Space Mono",
+                      "fontSize": 10,
+                      "fontWeight": "700",
+                      "letterSpacing": 1.5
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "09CdG",
+                  "name": "h7title",
+                  "fill": "$text/cream",
+                  "content": "The Big Stuff",
+                  "fontFamily": "Bricolage Grotesque",
+                  "fontSize": 24,
+                  "fontWeight": "700",
+                  "letterSpacing": -0.3
+                },
+                {
+                  "type": "frame",
+                  "id": "WpHpl",
+                  "name": "h7spacer",
+                  "width": "fill_container",
+                  "height": 1
+                },
+                {
+                  "type": "text",
+                  "id": "P6tEu",
+                  "name": "h7see",
+                  "fill": "$accent/gold",
+                  "content": "All festivals →",
+                  "fontFamily": "Space Mono",
+                  "fontSize": 11,
+                  "fontWeight": "normal"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "rectangle",
+          "id": "28sWj",
+          "name": "sep8",
+          "fill": "$surface/twilight",
+          "width": "fill_container",
+          "height": 1
+        },
+        {
+          "type": "frame",
+          "id": "UVa9J",
+          "name": "8. Game Day",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 4,
+          "children": [
+            {
+              "type": "text",
+              "id": "2bl0L",
+              "name": "h8label",
+              "fill": "$text/muted",
+              "content": "GAME DAY — sports & athletics",
+              "fontFamily": "Space Mono",
+              "fontSize": 10,
+              "letterSpacing": 1.5
+            },
+            {
+              "type": "frame",
+              "id": "IIvrY",
+              "name": "h8row",
+              "width": "fill_container",
+              "justifyContent": "space_between",
+              "alignItems": "end",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "XUYEv",
+                  "name": "h8titleGroup",
+                  "gap": 10,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "rectangle",
+                      "cornerRadius": 2,
+                      "id": "VRER8",
+                      "name": "h8bar",
+                      "fill": "$accent/neon-red",
+                      "width": 4,
+                      "height": 28
+                    },
+                    {
+                      "type": "text",
+                      "id": "GVMD4",
+                      "name": "h8title",
+                      "fill": "$text/cream",
+                      "content": "GAME DAY",
+                      "fontFamily": "Bebas Neue",
+                      "fontSize": 32,
+                      "letterSpacing": 3
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "pLbYz",
+                  "name": "h8see",
+                  "fill": "$accent/neon-red",
+                  "content": "All games →",
+                  "fontFamily": "Space Mono",
+                  "fontSize": 11,
+                  "fontWeight": "normal"
+                }
+              ]
+            }
+          ]
+        }
+      ]
     }
   ],
   "themes": {

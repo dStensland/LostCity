@@ -1,0 +1,189 @@
+<h2>New File Structure & Data Fetching</h2>
+<p class="subtitle">Clean slate. The old monoliths get replaced, not refactored.</p>
+
+<div class="section">
+  <h3>Directory Layout</h3>
+  <div style="max-width: 720px; margin: 0 auto; font-family: 'SF Mono', monospace; font-size: 12px; line-height: 1.8;">
+
+    <div style="background: #0f0f14; border: 1px solid #252530; border-radius: 12px; padding: 24px;">
+      <div style="color: #a1a1aa; margin-bottom: 4px;">web/components/detail/</div>
+
+      <div style="margin-left: 16px;">
+        <div style="color: #525260; margin-bottom: 2px;">── core/</div>
+        <div style="margin-left: 24px;">
+          <div><span style="color: #FFD93D;">DetailLayout.tsx</span> <span style="color: #525260;">— shared layout: sidebar skeleton + section pipeline renderer</span></div>
+          <div><span style="color: #FFD93D;">DetailHero.tsx</span> <span style="color: #525260;">— unified hero: image, gallery, poster, logo, fallback modes</span></div>
+          <div><span style="color: #FFD93D;">DetailIdentity.tsx</span> <span style="color: #525260;">— sidebar wrapper: consistent padding, dividers</span></div>
+          <div><span style="color: #FFD93D;">DetailActions.tsx</span> <span style="color: #525260;">— action zone: primary CTA + secondary icon buttons</span></div>
+          <div><span style="color: #FFD93D;">DetailStickyBar.tsx</span> <span style="color: #525260;">— mobile sticky bar (keep existing, clean up)</span></div>
+          <div><span style="color: #FFD93D;">SectionWrapper.tsx</span> <span style="color: #525260;">— wraps each section: SectionHeader + spacing + divider</span></div>
+          <div><span style="color: #FFD93D;">SectionHeader.tsx</span> <span style="color: #525260;">— mono label + count badge (one variant, not inline/divider)</span></div>
+        </div>
+
+        <div style="color: #525260; margin-top: 12px; margin-bottom: 2px;">── sections/</div>
+        <div style="margin-left: 24px;">
+          <div><span style="color: #00D9A0;">AboutSection.tsx</span></div>
+          <div><span style="color: #00D9A0;">LineupSection.tsx</span></div>
+          <div><span style="color: #00D9A0;">ShowtimesSection.tsx</span></div>
+          <div><span style="color: #00D9A0;">DiningSection.tsx</span></div>
+          <div><span style="color: #00D9A0;">ExhibitionsSection.tsx</span></div>
+          <div><span style="color: #00D9A0;">ScheduleSection.tsx</span></div>
+          <div><span style="color: #00D9A0;">UpcomingDatesSection.tsx</span></div>
+          <div><span style="color: #00D9A0;">EventsAtVenueSection.tsx</span></div>
+          <div><span style="color: #00D9A0;">FeaturesSection.tsx</span></div>
+          <div><span style="color: #00D9A0;">ConnectionsSection.tsx</span></div>
+          <div><span style="color: #00D9A0;">SocialProofSection.tsx</span></div>
+          <div><span style="color: #00D9A0;">GettingThereSection.tsx</span></div>
+          <div><span style="color: #00D9A0;">NearbySection.tsx</span></div>
+          <div><span style="color: #00D9A0;">PlanYourVisitSection.tsx</span></div>
+          <div><span style="color: #00D9A0;">SpecialsSection.tsx</span></div>
+          <div><span style="color: #00D9A0;">OccasionsSection.tsx</span></div>
+          <div><span style="color: #00D9A0;">AccoladesSection.tsx</span></div>
+          <div><span style="color: #00D9A0;">ShowSignalsSection.tsx</span></div>
+          <div><span style="color: #00D9A0;">VolunteerSection.tsx</span></div>
+          <div><span style="color: #00D9A0;">ProducerSection.tsx</span></div>
+          <div><span style="color: #00D9A0;">index.ts</span> <span style="color: #525260;">— section registry: id → { component, trait, label, icon }</span></div>
+        </div>
+
+        <div style="color: #525260; margin-top: 12px; margin-bottom: 2px;">── manifests/</div>
+        <div style="margin-left: 24px;">
+          <div><span style="color: #E879F9;">event.ts</span> <span style="color: #525260;">— section order for events</span></div>
+          <div><span style="color: #E879F9;">place.ts</span> <span style="color: #525260;">— section order by place_type (cinema, restaurant, museum, bar, etc.)</span></div>
+          <div><span style="color: #E879F9;">series.ts</span> <span style="color: #525260;">— section order (film vs non-film)</span></div>
+          <div><span style="color: #E879F9;">festival.ts</span> <span style="color: #525260;">— section order for festivals</span></div>
+          <div><span style="color: #E879F9;">org.ts</span> <span style="color: #525260;">— section order for orgs</span></div>
+        </div>
+
+        <div style="color: #525260; margin-top: 12px; margin-bottom: 2px;">── identity/</div>
+        <div style="margin-left: 24px;">
+          <div><span style="color: #22D3EE;">EventIdentity.tsx</span> <span style="color: #525260;">— title, venue, date/time/price, genres, signals</span></div>
+          <div><span style="color: #22D3EE;">PlaceIdentity.tsx</span> <span style="color: #525260;">— name, type, neighborhood, rating, quick actions, hours</span></div>
+          <div><span style="color: #22D3EE;">SeriesIdentity.tsx</span> <span style="color: #525260;">— title, type, recurrence, film metadata, director</span></div>
+          <div><span style="color: #22D3EE;">FestivalIdentity.tsx</span> <span style="color: #525260;">— name, dates, location, status banner, experience tags</span></div>
+          <div><span style="color: #22D3EE;">OrgIdentity.tsx</span> <span style="color: #525260;">— logo, name, type, categories, links</span></div>
+        </div>
+      </div>
+
+      <div style="color: #a1a1aa; margin-top: 20px; margin-bottom: 4px;">web/components/views/ <span style="color: #FF6B7A;">(rewritten — thin orchestrators)</span></div>
+
+      <div style="margin-left: 16px;">
+        <div><span style="color: #f5f5f3;">EventDetailView.tsx</span> <span style="color: #525260;">— ~60 lines: hero config + EventIdentity + action config + manifest</span></div>
+        <div><span style="color: #f5f5f3;">PlaceDetailView.tsx</span> <span style="color: #525260;">— ~80 lines: hero config + PlaceIdentity + action config + manifest resolver</span></div>
+        <div><span style="color: #f5f5f3;">SeriesDetailView.tsx</span> <span style="color: #525260;">— ~60 lines: hero config (film/non-film) + SeriesIdentity + manifest</span></div>
+        <div><span style="color: #f5f5f3;">FestivalDetailView.tsx</span> <span style="color: #525260;">— ~60 lines: hero config + FestivalIdentity + manifest</span></div>
+        <div><span style="color: #f5f5f3;">OrgDetailView.tsx</span> <span style="color: #525260;">— ~50 lines: logo hero + OrgIdentity + manifest</span></div>
+      </div>
+
+      <div style="color: #a1a1aa; margin-top: 20px; margin-bottom: 4px;">web/lib/detail/ <span style="color: #FF6B7A;">(new — unified data layer)</span></div>
+
+      <div style="margin-left: 16px;">
+        <div><span style="color: #f5f5f3;">types.ts</span> <span style="color: #525260;">— EntityData union, SectionId, SectionManifest, SectionModule, HeroConfig, ActionConfig</span></div>
+        <div><span style="color: #f5f5f3;">traits.ts</span> <span style="color: #525260;">— trait functions: hasScreenings(), hasDiningProfile(), hasConnections(), etc.</span></div>
+        <div><span style="color: #f5f5f3;">connections.ts</span> <span style="color: #525260;">— resolveConnections(entity) → ConnectionRow[] — extracts graph edges from any entity</span></div>
+        <div><span style="color: #f5f5f3;">use-detail-data.ts</span> <span style="color: #525260;">— unified hook wrapping useDetailFetch with standard envelope</span></div>
+        <div><span style="color: #f5f5f3;">format.ts</span> <span style="color: #525260;">— shared formatters: time, price, date range, recurrence, duration</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top: 32px;">
+  <h3>Data Fetching — Unified Hook</h3>
+  <div style="max-width: 680px; margin: 0 auto; font-family: 'SF Mono', monospace; font-size: 12px;">
+    <div style="background: #0f0f14; border: 1px solid #252530; border-radius: 12px; padding: 20px;">
+      <div style="color: #8b8b94; margin-bottom: 8px;">// Every orchestrator uses the same hook:</div>
+      <div style="color: #E879F9; margin-bottom: 4px;">const { data, status, error } = useDetailData&lt;EventData&gt;({</div>
+      <div style="margin-left: 16px; color: #f5f5f3;">
+        <div>entityType: <span style="color: #00D9A0;">'event'</span>,</div>
+        <div>identifier: eventId,</div>
+        <div>portalSlug,</div>
+        <div>initialData, <span style="color: #525260;">// from server render (SSR)</span></div>
+      </div>
+      <div style="color: #E879F9;">})</div>
+
+      <div style="margin-top: 16px; border-top: 1px solid #252530; padding-top: 16px;">
+        <div style="color: #8b8b94; margin-bottom: 8px;">// Hook internals:</div>
+        <div style="color: #f5f5f3; font-size: 11px; line-height: 1.6;">
+          <div>1. If initialData provided → skip fetch, use directly</div>
+          <div>2. Else → fetch from <span style="color: #22D3EE;">/api/{entityType}/{identifier}</span></div>
+          <div>3. Response envelope: <span style="color: #22D3EE;">{ data, error, status }</span></div>
+          <div>4. Retry logic, cancellation, error states — all shared</div>
+          <div>5. Returns typed data for the specific entity type</div>
+        </div>
+      </div>
+
+      <div style="margin-top: 16px; border-top: 1px solid #252530; padding-top: 16px;">
+        <div style="color: #8b8b94; margin-bottom: 8px;">// API routes stay the same — no backend changes needed:</div>
+        <div style="color: #f5f5f3; font-size: 11px; line-height: 1.6;">
+          <div><span style="color: #22D3EE;">/api/events/[id]</span> → EventData</div>
+          <div><span style="color: #22D3EE;">/api/places/by-slug/[slug]</span> → PlaceData</div>
+          <div><span style="color: #22D3EE;">/api/series/by-slug/[slug]</span> → SeriesData</div>
+          <div><span style="color: #22D3EE;">/api/festivals/by-slug/[slug]</span> → FestivalData</div>
+          <div><span style="color: #22D3EE;">/api/producers/by-slug/[slug]</span> → OrgData</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top: 32px;">
+  <h3>What Gets Deleted</h3>
+  <div style="max-width: 680px; margin: 0 auto; font-family: 'SF Mono', monospace; font-size: 12px;">
+    <div style="background: #0f0f14; border: 1px solid #FF6B7A20; border-radius: 12px; padding: 20px;">
+      <div style="color: #FF6B7A; font-size: 11px; font-weight: 600; margin-bottom: 12px;">REMOVED (dead code + superseded)</div>
+      <div style="color: #8b8b94; line-height: 1.8;">
+        <div><span style="color: #FF6B7A;">✗</span> detail/RelatedCard.tsx <span style="color: #525260;">— never imported</span></div>
+        <div><span style="color: #FF6B7A;">✗</span> detail/RelatedSection.tsx <span style="color: #525260;">— never imported</span></div>
+        <div><span style="color: #FF6B7A;">✗</span> detail/PlaceEventsSection.tsx <span style="color: #525260;">— never imported</span></div>
+        <div><span style="color: #FF6B7A;">✗</span> detail/DescriptionTeaser.tsx <span style="color: #525260;">— never used</span></div>
+        <div><span style="color: #FF6B7A;">✗</span> detail/SocialProofStrip.tsx <span style="color: #525260;">— reimplemented inline</span></div>
+        <div><span style="color: #FF6B7A;">✗</span> detail/MetadataGrid.tsx <span style="color: #525260;">— never exported</span></div>
+        <div><span style="color: #FF6B7A;">✗</span> detail/DetailHero.tsx <span style="color: #525260;">— superseded by new DetailHero</span></div>
+        <div><span style="color: #FF6B7A;">✗</span> detail/InfoCard.tsx <span style="color: #525260;">— Org only, absorbed into OrgIdentity</span></div>
+      </div>
+
+      <div style="color: #FFD93D; font-size: 11px; font-weight: 600; margin-top: 16px; margin-bottom: 12px;">REPLACED (monoliths → orchestrators)</div>
+      <div style="color: #8b8b94; line-height: 1.8;">
+        <div><span style="color: #FFD93D;">↻</span> views/EventDetailView.tsx <span style="color: #525260;">— 990 lines → ~60 lines</span></div>
+        <div><span style="color: #FFD93D;">↻</span> views/PlaceDetailView.tsx <span style="color: #525260;">— 1108 lines → ~80 lines</span></div>
+        <div><span style="color: #FFD93D;">↻</span> views/SeriesDetailView.tsx <span style="color: #525260;">— 645 lines → ~60 lines</span></div>
+        <div><span style="color: #FFD93D;">↻</span> views/FestivalDetailView.tsx <span style="color: #525260;">— 933 lines → ~60 lines</span></div>
+        <div><span style="color: #FFD93D;">↻</span> views/OrgDetailView.tsx <span style="color: #525260;">— 545 lines → ~50 lines</span></div>
+      </div>
+
+      <div style="color: #00D9A0; font-size: 11px; font-weight: 600; margin-top: 16px; margin-bottom: 12px;">KEPT & CLEANED</div>
+      <div style="color: #8b8b94; line-height: 1.8;">
+        <div><span style="color: #00D9A0;">✓</span> detail/DetailShell.tsx <span style="color: #525260;">— kept as is, DetailLayout wraps it</span></div>
+        <div><span style="color: #00D9A0;">✓</span> detail/RichArtistCard.tsx <span style="color: #525260;">— used by LineupSection</span></div>
+        <div><span style="color: #00D9A0;">✓</span> detail/ShowtimesTheaterCard.tsx <span style="color: #525260;">— used by ShowtimesSection</span></div>
+        <div><span style="color: #00D9A0;">✓</span> detail/NeonBackButton.tsx <span style="color: #525260;">— used by all via DetailLayout top bar</span></div>
+        <div><span style="color: #00D9A0;">✓</span> detail/HeroGallery.tsx <span style="color: #525260;">— absorbed into new DetailHero gallery mode</span></div>
+        <div><span style="color: #00D9A0;">✓</span> detail/ExperienceTagStrip.tsx <span style="color: #525260;">— used by FestivalIdentity</span></div>
+        <div><span style="color: #00D9A0;">✓</span> detail/CollapsibleSection.tsx <span style="color: #525260;">— general utility, kept</span></div>
+        <div><span style="color: #00D9A0;">✓</span> detail/QuickActionLink.tsx <span style="color: #525260;">— used by PlaceIdentity</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top: 32px;">
+  <h3>Net Result</h3>
+  <div style="max-width: 500px; margin: 0 auto; font-family: 'SF Mono', monospace; font-size: 13px;">
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+      <div style="background: #0f0f14; border: 1px solid #FF6B7A20; border-radius: 10px; padding: 16px; text-align: center;">
+        <div style="color: #FF6B7A; font-size: 10px; text-transform: uppercase; margin-bottom: 8px;">Before</div>
+        <div style="color: #f5f5f3; font-size: 24px; font-weight: 700;">~4,200</div>
+        <div style="color: #8b8b94; font-size: 11px;">lines in 5 monoliths</div>
+        <div style="color: #525260; font-size: 11px; margin-top: 4px;">+ ~4,300 lines in 31 detail components</div>
+        <div style="color: #525260; font-size: 11px;">(5 dead)</div>
+      </div>
+      <div style="background: #0f0f14; border: 1px solid #00D9A020; border-radius: 10px; padding: 16px; text-align: center;">
+        <div style="color: #00D9A0; font-size: 10px; text-transform: uppercase; margin-bottom: 8px;">After</div>
+        <div style="color: #f5f5f3; font-size: 24px; font-weight: 700;">~310</div>
+        <div style="color: #8b8b94; font-size: 11px;">lines in 5 orchestrators</div>
+        <div style="color: #525260; font-size: 11px; margin-top: 4px;">+ ~3,500 lines in focused modules</div>
+        <div style="color: #525260; font-size: 11px;">(0 dead)</div>
+      </div>
+    </div>
+  </div>
+</div>

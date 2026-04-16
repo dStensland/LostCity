@@ -1,0 +1,152 @@
+<h2>Structural primitive: what shape is this surface?</h2>
+<p class="subtitle">All three show the same data (your RSVPs, plans, series, friends' RSVPs, gaps). The difference is how time is organized. Click to select.</p>
+
+<style>
+  .plans-mock { font-size: 11px; line-height: 1.4; }
+  .plans-mock .row-header { text-transform: uppercase; font-size: 9px; letter-spacing: 0.08em; opacity: 0.55; margin: 10px 0 4px; font-weight: 600; }
+  .plans-mock .row-header:first-child { margin-top: 0; }
+  .plans-mock .entry { padding: 7px 10px; border-radius: 6px; margin-bottom: 4px; background: rgba(255,255,255,0.05); border-left: 2px solid rgba(255,150,100,0.6); }
+  .plans-mock .entry.friend { border-left-color: rgba(140,160,255,0.7); opacity: 0.75; }
+  .plans-mock .entry.series { border-left-color: rgba(100,200,160,0.7); }
+  .plans-mock .entry.plan { border-left-color: rgba(255,200,80,0.8); }
+  .plans-mock .gap { padding: 7px 10px; border-radius: 6px; margin-bottom: 4px; background: rgba(255,255,255,0.02); border: 1px dashed rgba(255,255,255,0.15); color: rgba(255,255,255,0.5); font-style: italic; }
+  .plans-mock .horizon-card { padding: 10px; border-radius: 8px; background: rgba(255,255,255,0.04); margin-bottom: 8px; border: 1px solid rgba(255,255,255,0.08); }
+  .plans-mock .horizon-label { text-transform: uppercase; font-size: 9px; letter-spacing: 0.1em; opacity: 0.65; font-weight: 700; margin-bottom: 6px; }
+  .plans-mock .horizon-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+  .plans-mock .horizon-grid .horizon-card { margin: 0; min-height: 70px; }
+  .plans-mock .title { font-weight: 500; }
+  .plans-mock .meta { opacity: 0.55; font-size: 10px; margin-top: 2px; }
+  .plans-mock .tag { display: inline-block; font-size: 8px; padding: 1px 4px; border-radius: 3px; background: rgba(100,200,160,0.2); color: rgba(150,230,200,0.9); margin-left: 4px; vertical-align: middle; }
+  .plans-mock .tag-friend { background: rgba(140,160,255,0.2); color: rgba(180,200,255,0.9); }
+  .card-image { min-height: 420px; padding: 14px; background: #0a0c14; }
+</style>
+
+<div class="cards">
+
+  <div class="card" data-choice="chronological" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="plans-mock">
+        <div class="row-header">Tonight — Wed Apr 15</div>
+        <div class="gap">Open → Explore tonight</div>
+
+        <div class="row-header">Thu Apr 16</div>
+        <div class="entry series">
+          <div class="title">Trivia at Joystick<span class="tag">series</span></div>
+          <div class="meta">8:00 PM · Joystick Gamebar</div>
+        </div>
+
+        <div class="row-header">Fri Apr 17</div>
+        <div class="gap">Open → Explore Friday</div>
+
+        <div class="row-header">Sat Apr 18</div>
+        <div class="entry friend">
+          <div class="title">Alex going: Hawks vs Celtics<span class="tag tag-friend">friend</span></div>
+          <div class="meta">7:30 PM · State Farm Arena</div>
+        </div>
+
+        <div class="row-header">Fri Apr 24</div>
+        <div class="entry">
+          <div class="title">ATLFF Opening Night</div>
+          <div class="meta">7:00 PM · Plaza Theatre</div>
+        </div>
+
+        <div class="row-header">Sat Apr 25</div>
+        <div class="entry">
+          <div class="title">RZA in Conversation</div>
+          <div class="meta">6:00 PM · Tara Theatre</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A · Chronological agenda</h3>
+      <p>Scroll = forward in time. Day headers. Empty days render as gap rows inline. One unified list. Closest to existing AgendaView.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="horizons" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="plans-mock">
+        <div class="horizon-label">Tonight</div>
+        <div class="horizon-card" style="background: rgba(255,150,100,0.06); border-color: rgba(255,150,100,0.15);">
+          <div style="color: rgba(255,180,140,0.9); font-size: 11px;">Your night is open</div>
+          <div style="font-size: 10px; opacity: 0.6; margin-top: 3px;">→ See what's happening tonight</div>
+        </div>
+
+        <div class="horizon-label">This Weekend</div>
+        <div class="entry friend">
+          <div class="title">Alex going: Hawks vs Celtics<span class="tag tag-friend">friend</span></div>
+          <div class="meta">Sat 7:30 PM</div>
+        </div>
+        <div class="gap" style="font-size: 10px;">+ Find something for the weekend</div>
+
+        <div class="horizon-label">Next Week</div>
+        <div class="entry series">
+          <div class="title">Trivia at Joystick<span class="tag">series</span></div>
+          <div class="meta">Wed 8:00 PM · recurring</div>
+        </div>
+        <div class="entry">
+          <div class="title">ATLFF Opening Night</div>
+          <div class="meta">Fri Apr 24 · 7:00 PM</div>
+        </div>
+        <div class="entry">
+          <div class="title">RZA in Conversation</div>
+          <div class="meta">Sat Apr 25 · 6:00 PM</div>
+        </div>
+
+        <div class="horizon-label">Later this month</div>
+        <div class="gap" style="font-size: 10px;">Nothing planned yet</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B · Horizon stack</h3>
+      <p>No literal dates as the primitive. "Tonight / Weekend / Next Week / Later" are the sections. Time compressed into how people actually plan leisure.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="hybrid" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="plans-mock">
+        <div class="horizon-grid">
+          <div class="horizon-card" style="background: rgba(255,150,100,0.08); border-color: rgba(255,150,100,0.2);">
+            <div class="horizon-label" style="margin-bottom: 4px;">Tonight</div>
+            <div style="color: rgba(255,180,140,0.85); font-size: 10px;">Open</div>
+            <div style="font-size: 9px; opacity: 0.55; margin-top: 6px;">→ Explore</div>
+          </div>
+          <div class="horizon-card" style="background: rgba(140,160,255,0.06); border-color: rgba(140,160,255,0.15);">
+            <div class="horizon-label" style="margin-bottom: 4px;">Weekend</div>
+            <div style="font-size: 10px;">1 friend going</div>
+            <div style="font-size: 9px; opacity: 0.55; margin-top: 3px;">Alex · Hawks game</div>
+          </div>
+        </div>
+
+        <div class="row-header" style="margin-top: 6px;">Agenda</div>
+        <div class="entry series">
+          <div class="title">Trivia at Joystick<span class="tag">series</span></div>
+          <div class="meta">Wed Apr 22 · 8:00 PM</div>
+        </div>
+        <div class="entry">
+          <div class="title">ATLFF Opening Night</div>
+          <div class="meta">Fri Apr 24 · 7:00 PM</div>
+        </div>
+        <div class="entry">
+          <div class="title">RZA in Conversation</div>
+          <div class="meta">Sat Apr 25 · 6:00 PM</div>
+        </div>
+        <div class="gap">Sun Apr 26 · Open → Explore</div>
+        <div class="entry series">
+          <div class="title">Trivia at Joystick<span class="tag">series</span></div>
+          <div class="meta">Wed Apr 29 · 8:00 PM</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>C · Hybrid — anchored horizons</h3>
+      <p>Horizons as hero cards at top for near-term urgency ("Tonight" / "Weekend"). Chronological agenda below for everything further out. Two primitives stacked.</p>
+    </div>
+  </div>
+
+</div>
+
+<p class="subtitle" style="margin-top: 20px; font-size: 12px; opacity: 0.7;">
+All three treat gaps as CTAs (dashed borders). All three show friends' RSVPs as a peer layer (blue tint). Colors are functional, not final visual polish.
+</p>

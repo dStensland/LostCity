@@ -1,0 +1,133 @@
+<h2>Section Module Interface</h2>
+<p class="subtitle">The contract every section module follows. Consistency at the interface level enables flexibility at the content level.</p>
+
+<div class="section">
+  <h3>DetailSection Contract</h3>
+  <div style="max-width: 680px; margin: 0 auto;">
+    <div style="background: #0f0f14; border: 1px solid #252530; border-radius: 12px; padding: 24px; font-family: 'SF Mono', monospace; font-size: 12px;">
+      <div style="color: #8b8b94; margin-bottom: 4px;">// Every section module exports:</div>
+      <div style="margin-bottom: 16px;">
+        <div style="color: #E879F9;">interface</div>
+        <div style="color: #f5f5f3; margin-left: 16px;">
+          <div><span style="color: #22D3EE;">id</span><span style="color: #8b8b94;">: SectionId</span> <span style="color: #525260;">// unique registry key</span></div>
+          <div><span style="color: #22D3EE;">component</span><span style="color: #8b8b94;">: React.FC&lt;SectionProps&gt;</span></div>
+          <div><span style="color: #22D3EE;">trait</span><span style="color: #8b8b94;">: (data: EntityData) → boolean</span> <span style="color: #525260;">// does the data support this section?</span></div>
+          <div><span style="color: #22D3EE;">label</span><span style="color: #8b8b94;">: string</span> <span style="color: #525260;">// "Now Playing", "On View", "Lineup"</span></div>
+          <div><span style="color: #22D3EE;">icon</span><span style="color: #8b8b94;">?: PhosphorIcon</span> <span style="color: #525260;">// section header icon</span></div>
+        </div>
+      </div>
+      <div style="color: #8b8b94; margin-bottom: 4px;">// The layout renders each section with:</div>
+      <div style="margin-bottom: 16px;">
+        <div style="color: #E879F9;">interface SectionProps</div>
+        <div style="color: #f5f5f3; margin-left: 16px;">
+          <div><span style="color: #22D3EE;">data</span><span style="color: #8b8b94;">: EntityData</span> <span style="color: #525260;">// full entity payload (section picks what it needs)</span></div>
+          <div><span style="color: #22D3EE;">portalSlug</span><span style="color: #8b8b94;">: string</span></div>
+          <div><span style="color: #22D3EE;">accentColor</span><span style="color: #8b8b94;">: string</span> <span style="color: #525260;">// inherited from entity category</span></div>
+          <div><span style="color: #22D3EE;">entityType</span><span style="color: #8b8b94;">: 'event' | 'place' | 'series' | 'festival' | 'org'</span></div>
+        </div>
+      </div>
+      <div style="color: #8b8b94; margin-bottom: 4px;">// Orchestrator defines a manifest:</div>
+      <div>
+        <div style="color: #E879F9;">type SectionManifest</div>
+        <div style="color: #f5f5f3; margin-left: 16px;">
+          <div><span style="color: #8b8b94;">= SectionId[]</span> <span style="color: #525260;">// ordered list — layout filters by trait at render</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top: 32px;">
+  <h3>How the Pipeline Resolves</h3>
+  <div style="max-width: 680px; margin: 0 auto; font-family: 'SF Mono', monospace; font-size: 12px;">
+    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px;">
+      <div style="background: #18181f; border: 1px solid #252530; border-radius: 8px; padding: 12px 16px; flex: 1;">
+        <div style="color: #a1a1aa; font-size: 10px; text-transform: uppercase; margin-bottom: 4px;">Manifest (cinema)</div>
+        <div style="color: #f5f5f3; font-size: 11px;">showtimes, about, connections, features, planYourVisit, nearby</div>
+      </div>
+      <div style="color: #525260; font-size: 18px;">→</div>
+      <div style="background: #18181f; border: 1px solid #252530; border-radius: 8px; padding: 12px 16px; flex: 1;">
+        <div style="color: #a1a1aa; font-size: 10px; text-transform: uppercase; margin-bottom: 4px;">Trait Filter</div>
+        <div style="color: #f5f5f3; font-size: 11px;">
+          <div>showtimes → <span style="color: #00D9A0;">✓ has screenings</span></div>
+          <div>about → <span style="color: #00D9A0;">✓ has description</span></div>
+          <div>connections → <span style="color: #FF6B7A;">✗ no festival link</span></div>
+          <div>features → <span style="color: #00D9A0;">✓ has 3 features</span></div>
+          <div>planYourVisit → <span style="color: #00D9A0;">✓ has admission</span></div>
+          <div>nearby → <span style="color: #00D9A0;">✓ has coords</span></div>
+        </div>
+      </div>
+      <div style="color: #525260; font-size: 18px;">→</div>
+      <div style="background: #18181f; border: 1px solid #FFD93D30; border-radius: 8px; padding: 12px 16px; flex: 0.8;">
+        <div style="color: #FFD93D; font-size: 10px; text-transform: uppercase; margin-bottom: 4px;">Rendered</div>
+        <div style="color: #f5f5f3; font-size: 11px;">
+          <div>1. ShowtimesSection</div>
+          <div>2. AboutSection</div>
+          <div style="color: #525260; text-decoration: line-through;">3. ConnectionsSection</div>
+          <div>3. FeaturesSection</div>
+          <div>4. PlanYourVisitSection</div>
+          <div>5. NearbySection</div>
+        </div>
+      </div>
+    </div>
+    <div style="color: #8b8b94; text-align: center; font-size: 11px;">ConnectionsSection drops out because this cinema has no festival or org links right now.<br/>During ATLFF, the trait fires and it appears at position 3 automatically.</div>
+  </div>
+</div>
+
+<div class="section" style="margin-top: 32px;">
+  <h3>Section Wrapper — Consistent Spacing & Headers</h3>
+  <p class="subtitle">DetailLayout wraps each section automatically. Sections don't manage their own spacing or headers.</p>
+  <div style="max-width: 500px; margin: 0 auto;">
+    <div style="background: #0f0f14; border-radius: 12px; overflow: hidden;">
+      <!-- Section 1 -->
+      <div style="border-bottom: 1px solid #252530;">
+        <div style="padding: 20px 24px 4px;">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="color: #FFD93D; font-size: 14px;">▶</span>
+            <span style="font-family: 'SF Mono', monospace; font-size: 11px; text-transform: uppercase; letter-spacing: 0.14em; color: #a1a1aa;">Now Playing</span>
+            <span style="font-family: 'SF Mono', monospace; font-size: 10px; background: #252530; color: #8b8b94; padding: 2px 8px; border-radius: 10px;">7</span>
+          </div>
+        </div>
+        <div style="padding: 8px 24px 20px;">
+          <div style="background: #18181f; border: 1px dashed #252530; border-radius: 8px; padding: 24px; text-align: center; color: #525260; font-size: 12px; font-family: 'SF Mono', monospace;">
+            ShowtimesSection renders here<br/>
+            <span style="font-size: 10px;">(section owns its own content layout)</span>
+          </div>
+        </div>
+      </div>
+      <!-- Section 2 -->
+      <div style="border-bottom: 1px solid #252530;">
+        <div style="padding: 20px 24px 4px;">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="color: #a1a1aa; font-size: 14px;">☰</span>
+            <span style="font-family: 'SF Mono', monospace; font-size: 11px; text-transform: uppercase; letter-spacing: 0.14em; color: #a1a1aa;">About</span>
+          </div>
+        </div>
+        <div style="padding: 8px 24px 20px;">
+          <div style="background: #18181f; border: 1px dashed #252530; border-radius: 8px; padding: 24px; text-align: center; color: #525260; font-size: 12px; font-family: 'SF Mono', monospace;">
+            AboutSection renders here
+          </div>
+        </div>
+      </div>
+      <!-- Section 3 -->
+      <div>
+        <div style="padding: 20px 24px 4px;">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="color: #E879F9; font-size: 14px;">⬡</span>
+            <span style="font-family: 'SF Mono', monospace; font-size: 11px; text-transform: uppercase; letter-spacing: 0.14em; color: #a1a1aa;">Connections</span>
+            <span style="font-family: 'SF Mono', monospace; font-size: 10px; background: #252530; color: #8b8b94; padding: 2px 8px; border-radius: 10px;">3</span>
+          </div>
+        </div>
+        <div style="padding: 8px 24px 20px;">
+          <div style="background: #18181f; border: 1px dashed #252530; border-radius: 8px; padding: 24px; text-align: center; color: #525260; font-size: 12px; font-family: 'SF Mono', monospace;">
+            ConnectionsSection renders here
+          </div>
+        </div>
+      </div>
+    </div>
+    <div style="color: #8b8b94; text-align: center; font-size: 11px; margin-top: 8px; font-family: 'SF Mono', monospace;">
+      Sections get consistent padding, SectionHeader, and dividers from the wrapper.<br/>
+      They only render their own content — no spacing, no headers.
+    </div>
+  </div>
+</div>

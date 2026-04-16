@@ -1,0 +1,320 @@
+<h2>Agenda entry types</h2>
+<p class="subtitle">Five distinct entry types share the same timeline. Each needs a visual signature that's instantly scannable — you should know what kind of commitment it is before reading the text. Review each treatment.</p>
+
+<style>
+  .agenda-mock {
+    max-width: 420px;
+    margin: 0 auto;
+    font-size: 13px;
+    line-height: 1.4;
+  }
+  .day-header {
+    text-transform: uppercase;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    color: rgba(255,255,255,0.45);
+    font-weight: 600;
+    margin: 18px 0 6px;
+    font-family: monospace;
+  }
+  .day-header:first-child { margin-top: 0; }
+  .entry-row {
+    display: flex;
+    align-items: flex-start;
+    padding: 10px 12px;
+    border-radius: 10px;
+    margin-bottom: 5px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.06);
+    gap: 10px;
+  }
+  .entry-row .indicator {
+    width: 3px;
+    border-radius: 2px;
+    align-self: stretch;
+    min-height: 32px;
+    flex-shrink: 0;
+  }
+  .entry-row .body { flex: 1; min-width: 0; }
+  .entry-row .title {
+    font-weight: 500;
+    color: rgba(255,255,255,0.92);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .entry-row .meta {
+    font-size: 11px;
+    color: rgba(255,255,255,0.45);
+    margin-top: 2px;
+  }
+  .entry-row .right-slot {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .avatar-stack {
+    display: flex;
+  }
+  .avatar-stack .av {
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    border: 2px solid #0a0c14;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 9px;
+    font-weight: 600;
+    color: rgba(255,255,255,0.8);
+  }
+  .avatar-stack .av + .av { margin-left: -6px; }
+  .tag-pill {
+    font-size: 9px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 600;
+  }
+
+  /* Type-specific colors */
+  .type-rsvp .indicator { background: rgba(255,150,100,0.7); }
+  .type-series .indicator { background: rgba(100,200,160,0.7); }
+  .type-series .tag-pill { background: rgba(100,200,160,0.15); color: rgba(150,230,200,0.9); }
+  .type-plan .indicator { background: rgba(255,200,80,0.7); }
+  .type-plan .tag-pill { background: rgba(255,200,80,0.15); color: rgba(255,220,130,0.9); }
+  .type-friend {
+    background: rgba(140,160,255,0.04);
+    border-color: rgba(140,160,255,0.1);
+    opacity: 0.7;
+  }
+  .type-friend .indicator { background: rgba(140,160,255,0.6); }
+  .type-friend .title { font-weight: 400; }
+
+  .gap-row {
+    display: flex;
+    align-items: center;
+    padding: 10px 12px;
+    border-radius: 10px;
+    margin-bottom: 5px;
+    border: 1px dashed rgba(255,255,255,0.1);
+    background: rgba(255,255,255,0.01);
+    gap: 10px;
+    cursor: pointer;
+    transition: border-color 0.3s ease-out;
+  }
+  .gap-row:hover { border-color: rgba(255,150,100,0.3); }
+  .gap-icon {
+    width: 28px; height: 28px;
+    border-radius: 8px;
+    background: rgba(255,150,100,0.08);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    flex-shrink: 0;
+  }
+  .gap-text {
+    color: rgba(255,255,255,0.4);
+    font-size: 12px;
+  }
+  .gap-cta {
+    color: rgba(255,150,100,0.8);
+    font-size: 11px;
+    margin-top: 1px;
+  }
+
+  .expand-hint {
+    font-size: 10px;
+    color: rgba(255,255,255,0.3);
+    padding: 2px 8px;
+    cursor: pointer;
+  }
+
+  .plan-stops {
+    margin-top: 6px;
+    padding-top: 6px;
+    border-top: 1px solid rgba(255,255,255,0.06);
+  }
+  .plan-stop {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    padding: 4px 0;
+    font-size: 11px;
+    color: rgba(255,255,255,0.55);
+  }
+  .plan-stop .stop-time {
+    font-family: monospace;
+    font-size: 10px;
+    color: rgba(255,255,255,0.35);
+    min-width: 42px;
+  }
+
+  .section-label {
+    font-size: 11px;
+    color: rgba(255,255,255,0.3);
+    margin: 24px 0 8px;
+    padding: 0 4px;
+    font-weight: 500;
+  }
+</style>
+
+<div class="mockup">
+  <div class="mockup-header">Agenda — one week of a moderately active user</div>
+  <div class="mockup-body">
+    <div class="agenda-mock">
+
+      <div class="day-header">Wed Apr 15 · Tonight</div>
+      <div class="gap-row">
+        <div class="gap-icon">✦</div>
+        <div>
+          <div class="gap-text">Tonight is open</div>
+          <div class="gap-cta">Explore what's happening →</div>
+        </div>
+      </div>
+
+      <div class="day-header">Thu Apr 16</div>
+      <div class="entry-row type-series">
+        <div class="indicator"></div>
+        <div class="body">
+          <div class="title">Trivia at Joystick Gamebar</div>
+          <div class="meta">8:00 PM · Joystick Gamebar</div>
+        </div>
+        <div class="right-slot">
+          <span class="tag-pill" style="background:rgba(100,200,160,0.15); color:rgba(150,230,200,0.9);">weekly</span>
+        </div>
+      </div>
+
+      <div class="day-header">Fri Apr 17</div>
+      <div class="gap-row">
+        <div class="gap-icon">✦</div>
+        <div>
+          <div class="gap-text">Friday is open</div>
+          <div class="gap-cta">Find something for Friday →</div>
+        </div>
+      </div>
+
+      <div class="day-header">Sat Apr 18</div>
+      <div class="entry-row type-rsvp">
+        <div class="indicator"></div>
+        <div class="body">
+          <div class="title">Hawks vs Celtics</div>
+          <div class="meta">7:30 PM · State Farm Arena</div>
+        </div>
+        <div class="right-slot">
+          <div class="avatar-stack">
+            <div class="av" style="background: rgba(140,160,255,0.3);">A</div>
+            <div class="av" style="background: rgba(200,140,255,0.3);">M</div>
+          </div>
+        </div>
+      </div>
+      <div class="entry-row type-friend">
+        <div class="indicator"></div>
+        <div class="body">
+          <div class="title">Sarah going: Sushi Hayakawa omakase</div>
+          <div class="meta">6:00 PM · Sushi Hayakawa</div>
+        </div>
+        <div class="right-slot">
+          <div class="avatar-stack">
+            <div class="av" style="background: rgba(255,180,200,0.3);">S</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="day-header">Sun Apr 19</div>
+      <div class="gap-row">
+        <div class="gap-icon">✦</div>
+        <div>
+          <div class="gap-text">Sunday is open</div>
+          <div class="gap-cta">Explore Sunday plans →</div>
+        </div>
+      </div>
+
+      <div class="day-header">Wed Apr 22</div>
+      <div class="entry-row type-series">
+        <div class="indicator"></div>
+        <div class="body">
+          <div class="title">Trivia at Joystick Gamebar</div>
+          <div class="meta">8:00 PM · Joystick Gamebar</div>
+        </div>
+        <div class="right-slot">
+          <span class="tag-pill" style="background:rgba(100,200,160,0.15); color:rgba(150,230,200,0.9);">weekly</span>
+        </div>
+      </div>
+
+      <div class="day-header">Fri Apr 24</div>
+      <div class="entry-row type-plan">
+        <div class="indicator"></div>
+        <div class="body">
+          <div class="title">ATLFF Opening Night</div>
+          <div class="meta">3 stops · 6:00 PM – late</div>
+          <div class="plan-stops">
+            <div class="plan-stop">
+              <span class="stop-time">6:00p</span>
+              <span>Dinner at The Optimist</span>
+            </div>
+            <div class="plan-stop">
+              <span class="stop-time">7:30p</span>
+              <span>Opening Film — Plaza Theatre</span>
+            </div>
+            <div class="plan-stop">
+              <span class="stop-time">10:00p</span>
+              <span>Afterparty — Hotel Clermont</span>
+            </div>
+          </div>
+        </div>
+        <div class="right-slot">
+          <span class="tag-pill" style="background:rgba(255,200,80,0.15); color:rgba(255,220,130,0.9);">plan</span>
+          <div class="avatar-stack" style="margin-left: 2px;">
+            <div class="av" style="background: rgba(140,160,255,0.3);">A</div>
+            <div class="av" style="background: rgba(255,180,200,0.3);">S</div>
+            <div class="av" style="background: rgba(100,200,160,0.3);">J</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="day-header">Sat Apr 25</div>
+      <div class="entry-row type-rsvp">
+        <div class="indicator"></div>
+        <div class="body">
+          <div class="title">RZA: One Spoon of Chocolate</div>
+          <div class="meta">6:00 PM · Tara Theatre</div>
+        </div>
+        <div class="right-slot">
+          <div class="avatar-stack">
+            <div class="av" style="background: rgba(140,160,255,0.3);">A</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top: 24px;">
+  <h3>Visual signature per entry type</h3>
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; font-size: 12px;">
+    <div style="padding: 10px; border-radius: 8px; background: rgba(255,255,255,0.03); border-left: 3px solid rgba(255,150,100,0.7);">
+      <strong style="color: rgba(255,150,100,0.9);">RSVP (coral)</strong><br>
+      <span style="opacity: 0.6;">Your commitment to a single event. Friend avatars stack right when shared.</span>
+    </div>
+    <div style="padding: 10px; border-radius: 8px; background: rgba(255,255,255,0.03); border-left: 3px solid rgba(100,200,160,0.7);">
+      <strong style="color: rgba(100,200,160,0.9);">Series (sage)</strong><br>
+      <span style="opacity: 0.6;">"Weekly" pill. Same visual weight as RSVP — it IS an RSVP, just recurring.</span>
+    </div>
+    <div style="padding: 10px; border-radius: 8px; background: rgba(255,255,255,0.03); border-left: 3px solid rgba(255,200,80,0.7);">
+      <strong style="color: rgba(255,200,80,0.9);">Plan (gold)</strong><br>
+      <span style="opacity: 0.6;">Expandable. Collapsed: "3 stops · 6pm – late." Tap to see stops. Participant avatars.</span>
+    </div>
+    <div style="padding: 10px; border-radius: 8px; background: rgba(140,160,255,0.06); border-left: 3px solid rgba(140,160,255,0.6);">
+      <strong style="color: rgba(140,160,255,0.9);">Friend (blue, dimmer)</strong><br>
+      <span style="opacity: 0.6;">70% opacity. Appears below your entries for that day. Tap → event detail → RSVP yourself.</span>
+    </div>
+  </div>
+  <div style="margin-top: 12px; padding: 10px; border-radius: 8px; border: 1px dashed rgba(255,255,255,0.1);">
+    <strong style="color: rgba(255,150,100,0.7);">Gap (dashed, warm)</strong><br>
+    <span style="opacity: 0.6; font-size: 12px;">Dashed border, sparkle icon. "Friday is open → Explore." Links to /explore?date=2026-04-17.</span>
+  </div>
+</div>
