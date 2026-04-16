@@ -26,7 +26,12 @@ export function ElevatedShell({
           {/* Content column */}
           <main className="flex-1 min-w-0">
             {identity && (
-              <div className="px-4 lg:px-8 pt-6 pb-4">{identity}</div>
+              <div
+                className="px-4 lg:px-8 pt-6 pb-4 motion-fade-up"
+                style={{ animationDelay: "100ms" }}
+              >
+                {identity}
+              </div>
             )}
             <div>{content}</div>
           </main>
