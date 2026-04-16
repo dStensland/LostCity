@@ -43,6 +43,7 @@ import {
 } from "@/lib/my-theaters";
 import { useAuth } from "@/lib/auth-context";
 import FeedSectionHeader from "@/components/feed/FeedSectionHeader";
+import FeedSectionReveal from "@/components/feed/FeedSectionReveal";
 import SmartImage from "@/components/SmartImage";
 import Dot from "@/components/ui/Dot";
 import { buildExploreUrl } from "@/lib/find-url";
@@ -320,10 +321,8 @@ export default function NowShowingSection({ portalSlug, embedded = false }: NowS
       : null;
   }
 
-  const Wrapper = embedded ? "div" : "section";
-
-  return (
-    <Wrapper className={embedded ? "" : "pb-2 feed-section-enter"}>
+  const content = (
+    <>
       {/* Section header — hidden when embedded inside a parent tab shell */}
       {!embedded && (
         <FeedSectionHeader
@@ -359,9 +358,9 @@ export default function NowShowingSection({ portalSlug, embedded = false }: NowS
           ))}
         </div>
 
-        {/* Mobile scroll indicator */}
+        {/* Scroll indicator */}
         {totalCards > 1 && (
-          <div className="flex sm:hidden justify-center items-center gap-1.5 mt-3">
+          <div className="flex justify-center items-center gap-1.5 mt-3">
             {totalCards <= 7 ? (
               Array.from({ length: totalCards }).map((_, idx) => (
                 <button
@@ -406,7 +405,13 @@ export default function NowShowingSection({ portalSlug, embedded = false }: NowS
           }}
         />
       )}
-    </Wrapper>
+    </>
+  );
+
+  return embedded ? (
+    <div>{content}</div>
+  ) : (
+    <FeedSectionReveal className="pb-2">{content}</FeedSectionReveal>
   );
 }
 

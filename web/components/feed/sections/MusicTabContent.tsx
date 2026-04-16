@@ -6,6 +6,7 @@ import { TonightShowCard } from "@/components/feed/venues/TonightShowCard";
 import { VenueShowCard } from "@/components/feed/venues/VenueShowCard";
 import { GenreFilterStrip } from "@/components/feed/GenreFilterStrip";
 import FeedSectionHeader from "@/components/feed/FeedSectionHeader";
+import FeedSectionReveal from "@/components/feed/FeedSectionReveal";
 import { getGenreBuckets, type GenreBucket } from "@/lib/genre-map";
 import { buildExploreUrl } from "@/lib/find-url";
 
@@ -170,7 +171,7 @@ export default function LiveMusicSection({
   });
 
   return (
-    <section>
+    <FeedSectionReveal className="pb-2">
       <FeedSectionHeader
         title="Live Music"
         priority="secondary"
@@ -257,7 +258,7 @@ export default function LiveMusicSection({
           )}
         </div>
       )}
-    </section>
+    </FeedSectionReveal>
   );
 }
 

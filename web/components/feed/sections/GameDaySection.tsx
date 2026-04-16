@@ -29,6 +29,7 @@ import {
 } from "@phosphor-icons/react";
 import { useAuth } from "@/lib/auth-context";
 import FeedSectionHeader from "@/components/feed/FeedSectionHeader";
+import FeedSectionReveal from "@/components/feed/FeedSectionReveal";
 import SmartImage from "@/components/SmartImage";
 import { formatTime, getLocalDateString } from "@/lib/formats";
 import {
@@ -292,7 +293,7 @@ export default function GameDaySection({ portalSlug }: GameDaySectionProps) {
   if (failed || displayedTeams.length === 0) return null;
 
   return (
-    <section className="pb-2 feed-section-enter">
+    <FeedSectionReveal className="pb-2">
       {/* Section header */}
       <FeedSectionHeader
         title="Game Day"
@@ -323,9 +324,9 @@ export default function GameDaySection({ portalSlug }: GameDaySectionProps) {
           ))}
         </div>
 
-        {/* Mobile scroll indicator */}
+        {/* Scroll indicator */}
         {totalCards > 1 && (
-          <div className="flex sm:hidden justify-center items-center gap-1.5 mt-3">
+          <div className="flex justify-center items-center gap-1.5 mt-3">
             {totalCards <= 7 ? (
               Array.from({ length: totalCards }).map((_, idx) => (
                 <button
@@ -372,7 +373,7 @@ export default function GameDaySection({ portalSlug }: GameDaySectionProps) {
           }}
         />
       )}
-    </section>
+    </FeedSectionReveal>
   );
 }
 

@@ -5,7 +5,7 @@ import {
   InfoCard,
   MetadataGrid,
   SectionHeader,
-  DetailHero,
+  LegacyDetailHero,
   DetailStickyBar,
 } from "@/components/detail";
 import type { Metadata } from "next";
@@ -258,7 +258,7 @@ export default async function ExhibitionDetailPage({ params }: Props) {
         <main className="max-w-3xl mx-auto px-4 py-4 sm:py-6 pb-28 space-y-5 sm:space-y-8">
 
           {/* Hero */}
-          <DetailHero
+          <LegacyDetailHero
             mode={exhibition.image_url ? "image" : "fallback"}
             imageUrl={exhibition.image_url}
             title={exhibition.title}

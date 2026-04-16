@@ -5,7 +5,7 @@ import { format, parseISO } from "date-fns";
 import { createClient } from "@/lib/supabase/server";
 import ScrollToTop from "@/components/ScrollToTop";
 import {
-  DetailHero,
+  LegacyDetailHero,
   InfoCard,
   MetadataGrid,
   SectionHeader,
@@ -281,7 +281,7 @@ export default async function ProgramDetailPage({ params }: Props) {
       >
         <main className="max-w-2xl mx-auto px-4 py-4 sm:py-6 pb-28 space-y-4 sm:space-y-5">
           {/* Hero */}
-          <DetailHero
+          <LegacyDetailHero
             mode={hasImage ? "image" : "fallback"}
             imageUrl={imageUrl}
             title={program.name}

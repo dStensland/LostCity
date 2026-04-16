@@ -1985,7 +1985,7 @@ def infer_genres(
                 "market",
             ),
             (
-                ["tour", "sightseeing", "scenic", "overlook", "walk", "beltline"],
+                ["tour", "sightseeing", "scenic", "overlook", "walk"],
                 "sightseeing",
             ),
             (["kayak", "paddle", "canoe", "river", "lake", "water"], "water"),

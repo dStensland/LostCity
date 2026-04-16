@@ -105,21 +105,15 @@ export function GettingThereSection({ data }: SectionProps) {
   const hasTransitRows = Boolean(martaLabel || parkingLabel || beltLineLabel);
 
   return (
-    <div
-      className="w-full rounded-[12px] border border-[var(--twilight)] bg-[var(--night)] p-3 motion-hover-lift"
-      style={{ display: "flex", flexDirection: "column", gap: "10px" }}
-    >
+    <div className="w-full rounded-xl border border-[var(--twilight)] bg-[var(--night)] p-3 motion-hover-lift flex flex-col gap-2.5">
       {address && (
-        <p
-          className="text-sm text-[var(--cream)] whitespace-pre-line"
-          style={{ lineHeight: 1.4 }}
-        >
+        <p className="text-sm text-[var(--cream)] whitespace-pre-line leading-snug">
           {address}
         </p>
       )}
 
       {hasTransitRows && (
-        <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+        <div className="flex flex-col gap-1.5">
           {martaLabel && (
             <div className="flex items-center gap-2">
               <Train size={14} color="var(--neon-green)" weight="regular" />

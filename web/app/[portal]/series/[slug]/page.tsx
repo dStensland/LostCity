@@ -16,7 +16,7 @@ import ScopedStylesServer from "@/components/ScopedStylesServer";
 import { createCssVarClass } from "@/lib/css-utils";
 import { buildExploreUrl } from "@/lib/find-url";
 import { resolveDetailPageRequest } from "../../_surfaces/detail/resolve-detail-page-request";
-import SeriesDetailView from "@/components/views/SeriesDetailView";
+import SeriesDetailWrapper from "./SeriesDetailWrapper";
 import type { SeriesApiResponse } from "@/lib/detail/types";
 
 export const revalidate = 120;
@@ -260,7 +260,7 @@ export default async function PortalSeriesPage({ params }: Props) {
 
       <ScopedStylesServer css={[seriesAccentClass?.css, festivalAccentClass?.css].filter(Boolean).join("\n")} />
 
-      <SeriesDetailView
+      <SeriesDetailWrapper
         slug={slug}
         portalSlug={activePortalSlug}
         initialData={initialData}

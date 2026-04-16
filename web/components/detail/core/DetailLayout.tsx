@@ -2,9 +2,12 @@
 
 import { useMemo } from "react";
 import DetailShell from "@/components/detail/DetailShell";
+import { ElevatedShell } from "@/components/detail/ElevatedShell";
 import { DetailHero } from "./DetailHero";
 import { DetailIdentity } from "./DetailIdentity";
 import { DetailActions } from "./DetailActions";
+import { QuickFactsCard } from "./QuickFactsCard";
+import { HeroOverlayNav } from "./HeroOverlayNav";
 import { SectionWrapper } from "./SectionWrapper";
 import { DetailStickyBar } from "@/components/detail/DetailStickyBar";
 import NeonBackButton from "@/components/detail/NeonBackButton";
@@ -14,6 +17,7 @@ import { sectionRegistry } from "@/components/detail/sections";
 import type {
   HeroConfig,
   ActionConfig,
+  QuickFactsData,
   SectionId,
   EntityData,
   EntityType,
@@ -31,6 +35,8 @@ interface DetailLayoutProps {
   entityType: EntityType;
   onClose?: () => void;
   accentColorSecondary?: string;
+  shellVariant?: "sidebar" | "elevated";
+  quickFacts?: QuickFactsData;
 }
 
 export function DetailLayout({
@@ -44,6 +50,8 @@ export function DetailLayout({
   entityType,
   onClose,
   accentColorSecondary,
+  shellVariant = "sidebar",
+  quickFacts,
 }: DetailLayoutProps) {
   // Resolve accent color CSS
   const accentClass = useMemo(
@@ -89,17 +97,8 @@ export function DetailLayout({
     return parts.length > 0 ? parts.join("\n") : null;
   }, [accentClass?.css, secondaryAccentClass?.css]);
 
-  // Build sidebar
-  const sidebar = (
-    <>
-      <DetailHero {...heroConfig} />
-      <DetailIdentity>{identity}</DetailIdentity>
-      <DetailActions config={actionConfig} accentColor={accentColor} />
-    </>
-  );
-
-  // Build content
-  const content = (
+  // Build shared content sections (used by both shell variants)
+  const contentSections = (
     <>
       {resolvedSections.length === 0 ? (
         // Empty state
@@ -132,15 +131,11 @@ export function DetailLayout({
     </>
   );
 
-  // Build top bar — NeonBackButton requires onClose; only render if provided
-  const topBar = onClose ? (
-    <div className="flex items-center justify-between w-full px-4 py-3">
-      <NeonBackButton onClose={onClose} floating={false} />
-    </div>
-  ) : undefined;
-
-  // Build bottom bar (sticky on mobile)
-  const bottomBar = actionConfig.stickyBar.enabled ? (
+  // Build bottom bar (sticky on mobile) — shared by both variants
+  // Render sticky bar unconditionally on mobile. Share + Save are always
+  // useful even when there's no primary CTA (free events, RSVP-only, etc.).
+  // The bar itself scroll-gates its visibility.
+  const bottomBar = (
     <DetailStickyBar
       primaryAction={
         actionConfig.primaryCTA
@@ -152,10 +147,89 @@ export function DetailLayout({
           : undefined
       }
       primaryVariant={actionConfig.primaryCTA?.variant}
-      primaryColor={accentColor}
+      primaryColor={actionConfig.primaryCTA?.color ?? accentColor}
       scrollThreshold={actionConfig.stickyBar.scrollThreshold}
       showShareButton
     />
+  );
+
+  // ── Elevated shell path ─────────────────────────────────────────────────────
+
+  if (shellVariant === "elevated") {
+    const rail = (
+      <>
+        <DetailActions config={actionConfig} accentColor={accentColor} variant="rail" />
+        {quickFacts && (
+          <div className="mt-4">
+            <QuickFactsCard
+              date={quickFacts.date}
+              venueName={quickFacts.venueName}
+              venueSlug={quickFacts.venueSlug}
+              portalSlug={portalSlug}
+              priceText={quickFacts.priceText}
+              agePolicy={quickFacts.agePolicy}
+            />
+          </div>
+        )}
+      </>
+    );
+
+    // Rail is hidden on mobile. Surface quickFacts inline between identity
+    // and first section so price/venue/age don't disappear on phones.
+    const elevatedContent = (
+      <>
+        {quickFacts && (
+          <div className="lg:hidden px-4 pt-1 pb-4">
+            <QuickFactsCard
+              date={quickFacts.date}
+              venueName={quickFacts.venueName}
+              venueSlug={quickFacts.venueSlug}
+              portalSlug={portalSlug}
+              priceText={quickFacts.priceText}
+              agePolicy={quickFacts.agePolicy}
+              variant="inline"
+            />
+          </div>
+        )}
+        {contentSections}
+      </>
+    );
+
+    const elevatedHeroConfig = {
+      ...heroConfig,
+      // Inject back-navigation overlay for the elevated hero
+      overlaySlot: <HeroOverlayNav onClose={onClose} portalSlug={portalSlug} />,
+    };
+
+    return (
+      <>
+        <ScopedStyles css={scopedCss} />
+        <ElevatedShell
+          hero={<DetailHero {...elevatedHeroConfig} />}
+          identity={identity}
+          rail={rail}
+          content={elevatedContent}
+          bottomBar={bottomBar}
+        />
+      </>
+    );
+  }
+
+  // ── Sidebar shell path (default — unchanged) ────────────────────────────────
+
+  const sidebar = (
+    <>
+      <DetailHero {...heroConfig} />
+      <DetailIdentity>{identity}</DetailIdentity>
+      <DetailActions config={actionConfig} accentColor={accentColor} />
+    </>
+  );
+
+  // Build top bar — NeonBackButton requires onClose; only render if provided
+  const topBar = onClose ? (
+    <div className="flex items-center justify-between w-full px-4 py-3">
+      <NeonBackButton onClose={onClose} floating={false} />
+    </div>
   ) : undefined;
 
   return (
@@ -164,7 +238,7 @@ export function DetailLayout({
       <DetailShell
         topBar={topBar}
         sidebar={sidebar}
-        content={content}
+        content={contentSections}
         bottomBar={bottomBar}
         onClose={onClose}
       />

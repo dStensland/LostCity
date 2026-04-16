@@ -28,7 +28,7 @@ PLACE_DATA = {
     "name": "ABV Gallery",
     "slug": "abv-gallery",
     "address": "1206 Metropolitan Ave SE",
-    "neighborhood": "East Atlanta Village",
+    "neighborhood": "Ormewood Park",
     "city": "Atlanta",
     "state": "GA",
     "zip": "30316",

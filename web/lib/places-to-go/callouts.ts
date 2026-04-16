@@ -533,8 +533,12 @@ const SUMMARY_CONFIG: Record<string, SummaryRule[]> = {
       emit: (s) => `${s.eventsThisWeek} ${pluralize(Number(s.eventsThisWeek), "event")} this week`,
     },
     {
+      check: (s) => Number(s.familyCount) > 0,
+      emit: (s) => `${s.familyCount} family-friendly ${pluralize(Number(s.familyCount), "spot")}`,
+    },
+    {
       check: () => true,
-      emit: (s) => `Family-friendly: ${s.familyCount ?? 0}`,
+      emit: (s) => `${s.totalCount ?? 0} ${pluralize(Number(s.totalCount ?? 0), "spot")}`,
     },
   ],
 

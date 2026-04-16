@@ -228,18 +228,30 @@ function Section({ children }) {
 
 ### Process
 
-1. **Open the page in browser** (Chrome automation or manual).
-2. **Scroll through the entire page** and note every element that:
+**Pre-flight memory check (mandatory — 16GB RAM + 0 swap = browser-test crashes the machine):**
+
+```bash
+vm_stat | awk '/Pages free/ {gsub(/\./,"",$3); printf "free: %d MB\n", $3*16384/1048576}'
+```
+
+If free memory < 200 MB, **abort** and ask the user to quit Spotify, close non-essential Chrome tabs, and close any other MCP browser sessions.
+
+**Browser budget:** Max 4 screenshots per audit. Open ONE tab at desktop (1440×900), take the shots you need, then close the tab. Do not keep the tab alive "just in case" — held tabs with infinite animations (pulse-glow, shimmer) continue burning GPU memory even when you're not interacting.
+
+**Mobile viewport audits are currently unavailable via this skill.** `mcp__claude-in-chrome__resize_window` resizes the macOS window frame but does NOT change the web viewport — any "mobile" screenshot captures a desktop-rendered page at reduced size. If mobile motion needs review, ask the user to open the page at 390px wide in a real Chrome window or on a device. See `docs/feed-audit-2026-04-16.md` §10.
+
+1. **Open one browser tab** at desktop width (Chrome automation or manual).
+2. **Scroll through the page using 3 jump-scrolls** (top, mid, bottom — `window.scrollTo(0, y)`, not incremental `scrollBy` loops). Note every element that:
    - Appears without any entrance animation (just pops in)
    - Has no hover response (cards, buttons, links feel dead)
    - Loads with a layout shift (skeleton doesn't match content)
    - Transitions between states without animation (tab switch, expand/collapse)
    - Has a sticky element that appears/disappears abruptly
-3. **Interact with the page** and note every element that:
+3. **Interact with the page** (short session — hover 2-3 key elements, click 1-2 CTAs). Note every element that:
    - Gives no press/click feedback (buttons don't respond to touch)
    - Has no focus indicator (keyboard navigation is invisible)
    - Scrolls jankily (not smooth-scrolling to sections)
-4. **Output a motion audit report:**
+4. **Close the tab.** Then output a motion audit report:
 
 ```markdown
 # Motion Audit: [Page Name]

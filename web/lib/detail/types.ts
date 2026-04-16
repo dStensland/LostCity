@@ -2,6 +2,9 @@
 
 import type React from "react";
 
+// ─── Hero Tier ──────────────────────────────────────────────────
+export type HeroTier = 'expanded' | 'compact' | 'typographic';
+
 // ─── Entity Types ───────────────────────────────────────────────
 // Re-export existing response types used by each detail view.
 // These are the shapes returned by the API routes.
@@ -31,6 +34,8 @@ export interface EventData {
   ticket_url: string | null;
   source_url: string | null;
   image_url: string | null;
+  image_width: number | null;
+  image_height: number | null;
   is_recurring: boolean;
   recurrence_rule: string | null;
   is_adult?: boolean | null;
@@ -100,6 +105,7 @@ export interface EventArtist {
 
 export interface EventApiResponse {
   event: EventData;
+  heroTier: HeroTier;
   eventArtists: EventArtist[];
   venueEvents: unknown[];
   nearbyEvents: unknown[];
@@ -320,14 +326,19 @@ export interface SectionProps {
 
 export interface HeroConfig {
   imageUrl: string | null;
-  aspectClass: string;
-  fallbackMode: "category-icon" | "type-icon" | "logo" | "banner";
+  tier?: HeroTier;                   // when set, uses tier-based rendering
+  aspectClass?: string;              // kept for sidebar shell backward compat
+  fallbackMode?: "category-icon" | "type-icon" | "logo" | "banner";
   galleryEnabled: boolean;
   galleryUrls?: string[];
   category?: string | null;
   isLive?: boolean;
   overlaySlot?: React.ReactNode;
-  mobileMaxHeight?: string; // e.g., "max-h-[280px]" for film posters
+  mobileMaxHeight?: string;          // e.g., "max-h-[280px]" for film posters
+  title?: string;                    // for typographic tier
+  metadataLine?: string;             // for typographic tier (e.g., "APR 18 · TERMINAL WEST")
+  tags?: string[];                   // for typographic tier
+  accentColor?: string;              // for tier gradient coloring
 }
 
 export interface ActionButton {
@@ -351,6 +362,19 @@ export interface ActionConfig {
     enabled: boolean;
     scrollThreshold?: number;
   };
+  // Rail-specific
+  posterUrl?: string | null;
+  heroTier?: HeroTier;
+}
+
+// ─── Quick Facts (elevated rail) ────────────────────────────────
+
+export interface QuickFactsData {
+  date: string;
+  venueName: string | null;
+  venueSlug: string | null;
+  priceText: string | null;
+  agePolicy: string | null;
 }
 
 // ─── Connection Types ───────────────────────────────────────────

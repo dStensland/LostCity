@@ -33,6 +33,24 @@ logger = logging.getLogger(__name__)
 BASE_URL = "https://www.masqueradeatlanta.com"
 EVENTS_URL = f"{BASE_URL}/events/"
 
+# URL fragments that identify venue promotional/schedule graphics — not event-specific images.
+# Any image_url matching one of these patterns is cleared to None so that the detail-page
+# enrichment pass (enrich_event_record) can fetch the correct poster from the event page.
+# Belt-and-suspenders: the same patterns are also registered in utils._IMAGE_SKIP_PATTERNS
+# so they are caught at the central is_likely_non_event_image() gate as well.
+_SCHEDULE_IMAGE_BLOCKLIST = re.compile(
+    r"weeklyservice",  # covers weeklyservice_0202slider, weeklyservice_0209slider, etc.
+    re.IGNORECASE,
+)
+
+
+def _is_schedule_image(url: Optional[str]) -> bool:
+    """Return True if the URL matches a known venue schedule/promo graphic pattern."""
+    if not url:
+        return False
+    return bool(_SCHEDULE_IMAGE_BLOCKLIST.search(url))
+
+
 PLACE_DATA = {
     "name": "The Masquerade",
     "slug": "the-masquerade",
@@ -395,6 +413,20 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
 
 
+                        # Guard: image_map is built from listing-page alt text, which can
+                        # match venue schedule/promo graphics (weeklyservice_*slider) instead
+                        # of event-specific posters.  Clear any blocklisted URL so that the
+                        # enrich_event_record() pass below can fetch the correct image from
+                        # the individual event detail page.
+                        raw_image = image_map.get(title)
+                        if _is_schedule_image(raw_image):
+                            logger.warning(
+                                "Masquerade: blocked schedule image for %r: %s",
+                                title,
+                                raw_image,
+                            )
+                            raw_image = None
+
                         event_record = {
                             "source_id": source_id,
                             "place_id": venue_id,
@@ -414,7 +446,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             "is_free": False,
                             "source_url": event_url,
                             "ticket_url": event_url,
-                            "image_url": image_map.get(title),
+                            "image_url": raw_image,
                             "raw_text": f"{title} - {start_date}",
                             "extraction_confidence": 0.90,
                             "is_recurring": False,
@@ -438,6 +470,18 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         # Skip if URL fell back to listing page
                         if event_url and event_url != EVENTS_URL:
                             enrich_event_record(event_record, "The Masquerade")
+
+                        # Post-enrich guard: if enrichment somehow set a schedule image
+                        # (e.g. the detail page og:image also resolves to a promo graphic),
+                        # clear it rather than persist a wrong image.
+                        if _is_schedule_image(event_record.get("image_url")):
+                            logger.warning(
+                                "Masquerade: post-enrich blocked schedule image for %r: %s",
+                                title,
+                                event_record.get("image_url"),
+                            )
+                            event_record["image_url"] = None
+
                         _repair_description_from_artist_bio(event_record)
 
                         existing = find_event_by_hash(content_hash)

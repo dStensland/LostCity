@@ -29,6 +29,7 @@ import {
   ArrowRight, MicrophoneStage, ListBullets, Plus, X, Check, WarningCircle,
 } from "@phosphor-icons/react";
 import FeedSectionHeader from "@/components/feed/FeedSectionHeader";
+import FeedSectionReveal from "@/components/feed/FeedSectionReveal";
 import { buildExploreUrl } from "@/lib/find-url";
 
 /** Map from activity ID → config for O(1) lookup */
@@ -286,7 +287,7 @@ export default function TheSceneSection({ portalSlug }: Props) {
   if (allEvents.length === 0) return null;
 
   return (
-    <section className="feed-section-enter">
+    <FeedSectionReveal>
       {/* Section header */}
       <FeedSectionHeader
         title="Regular Hangs"
@@ -399,7 +400,7 @@ export default function TheSceneSection({ portalSlug }: Props) {
           </p>
         </div>
       )}
-    </section>
+    </FeedSectionReveal>
   );
 }
 

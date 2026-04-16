@@ -1,11 +1,36 @@
 import type { EventApiResponse } from "@/components/views/EventDetailView";
+import type { HeroTier } from "@/lib/detail/types";
 import type { Event, EventWithProducer } from "@/lib/supabase";
 import { getDisplayParticipants } from "@/lib/artists-utils";
 import type { EventArtist } from "@/lib/artists-utils";
 import { buildDisplayDescription } from "@/lib/event-description";
+import { logger } from "@/lib/logger";
 import {
   suppressEventImagesIfVenueFlagged,
 } from "@/lib/image-quality-suppression";
+
+/**
+ * Determines the hero tier for an event detail page based on image quality signals.
+ * Computed server-side to avoid layout shifts on the client.
+ */
+export function computeHeroTier(
+  imageUrl: string | null,
+  imageWidth: number | null,
+  imageHeight: number | null,
+  galleryUrls: string[],
+): HeroTier {
+  if (!imageUrl) return 'typographic';
+  if (galleryUrls.length >= 2) return 'expanded';
+  if (
+    imageWidth != null &&
+    imageHeight != null &&
+    imageWidth >= 1200 &&
+    imageWidth / imageHeight >= 1.3
+  ) {
+    return 'expanded';
+  }
+  return 'compact';
+}
 
 /**
  * Maps server-fetched event data (from getEventById + related fetches) to the
@@ -84,6 +109,8 @@ export function mapEventServerDataToViewData(
     source_url: event.source_url,
     // Use resolved image (event → series → venue fallback)
     image_url: resolvedImageUrl,
+    image_width: (event as { image_width?: number | null }).image_width ?? null,
+    image_height: (event as { image_height?: number | null }).image_height ?? null,
     is_recurring: event.is_recurring ?? false,
     recurrence_rule: event.recurrence_rule ?? null,
     is_adult: (event as { is_adult?: boolean | null }).is_adult ?? null,
@@ -200,8 +227,36 @@ export function mapEventServerDataToViewData(
     recommendation_count: 0,
   }));
 
+  // Tier classification uses event.image_url specifically (not the
+  // series/venue fallback chain). An event without its own image should
+  // render the typographic treatment even if a venue fallback is
+  // available — that's the design intent.
+  const heroTier = computeHeroTier(
+    event.image_url,
+    (event as { image_width?: number | null }).image_width ?? null,
+    (event as { image_height?: number | null }).image_height ?? null,
+    [],
+  );
+
+  // Tier-distribution telemetry — sampled at 5% to keep log volume
+  // bounded. Intent is catching silent tier fall-through after a flag
+  // flip; ~1 in 20 renders is enough signal for distribution.
+  if (Math.random() < 0.05) {
+    logger.info(`hero tier resolved: ${heroTier}`, {
+      component: "event-detail-mapper",
+      eventId: event.id,
+      heroTier,
+      hasImage: !!event.image_url,
+      hasImageDimensions: !!(
+        (event as { image_width?: number | null }).image_width &&
+        (event as { image_height?: number | null }).image_height
+      ),
+    });
+  }
+
   return {
     event: mappedEvent,
+    heroTier,
     eventArtists: displayParticipants,
     venueEvents: mappedVenueEvents,
     nearbyEvents: mappedNearbyEvents,

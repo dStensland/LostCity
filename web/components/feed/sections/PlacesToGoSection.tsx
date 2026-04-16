@@ -2,8 +2,10 @@
 
 import { useState, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { MapPin } from "@phosphor-icons/react";
+import Link from "next/link";
+import { MapPin, Compass, ArrowRight } from "@phosphor-icons/react";
 import FeedSectionHeader from "@/components/feed/FeedSectionHeader";
+import FeedSectionReveal from "@/components/feed/FeedSectionReveal";
 import FeedSectionSkeleton from "@/components/feed/FeedSectionSkeleton";
 import { PlacesToGoCategoryTile } from "./PlacesToGoCategoryTile";
 import type { PlacesToGoResponse } from "@/lib/places-to-go/types";
@@ -59,7 +61,7 @@ export function PlacesToGoSection({ portalSlug }: PlacesToGoSectionProps) {
   }
 
   return (
-    <section>
+    <FeedSectionReveal className="pb-2">
       <FeedSectionHeader
         title="Places to Go"
         priority="secondary"
@@ -78,8 +80,32 @@ export function PlacesToGoSection({ portalSlug }: PlacesToGoSectionProps) {
             onToggle={() => handleToggle(category.key)}
           />
         ))}
+        <BrowseAllTile portalSlug={portalSlug} />
       </div>
-    </section>
+    </FeedSectionReveal>
+  );
+}
+
+function BrowseAllTile({ portalSlug }: { portalSlug: string }) {
+  return (
+    <Link
+      href={buildExploreUrl({ portalSlug, lane: "places" })}
+      className="rounded-card hover-lift border border-[var(--twilight)]/40 bg-[var(--night)] p-3.5 flex items-center justify-between group transition-all hover:border-[var(--neon-green)]/30"
+    >
+      <div className="flex items-center gap-1.5 min-w-0">
+        <Compass
+          weight="duotone"
+          className="w-5 h-5 flex-shrink-0 text-[var(--muted)] group-hover:text-[var(--neon-green)] transition-colors"
+        />
+        <span className="text-sm font-semibold leading-tight truncate text-[var(--soft)] group-hover:text-[var(--cream)] transition-colors">
+          Browse all
+        </span>
+      </div>
+      <ArrowRight
+        weight="bold"
+        className="w-4 h-4 flex-shrink-0 text-[var(--muted)] group-hover:text-[var(--neon-green)] group-hover:translate-x-0.5 transition-all"
+      />
+    </Link>
   );
 }
 

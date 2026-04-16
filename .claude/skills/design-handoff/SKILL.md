@@ -237,22 +237,35 @@ Write to `docs/design-specs/{kebab-case-name}.md`
 
 ### Step 2: Screenshot the Live Page
 
+**Pre-flight memory check (mandatory — 16GB RAM + 0 swap = screenshot accumulation crashes the machine):**
+
+```bash
+vm_stat | awk '/Pages free/ {gsub(/\./,"",$3); printf "free: %d MB\n", $3*16384/1048576}'
+```
+
+If free memory < 200 MB, **abort** and ask the user to quit Spotify, close non-essential Chrome tabs, and close any other MCP browser sessions. Do not proceed — every screenshot is a 1-3MB PNG held in context, and a verify run with multiple scrolls will tip the system over.
+
 Load Chrome browser tools (`ToolSearch` for `mcp__claude-in-chrome__*`).
 
+**Mobile viewport testing is currently unavailable via this skill.** `mcp__claude-in-chrome__resize_window` resizes the macOS window frame but does NOT change the web viewport — `window.innerWidth` stays at desktop. Any "mobile" screenshot via this path captures a desktop-rendered page at a smaller window size, which is worse than useless (it doubles screenshot budget for zero mobile coverage). When mobile verification is required, ask the user to open the page in a real Chrome window at 390px wide, on a real device, or in Chrome DevTools device emulation. Do not claim mobile verification from this skill. See `docs/feed-audit-2026-04-16.md` §10.
+
+**Hard budget per verify run: 3 screenshots desktop-only. Close the tab when done.** A single tab accumulates compositor layers and scroll-position layer buffers that never free until the tab closes. On pages with backdrop-blur (detail pages, modals), this is the dominant memory growth source.
+
+**Desktop pass (max 3 screenshots):**
 ```
 1. mcp__claude-in-chrome__tabs_create_mcp → get tab ID
-2. mcp__claude-in-chrome__resize_window({ width: 375, height: 812 })  // mobile
+2. mcp__claude-in-chrome__resize_window({ width: 1440, height: 900 })
 3. mcp__claude-in-chrome__navigate({ url: "<url>" })
 4. Wait for load
-5. mcp__claude-in-chrome__computer({ action: "screenshot" })
+5. mcp__claude-in-chrome__computer({ action: "screenshot" })   // above fold
+6. mcp__claude-in-chrome__javascript_tool({ code: "window.scrollTo(0, window.innerHeight)" })
+7. mcp__claude-in-chrome__computer({ action: "screenshot" })   // mid
+8. mcp__claude-in-chrome__javascript_tool({ code: "window.scrollTo(0, document.body.scrollHeight)" })
+9. mcp__claude-in-chrome__computer({ action: "screenshot" })   // bottom
+10. Close the tab before finishing
 ```
 
-**Full-page capture:** For pages longer than one viewport, scroll and capture additional screenshots:
-```
-6. mcp__claude-in-chrome__javascript_tool({ code: "window.scrollBy(0, 700)" })
-7. mcp__claude-in-chrome__computer({ action: "screenshot" })
-// Repeat until bottom of page
-```
+**Never `scrollBy(0, 700)` in a loop.** Three jump-scrolls (top, mid, bottom) cover the page; incremental scrolls produce more layer churn and more screenshots than the comparison needs. If the page is genuinely longer than 3 viewports and a section is missed, take one additional targeted screenshot — do not re-loop.
 
 ### Step 3: Visual Comparison
 

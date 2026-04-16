@@ -177,9 +177,19 @@ describe("buildSummary", () => {
     expect(result).toBe("7 free programs this week");
   });
 
-  it("returns family-friendly fallback for fun_games when eventsThisWeek=0", () => {
+  it("returns family-friendly count for fun_games when eventsThisWeek=0 and familyCount>0", () => {
     const result = buildSummary("fun_games", { eventsThisWeek: 0, familyCount: 4, totalCount: 10 });
-    expect(result).toBe("Family-friendly: 4");
+    expect(result).toBe("4 family-friendly spots");
+  });
+
+  it("singularizes family-friendly count for fun_games when familyCount=1", () => {
+    const result = buildSummary("fun_games", { eventsThisWeek: 0, familyCount: 1, totalCount: 5 });
+    expect(result).toBe("1 family-friendly spot");
+  });
+
+  it("falls back to total spots for fun_games when no events and no family-friendly", () => {
+    const result = buildSummary("fun_games", { eventsThisWeek: 0, familyCount: 0, totalCount: 3 });
+    expect(result).toBe("3 spots");
   });
 
   it("every category key works without throwing", () => {

@@ -11,7 +11,7 @@ import { EntityTagList } from "@/components/tags/EntityTagList";
 import type { Event } from "@/lib/supabase";
 import type { Metadata } from "next";
 import {
-  DetailHero,
+  LegacyDetailHero,
   InfoCard,
   MetadataGrid,
   SectionHeader,
@@ -357,7 +357,7 @@ export default async function PortalOrganizerPage({ params }: Props) {
       <div className="min-h-screen">
         <main data-clean-detail="true" className="max-w-5xl mx-auto px-4 py-4 sm:py-6 pb-36 md:pb-16 space-y-6 sm:space-y-9">
           {/* Hero Section */}
-          <DetailHero
+          <LegacyDetailHero
             mode="poster"
             imageUrl={organization.logo_url}
             title={organization.name}
@@ -394,7 +394,7 @@ export default async function PortalOrganizerPage({ params }: Props) {
                 Claim this organization
               </Link>
             </div>
-          </DetailHero>
+          </LegacyDetailHero>
 
           {/* Overview Card */}
           <InfoCard accentColor={orgColor} className="!bg-[var(--night)] !border-[var(--twilight)]/90">

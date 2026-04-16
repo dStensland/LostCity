@@ -14,7 +14,7 @@ import {
   hasDiningProfile,
   hasExhibitions,
   hasFeatures,
-  hasCoordinates,
+  hasNearbyContent,
   hasPrograms,
   hasUpcomingEvents,
   hasVolunteerOpportunities,
@@ -219,7 +219,7 @@ const features: SectionModule = {
 const nearby: SectionModule = {
   id: "nearby",
   component: NearbySection,
-  trait: hasCoordinates,
+  trait: hasNearbyContent,
   label: "Nearby",
   icon: ArrowsOutCardinal,
   allowedEntityTypes: ["event", "place"],

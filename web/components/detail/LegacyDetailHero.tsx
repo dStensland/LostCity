@@ -1,5 +1,11 @@
 "use client";
 
+// Legacy hero for detail pages that don't use DetailLayout:
+// artists, community, exhibitions, programs/shows, showtimes.
+// New tier-aware hero lives in core/DetailHero.tsx and is orchestrated
+// by DetailLayout. Do not import this directly for events, places,
+// festivals, or series — use DetailLayout instead.
+
 import { useState, useCallback, type ReactNode, type CSSProperties } from "react";
 import Image from "@/components/SmartImage";
 import CategoryPlaceholder from "../CategoryPlaceholder";
@@ -7,7 +13,7 @@ import BackButton from "../headers/BackButton";
 import ScopedStyles from "@/components/ScopedStyles";
 import { createCssVarClass } from "@/lib/css-utils";
 
-export interface DetailHeroProps {
+export interface LegacyDetailHeroProps {
   entityId?: number | string;
   /** Prefix for the CSS view-transition-name. Defaults to "event-hero". */
   viewTransitionPrefix?: string;
@@ -32,7 +38,7 @@ export interface DetailHeroProps {
 const BACK_BUTTON_CLASS =
   "absolute top-3 left-3 sm:top-4 sm:left-4 z-10 flex items-center justify-center w-9 h-9 rounded-full bg-black/50 backdrop-blur-sm text-white/90 hover:bg-black/70 hover:text-white transition-colors";
 
-export function DetailHero({
+export function LegacyDetailHero({
   entityId,
   viewTransitionPrefix = "event-hero",
   mode,
@@ -48,7 +54,7 @@ export function DetailHero({
   portrait,
   backFallbackHref,
   children,
-}: DetailHeroProps) {
+}: LegacyDetailHeroProps) {
   const [imgError, setImgError] = useState(false);
   const [imgLoaded, setImgLoaded] = useState(false);
   const [isLowRes, setIsLowRes] = useState(false);

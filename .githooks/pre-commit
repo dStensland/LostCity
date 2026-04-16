@@ -1,21 +1,55 @@
 #!/bin/bash
-# Pre-commit hook for LostCity monorepo
-# Runs tests before allowing commit to proceed
-# Skip with: git commit --no-verify
+# LostCity pre-commit — fast, targeted checks on staged files.
+# Skip with: git commit --no-verify (don't make this a habit).
 
 set -e
 
 REPO_ROOT="$(git rev-parse --show-toplevel)"
+START=$(date +%s)
 
-echo "Running pre-commit checks..."
+# Skip during merge/rebase — hooks fire there too and we don't want to block recovery.
+if [ -e "$REPO_ROOT/.git/MERGE_HEAD" ] || [ -d "$REPO_ROOT/.git/rebase-merge" ] || [ -d "$REPO_ROOT/.git/rebase-apply" ]; then
+    echo "merge/rebase in progress — skipping pre-commit checks"
+    exit 0
+fi
+
+STAGED=$(git diff --cached --name-only --diff-filter=ACM)
+if [ -z "$STAGED" ]; then
+    exit 0
+fi
+
+has_pattern() { echo "$STAGED" | grep -qE "$1"; }
+STEPS=0
+
+if has_pattern '^web/.*\.(ts|tsx)$'; then
+    STEPS=$((STEPS+1))
+    echo "→ [$STEPS] tsc --noEmit (web/)"
+    (cd "$REPO_ROOT/web" && npx tsc --noEmit)
+fi
+
+if has_pattern '^web/.*\.(js|jsx|ts|tsx)$'; then
+    STEPS=$((STEPS+1))
+    echo "→ [$STEPS] eslint (changed web files)"
+    CHANGED_WEB=$(echo "$STAGED" | grep -E '^web/.*\.(js|jsx|ts|tsx)$' | sed 's|^web/||' | tr '\n' ' ')
+    (cd "$REPO_ROOT/web" && npx eslint $CHANGED_WEB)
+fi
+
+if has_pattern '^web/.*\.(js|jsx|ts|tsx)$'; then
+    STEPS=$((STEPS+1))
+    echo "→ [$STEPS] vitest run --changed HEAD (web/)"
+    (cd "$REPO_ROOT/web" && npx vitest run --changed HEAD)
+fi
+
+if has_pattern '^crawlers/.*\.py$'; then
+    STEPS=$((STEPS+1))
+    echo "→ [$STEPS] pytest (crawlers/tests/)"
+    if [ -x "$REPO_ROOT/crawlers/venv/bin/python3" ]; then
+        (cd "$REPO_ROOT/crawlers" && ./venv/bin/python3 -m pytest tests/ -q)
+    else
+        echo "  ⚠ crawlers/venv not found — skipping pytest. Run: python3 -m venv crawlers/venv && crawlers/venv/bin/pip install -r crawlers/requirements.txt"
+    fi
+fi
+
+ELAPSED=$(($(date +%s) - START))
 echo ""
-
-echo "→ Running frontend tests (vitest)..."
-cd "$REPO_ROOT/web" && npx vitest run
-echo ""
-
-echo "→ Running crawler validation tests (pytest)..."
-cd "$REPO_ROOT/crawlers" && ./venv/bin/python3 -m pytest test_validation.py -v
-echo ""
-
-echo "All pre-commit checks passed!"
+echo "✓ pre-commit passed ($STEPS checks in ${ELAPSED}s)"

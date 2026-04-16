@@ -123,6 +123,28 @@ export function hasCoordinates(data: EntityData): boolean {
   }
 }
 
+// NearbySection renders only when there's actual nearby content. The earlier
+// hasCoordinates trait let an empty "Nearby" header appear whenever lat/lng
+// existed, even with zero nearby events/destinations.
+export function hasNearbyContent(data: EntityData): boolean {
+  switch (data.entityType) {
+    case "event": {
+      const nearbyEvents = (data.payload.nearbyEvents as unknown[]) ?? [];
+      const nearby = (data.payload.nearbyDestinations as Record<string, unknown[]>) ?? {};
+      const destinations = Object.values(nearby).flat();
+      return nearbyEvents.length > 0 || destinations.length > 0;
+    }
+    case "place": {
+      const upcoming = (data.payload.upcomingEvents as unknown[]) ?? [];
+      const nearby = (data.payload.nearbyDestinations as Record<string, unknown[]>) ?? {};
+      const destinations = Object.values(nearby).flat();
+      return upcoming.length > 0 || destinations.length > 0;
+    }
+    default:
+      return false;
+  }
+}
+
 export function hasAdmission(data: EntityData): boolean {
   if (data.entityType !== "place") return false;
   const profile = data.payload.placeProfile as Record<string, unknown> | null;
