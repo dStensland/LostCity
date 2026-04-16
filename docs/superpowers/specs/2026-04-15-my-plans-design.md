@@ -67,7 +67,7 @@ Discriminates subscription-materialized RSVPs from manual ones. Required for saf
 **Postgres trigger on `events` insert:**
 - When `new.series_id` matches an active subscription, auto-insert `event_rsvps(user_id, event_id, status='going', source='subscription')`
 - Use `INSERT ... ON CONFLICT DO NOTHING` to handle race conditions
-- Guard the existing `create_rsvp_activity()` trigger: add `WHEN (NEW.source != 'subscription')` condition to suppress activity feed spam from bulk materialization
+- **Migration ordering:** (a) add `source` column to `event_rsvps`, (b) THEN alter the existing `create_rsvp_activity()` trigger to add `WHEN (NEW.source != 'subscription')` condition. The trigger guard references the `source` column and will fail if it doesn't exist yet.
 
 **Subscribe activity:** The `/api/series/:id/subscribe` endpoint creates a single "subscribed to [Series Name]" activity row after materialization completes. This replaces the N individual RSVP activities that the trigger would have generated.
 
@@ -122,6 +122,10 @@ Top nav: **Discover | Explore | Plans | People**
 
 No week view. No separate mobile view (agenda is mobile-first).
 
+**Find surface calendar mode:** `web/components/find/EventsCalendarMode.tsx` currently imports `CalendarView` and `MobileCalendarView` (both deleted in this spec). Strip the calendar mode toggle from the Find/Explore surface entirely — the Find page uses list and grid modes only. The agenda lives on /plans, not embedded in Explore.
+
+**Film portal calendar:** `/[portal]/calendar/page.tsx` has film-specific chrome (`FilmPortalNav`, `resolveFilmPageRequest`). Film portals collapse into /plans like all other portals. Any film-specific navigation chrome on the Plans surface is handled by the portal theming system, not a separate route.
+
 ### 2.4 Header Bar
 
 - Left: "Plans" title + current month context (visible in month view, hidden in agenda)
@@ -132,27 +136,33 @@ No week view. No separate mobile view (agenda is mobile-first).
 
 ## 3. Agenda Entry Types
 
-Five entry types share the timeline, differentiated by left-edge color indicator:
+Five entry types share the timeline. Visual differentiation uses **two semantic tiers** (yours vs. theirs), not five colors. The left-edge indicator's job is "mine vs not mine" — zero-learning on first load. Entry subtype differentiation is handled by tag pills and row treatment.
 
-### 3.1 RSVP (coral indicator)
+### 3.0 Visual Tier System
 
-Your commitment to a single event. Standard row: title, time, venue. Friend avatars stack on the right when friends are also going to the same event (dedup — no separate friend row for shared events).
+- **Yours tier:** Solid left-edge indicator in `var(--coral)`. All your commitments (RSVP, series, Plan) share this accent. Subtype differences communicated via tag pill (none for RSVP, "weekly" for series, "plan" for Plan) and row structure (expandable for multi-stop Plans).
+- **Theirs tier:** Solid left-edge indicator in `var(--vibe)`. 70% opacity, lighter font weight. All friend entries use this treatment.
+- **Gap:** No left-edge indicator. Dashed border. Visually distinct from both tiers.
 
-### 3.2 Series (sage indicator)
+### 3.1 RSVP (yours tier, no tag pill)
 
-Visually identical to RSVP with a frequency tag pill derived from `series.frequency` (e.g., "weekly", "biweekly", "monthly"). Same weight — it IS an RSVP, just recurring. The tag pill distinguishes at a glance.
+Your commitment to a single event. Standard row: title, time, venue. Friend avatars stack on the right when friends are also going to the same event (dedup — no separate friend row for shared events). `role="listitem"` with `aria-label` including event title and date.
 
-### 3.3 Plan (gold indicator)
+### 3.2 Series (yours tier, frequency tag pill)
+
+Same visual weight as RSVP — it IS an RSVP, just recurring. Distinguished by a frequency tag pill derived from `series.frequency` (e.g., "weekly", "biweekly", "monthly"). The tag pill is the only differentiator at a glance.
+
+### 3.3 Plan (yours tier, "plan" tag pill, expandable)
 
 Group Plan objects. Multi-stop plans render as a single collapsed row: "ATLFF Opening Night · 3 stops · 6pm – late" with "plan" tag pill and participant avatar cluster. Tap to expand stops inline (time + venue per stop). Single-stop plans render as a flat row with participant avatars — no expand affordance needed.
 
-### 3.4 Friend (blue indicator, dimmer)
+### 3.4 Friend (theirs tier)
 
-Friend-only RSVPs (events you haven't committed to). 70% opacity, lighter font weight, blue-tinted background. Render below your entries for the same day. Tap opens event detail where you can RSVP yourself — this is the social conversion funnel.
+Friend-only RSVPs (events you haven't committed to). 70% opacity, lighter font weight, `var(--vibe)` left-edge accent. Render below your entries for the same day. Tap opens event detail where you can RSVP yourself — this is the social conversion funnel. `aria-label` includes friend name and event title.
 
 ### 3.5 Gap (dashed border, warm CTA)
 
-Day with zero personal commitments. Dashed border, Phosphor `Sparkle` icon in warm coral tint, "Friday is open" text with "Find something for Friday →" CTA. Links to `/[portal]/explore?date=YYYY-MM-DD`. Visually light but present.
+Day with zero personal commitments. Dashed border, Phosphor `Sparkle` icon in warm coral tint, "Friday is open" text with "Find something for Friday →" CTA. Links to `/[portal]/explore?date=YYYY-MM-DD`. Visually light but present. `role="listitem"` with `aria-label="Friday April 17 is open. Explore events."`
 
 ---
 
@@ -169,15 +179,25 @@ Day with zero personal commitments. Dashed border, Phosphor `Sparkle` icon in wa
 
 ## 5. Empty State
 
-### 5.1 Seeded Suggestions (primary)
+### 5.1 First-Session Empty State (zero RSVPs ever)
 
-When user has zero commitments, query top 5 events from the feed's Lineup pipeline, filtered to this week + next week, sorted by FORTH score. Render as ghost rows: same agenda layout but visually distinct — lower opacity, dashed left indicator, "RSVP" action button per row (RSVPing converts the ghost row into a real agenda entry). Day headers on ghost rows match the real agenda format.
+When the user has never RSVPed to anything, show an honest empty state that teaches the surface's job:
+- Headline: "Your plans live here"
+- Description: "RSVP to events, subscribe to series, build plans with friends. Everything you commit to shows up on this timeline."
+- Primary CTA: "Explore what's happening →" linking to `/[portal]/explore`
+- Secondary CTA: "Browse series →" linking to `/[portal]/explore?view=series`
+
+No ghost rows. The spec's core principle is "if it's on here, you said yes" — fake suggestions on first load violate this and teach the wrong mental model.
+
+### 5.2 Sparse-Week Suggestions (has RSVPs, thin week)
+
+After a user has at least one RSVP (the surface shape is understood), seed empty weeks with up to 3 suggestion rows from the feed's Lineup pipeline, filtered to this week + next week, sorted by FORTH score. Render as ghost rows: lower opacity, dashed left indicator, "RSVP" action button per row (RSVPing converts the ghost row into a real agenda entry). Query is best-effort with a 2-second timeout; on failure, render gap rows normally.
 
 Below ghost rows: "Browse more on Explore →" link.
 
-### 5.2 Bare Fallback
+### 5.3 Bare Fallback
 
-If the feed is also empty (new portal, no data): single atmospheric CTA — aspirational headline, one button to Explore. No ghost rows.
+If the feed pipeline returns no events (new portal, no data): gap rows render normally with Explore CTAs. No ghost rows.
 
 ---
 
@@ -219,6 +239,8 @@ If the feed is also empty (new portal, no data): single atmospheric CTA — aspi
 - `CalendarSkeleton.tsx` (replaced with agenda-shaped skeleton)
 - `HoverPreviewCard.tsx`
 - `MobileCalendarView.tsx` (agenda is mobile-first)
+- `EventsCalendarMode.tsx` (strip calendar mode from Find/Explore surface)
+- Film-specific calendar page chrome (absorbed by portal theming on /plans)
 
 ---
 
@@ -267,4 +289,4 @@ If the feed is also empty (new portal, no data): single atmospheric CTA — aspi
 - Series subscription from within /plans (subscribe lives on series detail page)
 - Push notifications for friend activity on plans
 
-**Implementation note:** Verify `series.id` column type (text vs UUID) before writing migration. The spec assumes UUID based on architect review, but this must be confirmed against the actual schema.
+**Implementation note:** `series.id` is confirmed UUID (migration 018).
