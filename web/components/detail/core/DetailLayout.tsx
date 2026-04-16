@@ -88,13 +88,8 @@ export function DetailLayout({
       }
     }
 
-    // Elevated shell: remove socialProof from content (to be shown in rail instead)
-    if (shellVariant === "elevated") {
-      return sections.filter((s) => s.id !== "socialProof");
-    }
-
     return sections;
-  }, [manifest, data, entityType, shellVariant]);
+  }, [manifest, data, entityType]);
 
   // Combine CSS for scoped styles (filter out null/empty)
   const scopedCss = useMemo(() => {
