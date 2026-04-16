@@ -374,8 +374,6 @@ function TypographicHero({
           </div>
         )}
       </div>
-
-      {overlaySlot}
     </div>
   );
 }

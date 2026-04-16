@@ -8,6 +8,7 @@ import { EventIdentity } from "@/components/detail/identity/EventIdentity";
 import { eventManifest } from "@/components/detail/manifests/event";
 import { useDetailData } from "@/lib/detail/use-detail-data";
 import { getCategoryColor } from "@/lib/category-config";
+import { ENABLE_ELEVATED_DETAIL } from "@/lib/launch-flags";
 import type { EventApiResponse, EventData, HeroConfig, ActionConfig, EntityData } from "@/lib/detail/types";
 
 // ── Re-export EventApiResponse so callers (EventDetailWrapper) can still import it ──
@@ -140,7 +141,7 @@ export default function EventDetailView({
       accentColor={accentColor}
       entityType="event"
       onClose={onClose}
-      shellVariant="elevated"
+      shellVariant={ENABLE_ELEVATED_DETAIL ? "elevated" : "sidebar"}
     />
   );
 }

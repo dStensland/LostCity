@@ -22,3 +22,9 @@ export const USE_FEED_READY_TABLE =
 export const ENABLE_LINEUP_RECURRING =
   process.env.NEXT_PUBLIC_ENABLE_LINEUP_RECURRING === "true" ||
   process.env.ENABLE_LINEUP_RECURRING === "true";
+// NEXT_PUBLIC_ prefix required: checked in EventDetailView (client component).
+// When ON, event detail pages use the elevated shell (full-width hero + sticky rail).
+// When OFF, events use the classic 340px sidebar shell.
+export const ENABLE_ELEVATED_DETAIL =
+  process.env.NEXT_PUBLIC_ENABLE_ELEVATED_DETAIL === "true" ||
+  process.env.ENABLE_ELEVATED_DETAIL === "true";

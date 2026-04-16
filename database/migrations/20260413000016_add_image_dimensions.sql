@@ -1,3 +1,8 @@
+-- Migration: Add Image Dimensions
+--
+-- Keep this file mirrored in database/migrations and supabase/migrations.
+-- Update database/schema.sql in the same change set when schema changes are involved.
+
 -- Add image dimension columns for server-side hero tier detection
 -- These are populated at crawl time via image intrinsics
 ALTER TABLE events
