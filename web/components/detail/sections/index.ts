@@ -79,7 +79,7 @@ const connections: SectionModule = {
   id: "connections",
   component: ConnectionsSection,
   trait: hasConnections,
-  label: "Connections",
+  label: "Related",
   icon: Graph,
   allowedEntityTypes: ["event", "place", "series", "festival", "org"],
 };
@@ -97,7 +97,7 @@ const showSignals: SectionModule = {
   id: "showSignals",
   component: ShowSignalsSection,
   trait: hasShowSignals,
-  label: "Show Info",
+  label: "Details",
   icon: SpeakerSimpleHigh,
   allowedEntityTypes: ["event"],
 };
@@ -223,6 +223,10 @@ const nearby: SectionModule = {
   label: "Nearby",
   icon: ArrowsOutCardinal,
   allowedEntityTypes: ["event", "place"],
+  // NearbySection renders its own sub-section headers ("More at ...",
+  // "Also Happening Nearby", "Before & After in ..."), so the outer
+  // wrapper header would be redundant.
+  hideWrapperHeader: true,
 };
 
 // ─── Batch 4: Schedule, events, admin sections ──────────────────────────────

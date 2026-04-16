@@ -58,6 +58,7 @@ export interface EventData {
     state: string;
     place_type?: string | null;
     vibes: string[] | null;
+    image_url?: string | null;
     lat?: number | null;
     lng?: number | null;
     nearest_marta_station?: string | null;
@@ -313,6 +314,9 @@ export interface SectionModule {
   icon?: React.FC<any>;
   allowedEntityTypes: EntityType[];
   getCount?: (data: EntityData) => number | null;
+  /** Suppress the outer SectionWrapper header — for sections that
+   *  render their own sub-section headers internally. */
+  hideWrapperHeader?: boolean;
 }
 
 export interface SectionProps {

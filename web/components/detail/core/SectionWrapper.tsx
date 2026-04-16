@@ -37,7 +37,9 @@ export function SectionWrapper({ module, data, children, index }: SectionWrapper
             : undefined
         }
       >
-        <SectionHeader label={module.label} count={count} icon={module.icon} />
+        {!module.hideWrapperHeader && (
+          <SectionHeader label={module.label} count={count} icon={module.icon} />
+        )}
         <div>{children}</div>
       </div>
     </section>

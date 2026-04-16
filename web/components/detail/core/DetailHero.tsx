@@ -224,7 +224,10 @@ function ExpandedHero({
   );
 }
 
-// ─── Compact Tier (~200px) ───────────────────────────────────────────────────
+// ─── Compact Tier — poster-card treatment ───────────────────────────────────
+// Portrait/square images (not wide enough for ExpandedHero) render as a
+// centered poster with a blurred version of itself as an atmospheric
+// backdrop. Reads as an intentional poster frame, not an empty slot.
 
 function CompactHero({
   imageUrl,
@@ -234,37 +237,55 @@ function CompactHero({
 }: DetailHeroProps) {
   const bandColor = accentColor ?? "var(--dusk)";
 
+  if (!imageUrl) {
+    // No image — fall back to gradient band (matches prior behavior).
+    return (
+      <div
+        className="relative w-full h-[200px] lg:h-[300px] overflow-hidden motion-fade-in"
+        style={{ background: `linear-gradient(135deg, ${bandColor}40 0%, var(--dusk) 60%, var(--void) 100%)` }}
+      >
+        {overlaySlot}
+      </div>
+    );
+  }
+
   return (
-    <div
-      className="relative w-full h-[200px] lg:h-[340px] overflow-hidden motion-fade-in"
-      style={{ background: `linear-gradient(135deg, ${bandColor}40 0%, var(--dusk) 60%, var(--void) 100%)` }}
-    >
-      {/* Blurred poster backdrop — fills hero with atmospheric color
-          pulled from the image itself. Portrait/square images that
-          don't qualify for ExpandedHero still get visual presence. */}
-      {imageUrl && (
-        <>
+    <div className="relative w-full h-[280px] lg:h-[440px] overflow-hidden motion-fade-in bg-[var(--void)]">
+      {/* Blurred backdrop — the image itself, heavily blurred, full-bleed */}
+      <SmartImage
+        src={imageUrl}
+        alt=""
+        fill
+        className="object-cover scale-110 blur-3xl opacity-50"
+        sizes="100vw"
+        priority
+      />
+      <div className="absolute inset-0 bg-[var(--void)]/50" />
+
+      {/* Centered foreground poster — object-contain so the full poster is
+          visible, capped to a portrait-friendly height. */}
+      <div className="relative z-10 h-full flex items-center justify-center px-4 py-4">
+        <div className="relative h-full aspect-[3/4] max-h-full rounded-xl overflow-hidden shadow-2xl">
           <SmartImage
             src={imageUrl}
             alt=""
             fill
-            className="object-cover scale-110 blur-2xl opacity-60"
-            sizes="100vw"
+            className="object-cover"
+            sizes="(max-width: 1024px) 60vw, 330px"
             priority
           />
-          <div className="absolute inset-0 bg-[var(--void)]/40" />
-        </>
-      )}
+        </div>
+      </div>
 
-      {/* Bottom gradient fade to --void */}
+      {/* Bottom gradient fade to --void for section transition */}
       <div
-        className="absolute inset-x-0 bottom-0 h-[40%] pointer-events-none"
+        className="absolute inset-x-0 bottom-0 h-[30%] pointer-events-none"
         style={{ background: 'linear-gradient(to bottom, transparent, var(--void))' }}
       />
 
       {/* LIVE badge */}
       {isLive && (
-        <div className="absolute top-14 left-4 flex items-center gap-1 bg-[var(--coral)] rounded px-2 py-[3px]">
+        <div className="absolute top-14 left-4 flex items-center gap-1 bg-[var(--coral)] rounded px-2 py-[3px] z-20">
           <div className="w-1.5 h-1.5 rounded-full bg-white" />
           <span className="font-mono text-[9px] font-bold tracking-[1px] text-white">LIVE NOW</span>
         </div>

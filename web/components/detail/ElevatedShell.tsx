@@ -33,7 +33,7 @@ export function ElevatedShell({
                 {identity}
               </div>
             )}
-            <div>{content}</div>
+            <div className="pb-16 lg:pb-24">{content}</div>
           </main>
 
           {/* Sticky action rail — desktop only */}

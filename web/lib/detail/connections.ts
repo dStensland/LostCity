@@ -35,6 +35,7 @@ function resolveEventConnections(data: EventApiResponse, portalSlug: string): Co
       label: e.venue.name,
       contextLine: [e.venue.place_type, e.venue.neighborhood].filter(Boolean).join(" · "),
       href: `/${portalSlug}?spot=${e.venue.slug}`,
+      imageUrl: e.venue.image_url ?? null,
       accent: null,
     });
   }

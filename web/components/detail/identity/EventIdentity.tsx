@@ -56,10 +56,7 @@ export const EventIdentity = memo(function EventIdentity({
 
   if (variant === "elevated") {
     const categoryColor = getCategoryColor(event.category);
-    const metaParts: string[] = [];
-    if (event.start_date) metaParts.push(formatDateShort(event.start_date));
-    if (event.venue?.name) metaParts.push(event.venue.name.toUpperCase());
-    const metadataLine = metaParts.join(" · ");
+    const dateToken = event.start_date ? formatDateShort(event.start_date) : null;
 
     const pills = [
       ...(event.genres ?? []),
@@ -73,10 +70,23 @@ export const EventIdentity = memo(function EventIdentity({
           {event.title}
         </h1>
 
-        {/* Single metadata line — no icons */}
-        {metadataLine && (
+        {/* Single metadata line — date + venue (venue is linked) */}
+        {(dateToken || event.venue?.name) && (
           <p className="font-mono text-xs uppercase tracking-[0.14em] text-[var(--muted)]">
-            {metadataLine}
+            {dateToken && <span>{dateToken}</span>}
+            {dateToken && event.venue?.name && <span aria-hidden> · </span>}
+            {event.venue?.name && (
+              venueUrl ? (
+                <a
+                  href={venueUrl}
+                  className="text-[var(--soft)] hover:text-[var(--coral)] transition-colors focus-ring"
+                >
+                  {event.venue.name.toUpperCase()}
+                </a>
+              ) : (
+                <span>{event.venue.name.toUpperCase()}</span>
+              )
+            )}
           </p>
         )}
 

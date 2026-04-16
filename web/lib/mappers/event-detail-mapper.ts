@@ -130,6 +130,7 @@ export function mapEventServerDataToViewData(
           state: event.venue.state,
           vibes: event.venue.vibes ?? null,
           place_type: event.venue.place_type ?? null,
+          image_url: event.venue.image_url ?? null,
           nearest_marta_station: event.venue.nearest_marta_station ?? null,
           marta_walk_minutes: event.venue.marta_walk_minutes ?? null,
           marta_lines: event.venue.marta_lines ?? null,
