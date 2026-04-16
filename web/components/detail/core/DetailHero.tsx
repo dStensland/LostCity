@@ -143,7 +143,7 @@ function ExpandedHero({
   const categoryColor = getCategoryColor(category);
 
   return (
-    <div className="relative w-full h-[55vh] min-h-[400px] max-h-[700px] overflow-hidden bg-[var(--night)] motion-fade-in">
+    <div className="relative w-full h-[300px] lg:h-[55vh] lg:min-h-[400px] lg:max-h-[700px] overflow-hidden bg-[var(--night)] motion-fade-in">
       {/* Skeleton */}
       {!imgLoaded && currentImage && (
         <div className="absolute inset-0 bg-[var(--twilight)] animate-pulse" />
@@ -235,7 +235,7 @@ function CompactHero({
 
   return (
     <div
-      className="relative w-full h-[200px] overflow-hidden motion-fade-in"
+      className="relative w-full h-[200px] lg:h-[340px] overflow-hidden motion-fade-in"
       style={{ background: `linear-gradient(135deg, ${bandColor}40 0%, var(--dusk) 60%, var(--void) 100%)` }}
     >
       {/* Bottom gradient fade to --void */}
