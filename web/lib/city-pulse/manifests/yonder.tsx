@@ -42,12 +42,12 @@ export const YONDER_FEED_MANIFEST: FeedSection[] = [
   ...ATLANTA_FEED_MANIFEST,
   {
     id: "yonder_regional_escapes",
-    mode: "client-island",
+    render: "client-island",
     component: YonderRegionalEscapesIsland,
   },
   {
     id: "yonder_destination_quests",
-    mode: "client-island",
+    render: "client-island",
     component: YonderDestinationNodeQuestsIsland,
   },
 ];

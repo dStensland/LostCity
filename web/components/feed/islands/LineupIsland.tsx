@@ -71,35 +71,27 @@ export default function LineupIsland({ portalSlug, initialData }: LineupIslandPr
   const showLineupContent = !!hasLineupContent;
 
   return (
-    <div
-      id="city-pulse-events"
-      data-feed-anchor="true"
-      data-index-label="The Lineup"
-      data-block-id="events"
-      className="mt-4 scroll-mt-28"
+    <ContentSwap
+      swapKey={showLineupContent ? "loaded" : "loading"}
+      minHeight={400}
     >
-      <ContentSwap
-        swapKey={showLineupContent ? "loaded" : "loading"}
-        minHeight={400}
-      >
-        {!showLineupContent ? (
-          <FeedSectionSkeleton accentColor="var(--coral)" minHeight={400} onRetry={refresh} />
-        ) : (
-          <LineupSection
-            sections={lineupSections}
-            portalSlug={portalSlug}
-            tabCounts={tabCounts}
-            categoryCounts={categoryCounts}
-            fetchTab={fetchTab}
-            activeInterests={feedLayout?.interests}
-            savedInterests={savedInterests}
-            onInterestsChange={handleInterestsChange}
-            onSaveInterests={handleSaveInterests}
-            vertical={portal?.settings?.vertical}
-            keepRecurring={portal?.settings?.vertical === "community"}
-          />
-        )}
-      </ContentSwap>
-    </div>
+      {!showLineupContent ? (
+        <FeedSectionSkeleton accentColor="var(--coral)" minHeight={400} onRetry={refresh} />
+      ) : (
+        <LineupSection
+          sections={lineupSections}
+          portalSlug={portalSlug}
+          tabCounts={tabCounts}
+          categoryCounts={categoryCounts}
+          fetchTab={fetchTab}
+          activeInterests={feedLayout?.interests}
+          savedInterests={savedInterests}
+          onInterestsChange={handleInterestsChange}
+          onSaveInterests={handleSaveInterests}
+          vertical={portal?.settings?.vertical}
+          keepRecurring={portal?.settings?.vertical === "community"}
+        />
+      )}
+    </ContentSwap>
   );
 }

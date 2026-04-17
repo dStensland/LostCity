@@ -100,23 +100,15 @@ export default function CityBriefingIsland({
 
   return (
     <>
-      <div
-        id="city-pulse-briefing"
-        data-feed-anchor="true"
-        data-index-label="City Briefing"
-        data-block-id="briefing"
-        className="scroll-mt-28"
-      >
-        <CityBriefing
-          header={header}
-          context={context}
-          portalSlug={portalSlug}
-          quickLinks={quickLinks}
-          tabCounts={tabCounts}
-          categoryCounts={categoryCounts}
-          serverHeroUrl={serverHeroUrl}
-        />
-      </div>
+      <CityBriefing
+        header={header}
+        context={context}
+        portalSlug={portalSlug}
+        quickLinks={quickLinks}
+        tabCounts={tabCounts}
+        categoryCounts={categoryCounts}
+        serverHeroUrl={serverHeroUrl}
+      />
       {header.cta && (
         <div className="mt-2.5 animate-fade-in">
           <Link

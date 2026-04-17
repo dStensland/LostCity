@@ -82,17 +82,15 @@ export async function CityPulseServerShell({ portal, serverHeroUrl }: Props) {
     serverHeroUrl: serverHeroUrl ?? resolveServerHeroUrl(),
   };
 
+  const sectionsToLoad = manifest.flatMap((section) =>
+    section.loader && (section.shouldRender?.(ctx) ?? true)
+      ? [{ id: section.id, loader: section.loader }]
+      : [],
+  );
   const serverLoads = await Promise.all(
-    manifest
-      .filter(
-        (section) =>
-          section.loader != null &&
-          (section.shouldRender?.(ctx) ?? true),
-      )
-      .map(
-        async (section) =>
-          [section.id, await section.loader!(ctx)] as const,
-      ),
+    sectionsToLoad.map(
+      async ({ id, loader }) => [id, await loader(ctx)] as const,
+    ),
   );
   const byId = new Map<string, unknown>(serverLoads);
 

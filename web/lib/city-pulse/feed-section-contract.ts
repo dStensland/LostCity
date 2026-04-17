@@ -27,7 +27,14 @@ export interface FeedSectionContext {
   serverHeroUrl?: string;
 }
 
-export type FeedSectionMode = "server" | "client-island";
+/**
+ * How a section renders.
+ * - `"server"` — pure server component; no `"use client"` on the underlying
+ *   section file.
+ * - `"client-island"` — `"use client"` section that may still receive server-
+ *   pre-loaded data via `initialData` (e.g. to seed React Query).
+ */
+export type FeedSectionRenderMode = "server" | "client-island";
 
 export interface FeedSectionWrapper {
   id?: string;
@@ -40,16 +47,16 @@ export interface FeedSectionWrapper {
 
 export interface FeedSectionComponentProps<TData = unknown> {
   ctx: FeedSectionContext;
-  /** Pre-loaded server data, typed by the section. Undefined for client-island sections. */
+  /** Pre-loaded server data, typed by the section. Undefined when no loader is registered. */
   initialData?: TData;
 }
 
 export interface FeedSection<TData = unknown> {
   /** Stable identifier, e.g. "festivals". Used as the React key and the data-block-id fallback. */
   id: string;
-  mode: FeedSectionMode;
+  render: FeedSectionRenderMode;
   component: ComponentType<FeedSectionComponentProps<TData>>;
-  /** Runs on the server (RSC path). Returns the data the component needs, or null to skip rendering. */
+  /** Runs on the server. Returns the data the component needs, or null to skip rendering. */
   loader?: (ctx: FeedSectionContext) => Promise<TData | null>;
   /** Rendered around the section (anchors, spacing, dividers). */
   wrapper?: FeedSectionWrapper;

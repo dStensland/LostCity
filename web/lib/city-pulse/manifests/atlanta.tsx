@@ -208,31 +208,45 @@ function GameDayIsland({ ctx }: FeedSectionComponentProps) {
 export const ATLANTA_FEED_MANIFEST: FeedSection[] = [
   {
     id: "briefing",
-    mode: "client-island",
+    render: "client-island",
     component: CityBriefingManifestIsland,
     loader: loadCityPulseForFeed,
+    wrapper: {
+      id: "city-pulse-briefing",
+      className: "scroll-mt-28",
+      dataAnchor: true,
+      indexLabel: "City Briefing",
+      blockId: "briefing",
+    },
   },
   {
     id: "holiday",
-    mode: "server",
+    render: "server",
     component: HolidayHeroIsland,
     loader: loadHolidayHeroForFeed,
   },
   {
     id: "news",
-    mode: "server",
+    render: "server",
     component: TodayInAtlantaIsland,
     loader: loadNewsForFeed,
   },
   {
     id: "lineup",
-    mode: "client-island",
+    render: "client-island",
     component: LineupManifestIsland,
     loader: loadCityPulseForFeed,
+    wrapper: {
+      id: "city-pulse-events",
+      className: "mt-4 scroll-mt-28",
+      dataAnchor: true,
+      indexLabel: "The Lineup",
+      blockId: "events",
+    },
   },
   {
     id: "festivals",
-    mode: "server",
+    render: "server",
     component: FestivalsSectionIsland,
     loader: loadFestivalsForFeed,
     wrapper: {
@@ -246,7 +260,7 @@ export const ATLANTA_FEED_MANIFEST: FeedSection[] = [
   },
   {
     id: "cinema",
-    mode: "client-island",
+    render: "client-island",
     component: NowShowingIsland,
     wrapper: {
       id: "city-pulse-cinema",
@@ -258,7 +272,7 @@ export const ATLANTA_FEED_MANIFEST: FeedSection[] = [
   },
   {
     id: "live_music",
-    mode: "client-island",
+    render: "client-island",
     component: LiveMusicIsland,
     wrapper: {
       id: "city-pulse-live-music",
@@ -270,13 +284,13 @@ export const ATLANTA_FEED_MANIFEST: FeedSection[] = [
   },
   {
     id: "regulars",
-    mode: "server",
+    render: "server",
     component: RegularHangsIsland,
     loader: loadRegularsForFeed,
   },
   {
     id: "places",
-    mode: "server",
+    render: "server",
     component: PlacesToGoIsland,
     loader: loadPlacesToGoForFeed,
     wrapper: {
@@ -289,13 +303,13 @@ export const ATLANTA_FEED_MANIFEST: FeedSection[] = [
   },
   {
     id: "active_contest",
-    mode: "server",
+    render: "server",
     component: ActiveContestIsland,
     loader: loadActiveContestForFeed,
   },
   {
     id: "hangs",
-    mode: "client-island",
+    render: "client-island",
     component: HangFeedIsland,
     wrapper: {
       id: "city-pulse-hangs",
@@ -308,7 +322,7 @@ export const ATLANTA_FEED_MANIFEST: FeedSection[] = [
   },
   {
     id: "sports",
-    mode: "client-island",
+    render: "client-island",
     component: GameDayIsland,
     wrapper: {
       id: "city-pulse-sports",
