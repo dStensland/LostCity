@@ -1,11 +1,11 @@
 "use client";
 
 /**
- * LivePreview — Renders the actual GreetingBar in a phone-width frame
+ * LivePreview — Renders the actual CityBriefing hero in a phone-width frame
  * using synthetic ResolvedHeader from editor state.
  */
 
-import GreetingBar from "@/components/feed/GreetingBar";
+import CityBriefing from "@/components/feed/CityBriefing";
 import { getCityPhoto, getEditorialHeadline, getDefaultAccentColor } from "@/lib/city-pulse/header-defaults";
 import { getDashboardCards } from "@/lib/city-pulse/dashboard-cards";
 import type { ResolvedHeader, FeedContext, TimeSlot, LayoutVariant, TextTreatment } from "@/lib/city-pulse/types";
@@ -40,7 +40,6 @@ export default function LivePreview({
 }: LivePreviewProps) {
   const context = buildPreviewContext(day, slot);
 
-  // Resolve template variables for preview
   const templateVars: Record<string, string> = {
     display_name: "Alex",
     city_name: "Atlanta",
@@ -49,7 +48,6 @@ export default function LivePreview({
     time_label: slot.replace(/_/g, " "),
   };
 
-  // Build ResolvedHeader from form state, falling back to algorithm defaults
   const headline = formData.headline
     ? resolveTemplateVars(formData.headline, templateVars)
     : getEditorialHeadline(context);
@@ -99,7 +97,7 @@ export default function LivePreview({
         style={{ maxWidth: 390 }}
       >
         <div className="p-3">
-          <GreetingBar
+          <CityBriefing
             header={resolvedHeader}
             context={context}
             portalSlug={portalSlug}

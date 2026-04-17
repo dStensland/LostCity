@@ -3,14 +3,18 @@
 /**
  * CityBriefing — full-bleed cinematic hero for the Atlanta feed.
  *
- * Zone 1: Full-viewport-bleed hero (parallax, Ken Burns, layout variants,
- *         weather pill, live badge, quick links).
+ * One canonical bottom-left layout. Day/time variety comes from the photo +
+ * accent color + masthead text, not from shuffling layout geometry.
  *
- * News ("Today in Atlanta") has been extracted to TodayInAtlantaSection
- * and is rendered below The Lineup in CityPulseShell.
+ * Features:
+ *  - Festival ribbon composed into the top edge of the hero image
+ *  - Photo crossfade through curated time-slot photos every ~17s
+ *  - Multi-layer scroll parallax for real depth
+ *  - Named-event SummaryLine with strong title contrast
+ *  - Live badge that names a specific venue when a high-confidence pick exists
  *
- * Self-fetching:
- *   - /api/portals/[slug]/happening-now?countOnly=true → live count badge
+ * Self-fetches:
+ *   - /api/portals/[slug]/happening-now?countOnly=true → live count + topLive
  */
 
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -44,7 +48,6 @@ import type {
   ResolvedHeader,
   FlagshipEvent,
   TimeSlot,
-  LayoutVariant,
   TextTreatment,
   QuickLink,
 } from "@/lib/city-pulse/types";
@@ -52,6 +55,7 @@ import type {
 import { SignalStrip } from "./SignalStrip";
 import { SummaryLine } from "./SummaryLine";
 import { useFeedVisible } from "@/lib/feed-visibility";
+import { getCityPhotoPool } from "@/lib/city-pulse/header-defaults";
 
 // ── Icon map for quick link pills ────────────────────────────────────────────
 
@@ -67,35 +71,13 @@ export interface CityBriefingProps {
   header: ResolvedHeader;
   context: FeedContext;
   portalSlug: string;
-  portalId: string;
+  /** Optional — kept for CityBriefingIsland signature; not used by the component. */
+  portalId?: string;
   quickLinks?: QuickLink[];
   tabCounts?: { today: number; this_week: number; coming_up: number } | null;
   categoryCounts?: { today: Record<string, number> } | null;
   /** Server-computed hero URL — available before JS hydrates, used as initial state. */
   serverHeroUrl?: string;
-}
-
-// ── Layout variant selection ──────────────────────────────────────────────────
-
-function getLayoutVariant(timeSlot: TimeSlot, dayOfWeek: string): LayoutVariant {
-  const DAY_INDEX: Record<string, number> = {
-    monday: 0, tuesday: 1, wednesday: 2, thursday: 3,
-    friday: 4, saturday: 5, sunday: 6,
-  };
-  const dayIdx = DAY_INDEX[dayOfWeek] ?? 0;
-
-  const SLOT_INDEX: Record<TimeSlot, number> = {
-    morning: 0, midday: 1, happy_hour: 2, evening: 3, late_night: 4,
-  };
-  const slotIdx = SLOT_INDEX[timeSlot];
-
-  // Bottom-left is the most reliable layout (text always in darkest gradient zone).
-  // Use it as the dominant variant, with editorial and centered as occasional variety.
-  const variants: LayoutVariant[] = [
-    "bottom-left", "editorial", "bottom-left", "centered",
-    "bottom-left", "editorial", "bottom-left",
-  ];
-  return variants[(dayIdx + slotIdx) % variants.length];
 }
 
 // ── Masthead text ─────────────────────────────────────────────────────────────
@@ -139,16 +121,17 @@ const GRADIENT_PRESETS: Record<GradientIntensity, string> = {
     "rgba(9,9,11,0.75) 92%,",
     "#09090b 100%)",
   ].join(" "),
+  // Softened: bottom stops pulled back so the photo breathes in the lower third.
   standard: [
     "linear-gradient(to bottom,",
-    "rgba(9,9,11,0.35) 0%,",
-    "rgba(9,9,11,0.2) 10%,",
-    "rgba(9,9,11,0.08) 25%,",
-    "rgba(9,9,11,0.05) 40%,",
-    "rgba(9,9,11,0.1) 55%,",
-    "rgba(9,9,11,0.35) 68%,",
-    "rgba(9,9,11,0.65) 80%,",
-    "rgba(9,9,11,0.88) 92%,",
+    "rgba(9,9,11,0.30) 0%,",
+    "rgba(9,9,11,0.15) 10%,",
+    "rgba(9,9,11,0.05) 25%,",
+    "rgba(9,9,11,0.03) 42%,",
+    "rgba(9,9,11,0.08) 58%,",
+    "rgba(9,9,11,0.25) 72%,",
+    "rgba(9,9,11,0.5) 84%,",
+    "rgba(9,9,11,0.75) 94%,",
     "#09090b 100%)",
   ].join(" "),
   heavy: [
@@ -181,8 +164,6 @@ function getTreatmentStyle(treatment: TextTreatment): TreatmentStyle {
         contentClass: "rounded-xl",
         contentStyle: {
           background: "rgba(9,9,11,0.35)",
-          backdropFilter: "blur(12px) saturate(1.4)",
-          WebkitBackdropFilter: "blur(12px) saturate(1.4)",
           padding: "0.75rem 1rem",
           margin: "-0.75rem -1rem",
         },
@@ -234,7 +215,7 @@ function HeroQuickLinks({
           <Link
             key={link.label}
             href={link.href}
-            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-full bg-black/35 backdrop-blur-sm border border-white/[0.30] transition-all hover:bg-black/45 hover:border-white/[0.40]"
+            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-full bg-black/35 border border-white/[0.30] transition-all hover:bg-black/50 hover:border-white/[0.40]"
           >
             {IconComp && (
               <IconComp
@@ -244,12 +225,12 @@ function HeroQuickLinks({
               />
             )}
             <span
-              className="font-mono text-xs font-medium tracking-wide"
+              className="font-sans text-xs font-medium tracking-normal"
               style={{ color: link.accent_color }}
             >
               {link.label}
               {count != null && count > 0 && (
-                <span className="ml-1 opacity-70">{count}</span>
+                <span className="ml-1 opacity-70 tabular-nums">{count}</span>
               )}
             </span>
           </Link>
@@ -259,48 +240,88 @@ function HeroQuickLinks({
   );
 }
 
-// ── Layout variant shared props ───────────────────────────────────────────────
+// ── Live count / named-live badge ─────────────────────────────────────────────
 
-interface LayoutProps {
-  masthead: { line1: string; line2: string };
-  accentColor: string;
-  headline: string;
-  treatment: TreatmentStyle;
-  weather: FeedContext["weather"];
-  quickLinks?: QuickLink[];
-  liveCount: number | null;
-  portalSlug: string;
-  context: FeedContext;
-  sportsTentpole?: ResolvedHeader["sports_tentpole"];
-  tabCounts?: { today: number; this_week: number; coming_up: number } | null;
-  categoryCounts?: { today: Record<string, number> } | null;
+interface TopLive {
+  id: number;
+  title: string | null;
+  venue_name: string | null;
+  href: string;
 }
-
-// ── Live count badge (shared across variants) ─────────────────────────────────
 
 function LiveBadge({
   liveCount,
+  topLive,
   portalSlug,
+  offsetBelow,
 }: {
   liveCount: number | null;
+  topLive: TopLive | null;
   portalSlug: string;
+  offsetBelow?: boolean;
 }) {
   if (!liveCount || liveCount <= 0) return null;
+  const named = topLive?.venue_name ?? null;
+  const href = topLive?.href ?? `/${portalSlug}/happening-now`;
   return (
-    <div className="absolute top-4 left-4 z-10">
+    <div
+      className={`absolute left-4 z-10 ${offsetBelow ? "top-[3.25rem]" : "top-4"}`}
+    >
       <Link
-        href={`/${portalSlug}/happening-now`}
-        className="flex items-center gap-1 rounded-full px-2.5 py-1.5 bg-[var(--neon-red)]/20 backdrop-blur-md border border-[var(--neon-red)]/40 transition-colors hover:bg-[var(--neon-red)]/30"
+        href={href}
+        className="flex items-center gap-1.5 rounded-full px-2.5 py-1.5 bg-[var(--neon-red)]/20 border border-[var(--neon-red)]/40 transition-colors hover:bg-[var(--neon-red)]/30 max-w-[240px]"
       >
-        <span className="relative flex items-center justify-center">
+        <span className="relative flex items-center justify-center shrink-0">
           <span className="w-1.5 h-1.5 rounded-full bg-[var(--neon-red)]" />
           <span className="absolute inset-0 rounded-full bg-[var(--neon-red)]/50 animate-ping" />
         </span>
-        <span className="font-mono text-xs font-bold text-[var(--neon-red)] uppercase tracking-wide">
-          {liveCount} Live
-        </span>
+        {named ? (
+          <span className="font-sans text-xs font-semibold text-[var(--neon-red)] truncate">
+            {named}
+          </span>
+        ) : (
+          <span className="font-mono text-xs font-bold text-[var(--neon-red)] uppercase tracking-wide">
+            {liveCount} Live
+          </span>
+        )}
       </Link>
     </div>
+  );
+}
+
+// ── Festival ribbon — composes into the hero's empty top edge ─────────────────
+
+function FestivalRibbon({
+  festivalName,
+  portalSlug,
+  festivalSlug,
+}: {
+  festivalName: string;
+  portalSlug: string;
+  festivalSlug: string;
+}) {
+  return (
+    <Link
+      href={`/${portalSlug}?festival=${festivalSlug}`}
+      className="absolute top-0 left-0 right-0 z-20 flex items-center justify-between gap-3 pl-4 pr-3 py-2.5 border-l-2 transition-colors group animate-fade-in"
+      style={{
+        borderLeftColor: "var(--gold)",
+        backgroundColor: "color-mix(in srgb, var(--gold) 12%, rgba(9,9,11,0.6))",
+      }}
+    >
+      <span className="flex items-center gap-2 min-w-0">
+        <span className="font-mono text-2xs font-bold uppercase tracking-[0.12em] text-[var(--gold)] shrink-0">
+          Festival week
+        </span>
+        <span className="font-sans text-xs text-[var(--cream)] truncate">
+          {festivalName}
+        </span>
+      </span>
+      <ArrowRight
+        weight="bold"
+        className="w-3.5 h-3.5 text-[var(--gold)] shrink-0 transition-transform group-hover:translate-x-0.5"
+      />
+    </Link>
   );
 }
 
@@ -324,73 +345,49 @@ function HeadlineSubtitle({
   );
 }
 
-// ── Layout variants ───────────────────────────────────────────────────────────
+// ── Canonical layout ──────────────────────────────────────────────────────────
 
-function CenteredLayout({
-  masthead, accentColor, headline, treatment, weather, quickLinks,
-  liveCount, portalSlug, context, sportsTentpole,
-  tabCounts, categoryCounts,
-}: LayoutProps) {
-  return (
-    <div className="relative z-10 flex flex-col items-center justify-end text-center min-h-[300px] sm:min-h-[480px] px-6 pb-7 pt-5">
-      <LiveBadge liveCount={liveCount} portalSlug={portalSlug} />
-
-      <div className={`mt-auto mb-1 ${treatment.contentClass || ""}`} style={treatment.contentStyle}>
-        <div
-          className="animate-fade-in hero-stagger-2"
-
-        >
-          <div className="flex justify-center mb-2">
-            <SignalStrip context={context} sportsTentpole={sportsTentpole} portalSlug={portalSlug} />
-          </div>
-          <h1
-            className="text-[3.5rem] sm:text-[4.5rem] leading-[0.85] tracking-[0.04em] text-[var(--cream)]"
-            style={{ fontFamily: "var(--font-masthead), sans-serif", textShadow: treatment.mastheadShadow }}
-          >
-            {masthead.line1}
-          </h1>
-          {masthead.line2 && (
-            <p
-              className="text-[1.75rem] sm:text-[2.25rem] leading-[0.9] tracking-[0.06em] mt-0.5"
-              style={{
-                fontFamily: "var(--font-masthead), sans-serif",
-                color: accentColor,
-                textShadow: treatment.mastheadShadow,
-              }}
-            >
-              {masthead.line2}
-            </p>
-          )}
-          <HeadlineSubtitle headline={headline} bodyShadow={treatment.bodyShadow} />
-          <SummaryLine tabCounts={tabCounts} categoryCounts={categoryCounts} weather={context.weather} />
-        </div>
-
-        <div
-          className="animate-fade-in hero-stagger-3 flex justify-center"
-
-        >
-          <HeroQuickLinks links={quickLinks} categoryCounts={categoryCounts?.today} />
-        </div>
-      </div>
-    </div>
-  );
+interface LayoutProps {
+  masthead: { line1: string; line2: string };
+  accentColor: string;
+  headline: string;
+  treatment: TreatmentStyle;
+  quickLinks?: QuickLink[];
+  liveCount: number | null;
+  topLive: TopLive | null;
+  portalSlug: string;
+  context: FeedContext;
+  sportsTentpole?: ResolvedHeader["sports_tentpole"];
+  namedEvent?: ResolvedHeader["named_event"];
+  tabCounts?: { today: number; this_week: number; coming_up: number } | null;
+  categoryCounts?: { today: Record<string, number> } | null;
+  hasFestivalRibbon?: boolean;
+  /** Parent-owned ref — parent writes parallax transform directly, no React re-render. */
+  contentRef: React.RefObject<HTMLDivElement | null>;
 }
 
-function BottomLeftLayout({
-  masthead, accentColor, headline, treatment, weather, quickLinks,
-  liveCount, portalSlug, context, sportsTentpole,
-  tabCounts, categoryCounts,
+function CanonicalHero({
+  masthead, accentColor, headline, treatment, quickLinks,
+  liveCount, topLive, portalSlug, context, sportsTentpole, namedEvent,
+  tabCounts, categoryCounts, hasFestivalRibbon, contentRef,
 }: LayoutProps) {
   return (
-    <div className="relative z-10 flex flex-col justify-end min-h-[300px] sm:min-h-[520px] px-6 sm:px-10 pb-8 pt-5">
-      <LiveBadge liveCount={liveCount} portalSlug={portalSlug} />
+    <div className="relative z-10 flex flex-col justify-end min-h-[320px] sm:min-h-[480px] px-6 sm:px-10 pb-8 pt-5">
+      <LiveBadge
+        liveCount={liveCount}
+        topLive={topLive}
+        portalSlug={portalSlug}
+        offsetBelow={hasFestivalRibbon}
+      />
 
-      <div className={`mt-auto ${treatment.contentClass || ""}`} style={treatment.contentStyle}>
-        <div
-          className="animate-fade-in hero-stagger-2"
-
-        >
-          <div className="mb-2">
+      {/* Content layer — gets slight forward parallax (feels close to the viewer) */}
+      <div
+        ref={contentRef}
+        className={`mt-auto will-change-transform ${treatment.contentClass || ""}`}
+        style={treatment.contentStyle}
+      >
+        <div className="animate-fade-in hero-stagger-2">
+          <div className="mb-3">
             <SignalStrip context={context} sportsTentpole={sportsTentpole} portalSlug={portalSlug} />
           </div>
           <h1
@@ -412,123 +409,17 @@ function BottomLeftLayout({
             </p>
           )}
           <HeadlineSubtitle headline={headline} bodyShadow={treatment.bodyShadow} />
-          <SummaryLine tabCounts={tabCounts} categoryCounts={categoryCounts} weather={context.weather} />
+          <SummaryLine
+            tabCounts={tabCounts}
+            categoryCounts={categoryCounts}
+            weather={context.weather}
+            namedEvent={namedEvent}
+          />
         </div>
 
-        <div
-          className="animate-fade-in hero-stagger-3 mt-3"
-
-        >
+        <div className="animate-fade-in hero-stagger-3 mt-3">
           <HeroQuickLinks links={quickLinks} categoryCounts={categoryCounts?.today} />
         </div>
-      </div>
-    </div>
-  );
-}
-
-function SplitLayout({
-  masthead, accentColor, headline, treatment, weather, quickLinks,
-  liveCount, portalSlug, context, sportsTentpole,
-  tabCounts, categoryCounts,
-}: LayoutProps) {
-  return (
-    <div className="relative z-10 flex flex-col min-h-[300px] sm:min-h-[480px] px-6 pb-7 pt-6">
-      <LiveBadge liveCount={liveCount} portalSlug={portalSlug} />
-
-      {/* Top: masthead (pr-14 clears any floating ToC button) */}
-      <div className="pr-14">
-        <div
-          className="animate-fade-in hero-stagger-2"
-
-        >
-          <div className="mb-2">
-            <SignalStrip context={context} sportsTentpole={sportsTentpole} portalSlug={portalSlug} />
-          </div>
-          <h1
-            className="text-[2.5rem] sm:text-[3.25rem] leading-[0.85] tracking-[0.03em] text-[var(--cream)]"
-            style={{ fontFamily: "var(--font-masthead), sans-serif", textShadow: treatment.mastheadShadow }}
-          >
-            {masthead.line1}
-          </h1>
-          {masthead.line2 && (
-            <p
-              className="text-[1.25rem] sm:text-[1.75rem] leading-[0.9] tracking-[0.05em]"
-              style={{
-                fontFamily: "var(--font-masthead), sans-serif",
-                color: accentColor,
-                textShadow: treatment.mastheadShadow,
-              }}
-            >
-              {masthead.line2}
-            </p>
-          )}
-        </div>
-      </div>
-
-      <div className="flex-1" />
-
-      <div className={treatment.contentClass || ""} style={treatment.contentStyle}>
-        <div
-          className="animate-fade-in hero-stagger-3"
-
-        >
-          <HeadlineSubtitle headline={headline} bodyShadow={treatment.bodyShadow} />
-          <SummaryLine tabCounts={tabCounts} categoryCounts={categoryCounts} weather={context.weather} />
-          <HeroQuickLinks links={quickLinks} categoryCounts={categoryCounts?.today} />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function EditorialLayout({
-  masthead, accentColor, headline, treatment, weather, quickLinks,
-  liveCount, portalSlug, context, sportsTentpole,
-  tabCounts, categoryCounts,
-}: LayoutProps) {
-  return (
-    <div className="relative z-10 flex flex-col min-h-[300px] sm:min-h-[480px] px-6 pb-7 pt-5">
-      <LiveBadge liveCount={liveCount} portalSlug={portalSlug} />
-
-      <div className="flex-1" />
-
-      {/* Bottom: right-aligned masthead */}
-      <div className={`text-right ${treatment.contentClass || ""}`} style={treatment.contentStyle}>
-        <div
-          className="animate-fade-in hero-stagger-2"
-
-        >
-          <div className="flex justify-end mb-2">
-            <SignalStrip context={context} sportsTentpole={sportsTentpole} portalSlug={portalSlug} />
-          </div>
-          <h1
-            className="text-[3rem] sm:text-[4rem] leading-[0.85] tracking-[0.04em] text-[var(--cream)]"
-            style={{ fontFamily: "var(--font-masthead), sans-serif", textShadow: treatment.mastheadShadow }}
-          >
-            {masthead.line1}
-          </h1>
-          {masthead.line2 && (
-            <p
-              className="text-[1.5rem] sm:text-[2rem] leading-[0.9] tracking-[0.06em]"
-              style={{
-                fontFamily: "var(--font-masthead), sans-serif",
-                color: accentColor,
-                textShadow: treatment.mastheadShadow,
-              }}
-            >
-              {masthead.line2}
-            </p>
-          )}
-        </div>
-      </div>
-
-      <div
-        className="animate-fade-in hero-stagger-3 mt-3"
-
-      >
-        <HeadlineSubtitle headline={headline} bodyShadow={treatment.bodyShadow} />
-        <SummaryLine tabCounts={tabCounts} categoryCounts={categoryCounts} weather={context.weather} />
-        <HeroQuickLinks links={quickLinks} categoryCounts={categoryCounts?.today} />
       </div>
     </div>
   );
@@ -538,42 +429,48 @@ function EditorialLayout({
 
 function FlagshipHeroContent({
   flagship,
-  weather,
   liveCount,
+  topLive,
   portalSlug,
   quickLinks,
   context,
   sportsTentpole,
   categoryCounts,
+  hasFestivalRibbon,
+  contentRef,
 }: {
   flagship: FlagshipEvent;
-  weather: FeedContext["weather"];
   liveCount: number | null;
+  topLive: TopLive | null;
   portalSlug: string;
   quickLinks?: QuickLink[];
   context: FeedContext;
   sportsTentpole?: ResolvedHeader["sports_tentpole"];
   categoryCounts?: { today: Record<string, number> } | null;
+  hasFestivalRibbon?: boolean;
+  contentRef: React.RefObject<HTMLDivElement | null>;
 }) {
   return (
-    <div className="relative z-10 flex flex-col justify-end min-h-[300px] sm:min-h-[520px] px-6 sm:px-10 pb-8 pt-5">
-      <LiveBadge liveCount={liveCount} portalSlug={portalSlug} />
+    <div className="relative z-10 flex flex-col justify-end min-h-[320px] sm:min-h-[480px] px-6 sm:px-10 pb-8 pt-5">
+      <LiveBadge
+        liveCount={liveCount}
+        topLive={topLive}
+        portalSlug={portalSlug}
+        offsetBelow={hasFestivalRibbon}
+      />
 
-      <div className="mt-auto">
-        <div
-          className="animate-fade-in hero-stagger-2"
-
-        >
-          <div className="mb-2">
+      <div ref={contentRef} className="mt-auto will-change-transform">
+        <div className="animate-fade-in hero-stagger-2">
+          <div className="mb-3">
             <SignalStrip context={context} sportsTentpole={sportsTentpole} portalSlug={portalSlug} />
           </div>
-          {/* "HAPPENING NOW" label */}
-          <span className="font-mono text-2xs uppercase tracking-[1.2px] text-[var(--gold)]"
-            style={{ textShadow: "0 1px 8px rgba(0,0,0,0.8)" }}>
+          <span
+            className="font-mono text-2xs uppercase tracking-[1.2px] text-[var(--gold)]"
+            style={{ textShadow: "0 1px 8px rgba(0,0,0,0.8)" }}
+          >
             HAPPENING NOW
           </span>
 
-          {/* Event title replaces time-of-day masthead */}
           <Link href={flagship.href}>
             <h1
               className="text-[2.25rem] sm:text-[3rem] leading-[0.92] tracking-[0.01em] text-white mt-1 hover:opacity-90 transition-opacity line-clamp-2"
@@ -586,7 +483,6 @@ function FlagshipHeroContent({
             </h1>
           </Link>
 
-          {/* Venue + time + price metadata */}
           {(flagship.venue_name || flagship.start_time || flagship.price_info) && (
             <div className="flex items-center gap-2 mt-2 flex-wrap">
               {flagship.venue_name && (
@@ -623,10 +519,7 @@ function FlagshipHeroContent({
           )}
         </div>
 
-        <div
-          className="animate-fade-in hero-stagger-3 mt-3"
-
-        >
+        <div className="animate-fade-in hero-stagger-3 mt-3">
           <HeroQuickLinks links={quickLinks} categoryCounts={categoryCounts?.today} />
         </div>
       </div>
@@ -646,8 +539,8 @@ export default function CityBriefing({
   serverHeroUrl,
 }: CityBriefingProps) {
   const [liveCount, setLiveCount] = useState<number | null>(null);
+  const [topLive, setTopLive] = useState<TopLive | null>(null);
 
-  // ── Fetch live count ──────────────────────────────────────────────────────
   useEffect(() => {
     const controller = new AbortController();
 
@@ -657,20 +550,14 @@ export default function CityBriefing({
         if (controller.signal.aborted) return;
         const count = (data.eventCount || 0) + (data.spotCount || 0);
         setLiveCount(count);
+        setTopLive(data.topLive ?? null);
       })
       .catch(() => {});
 
     return () => controller.abort();
   }, [portalSlug]);
 
-  // ── Hero configuration ───────────────────────────────────────────────────
-
   const feedVisible = useFeedVisible();
-
-  const variant = useMemo(
-    () => header.layout_variant || getLayoutVariant(context.time_slot, context.day_of_week),
-    [header.layout_variant, context.time_slot, context.day_of_week],
-  );
 
   const treatment = useMemo(
     () => getTreatmentStyle(header.text_treatment || "auto"),
@@ -679,126 +566,246 @@ export default function CityBriefing({
 
   const masthead = useMemo(() => getMastheadText(context), [context]);
 
-  // ── Parallax scroll — background image only ─────────────────────────────
+  // ── Multi-layer parallax — real depth with lerp smoothing ───────────────
+  // Three layers, each with its own scroll coefficient. Farther-away layers
+  // move slower on scroll (higher lag), creating a parallax stack:
+  //
+  //   bg      — 0.50 (deepest, most lag + 1.0→1.08 scale for zoom-in feel)
+  //   noise   — 0.35 (atmospheric shader, mid-depth)
+  //   content — 0.10 forward-lag (content feels close to the viewer)
+  //
+  // Smoothness: rather than writing the target offset directly on each scroll
+  // event, we run a continuous rAF loop that eases current toward target
+  // (lerp factor 0.18). This creates momentum — scroll stops and the layers
+  // glide into place instead of snapping. All three layers share the same
+  // loop so they stay perfectly in sync.
+  //
+  // Everything is written directly to DOM refs (no React state) so scroll
+  // never triggers a re-render.
   const heroRef = useRef<HTMLDivElement>(null);
   const bgRef = useRef<HTMLDivElement>(null);
+  const noiseRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     if (!feedVisible) return;
+    if (typeof window === "undefined") return;
 
     const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (prefersReduced) return;
 
-    let ticking = false;
-    const handleScroll = () => {
-      if (ticking) return;
-      ticking = true;
-      requestAnimationFrame(() => {
-        const hero = heroRef.current;
-        const bg = bgRef.current;
-        if (!hero || !bg) { ticking = false; return; }
-        const rect = hero.getBoundingClientRect();
-        if (rect.bottom > 0) {
-          const offset = -rect.top;
-          bg.style.transform = `translateY(${offset * 0.15}px)`;
-        }
-        ticking = false;
-      });
+    let targetOffset = 0;
+    let currentOffset = 0;
+    let rafId = 0;
+    let running = false;
+
+    const LERP = 0.18; // 0 = no easing, 1 = instant. 0.18 ≈ ~6 frames to converge.
+
+    const frame = () => {
+      const diff = targetOffset - currentOffset;
+      // Snap when essentially converged — avoids endless tiny rAF calls.
+      if (Math.abs(diff) < 0.3) {
+        currentOffset = targetOffset;
+        running = false;
+      } else {
+        currentOffset += diff * LERP;
+      }
+
+      const bg = bgRef.current;
+      if (bg) {
+        // Scale 1 → 1.08 over ~1200px of scroll — more felt zoom.
+        const scale = 1 + Math.min(0.08, Math.max(0, currentOffset / 1200));
+        bg.style.transform = `translate3d(0, ${currentOffset * 0.5}px, 0) scale(${scale})`;
+      }
+      const noise = noiseRef.current;
+      if (noise) {
+        noise.style.transform = `translate3d(0, ${currentOffset * 0.35}px, 0)`;
+      }
+      const content = contentRef.current;
+      if (content) {
+        // Content lags forward — capped so it never leaves the readability wash zone.
+        const shift = Math.max(-40, Math.min(0, currentOffset * -0.10));
+        content.style.transform = `translate3d(0, ${shift}px, 0)`;
+      }
+
+      if (running) {
+        rafId = requestAnimationFrame(frame);
+      }
     };
 
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
+    const ensureRunning = () => {
+      if (running) return;
+      running = true;
+      rafId = requestAnimationFrame(frame);
+    };
+
+    const readScroll = () => {
+      const hero = heroRef.current;
+      if (!hero) return;
+      const rect = hero.getBoundingClientRect();
+      // Only animate while the hero is in (or near) viewport.
+      if (rect.bottom > -200 && rect.top < window.innerHeight + 200) {
+        targetOffset = -rect.top;
+        ensureRunning();
+      }
+    };
+
+    readScroll(); // initial
+
+    window.addEventListener("scroll", readScroll, { passive: true });
+    window.addEventListener("resize", readScroll, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", readScroll);
+      window.removeEventListener("resize", readScroll);
+      if (rafId) cancelAnimationFrame(rafId);
+    };
   }, [feedVisible]);
 
-  // ── Flagship event binding ────────────────────────────────────────────────
-  // Flagship events disabled — tentpole data not curated enough.
-  // "VIP Show Floor Early Access" was replacing the city hero content.
-  // Re-enable when flagship_event is a curated list, not raw is_tentpole inference.
+  // ── Flagship takeover (rare — only when CMS curates) ─────────────────────
   const flagship = header.flagship_event ?? null;
 
-  // ── Hero image with fallback ─────────────────────────────────────────────
-  // CMS header photo or atmospheric city photo. Flagship events get hero cards
-  // in the Lineup but don't override the page hero — tentpole data isn't curated
-  // enough to trust random event images as the full-bleed background.
   const atmosphericImageUrl = header.hero_image_url;
   const initialHeroUrl = serverHeroUrl ?? atmosphericImageUrl;
-  const [heroImageUrl, setHeroImageUrl] = useState(initialHeroUrl);
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setHeroImageUrl(atmosphericImageUrl);
-  }, [atmosphericImageUrl]);
 
-  // ── Derived state ────────────────────────────────────────────────────────
+  // ── Photo crossfade ──────────────────────────────────────────────────────
+  const photoPool = useMemo(() => {
+    const pool = getCityPhotoPool(
+      context.time_slot,
+      context.weather_signal ?? undefined,
+    );
+    if (!initialHeroUrl) return pool;
+    const idx = pool.indexOf(initialHeroUrl);
+    if (idx > 0) return [...pool.slice(idx), ...pool.slice(0, idx)];
+    if (idx === 0) return pool;
+    return [initialHeroUrl, ...pool];
+  }, [initialHeroUrl, context.time_slot, context.weather_signal]);
+
+  const [idxA, setIdxA] = useState(0);
+  const [idxB, setIdxB] = useState(1);
+  const [activeIsA, setActiveIsA] = useState(true);
+
+  useEffect(() => {
+    if (!feedVisible) return;
+    if (photoPool.length < 2) return;
+    if (typeof window === "undefined") return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+    const tick = setInterval(() => {
+      setActiveIsA((prev) => {
+        const next = !prev;
+        setTimeout(() => {
+          if (next) {
+            setIdxB((b) => (b + 2) % photoPool.length);
+          } else {
+            setIdxA((a) => (a + 2) % photoPool.length);
+          }
+        }, 1300);
+        return next;
+      });
+    }, 17000);
+
+    return () => clearInterval(tick);
+  }, [feedVisible, photoPool]);
+
   const effectiveQuickLinks = quickLinks ?? header.quick_links ?? [];
   const hasFestival = context.active_festivals.length > 0;
   const hasHoliday = context.active_holidays.length > 0;
+  const showFestivalRibbon = hasFestival && !hasHoliday;
 
   const layoutProps: LayoutProps = {
     masthead,
     accentColor: header.accent_color,
     headline: header.headline,
     treatment,
-    weather: context.weather,
     quickLinks: effectiveQuickLinks,
     liveCount,
+    topLive,
     portalSlug,
     context,
     sportsTentpole: header.sports_tentpole,
+    namedEvent: header.named_event,
     tabCounts,
     categoryCounts,
+    hasFestivalRibbon: showFestivalRibbon,
+    contentRef,
   };
 
   return (
     <section aria-label="City Briefing">
-      {/* ── Zone 1: Full-bleed hero ──────────────────────────────────────── */}
       <div style={{ width: "100vw", marginLeft: "calc(50% - 50vw)" }}>
         <div
           ref={heroRef}
           className="relative overflow-hidden"
         >
-          {/* Skeleton background — atmospheric gradient while hero image loads */}
+          {/* Skeleton gradient while image loads */}
           <div className="absolute inset-0 bg-gradient-to-b from-[var(--night)] via-[var(--dusk)] to-[var(--night)]" />
 
-          {/* Background photo — Ken Burns + parallax */}
+          {/* Background photo layer — deepest, most scroll lag + slight scale */}
           <div
             ref={bgRef}
             className="absolute inset-0 will-change-transform"
             style={{
               top: "-15%",
               bottom: "-15%",
+              transformOrigin: "center 60%",
             }}
           >
-            <SmartImage
-              src={heroImageUrl}
-              alt=""
-              fill
-              priority
-              className="object-cover hero-ken-burns"
-              style={{ objectPosition: "center 70%" }}
-              sizes="100vw"
-              onError={() => setHeroImageUrl(flagship ? atmosphericImageUrl : "/portals/atlanta/jackson-st-bridge.jpg")}
-            />
+            {/* Crossfade layer A */}
+            <div
+              className="absolute inset-0 transition-opacity duration-[1200ms] ease-in-out"
+              style={{ opacity: activeIsA ? 1 : 0 }}
+            >
+              <SmartImage
+                src={photoPool[idxA] ?? initialHeroUrl}
+                alt=""
+                fill
+                priority
+                className="object-cover hero-ken-burns"
+                style={{ objectPosition: "center 70%" }}
+                sizes="100vw"
+              />
+            </div>
+            {/* Crossfade layer B */}
+            {photoPool.length > 1 && (
+              <div
+                className="absolute inset-0 transition-opacity duration-[1200ms] ease-in-out"
+                style={{ opacity: activeIsA ? 0 : 1 }}
+                aria-hidden
+              >
+                <SmartImage
+                  src={photoPool[idxB] ?? initialHeroUrl}
+                  alt=""
+                  fill
+                  className="object-cover hero-ken-burns"
+                  style={{ objectPosition: "center 70%" }}
+                  sizes="100vw"
+                />
+              </div>
+            )}
           </div>
 
-          {/* Subtle color wash — slight warmth without killing vibrancy */}
+          {/* Warm color wash */}
           <div
             className="absolute inset-0"
             style={{ background: "rgba(9,9,11,0.05)", mixBlendMode: "multiply" }}
           />
 
-          {/* Atmospheric shader layer */}
-          <WarpedNoiseBackground
-            color1={[1.0, 0.42, 0.48]}
-            color2={[0.29, 0.1, 0.26]}
-            intensity={0.25}
-            speed={0.6}
-            resolutionScale={0.4}
-            className="absolute inset-0 mix-blend-soft-light opacity-60"
-          />
+          {/* Atmospheric noise shader — mid-depth parallax layer */}
+          <div ref={noiseRef} className="absolute inset-0 will-change-transform">
+            <WarpedNoiseBackground
+              color1={[1.0, 0.42, 0.48]}
+              color2={[0.29, 0.1, 0.26]}
+              intensity={0.25}
+              speed={0.6}
+              resolutionScale={0.4}
+              className="absolute inset-0 mix-blend-soft-light opacity-60"
+            />
+          </div>
 
           {/* Gradient overlay */}
           <div className="absolute inset-0" style={treatment.overlay} />
 
-          {/* Universal vignette */}
+          {/* Soft center vignette */}
           <div
             className="absolute inset-0"
             style={{
@@ -806,56 +813,58 @@ export default function CityBriefing({
             }}
           />
 
-          {/* Extra vignette (cinematic treatment) */}
+          {/* Localized text-readability wash — darkens ONLY the bottom-left
+              zone where content sits, leaving the upper two-thirds of the
+              photo bright and legible. Desktop and mobile get slightly
+              different ellipse sizes to match where the masthead actually
+              lands. Sits above the main gradient so text always has a dark
+              bed regardless of photo content. */}
+          <div
+            className="absolute inset-0 pointer-events-none hidden sm:block"
+            style={{
+              background:
+                "radial-gradient(ellipse 55% 45% at 25% 85%, rgba(9,9,11,0.55) 0%, rgba(9,9,11,0.32) 40%, transparent 75%)",
+            }}
+          />
+          <div
+            className="absolute inset-0 pointer-events-none sm:hidden"
+            style={{
+              background:
+                "radial-gradient(ellipse 90% 50% at 30% 82%, rgba(9,9,11,0.6) 0%, rgba(9,9,11,0.35) 45%, transparent 80%)",
+            }}
+          />
+
           {treatment.vignette && (
             <div className="absolute inset-0" style={treatment.vignette} />
           )}
 
-          {/* Layout variant content — flagship event owns the hero when present */}
+          {/* Festival ribbon — pinned into the top edge of the hero */}
+          {showFestivalRibbon && (
+            <FestivalRibbon
+              festivalName={context.active_festivals[0].name}
+              festivalSlug={context.active_festivals[0].slug}
+              portalSlug={portalSlug}
+            />
+          )}
+
           {flagship ? (
             <FlagshipHeroContent
               flagship={flagship}
-              weather={context.weather}
               liveCount={liveCount}
+              topLive={topLive}
               portalSlug={portalSlug}
               quickLinks={effectiveQuickLinks}
               context={context}
               sportsTentpole={header.sports_tentpole}
               categoryCounts={categoryCounts}
+              hasFestivalRibbon={showFestivalRibbon}
+              contentRef={contentRef}
             />
           ) : (
-            <>
-              {variant === "centered" && <CenteredLayout {...layoutProps} />}
-              {variant === "bottom-left" && <BottomLeftLayout {...layoutProps} />}
-              {variant === "split" && <SplitLayout {...layoutProps} />}
-              {variant === "editorial" && <EditorialLayout {...layoutProps} />}
-            </>
+            <CanonicalHero {...layoutProps} />
           )}
         </div>
-
-        {/* Festival alert ribbon */}
-        {hasFestival && !hasHoliday && (
-          <Link
-            href={`/${portalSlug}?festival=${context.active_festivals[0].slug}`}
-            className="w-full flex items-center px-4 py-2.5 border text-left transition-colors hover:bg-[var(--dusk)] mt-2 animate-fade-in"
-            style={{
-              borderColor: `color-mix(in srgb, ${header.accent_color} 30%, var(--twilight))`,
-              backgroundColor: `color-mix(in srgb, ${header.accent_color} 4%, var(--night))`,
-            }}
-          >
-            <span className="flex-1 min-w-0">
-              <span className="font-mono text-xs font-medium text-[var(--cream)]">
-                {context.active_festivals[0].name}
-              </span>
-              <span className="font-mono text-xs text-[var(--muted)] ml-2">
-                is happening today
-              </span>
-            </span>
-            <ArrowRight weight="bold" className="w-3.5 h-3.5 text-[var(--muted)] shrink-0 ml-2" />
-          </Link>
-        )}
       </div>
-
     </section>
   );
 }

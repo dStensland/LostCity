@@ -23,6 +23,7 @@ import type {
   FeedHeaderCardQuery,
   ResolvedHeader,
   FlagshipEvent,
+  NamedEvent,
   DashboardCard,
   QuickLink,
   EventsPulse,
@@ -188,8 +189,70 @@ export async function resolveHeader(opts: ResolveHeaderOpts): Promise<ResolvedHe
     suppressed_event_ids: suppressedEventIds,
     boosted_event_ids: boostedEventIds,
     flagship_event: flagshipEvent,
+    named_event: resolveNamedEvent(todayEvents, portalSlug),
     sports_tentpole: sportsTentpole,
     briefing,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Named-event selection — widened picker used by the hero SummaryLine.
+// ---------------------------------------------------------------------------
+
+/**
+ * Pick a single named event for the hero's SummaryLine. Widened past flagship:
+ *
+ * Tier 1: `importance='flagship'`
+ * Tier 2: `importance='major'`
+ * Tier 3: `is_tentpole=true`
+ * Tier 4: curated festival (`festival_id != null`) with a hero-ready image
+ *
+ * Tier 4 catches events where a festival has been deliberately curated but the
+ * `importance` tagging pipeline hasn't caught up. Generic recurring titles
+ * (open mic, trivia, etc.) are rejected at every tier.
+ *
+ * Returns null when no candidate clears the bar — caller falls back to counts.
+ */
+function resolveNamedEvent(
+  todayEvents: FeedEventData[] | undefined,
+  portalSlug: string,
+): NamedEvent | null {
+  if (!todayEvents || todayEvents.length === 0) return null;
+
+  const GENERIC_TITLE_RE = /\b(open mic|trivia|karaoke|yoga class|run club|happy hour|brunch|open house)\b/i;
+
+  const tierOf = (e: FeedEventData): number | null => {
+    if (e.importance === "flagship") return 0;
+    if (e.importance === "major") return 1;
+    if (e.is_tentpole === true) return 2;
+    if (e.festival_id != null && !!getEffectiveEventImageUrl(e)) return 3;
+    return null;
+  };
+
+  const candidates = todayEvents.filter((e) => {
+    if (tierOf(e) === null) return false;
+    if (!e.title || e.title.trim().length < 4) return false;
+    if (GENERIC_TITLE_RE.test(e.title)) return false;
+    return true;
+  });
+
+  if (candidates.length === 0) return null;
+
+  candidates.sort((a, b) => {
+    const t = (tierOf(a) ?? 99) - (tierOf(b) ?? 99);
+    if (t !== 0) return t;
+    const aHasVenue = a.venue?.name ? 0 : 1;
+    const bHasVenue = b.venue?.name ? 0 : 1;
+    return aHasVenue - bHasVenue;
+  });
+
+  const best = candidates[0];
+  return {
+    id: best.id,
+    title: best.title,
+    venue_name: best.venue?.name ?? null,
+    start_time: best.start_time ?? null,
+    href: `/${portalSlug}/events/${best.id}`,
   };
 }
 

@@ -6,14 +6,12 @@
  */
 
 import ImagePicker from "./ImagePicker";
-import LayoutPicker from "./LayoutPicker";
 import TextTreatmentPicker from "./TextTreatmentPicker";
 import {
   TEMPLATE_VARS,
   ACCENT_SWATCHES,
   type HeaderFormData,
 } from "@/lib/admin/feed-header-utils";
-import type { LayoutVariant, TextTreatment } from "@/lib/city-pulse/types";
 
 interface HeaderEditorProps {
   formData: HeaderFormData;
@@ -79,17 +77,11 @@ export default function HeaderEditor({
         />
       </div>
 
-      {/* Layout + Text treatment — side by side */}
-      <div className="grid grid-cols-2 gap-3">
-        <LayoutPicker
-          value={formData.layout_variant}
-          onChange={(v) => onChange({ layout_variant: v })}
-        />
-        <TextTreatmentPicker
-          value={formData.text_treatment}
-          onChange={(v) => onChange({ text_treatment: v })}
-        />
-      </div>
+      {/* Text treatment picker — layout is now single-canonical, no picker */}
+      <TextTreatmentPicker
+        value={formData.text_treatment}
+        onChange={(v) => onChange({ text_treatment: v })}
+      />
 
       {/* Image picker */}
       <ImagePicker

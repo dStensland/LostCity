@@ -115,9 +115,12 @@ export async function GET(request: NextRequest, context: RouteContext) {
     // 2. It has started (start_time <= now)
     // 3. It hasn't ended (end_time > now, or no end_time and within 3 hours of start)
 
-    let query = portalClient
-      .from("events")
-      .select(countOnly ? "*" : `
+    // In countOnly mode we still fetch a narrow list (not head-only) so we can
+    // score a "top live thing" for the hero's Live badge without a second RPC.
+    const selectColumns = countOnly
+      ? `id, title, start_time, end_time, importance, is_tentpole, festival_id, data_quality, image_url,
+         venue:places(name, slug)`
+      : `
         id,
         title,
         start_date,
@@ -128,7 +131,11 @@ export async function GET(request: NextRequest, context: RouteContext) {
         tags,
         image_url,
         venue:places(id, name, slug, neighborhood, city, location_designator, lat, lng, image_url)
-      `, { count: countOnly ? "exact" : undefined, head: countOnly })
+      `;
+
+    let query = portalClient
+      .from("events")
+      .select(selectColumns, { count: countOnly ? "exact" : undefined })
       .eq("start_date", today)
       .eq("is_all_day", false)
       .not("start_time", "is", null)
@@ -153,6 +160,14 @@ export async function GET(request: NextRequest, context: RouteContext) {
         .order("start_time", { ascending: true })
         .order("data_quality", { ascending: false, nullsFirst: false })
         .limit(limit);
+    } else {
+      // countOnly: we still want ordering to pick the top-scored live item.
+      // Importance (flagship > major > standard), then data_quality, then most-recently started.
+      query = query
+        .order("importance", { ascending: true, nullsFirst: false })
+        .order("data_quality", { ascending: false, nullsFirst: false })
+        .order("start_time", { ascending: false })
+        .limit(50);
     }
 
     const { data, count, error } = await query;
@@ -175,10 +190,55 @@ export async function GET(request: NextRequest, context: RouteContext) {
 
       const openSpotCount = openSpotData ?? 0;
 
+      // Pick a top-live item if one clears the confidence bar.
+      interface TopLiveRow {
+        id: number;
+        title: string | null;
+        start_time: string | null;
+        end_time: string | null;
+        importance: "flagship" | "major" | "standard" | null;
+        is_tentpole: boolean | null;
+        festival_id: string | null;
+        image_url: string | null;
+        venue?: { name: string | null; slug: string | null } | null;
+      }
+      const rows = (data || []) as TopLiveRow[];
+      const stillLive = rows.filter((r) => {
+        if (!r.start_time) return false;
+        const [sh, sm] = r.start_time.split(":").map(Number);
+        const startM = sh * 60 + sm;
+        const nowM = currentHour * 60 + currentMinute;
+        if (r.end_time) {
+          const [eh, em] = r.end_time.split(":").map(Number);
+          return nowM < eh * 60 + em;
+        }
+        return nowM < startM + 180;
+      });
+      const GENERIC_TITLE = /\b(open mic|trivia|karaoke|yoga class|run club|happy hour|brunch|open house)\b/i;
+      const qualifies = (r: TopLiveRow): boolean => {
+        if (!r.venue?.name) return false;
+        if (!r.title || r.title.trim().length < 4) return false;
+        if (GENERIC_TITLE.test(r.title)) return false;
+        if (r.importance === "flagship" || r.importance === "major") return true;
+        if (r.is_tentpole) return true;
+        if (r.festival_id && r.image_url) return true;
+        return false;
+      };
+      const topCandidate = stillLive.find(qualifies);
+      const topLive = topCandidate
+        ? {
+            id: topCandidate.id,
+            title: topCandidate.title,
+            venue_name: topCandidate.venue?.name ?? null,
+            href: `/${slug}/events/${topCandidate.id}`,
+          }
+        : null;
+
       const payload = {
         count: (count || 0) + openSpotCount,
         eventCount: count || 0,
         spotCount: openSpotCount,
+        topLive,
       };
       await setCachedHappeningNowPayload(cacheKey, payload);
       return NextResponse.json(payload);

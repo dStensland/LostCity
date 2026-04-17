@@ -1,16 +1,30 @@
 /**
- * SummaryLine — one-line briefing for normal (non-flagship) days.
+ * SummaryLine — the one-line briefing under the hero masthead.
  *
- * Example output: "47 events tonight · 12 live music · Perfect patio weather"
+ * Two states:
  *
- * Renders null when there is nothing meaningful to say. No weather comment
- * is forced — a missing or ambiguous condition produces no weather part.
+ *   1. Named-event mode (preferred): when a named, high-confidence event
+ *      exists for today/tonight, we lead with it.
+ *        → "Cardi B, 7:30pm · 284 more"
+ *      The start time is gold-accented; the rest is --soft. The title itself
+ *      gets a strong text-shadow to stay crisp on busy hero photos.
+ *
+ *   2. Count mode (fallback): when no named event clears the bar.
+ *        → "285 events tonight · 63 live music"
+ *
+ * Both states share the same typographic treatment — a reader shouldn't be
+ * able to tell "named" vs "fallback" by styling, only by wording.
  */
+
+import Link from "next/link";
+import { formatTime } from "@/lib/formats";
+import type { NamedEvent } from "@/lib/city-pulse/types";
 
 interface SummaryLineProps {
   tabCounts?: { today: number; this_week: number; coming_up: number } | null;
   categoryCounts?: { today: Record<string, number> } | null;
   weather?: { temperature_f: number; condition: string; icon?: string } | null;
+  namedEvent?: NamedEvent | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -39,48 +53,69 @@ const CATEGORY_LABELS: Record<string, string> = {
   business: "business",
 };
 
+// Strong text-shadow — reinforces the cream title against bright hero photos
+// where the background gradient alone isn't enough at eye level.
+const TITLE_SHADOW = "0 1px 10px rgba(0,0,0,0.85), 0 0 3px rgba(0,0,0,0.9)";
+const BODY_SHADOW = "0 1px 6px rgba(0,0,0,0.7)";
+
 // ---------------------------------------------------------------------------
-// Weather context
+// Named-event presentation — "Cardi B, 7:30pm · 284 more"
 // ---------------------------------------------------------------------------
 
-function getWeatherPhrase(
-  temperature_f: number,
-  condition: string,
-): string | null {
-  const c = condition.toLowerCase();
+function NamedEventLine({
+  event,
+  totalToday,
+}: {
+  event: NamedEvent;
+  totalToday: number;
+}) {
+  const time = formatTime(event.start_time ?? null);
+  const displayTime = time && time !== "TBA" ? time : null;
+  const moreCount = Math.max(0, totalToday - 1);
 
-  const isRain =
-    c.includes("rain") || c.includes("drizzle") || c.includes("storm") || c.includes("thunder");
-  const isClear = c.includes("clear") || c.includes("sunny");
-  const isCloudy = c.includes("cloud") || c.includes("overcast");
-
-  if (isRain) return "Indoor day";
-
-  if (isClear) {
-    if (temperature_f >= 65 && temperature_f <= 85) return "Perfect patio weather";
-    if (temperature_f > 55 && temperature_f < 65) return "Beautiful evening ahead";
-    if (temperature_f > 85 && temperature_f <= 95) return "Hot one \u2014 find some shade";
-    if (temperature_f < 45) return "Bundle up tonight";
-    return null;
-  }
-
-  if (isCloudy && temperature_f >= 55 && temperature_f <= 75) return "Nice out";
-
-  return null;
+  return (
+    <p
+      className="text-sm mt-1 leading-snug"
+      style={{ color: "var(--soft)", textShadow: BODY_SHADOW }}
+    >
+      <Link
+        href={event.href}
+        className="font-semibold hover:underline underline-offset-2"
+        style={{ color: "var(--cream)", textShadow: TITLE_SHADOW }}
+      >
+        {event.title}
+      </Link>
+      {displayTime && (
+        <>
+          <span style={{ color: "rgba(245,245,243,0.4)" }}>, </span>
+          <span
+            className="font-semibold"
+            style={{ color: "var(--gold)", textShadow: TITLE_SHADOW }}
+          >
+            {displayTime}
+          </span>
+        </>
+      )}
+      {moreCount > 0 && (
+        <>
+          <span className="mx-1.5" style={{ color: "rgba(245,245,243,0.3)" }}>·</span>
+          <span>{moreCount} more</span>
+        </>
+      )}
+    </p>
+  );
 }
 
 // ---------------------------------------------------------------------------
-// Core builder
+// Count fallback
 // ---------------------------------------------------------------------------
 
-function buildSummary(
+function buildCountSummary(
   tabCounts: SummaryLineProps["tabCounts"],
   categoryCounts: SummaryLineProps["categoryCounts"],
-  weather: SummaryLineProps["weather"],
 ): string | null {
   const parts: string[] = [];
 
-  // Part 1: total event count
   const total = tabCounts?.today ?? 0;
   if (total > 0) {
     const hour = Number(
@@ -94,11 +129,11 @@ function buildSummary(
     parts.push(`${total} events ${timeLabel}`);
   }
 
-  // Part 2: top category
   const counts = categoryCounts?.today ?? {};
   let topCategory: string | null = null;
   let topCount = 0;
   for (const [id, count] of Object.entries(counts)) {
+    if (id.startsWith("tag:") || id.startsWith("genre:")) continue;
     if (count > topCount) {
       topCount = count;
       topCategory = id;
@@ -109,12 +144,6 @@ function buildSummary(
     parts.push(`${topCount} ${label}`);
   }
 
-  // Part 3: weather context
-  if (weather) {
-    const phrase = getWeatherPhrase(weather.temperature_f, weather.condition);
-    if (phrase) parts.push(phrase);
-  }
-
   if (parts.length === 0) return null;
   return parts.join(" \u00B7 ");
 }
@@ -123,16 +152,27 @@ function buildSummary(
 // Component
 // ---------------------------------------------------------------------------
 
-export function SummaryLine({ tabCounts, categoryCounts, weather }: SummaryLineProps) {
-  const summary = buildSummary(tabCounts, categoryCounts, weather);
+export function SummaryLine({ tabCounts, categoryCounts, namedEvent }: SummaryLineProps) {
+  const totalToday = tabCounts?.today ?? 0;
 
-  // Reserve the line height even when no data yet — prevents layout shift
-  // when event counts arrive from the API
+  if (namedEvent && totalToday > 0) {
+    return <NamedEventLine event={namedEvent} totalToday={totalToday} />;
+  }
+
+  const summary = buildCountSummary(tabCounts, categoryCounts);
+
   if (!summary) {
     return <p className="text-sm mt-1 h-5" aria-hidden />;
   }
 
-  return <p className="text-sm text-[var(--soft)] mt-1">{summary}</p>;
+  return (
+    <p
+      className="text-sm mt-1"
+      style={{ color: "var(--soft)", textShadow: BODY_SHADOW }}
+    >
+      {summary}
+    </p>
+  );
 }
 
 export type { SummaryLineProps };

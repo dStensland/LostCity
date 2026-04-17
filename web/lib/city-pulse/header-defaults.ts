@@ -3,7 +3,6 @@
  *
  * These pure functions are the algorithm defaults — they run when
  * no CMS override is active (or when CMS fields are null).
- * Extracted from GreetingBar.tsx so they're importable server-side.
  */
 
 import type { FeedContext, TimeSlot } from "./types";
@@ -135,6 +134,12 @@ export function getCityPhoto(timeSlot: TimeSlot, weatherSignal?: string, dayOfWe
   // Rotate by day of week for variety
   const dayIdx = dayOfWeek ? DAY_INDICES[dayOfWeek] ?? 0 : 0;
   return photos[dayIdx % photos.length];
+}
+
+/** Return the full photo pool for crossfade rotation, with rain override applied. */
+export function getCityPhotoPool(timeSlot: TimeSlot, weatherSignal?: string): string[] {
+  if (weatherSignal === "rain") return RAIN_PHOTOS.slice();
+  return HEADER_PHOTOS[timeSlot].slice();
 }
 
 const DAY_INDICES: Record<string, number> = {

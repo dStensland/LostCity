@@ -311,6 +311,17 @@ export interface FlagshipEvent {
   href: string;
 }
 
+/** Named event for the hero SummaryLine — widened from flagship to include
+ * `importance='major'` and curated-festival events, so more days surface a
+ * specific, named happening. */
+export interface NamedEvent {
+  id: number;
+  title: string;
+  venue_name?: string | null;
+  start_time?: string | null;
+  href: string;
+}
+
 /** Server-resolved header sent to the client */
 export interface ResolvedHeader {
   config_id: string | null;
@@ -329,6 +340,8 @@ export interface ResolvedHeader {
   boosted_event_ids: number[];
   /** Tentpole or festival event happening today with an image — owns the hero when present */
   flagship_event?: FlagshipEvent | null;
+  /** Widened named pick (flagship/major/tentpole/curated-festival) — used in the SummaryLine, not the hero */
+  named_event?: NamedEvent | null;
   /** Tentpole sports event today — surfaced in the signal strip (e.g. "Braves vs Mets · 7:20") */
   sports_tentpole?: {
     title: string;
