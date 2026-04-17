@@ -9,6 +9,7 @@ only the entity-graph migrations without dragging in unrelated pending files.
 from __future__ import annotations
 
 import argparse
+import os
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -37,16 +38,22 @@ class Migration:
 
 
 def _database_url_for_target(target: str) -> tuple[str | None, str | None]:
-    env = dotenv_values(ENV_PATH)
+    # Read .env file if present (local dev), fall back to OS env (CI).
+    env = dotenv_values(ENV_PATH) if ENV_PATH.exists() else {}
     if target == "production":
-        value = env.get("DATABASE_URL")
+        value = env.get("DATABASE_URL") or os.environ.get("DATABASE_URL")
         if not value:
-            return None, "Missing DATABASE_URL in .env"
+            return None, "Missing DATABASE_URL (.env or environment)"
         return value, None
 
-    value = env.get("STAGING_DATABASE_URL") or env.get("DATABASE_URL_STAGING")
+    value = (
+        env.get("STAGING_DATABASE_URL")
+        or env.get("DATABASE_URL_STAGING")
+        or os.environ.get("STAGING_DATABASE_URL")
+        or os.environ.get("DATABASE_URL_STAGING")
+    )
     if not value:
-        return None, "Missing STAGING_DATABASE_URL (or DATABASE_URL_STAGING) in .env"
+        return None, "Missing STAGING_DATABASE_URL or DATABASE_URL_STAGING (.env or environment)"
     return value, None
 
 
@@ -111,11 +118,40 @@ def parse_args() -> argparse.Namespace:
         help="Apply the guarded entity-graph rollout migration set.",
     )
     parser.add_argument(
+        "--all-pending",
+        action="store_true",
+        help=(
+            "Apply every migration in supabase/migrations/ that is not yet "
+            "recorded in supabase_migrations.schema_migrations. Sorted by version."
+        ),
+    )
+    parser.add_argument(
         "--dry-run",
         action="store_true",
         help="Print what would be applied without executing any SQL.",
     )
     return parser.parse_args()
+
+
+def _discover_pending_versions(database_url: str) -> list[str]:
+    """Return all version strings from supabase/migrations/*.sql that are not
+    yet present in supabase_migrations.schema_migrations, sorted ascending."""
+    on_disk: set[str] = set()
+    for path in SUPABASE_MIGRATIONS.glob("*.sql"):
+        # Filename format: YYYYMMDDHHMMSS_name.sql → version is the prefix
+        version = path.stem.split("_", 1)[0]
+        if version.isdigit():
+            on_disk.add(version)
+
+    conn = psycopg2.connect(database_url)
+    try:
+        with conn.cursor() as cur:
+            cur.execute("select version from supabase_migrations.schema_migrations")
+            applied: set[str] = {row[0] for row in cur.fetchall()}
+    finally:
+        conn.close()
+
+    return sorted(on_disk - applied)
 
 
 def main() -> int:
@@ -124,13 +160,20 @@ def main() -> int:
     if args.entity_graph_rollout:
         versions = ENTITY_GRAPH_VERSIONS
 
-    if not versions:
-        raise SystemExit("Provide --versions or --entity-graph-rollout")
-
     database_url, error = _database_url_for_target(args.target)
     if error:
         print(f"ERROR: {error}")
         return 1
+
+    if args.all_pending:
+        versions = _discover_pending_versions(database_url)
+        if not versions:
+            print(f"No pending migrations against {args.target} — schema is up to date.")
+            return 0
+        print(f"Discovered {len(versions)} pending migrations: {versions}")
+
+    if not versions:
+        raise SystemExit("Provide --versions, --entity-graph-rollout, or --all-pending")
 
     migrations = _load_migrations(versions)
 
