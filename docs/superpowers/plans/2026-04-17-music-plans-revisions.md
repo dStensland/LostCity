@@ -645,6 +645,31 @@ Plan 2 Task 3 drag handle is a `<div>`. If non-functional (no drag-to-dismiss), 
 
 ---
 
+### R24. `supabase db reset --local` doesn't work in this repo — use `psql $DATABASE_URL`
+
+**Affected:** Every plan task that says `npx supabase db reset --local`.
+
+**Problem:** The supabase/migrations/ track starts at `20260128000086_producer_to_organization_rename.sql`, which renames `event_producers` → `organizations`. But there is no prior migration in the supabase/ track that creates `event_producers`. That table exists only because the canonical schema lives at `database/schema.sql` and/or was historically bootstrapped out-of-band. `supabase db reset --local` replays only the supabase/ track, so it fails with `relation "event_producers" does not exist` on every fresh reset. This has never worked; it's dead documentation, not a regression.
+
+**Fix:** Use the repo's actual verification path:
+
+```bash
+# Apply a new migration against the dev/staging DB via DATABASE_URL from .env:
+psql "$DATABASE_URL" -f database/migrations/<NNN_name>.sql
+
+# Verify columns / rows exist:
+psql "$DATABASE_URL" -c "\\d places"
+psql "$DATABASE_URL" -c "SELECT count(*) FROM places WHERE music_programming_style IS NOT NULL;"
+```
+
+`$DATABASE_URL` comes from `.env` (loaded by any script that uses `dotenv`); for interactive psql, either `source .env; export DATABASE_URL` or just `psql "$(grep ^DATABASE_URL= .env | cut -d= -f2- | tr -d '\"')"`.
+
+For larger migration batches, `python database/apply_targeted_migrations.py --target staging` (or `production`) is the canonical script — see `database/apply_targeted_migrations.py` for flags. Don't hand-edit the migrations registry in `supabase_migrations.schema_migrations` unless you know what you're doing.
+
+**Subagents must:** replace `npx supabase db reset --local` with `psql "$DATABASE_URL" -f <path>` in every task they execute. Replace `psql "$(npx supabase status -o json | jq -r '.DB_URL')" -c "..."` with `psql "$DATABASE_URL" -c "..."`.
+
+---
+
 ## 🟢 NOTABLE — defer to post-v1
 
 Real improvements, not blocking.
