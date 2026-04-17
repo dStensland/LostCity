@@ -1,6 +1,6 @@
 # Seasonal Attractions — Design Spec
 
-**Date**: 2026-04-17 (revised after expert review)
+**Date**: 2026-04-17 (third revision — absorbed 11 must-fixes from second expert review round)
 **Status**: Design
 **Author**: Claude + coach
 
@@ -45,6 +45,24 @@ The original draft added `season_start`/`season_end` columns to `places` with a 
 4. **Product-designer** — "Only Here For Now" label fails grid context; "This Season" is the right noun phrase alongside "Parks & Gardens" etc.
 
 Key finding from follow-up research across 11 real destinations: the **exhibitions-as-season-carrier** model holds for every shape encountered. The `exhibitions` table already supports `exhibition_type = 'seasonal'` (added 2026-04-10) and `events.exhibition_id` FK (landed 2026-04-13). The infrastructure is ready; no crawler uses it yet.
+
+### Third revision — absorbed from round 2 reviews
+
+Round 2 expert review surfaced 11 must-fixes, all absorbed into this spec:
+
+1. **Year-scoped slug convention** for seasonal exhibitions (data-specialist) — prevents UNIQUE collision on year rollover.
+2. **`_EXHIBITION_COLUMNS` update** in `crawlers/db/exhibitions.py` (crawler-dev) — prevents silent `operating_schedule` data loss.
+3. **Overlap handling** — helper returns array, not single row (architect + data-specialist). Yule Forest Pumpkin + Christmas tree handoff is real.
+4. **Shape A scoring story** (architect) — `web/lib/city-pulse/scoring.ts` must rank exhibition-only places, not score them as zero.
+5. **Festivals cleanup sequencing** — NULL `series.festival_id` before delete (data-specialist); MUST precede "This Season" launch (architect).
+6. **`annual_tentpoles.py` cleanup sequencing** — MUST precede Ren Fest crawler conversion (architect) to avoid race upsert.
+7. **Color change** from `--gold` to `--neon-cyan` (product-designer) — resolves collision with historic_sites.
+8. **TypeScript type path** — add `filter?`, `seeAllHrefStrategy?` to `PlacesToGoCategoryConfig` (product-designer) — avoids portal-specific `if`-check pattern.
+9. **Detail page duplication guard** (product-designer) — suppress seasonal exhibition from general Exhibitions block when rendered as status strip.
+10. **Haunted house trio** added to scope: `folklore_haunted.py`, `paranoia_haunted.py`, `nightmares_gate.py` (crawler-dev).
+11. **`north_georgia_state_fair.py`** moved from "new crawlers" to "in-scope conversions" (crawler-dev) — existing crawler uses pseudo-event pattern.
+
+Plus important/polish items folded in: series invariant, `is_active` trap, search filter scope gate (exclude Shape F), enrichment guard scope, mobile truncation via discrete callouts, see-all link strategy, Stone Mountain per-slug triage, single-item suppression, Southern Belle wording ("active first, else next upcoming"), Shape F cross-category documented as correct.
 
 ## Non-goals
 
@@ -94,7 +112,7 @@ All 11 destinations fit without schema gymnastics.
 
 ### Schema deltas (minimal — 2 columns)
 
-**New column: `series.exhibition_id`** — nullable FK to `exhibitions(id)`. Enables shape B (recurring rituals under a seasonal exhibition).
+**New column: `series.exhibition_id`** — nullable FK to `exhibitions(id)`. Enables shape B (recurring rituals under a seasonal exhibition). When NULL, the series is persistent-venue programming; when set, it's a ritual scoped to the exhibition's run window. This IS the discriminator — document in `crawlers/CLAUDE.md` and in the helper module.
 
 **New column: `exhibitions.operating_schedule`** — `jsonb`, nullable. Per-exhibition operating schedule with variable per-day/per-night hours. Structure:
 
@@ -121,6 +139,33 @@ For simple cases (Ren Fest: same hours Sat/Sun), only `days` is populated. For c
 
 This is scoped to `exhibitions` — `places.hours_json` remains the place's default (off-season = the place is unscheduled; in-season = the active exhibition's schedule wins). No change to `places`.
 
+### Crawler-side schema dependency — `_EXHIBITION_COLUMNS` update
+
+`crawlers/db/exhibitions.py` maintains an explicit `_EXHIBITION_COLUMNS` set (around line 94) that filters incoming data dicts before insert/update. Adding `operating_schedule` to the DB is **not sufficient** — the column name must also be added to `_EXHIBITION_COLUMNS`, or the field is silently stripped. This is load-bearing and must land in the same PR as the schema migration.
+
+### Slug convention (year-scoped)
+
+`exhibitions.slug` has a `UNIQUE` constraint. A year-agnostic slug (e.g. `georgia-renaissance-festival-seasonal`) would collide on second-year upsert. Convention for `exhibition_type = 'seasonal'` rows:
+
+```
+<place-slug>-seasonal-<year>
+```
+
+Examples:
+- `georgia-renaissance-festival-seasonal-2026`
+- `netherworld-haunted-house-seasonal-2025`
+- `southern-belle-farm-strawberry-season-2026` (multi-season place: include season identifier)
+
+The content-hash dedup in `insert_exhibition()` already keys on `(title, venue_id, opening_date)`, so re-runs during the same season find and update the existing row. Only the slug needs explicit year-scoping to avoid the UNIQUE collision on year rollover.
+
+### Exhibition lifecycle — `is_active` trap
+
+Do **not** set `is_active = FALSE` on a seasonal exhibition to signal mid-season closure (weather cancellation, health emergency). Update `closing_date` to the early date instead. `is_active = FALSE` silences the row without creating a truthful historical record. This must be explicit in `crawlers/CLAUDE.md`.
+
+### Series invariant
+
+When `series.exhibition_id` is set, `series.place_id` MUST equal `exhibitions.place_id` for the referenced exhibition. Both fields address "where is this series?" — drift creates conflicting attribution. Enforce in crawler write logic; consider a DB trigger as a later hardening step.
+
 ### Why no new `place_type`
 
 - Place identity is preserved: Ren Fest grounds stay `place_type: "festival_grounds"` (or `"fairgrounds"` — already exists); Southern Belle stays `"farm"`; Netherworld stays whatever haunted-attraction type it has.
@@ -133,26 +178,38 @@ Already in the check constraint as of `20260410010002_exhibitions_expansion.sql`
 
 ## Section 2 — Helper functions and feed surfacing
 
-### New helper: `getActiveSeasonalExhibition(place_id, date)`
+### New helpers in `web/lib/places/seasonal.ts`
 
-Server-side TypeScript helper. Returns the single active `exhibition_type = 'seasonal'` row for a place on a given date, or null. Centralizes the date-range logic so it's not reimplemented in 5 places.
-
-Location: `web/lib/places/seasonal.ts`.
+**Returns an array** (not a single row) — a place can have overlapping seasonal exhibitions (Yule Forest: Pumpkin Oct–Nov + Christmas tree Nov–Dec; Southern Belle adjacent handoffs).
 
 ```ts
-export async function getActiveSeasonalExhibition(
+export async function getActiveSeasonalExhibitions(
   placeId: number,
   date: Date,
-): Promise<SeasonalExhibition | null>;
+): Promise<SeasonalExhibition[]>;  // empty array if none active
+
+export function getPrimarySeasonalExhibition(
+  exhibitions: SeasonalExhibition[],
+  date: Date,
+): SeasonalExhibition | null;
+  // Tiebreaker rule: prefer the exhibition with the LATEST opening_date
+  // (transition-forward — "what's new right now"). Ties broken by
+  // earliest closing_date (most urgent).
 
 export function isPlaceInSeason(
   place: Place,
-  exhibition: SeasonalExhibition | null,
+  exhibitions: SeasonalExhibition[],
   date: Date,
-): { status: "active" | "pre-open" | "grace" | "off-season"; daysToOpen: number | null };
+): {
+  status: "active" | "pre-open" | "grace" | "off-season";
+  daysToOpen: number | null;
+  activeCount: number;  // for "2 seasons running" UX signaling
+};
 ```
 
-Consumers: Places to Go filter, detail page status strip, search_unified season guard, feed pipeline.
+Consumers: Places to Go filter, detail page status strip, search_unified season guard, feed pipeline. **Lint rule**: ban direct reads of `exhibition_type = 'seasonal'` outside `web/lib/places/seasonal.ts` (custom ESLint rule or search-based pre-commit check). Drift prevention.
+
+Optional second file: `isPlaceInSeason()` may fit better in `web/lib/places/state.ts` alongside other place-state predicates (`is_open`, `hours_today`). Decide at implementation time — non-blocking.
 
 ### Places to Go: new "This Season" category
 
@@ -164,12 +221,57 @@ Add to `web/lib/places-to-go/constants.ts`:
   label: "This Season",
   placeTypes: [],                                    // type-agnostic
   filter: "has_active_seasonal_exhibition",          // new filter primitive
-  accentColor: "#FFD93D",                             // gold
+  accentColor: "#00D4E8",                             // --neon-cyan
   iconType: "calendar",
+  seeAllHrefStrategy: "none",                         // phase 1: no see-all link
 }
 ```
 
-The `placeTypes` array is empty — this category filters by exhibition state, not place_type. This is a new filter primitive for Places to Go (existing categories filter by `place_type` only). Implementation: the places-to-go query joins `exhibitions` and filters where an active seasonal exhibition exists OR is within 28 days of opening.
+**Color rationale**: the previous draft used `--gold` (`#FFD93D`). Product-designer review identified a collision with `historic_sites` (`#FBBF24`, Tailwind amber-400) — both warm yellows, visually indistinguishable at card-badge size. Switching to `--neon-cyan` (`#00D4E8`) — "now" semantics, non-colliding, and cyan is under-used in the Places to Go palette.
+
+### TypeScript type updates
+
+`PlacesToGoCategoryConfig` in `web/lib/places-to-go/types.ts` does not currently have a `filter` field. Add:
+
+```ts
+export interface PlacesToGoCategoryConfig {
+  key: string;
+  label: string;
+  placeTypes: readonly string[];
+  accentColor: string;
+  iconType: string;
+  seeAllTab?: string;
+  filter?: "has_active_seasonal_exhibition";   // new, extensible
+  seeAllHrefStrategy?: "placeTypes" | "seasonal" | "none";   // routes the see-all URL
+}
+```
+
+Without this, the query-path implementation has to special-case `category.key === "seasonal"`, which is the portal-specific `if`-check pattern the design system rules explicitly forbid.
+
+### Query-path implementation
+
+The places-to-go query detects `filter === "has_active_seasonal_exhibition"` and joins `exhibitions`:
+
+```
+LEFT JOIN exhibitions e
+  ON e.venue_id = places.id
+  AND e.exhibition_type = 'seasonal'
+  AND (
+    CURRENT_DATE BETWEEN e.opening_date AND e.closing_date
+    OR CURRENT_DATE BETWEEN e.opening_date - INTERVAL '28 days' AND e.opening_date - INTERVAL '1 day'
+  )
+WHERE e.id IS NOT NULL
+```
+
+Empty-category suppression: if fewer than 2 places match, hide the category entirely. A single-card category reads as a mistake. Implementation: gate in the API layer before returning the category block.
+
+### Single-item suppression
+
+If the "This Season" query returns fewer than 2 places, suppress the category from the response. Rationale: a single-card category in a grid of 12+ looks like a bug, not a feature. During sparse stretches (Feb/early-March Atlanta), "This Season" simply disappears. The 28-day pre-open window increases the chance of clearing the 2-item floor during transitional weeks.
+
+### See-all link strategy
+
+Phase 1: **no see-all link** (`seeAllHrefStrategy: "none"`). Rationale: the existing Places view filter has no `?seasonal=true` primitive. Wiring one up is real work (query params, filter UI, state handling). Phase 2 follow-on can wire `/{portal}/explore/places?seasonal=true`. Shipping a broken see-all link is smoke-and-mirrors; omitting it is honest.
 
 ### Filter logic
 
@@ -191,12 +293,18 @@ Add to `web/lib/places-to-go/callouts.ts`:
 
 | Condition | Callout |
 |---|---|
-| `today > closing_date - 7 days` | `"Final week"` (or `"Final weekend"` for Ren Fest) |
+| `today > closing_date - 7 days` | `"Final week"` (or `"Final weekend"` for weekend-only cadences) |
 | `today BETWEEN opening_date AND closing_date` | `"Running through <month> <day>"` |
 | `opening_date > today` | `"Opens <month> <day>"` |
-| Always (append) | `"<Cadence display> <hours>"` — e.g. `"Sat–Sun 10:30–6"`, `"Nightly 5:30–9:30"` |
+| Always (second discrete callout) | `"<Cadence display> <hours>"` — e.g. `"Sat–Sun 10:30–6"`, `"Nightly 5:30–9:30"` |
+
+**Discrete callouts, not concatenated**: the callout system renders via `callouts.join(" · ")` and truncates the full string. At 375px mobile, "Sat–Sun 10:30–6 · Running through June 8" (~240px) exceeds available space (~160–180px) and truncates mid-string. Emit the two callouts as separate array entries so mobile truncation kills only the less-critical trailing one (keep cadence as `callouts[0]`, status as `callouts[1]`).
 
 Cadence display derived from `exhibitions.operating_schedule.days` — days with non-null entries are open days, collapsed to short form.
+
+### Event-count badge for high-density shapes
+
+Shape D (fairgrounds with 50-150 child events via `exhibition_id`) — the existing `PlacesToGoCard.event_count` badge renders the full count, which reads as confusing rather than informative at 3-digit values. For places with a seasonal exhibition, cap the badge at `event_count >= 10` → show `"10+"` or suppress entirely. Decision at implementation time.
 
 ### `is_open` logic
 
@@ -209,15 +317,17 @@ Otherwise false. Off-season, the card never appears in the category anyway.
 
 ### Festivals rail cleanup
 
-`FestivalsSection` reads from `/api/festivals/upcoming` which queries the `festivals` table. Migration:
+`FestivalsSection` reads from `/api/festivals/upcoming` which queries the `festivals` table. **Cleanup has required sequencing (do not skip — FK violation otherwise):**
 
-1. Identify rows in `festivals` table that are actually seasonal attractions (Ren Fest, state fairs, any that have been misclassified).
-2. Decide: remove these rows entirely OR add a `festivals.is_seasonal` column and filter them out.
-3. Reviewers didn't verify, so we'll inspect during implementation. **Simplest path**: hard-delete the Ren Fest row from `festivals` after migrating its data to an exhibition. Same for state fairs if present.
+1. **Audit**: GET `/api/festivals/upcoming?portal_id=<atlanta>` to list what's in there. Compare to the seasonal-destination list (Ren Fest, state fairs, any misclassified).
+2. **NULL the series FKs first**: `series.festival_id` does not have a declared `ON DELETE` behavior. Precedent from migration `20260328300004_festival_data_cleanup.sql`: `UPDATE series SET festival_id = NULL WHERE festival_id = <target>`.
+3. **Check events**: `events.festival_id` has `ON DELETE SET NULL` — safe, auto-clears.
+4. **Hard-delete**: `DELETE FROM festivals WHERE id = <target>`.
+5. **Verify**: re-call `/api/festivals/upcoming` to confirm the row no longer surfaces.
 
-### `/api/festivals/upcoming` audit
+### Festivals-cleanup sequencing gate
 
-Before migration, GET `/api/festivals/upcoming?portal_id=<atlanta>` to see what's in there today. Compare to the seasonal-destination list. Hard-delete confirmed seasonal attractions.
+The `festivals` cleanup MUST complete **before** the `seasonal` Places to Go category ships to users. Otherwise, Ren Fest appears in both "The Big Stuff" festivals rail AND "This Season" — a dedup bug at launch. Document as a launch-blocker in the implementation plan.
 
 ## Section 3 — Crawler conversions
 
@@ -231,29 +341,50 @@ The single crawler pattern:
 6. For shape E: repeat step 2 per season. Each gets its own exhibition row.
 7. Never emit a season-window pseudo-event in the `events` table.
 
-### Crawlers to convert
+### Crawlers to convert (in scope)
 
 | Crawler | Shape | Effort |
 |---|---|---|
 | `georgia_ren_fest.py` | C | Drop `scrape_season_event()`, create seasonal exhibition, link 8 themed weekends via `exhibition_id`. ~2h. |
-| `netherworld.py` | A | Collapse 47 per-night events to 1 seasonal exhibition with `operating_schedule`. ~3h. |
-| `stone_mountain_park.py` (Christmas portion only) | B + E | One seasonal exhibition for Christmas overlay, series for parade/fireworks/light-show. Other seasonal events (Yellow Daisy, Pumpkin) get their own exhibitions. ~4h. |
+| `netherworld.py` | A | Collapse per-night event rows to 1 seasonal exhibition with `operating_schedule`. Reduces crawler from ~160 lines of fragile text parsing to ~20 lines. ~3h. Also handle Netherworld special nights (opening, closing, "Lights On" kid-friendly) as events linked via `exhibition_id` — shape A with Shape C sprinkles. |
+| `folklore_haunted.py` | A | Same conversion as Netherworld (Shape A). ~2h. |
+| `paranoia_haunted.py` | A | Same conversion as Netherworld (Shape A). ~2h. |
+| `nightmares_gate.py` | A | Same conversion as Netherworld (Shape A). ~2h. |
+| `stone_mountain_park.py` | B + E (complex triage) | See per-slug triage below. ~4h + 30min decision time. |
 | `southern_belle_farm.py` | E | Replace 4 season-window events with 4 seasonal exhibitions. Link Donut Breakfast/Sunflower sub-events via `exhibition_id`. ~3h. |
-| `annual_tentpoles.py` | Various | Remove Ren Fest entry (`ga-renaissance-festival-grounds`) entirely — main Ren Fest crawler owns it. Audit other entries for seasonal shapes. ~2h. |
+| `north_georgia_state_fair.py` | D | **Existing crawler** (not greenfield): convert season-window pseudo-event + dated daily programming to 1 seasonal exhibition + N child events via `exhibition_id`. ~4h. |
+| `annual_tentpoles.py` | Cleanup | **Remove Ren Fest entry** (`ga-renaissance-festival-grounds`) entirely — main Ren Fest crawler owns it. Audit `_KNOWN_WINDOWS_BY_SLUG` for other seasonal-shape entries. ~2h. |
 
-### New crawlers (not required for this spec, documented pattern)
+### Stone Mountain per-slug triage
+
+The current `stone_mountain_park.py` crawler emits 10 seasonal events from `_FESTIVAL_META`. Per-slug decision matrix:
+
+| Slug | Current | Target | Reason |
+|---|---|---|---|
+| `stone-mountain-christmas` | Event | Seasonal exhibition + series for nightly parade/fireworks/light-show | Shape B — long seasonal run with recurring rituals |
+| `stone-mountain-yellow-daisy` | Event | Seasonal exhibition | Shape E — multi-day seasonal festival, no dated sub-programming visible |
+| `stone-mountain-pumpkin` | Event | Seasonal exhibition | Shape E |
+| `stone-mountain-dino-fest` | Event | Seasonal exhibition | Shape E |
+| `stone-mountain-summer-at-the-rock` | Event | Seasonal exhibition | Shape E — summer overlay |
+| `stone-mountain-easter-sunrise` | Event | **Stay as event** | Single-day, not seasonal |
+| `stone-mountain-memorial-day-weekend` | Event | **Stay as event** | 3-day weekend, not seasonal |
+| `stone-mountain-fantastic-fourth` | Event | **Stay as event** | Single-day |
+| `stone-mountain-labor-day-weekend` | Event | **Stay as event** | 3-day weekend, not seasonal |
+| `stone-mountain-kids-early-nye` | Event | **Stay as event** | Single-day |
+
+### New crawlers (follow-on, documented pattern, not blocking)
 
 | Destination | Shape | Status |
 |---|---|---|
-| Lake Lanier Magical Nights of Lights | A | No crawler yet. Add pattern doc in `crawlers/CLAUDE.md`. |
+| Lake Lanier Magical Nights of Lights | A | No crawler yet. |
 | Callaway Fantasy in Lights | A | No crawler yet. |
-| North Georgia State Fair | D | No crawler yet. |
-| Georgia National Fair | D | No crawler yet. |
+| Georgia National Fair (Perry) | D | No crawler yet. |
 | Burt's Pumpkin Farm | A | No crawler yet. |
 | Buford Corn Maze | C | No crawler yet. |
 | Yule Forest | E | No crawler yet. |
+| Six Flags (Fright Fest, Holiday in the Park) | F | Defer — lower impact. |
 
-These are follow-on, not blocking. The pattern is documented; crawlers ship as time permits.
+The pattern is documented; these crawlers ship as time permits.
 
 ### Normalization / taxonomy updates
 
@@ -262,30 +393,58 @@ These are follow-on, not blocking. The pattern is documented; crawlers ship as t
 
 ### Enrichment pipeline guards
 
-- `crawlers/hydrate_hours_google.py` and `crawlers/hydrate_venues_foursquare.py` — add a guard: skip places that have an active `exhibition_type = 'seasonal'` row. Prevents silent NULL overwrites of seasonal hours (the hours live on the exhibition, not the place).
+- `crawlers/hydrate_hours_google.py` and `crawlers/hydrate_venues_foursquare.py` — add a guard: skip places that have **any** `exhibition_type = 'seasonal'` row (past, current, or future), not just active. Rationale: off-season enrichment would silently NULL the place's `hours_json`; next season the place would render "Closed" even during its run. The enrichment pipeline simply leaves seasonal-only places alone — their schedules live on the exhibition.
 
 ## Section 4 — Propagation to other surfaces
 
 ### `search_unified()` RPC
 
-Off-season events at seasonal places should not leak into search. Option A: filter in the RPC itself — if an event's place has an active seasonal exhibition window, only include the event if its `start_date` falls within that window. Option B: filter at the caller. Prefer A so all consumers benefit.
+Off-season events at seasonal-only places should not leak into search. Filter in the RPC itself: if an event's place has an `exhibition_type = 'seasonal'` exhibition AND the place is flagged as seasonal-only, only include the event if its `start_date` falls within a seasonal exhibition's window.
 
-Scope gate: only apply this filter when the place has at least one `exhibition_type = 'seasonal'` row. Persistent places with occasional exhibitions (museums) are unaffected.
+**Critical scope gate — exclude Shape F places**: Atlanta Botanical Garden is a year-round persistent destination that also runs Garden Lights seasonally. The Garden has off-season events (summer concerts, member nights in January) that MUST NOT be suppressed. The filter has to distinguish:
+
+- Shape A-E (seasonal-only): place primarily exists as the seasonal attraction. Off-season events suppressed.
+- Shape F (persistent + overlay): place is year-round. Off-season events flow through.
+
+Implementation options:
+- (a) A new `places.is_seasonal_only` boolean, set by crawlers. Explicit signal.
+- (b) Derived: if place has zero events outside any seasonal-exhibition window, treat as seasonal-only. Implicit.
+
+Prefer (a) — explicit signals beat derivation. Document in the crawler pattern: set `is_seasonal_only = true` for Shape A-E crawlers, leave false/default for Shape F.
+
+### Shape A scoring (places with exhibitions but no events)
+
+`web/lib/city-pulse/scoring.ts` and downstream section builders key on event counts and next-event proximity. Shape A places (Netherworld, Lake Lanier Lights, Callaway, Burt's Pumpkin Farm) have an active exhibition and **zero child events**. Without explicit handling, they score zero and get ranked below trivially-active venues.
+
+Add to the scoring pipeline: when a place has an active seasonal exhibition, synthesize a pseudo-event-signal from the exhibition — `next_event_date = today` during active window (recency-equivalent), category from place_type. Alternative: add an explicit `has_active_seasonal_exhibition` signal that scoring weights highly. Pick one at implementation time; both work. The point is that the scoring layer must not treat exhibition-only places as dead.
+
+Detail-page "upcoming at this place" rails must also render the exhibition status, not an empty state.
 
 ### `fetch-destinations.ts`, `fetch-enrichments.ts`
 
-Consumers that select places for display should join `exhibitions` when filtering for "actively open" places. The helper `isPlaceInSeason()` is the canonical check.
+Consumers that select places for display should join `exhibitions` when filtering for "actively open" places. The helper `isPlaceInSeason()` is the canonical check. Don't inline the date math in the fetch modules.
 
 ### Detail page (`PlaceDetailShell`)
 
 Status strip at the top of the place detail page:
 
-- Active seasonal exhibition: `"Running through June 8 · Sat–Sun 10:30–6"` with gold accent.
+- Active seasonal exhibition: `"Running through June 8 · Sat–Sun 10:30–6"` with cyan accent.
 - Pre-open: `"Opens April 11 · Sat–Sun 10:30–6"`.
 - Off-season: `"Closed for the season — reopens next spring"` (if the latest exhibition closed <180 days ago and no newer opens) OR `"Dates TBD"` if stale.
-- Multi-season place (Southern Belle): show the next upcoming season, plus a "See all seasons" collapsible list.
+- **Multi-season place** (Southern Belle): show the **currently active** season if one exists; if between seasons, show the next upcoming. Plus a "See all seasons" collapsible list. Precedence (active-first) prevents the bug where a place mid-Fall-Pumpkin renders "Next: Christmas" because the crawler already wrote December's exhibition.
+- **Overlap** (Yule Forest, Pumpkin + Christmas tree in handoff week): show the primary exhibition (per `getPrimarySeasonalExhibition()` tiebreaker) plus an inline "+1 more season running" signal. Full list in the collapsible.
 
-The existing place detail infrastructure renders exhibitions as a block. For seasonal exhibitions specifically, the status strip is more prominent than the exhibition body.
+**Duplication guard**: the existing `PlaceDetailShell` renders an Exhibitions content block. When a seasonal exhibition is rendered as the status strip at the top, **suppress it from the general Exhibitions block** — otherwise it appears twice on the page. Implementation: filter `exhibitions` in the render pipeline to exclude `exhibition_type = 'seasonal'` rows when a status strip is active.
+
+### Shape F cross-category behavior (documented as correct, not a bug)
+
+Atlanta Botanical Garden is `place_type: "garden"`. During Garden Lights (Nov–Jan), ABG appears in:
+1. "Parks & Gardens" category — persistent identity.
+2. "This Season" category — active seasonal exhibition.
+
+This is **correct behavior**. Different user intents ("I want a garden this weekend" vs "what's running right now?") surface through different categories. The card callout makes the difference obvious in the seasonal case ("Nightly 5:30–9:30 · Running through Jan 4"), and in the Parks & Gardens card the normal open/closed treatment applies.
+
+Follow-on polish (not in scope): add a seasonal-overlay callout to Shape F cards in their persistent category ("Garden Lights running · Nov 15–Jan 11") so the ABG card in Parks & Gardens signals the overlay. Documented as known gap.
 
 ## Section 5 — Lifecycle / transition states
 
@@ -306,19 +465,45 @@ Timeline for one seasonal exhibition (Ren Fest 2026, Apr 11 – Jun 8):
 
 ## Section 6 — Migration and rollout
 
+### Sequencing gates (hard blockers)
+
+- **`annual_tentpoles.py` Ren Fest removal MUST land before `georgia_ren_fest.py` conversion.** Otherwise both crawlers race-upsert against different slugs for the same destination, producing dedup artifacts.
+- **Festivals table cleanup MUST land before the `seasonal` Places to Go category ships to users.** Otherwise Ren Fest appears in both "The Big Stuff" festivals rail AND "This Season" — launch-day dedup bug.
+- **`_EXHIBITION_COLUMNS` update MUST land in the same PR as the `operating_schedule` migration.** Otherwise every seasonal exhibition silently drops hours on insert.
+
 ### Order of operations
 
-1. **Schema migrations** — `series.exhibition_id` FK + `exhibitions.operating_schedule` JSONB. Parity: both `database/migrations/` and `supabase/migrations/`.
-2. **Helper library** — `web/lib/places/seasonal.ts` with `getActiveSeasonalExhibition`, `isPlaceInSeason`, cadence-display formatter.
-3. **Places to Go wire-up** — add `seasonal` category with new `has_active_seasonal_exhibition` filter primitive. Callout rules.
-4. **Feed pipeline** — `fetch-destinations.ts` uses the helper. `/api/places-to-go` returns the new category.
-5. **Festivals table audit + cleanup** — hard-delete rows for confirmed seasonal attractions. Verify `FestivalsSection` no longer renders them.
-6. **`search_unified()` guard** — filter off-season events at seasonal places.
-7. **Enrichment pipeline guards** — `hydrate_hours_google.py` + `hydrate_venues_foursquare.py` skip places with active seasonal exhibitions.
-8. **Crawler conversions (parallel)** — Ren Fest, Netherworld, Stone Mountain Christmas, Southern Belle. `annual_tentpoles.py` cleanup.
-9. **Normalization / taxonomy audit** — `genre_normalize.py`, `VALID_FESTIVAL_TYPES`.
-10. **Pattern documentation** — `crawlers/CLAUDE.md` seasonal-destinations section.
-11. **Detail page updates** — status strip for seasonal exhibitions; multi-season place handling.
+**Phase 1 — Foundation (sequential, blocks everything)**
+1. **Schema migrations** — `series.exhibition_id` FK + `exhibitions.operating_schedule` JSONB + `places.is_seasonal_only` boolean. Parity: both `database/migrations/` and `supabase/migrations/`.
+2. **`_EXHIBITION_COLUMNS` update** — add `operating_schedule` to `crawlers/db/exhibitions.py`. Same PR as (1).
+3. **Helper library** — `web/lib/places/seasonal.ts` with `getActiveSeasonalExhibitions`, `getPrimarySeasonalExhibition`, `isPlaceInSeason`, cadence-display formatter. Plus lint rule banning direct reads of `exhibition_type = 'seasonal'` outside the module.
+4. **TypeScript type update** — add `filter?`, `seeAllHrefStrategy?` to `PlacesToGoCategoryConfig`.
+
+**Phase 2 — Cleanup (sequenced)**
+5. **`annual_tentpoles.py` Ren Fest removal** — delete the `ga-renaissance-festival-grounds` entry and any other confirmed seasonal entries.
+6. **Festivals table cleanup** — audit `/api/festivals/upcoming`, NULL `series.festival_id` for targets, delete rows, verify.
+
+**Phase 3 — Crawler conversions (parallel after Phase 1)**
+7. `georgia_ren_fest.py` — requires (5) to land first.
+8. `netherworld.py`, `folklore_haunted.py`, `paranoia_haunted.py`, `nightmares_gate.py` — 4 parallel, all Shape A.
+9. `stone_mountain_park.py` — per-slug triage, shape B + E.
+10. `southern_belle_farm.py` — shape E.
+11. `north_georgia_state_fair.py` — shape D.
+
+**Phase 4 — Propagation (parallel after Phase 1)**
+12. **Places to Go wire-up** — `seasonal` category config, callout rules, single-item suppression logic. Join exhibitions in the query.
+13. **Feed pipeline** — `fetch-destinations.ts` uses helpers.
+14. **Shape A scoring fix** — `web/lib/city-pulse/scoring.ts` handles exhibition-only places.
+15. **`search_unified()` guard** — filter off-season events at `is_seasonal_only` places.
+16. **Enrichment pipeline guards** — `hydrate_hours_google.py` + `hydrate_venues_foursquare.py` skip any place with a seasonal exhibition (past/future, not just active).
+17. **Detail page updates** — status strip + duplication guard + multi-season handling.
+
+**Phase 5 — Normalization + docs**
+18. **Normalization / taxonomy audit** — `crawlers/genre_normalize.py` (`fair/hayride/carnival → festival` mappings review), `crawlers/tags.py` (`VALID_FESTIVAL_TYPES`).
+19. **Pattern documentation** — `crawlers/CLAUDE.md` seasonal-destinations section with the slug convention, `is_active` trap note, series invariant, and shape taxonomy.
+
+**Phase 6 — Launch gate**
+20. **Launch readiness**: Phase 2 (festivals cleanup) AND Phase 3 Ren Fest conversion AND Phase 4 Places to Go category all complete. THEN flip "This Season" category visible.
 
 ### Data migration
 
@@ -350,30 +535,40 @@ Not in scope for this spec. Flag as follow-on after shipping the base pattern an
 
 ## Success criteria
 
-- Ren Fest no longer appears in "The Big Stuff" festivals rail. Verified by querying the festivals table.
-- Ren Fest appears in the "This Season" Places to Go category during its active window + 28d pre-open, with accurate callouts ("Running through June 8 · Sat–Sun 10:30–6").
-- Netherworld collapses from 47 per-night event rows to 1 exhibition row; still surfaces correctly in the feed during its window.
-- Southern Belle Farm's 4 seasons each have their own exhibition, non-overlapping, cycling correctly through the year.
+- Ren Fest no longer appears in "The Big Stuff" festivals rail. Verified by querying the festivals table (row deleted) and by browser-testing the rail during active season.
+- Ren Fest appears in the "This Season" Places to Go category during its active window + 28d pre-open, with accurate callouts (`callouts[0]` = cadence, `callouts[1]` = status).
+- Netherworld + 3 haunted house crawlers collapse from per-night event rows to 1 exhibition row each; still surface correctly in the feed during their Sep–Nov windows.
+- Southern Belle Farm's 4 seasons each have their own exhibition, cycling correctly; detail page shows active-first, next-upcoming if between.
+- North Georgia State Fair's 11-day window renders as 1 exhibition with dated child events; `event_count` badge reads sanely.
 - `annual_tentpoles.py` no longer emits a duplicate Ren Fest entry.
-- Year rollover creates a new exhibition row, preserves history.
-- `search_unified()` no longer leaks off-season events at seasonal places.
-- Pattern documented so crawlers for Lake Lanier Lights, Callaway, state fairs, Burt's, Yule Forest can follow the same shape.
+- Year rollover creates a new exhibition row with year-scoped slug, preserves history. Query `SELECT * FROM exhibitions WHERE venue_id = <ren_fest> AND exhibition_type = 'seasonal'` returns multiple rows after two seasons.
+- `search_unified()` no longer leaks off-season events at `is_seasonal_only` places. Shape F (Botanical Garden) events unaffected year-round.
+- Enrichment pipelines skip places with any seasonal exhibition row; no silent NULL overwrites of seasonal hours.
+- Post-launch audit: "This Season" Places to Go category click-through tracked. If it ranks below three other categories in engagement during active seasonal windows, the deferred feed-level contextual card ships as follow-on.
+- Pattern documented in `crawlers/CLAUDE.md` so crawlers for Lake Lanier Lights, Callaway, Georgia National Fair, Burt's, Yule Forest, and others can follow the same shape.
 
 ## Implementation parallelization
 
-The following workstreams can proceed in parallel:
-- Schema migration + helper library (foundational, blocks downstream)
-- Places to Go wire-up (blocks on helper)
-- Crawler conversions (each crawler is independent — Ren Fest, Netherworld, Stone Mountain, Southern Belle can run in parallel once schema is in)
-- Normalization audit + enrichment guards (independent of above)
-- `search_unified()` filter (independent)
+Refer to the Phase structure in Section 6. Key parallelizable workstreams:
 
-Realistic sequencing: schema first, then helper + Places to Go + crawler conversions in parallel, then search_unified and polish.
+- **After Phase 1 (foundation) lands**: Phase 3 (crawler conversions — 8 crawlers including haunted house trio), Phase 4 (propagation — Places to Go, feed pipeline, Shape A scoring, search_unified, enrichment guards), and Phase 5 (normalization + docs) can all proceed in parallel.
+- **Sequencing caveats**: `georgia_ren_fest.py` blocks on `annual_tentpoles.py` cleanup. "This Season" category user-visible ship blocks on festivals table cleanup.
+
+Estimated effort (crawler-dev review):
+- 1 week sprint: minimum viable — Ren Fest + Netherworld + Places to Go + festivals cleanup (~8h)
+- 2–3 weeks: core scope (5 named crawlers, Places to Go, festivals, scoring fix, search guard)
+- 3 weeks: + haunted house trio (this spec's target)
+- 4 weeks: + `genre_normalize.py` audit, enrichment guards, detail page polish, Shape F cross-category callouts
+
+Target: **full scope, ~4 weeks**.
 
 ## Out of scope
 
-- Building new crawlers for Lake Lanier, Callaway, state fairs, Burt's, Buford Corn Maze, Yule Forest. Pattern is documented; these ship as time permits.
-- Per-exhibition `promo_window_days` tuning (deferred until second consumer ships).
+- Building new crawlers for Lake Lanier, Callaway, Georgia National Fair, Burt's, Buford Corn Maze, Yule Forest, Six Flags. Pattern is documented; these ship as time permits.
+- Per-exhibition `promo_window_days` tuning (deferred until second consumer case observed).
 - Weather-aware seasonal recommendations (outside scope of this spec; Places to Go already handles weather).
 - Multi-city cross-portal seasonal rollups.
-- Feed-level contextual card during active windows (documented as follow-on).
+- Feed-level contextual card during active windows (documented as follow-on; ships if post-launch audit shows Places to Go under-surfacing).
+- Cross-category callouts for Shape F persistent places (e.g. "Garden Lights running" badge on ABG in Parks & Gardens).
+- `?seasonal=true` URL param on Places view + see-all link for the "This Season" category (phase 2 follow-on).
+- DB-enforced series invariant (crawler-side enforcement only in phase 1).
