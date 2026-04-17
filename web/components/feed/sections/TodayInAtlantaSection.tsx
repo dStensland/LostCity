@@ -10,7 +10,7 @@
  * Fetch: /api/portals/[slug]/network-feed?limit=60
  */
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Broadcast } from "@phosphor-icons/react";
 import Dot from "@/components/ui/Dot";
@@ -155,6 +155,23 @@ export function TodayInAtlantaSection({ portalSlug }: TodayInAtlantaSectionProps
 
   const activeGroup = tabs.find((t) => t.id === effectiveTab);
 
+  // Directional swap — new tab content enters from the side the user tabbed
+  // FROM, matching the spatial intent of moving right/left through the strip.
+  const prevTabRef = useRef(effectiveTab);
+  const lastDirRef = useRef<"left" | "right" | null>(null);
+  const swapDirection = useMemo(() => {
+    const prev = prevTabRef.current;
+    if (prev === effectiveTab) return lastDirRef.current;
+    const oldIdx = tabs.findIndex((t) => t.id === prev);
+    const newIdx = tabs.findIndex((t) => t.id === effectiveTab);
+    if (oldIdx < 0 || newIdx < 0 || oldIdx === newIdx) return lastDirRef.current;
+    return newIdx > oldIdx ? "right" : "left";
+  }, [effectiveTab, tabs]);
+  useEffect(() => {
+    if (swapDirection) lastDirRef.current = swapDirection;
+    prevTabRef.current = effectiveTab;
+  }, [effectiveTab, swapDirection]);
+
   // ── Guards ─────────────────────────────────────────────────────────────────
 
   if (loading) {
@@ -236,9 +253,19 @@ export function TodayInAtlantaSection({ portalSlug }: TodayInAtlantaSectionProps
         })}
       </div>
 
-      {/* Active tab stories */}
+      {/* Active tab stories — directional slide on swap, matches Lineup pattern */}
       {activeGroup && (
-        <div className="rounded-card bg-[var(--night)] border border-[var(--twilight)]/30 px-3 py-0.5">
+        <div
+          key={effectiveTab}
+          className={[
+            "rounded-card bg-[var(--night)] border border-[var(--twilight)]/30 px-3 py-0.5",
+            swapDirection === "right"
+              ? "lineup-tab-enter-from-right"
+              : swapDirection === "left"
+                ? "lineup-tab-enter-from-left"
+                : "lineup-tab-enter",
+          ].join(" ")}
+        >
           {activeGroup.posts.map((post, i) => (
             <NewsRow key={post.id} post={post} isLast={i === activeGroup.posts.length - 1} />
           ))}

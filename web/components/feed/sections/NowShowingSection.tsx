@@ -434,10 +434,12 @@ function TheaterCard({
     .slice(0, 3);
 
   return (
-    <div className="flex-shrink-0 w-64 snap-start rounded-card overflow-hidden bg-[var(--night)] shadow-card-sm hover-lift border-t-2 border border-[var(--twilight)]/40 border-t-[var(--vibe)]/25">
-      {/* Poster strip — only rendered when images exist */}
+    <div className="group/theater flex-shrink-0 w-64 snap-start rounded-card overflow-hidden bg-[var(--night)] shadow-card-sm hover-lift border-t-2 border border-[var(--twilight)]/40 border-t-[var(--vibe)]/25">
+      {/* Poster strip — only rendered when images exist.
+          Marquee riffle on hover: posters cascade a subtle tilt + lift.
+          See Wave D / D1 Now Showing motion. */}
       {posters.length > 0 && (
-        <div className="relative h-40 flex overflow-hidden">
+        <div className="theater-poster-riffle relative h-40 flex overflow-hidden">
           {posters.map((url, i) => (
             <div
               key={i}

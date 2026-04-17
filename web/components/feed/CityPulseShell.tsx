@@ -43,7 +43,6 @@ import GreetingBar from "./GreetingBar";
 import LineupSection from "./LineupSection";
 import CityPulseSection from "./CityPulseSection";
 import LazySection from "./LazySection";
-import InterestChannelsSection from "./sections/InterestChannelsSection";
 const HangFeedSection = dynamic(
   () => import("./sections/HangFeedSection").then(m => ({ default: m.HangFeedSection })),
   { ssr: false },
@@ -57,15 +56,13 @@ import FestivalsSection from "./sections/FestivalsSection";
 import HolidayHero from "./HolidayHero";
 import type { FeedEventData } from "@/components/EventCard";
 import type {
-  FeedBlockId,
   CityPulseSectionType,
   TimeSlot,
   FeedContext,
   ResolvedHeader,
   CityPulseResponse,
 } from "@/lib/city-pulse/types";
-import { DEFAULT_FEED_ORDER, ALWAYS_VISIBLE_BLOCKS, FIXED_LAST_BLOCKS } from "@/lib/city-pulse/types";
-import { ENABLE_HANGS_V1, ENABLE_LINEUP_RECURRING } from "@/lib/launch-flags";
+import { ENABLE_HANGS_V1 } from "@/lib/launch-flags";
 
 // Client-safe pure functions for instant shell rendering
 import { getDayOfWeek, getDayTheme } from "@/lib/city-pulse/time-slots";
@@ -98,12 +95,6 @@ const TIMELINE_SECTION_TYPES = new Set<CityPulseSectionType>([
   "this_week",
   "coming_up",
 ]);
-
-/** Middle blocks = everything except always-first and always-last */
-const MIDDLE_BLOCK_IDS: FeedBlockId[] = DEFAULT_FEED_ORDER.filter(
-  (b) => !ALWAYS_VISIBLE_BLOCKS.includes(b) && !FIXED_LAST_BLOCKS.includes(b),
-);
-
 
 // ---------------------------------------------------------------------------
 // Client-side default shell — renders at T=0 with no API call
@@ -200,7 +191,6 @@ export default function CityPulseShell({ portalSlug, serverHeroUrl, serverFeedDa
   const {
     feedLayout,
     savedInterests,
-    handleSaveLayout,
     handleInterestsChange,
     handleSaveInterests,
   } = useFeedPreferences({ isAuthenticated });
@@ -262,75 +252,10 @@ export default function CityPulseShell({ portalSlug, serverHeroUrl, serverFeedDa
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Background refresh for regulars cache.
-  // With server prefetch seeding the cache above, this is a no-op for staleTime (3 min).
-  // On cache miss (server returned null), fires immediately — no waterfall.
-  useEffect(() => {
-    if (!ENABLE_LINEUP_RECURRING) return;
-    queryClient.prefetchQuery({
-      queryKey: ["regulars", portalSlug],
-      queryFn: async () => {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 10_000);
-        try {
-          const res = await fetch(`/api/regulars?portal=${portalSlug}`, {
-            signal: controller.signal,
-          });
-          if (!res.ok) throw new Error(`Regulars prefetch failed: ${res.status}`);
-          return res.json();
-        } finally {
-          clearTimeout(timeoutId);
-        }
-      },
-      staleTime: 3 * 60 * 1000,
-    });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [portalSlug]);
-
-  // Pre-fetch network feed for TodayInAtlantaSection.
-  // Fires immediately on mount — shares ["network-feed", portalSlug] cache key.
-  useEffect(() => {
-    queryClient.prefetchQuery({
-      queryKey: ["network-feed", portalSlug],
-      queryFn: async () => {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 10_000);
-        try {
-          const res = await fetch(
-            `/api/portals/${portalSlug}/network-feed?limit=60`,
-            { signal: controller.signal },
-          );
-          if (!res.ok) throw new Error(`Network feed prefetch failed: ${res.status}`);
-          const data = await res.json();
-          const seenTitles = new Set<string>();
-          return ((data.posts || []) as { title: string }[]).filter((p) => {
-            const norm = p.title.toLowerCase().trim();
-            if (seenTitles.has(norm)) return false;
-            seenTitles.add(norm);
-            return true;
-          });
-        } finally {
-          clearTimeout(timeoutId);
-        }
-      },
-      staleTime: 5 * 60 * 1000,
-    });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [portalSlug]);
-
-  // Compute hidden block set and middle section order from feedLayout
-  const hiddenBlockSet = useMemo(() => {
-    if (!feedLayout?.hidden_blocks) return new Set<FeedBlockId>();
-    return new Set<FeedBlockId>(feedLayout.hidden_blocks);
-  }, [feedLayout]);
-
-  const middleSectionOrder = useMemo(() => {
-    if (!feedLayout?.visible_blocks) return MIDDLE_BLOCK_IDS;
-    // Extract middle blocks from visible_blocks, preserving user order
-    return feedLayout.visible_blocks.filter(
-      (b) => !ALWAYS_VISIBLE_BLOCKS.includes(b) && !FIXED_LAST_BLOCKS.includes(b),
-    );
-  }, [feedLayout]);
+  // Previous shell-level prefetches for regulars + network-feed were removed
+  // Wave C / C4. Both sections own their own useQuery with matching cache keys
+  // so the shell prefetch was racing the section fetch to the cache with no
+  // benefit. Keeping only the server-seed above for the SSR-provided slice.
 
   // Split sections: timeline sections for LineupSection
   const lineupSections = useMemo(() => {
@@ -352,63 +277,12 @@ export default function CityPulseShell({ portalSlug, serverHeroUrl, serverFeedDa
     [context, portalSlug, isLightTheme],
   );
 
-  /** Render a middle section by blockId */
-  const renderMiddleSection = (blockId: FeedBlockId) => {
-    switch (blockId) {
-      case "hangs":
-        return ENABLE_HANGS_V1 ? (
-          <div
-            key="city-pulse-hangs"
-            id="city-pulse-hangs"
-            data-feed-anchor="true"
-            data-index-label="Hangs"
-            data-block-id="hangs"
-            className="mt-6 scroll-mt-28"
-          >
-            <LazySection minHeight={200}>
-              <HangFeedSection portalSlug={portalSlug} />
-            </LazySection>
-          </div>
-        ) : null;
-
-      case "recurring":
-        // Regular Hangs rendered as standalone RegularHangsSection above
-        return null;
-
-      case "cinema":
-        // Now Showing is hard-coded in JSX (above PlacesToGo) so users cannot
-        // hide or reorder it. Return null here to prevent double-rendering for
-        // users who have "cinema" in their legacy visible_blocks preference.
-        return null;
-
-      case "live_music":
-        // Live Music is hard-coded in JSX (above PlacesToGo) — same rationale
-        // as cinema. Null here prevents duplicate rendering.
-        return null;
-
-      case "sports":
-        return (
-          <div
-            key="city-pulse-sports"
-            id="city-pulse-sports"
-            data-feed-anchor="true"
-            data-index-label="Game Day"
-            data-block-id="sports"
-            className="mt-8 scroll-mt-28"
-          >
-            <div className="h-px bg-[var(--twilight)]" />
-            <div className="pt-6">
-              <LazySection minHeight={200}>
-                <GameDaySection portalSlug={portalSlug} />
-              </LazySection>
-            </div>
-          </div>
-        );
-
-      default:
-        return null;
-    }
-  };
+  // Middle-section render: the feed-block prefs system used to route hangs,
+  // cinema, live_music, recurring, sports through a configurable switch. In
+  // practice every block other than hangs + sports had been hard-coded into
+  // JSX below (and the dispatch cases returned null), so user reorder/hide
+  // prefs silently did nothing. System removed Wave C / C3. Hangs + sports
+  // are now inline too; see their render sites.
 
   const hasAnyTabEvents = tabCounts && (tabCounts.today > 0 || tabCounts.this_week > 0 || tabCounts.coming_up > 0);
   const hasLineupContent = lineupSections.length > 0 || hasAnyTabEvents;
@@ -573,14 +447,15 @@ export default function CityPulseShell({ portalSlug, serverHeroUrl, serverFeedDa
         </LazySection>
       </div>
 
-      {/* 6. Interest Channels — only on civic portals where groups are meaningful */}
-      {portal?.settings?.vertical === "community" && (
-        <InterestChannelsSection portalSlug={portalSlug} onSubscriptionChange={refresh} compact />
-      )}
-
       {/* Active Contest card — self-fetching, renders only when a contest is live */}
       <ActiveContestSection portalSlug={portalSlug} />
 
+      {/* Yonder-specific sections.
+          TODO(Wave D): extract to a dedicated YonderFeedShell alongside the
+          existing CivicFeedShell / ArtsFeedShell / AdventureFeed so this file
+          isn't the catch-all for every portal that doesn't fit the default
+          pattern. Wave C scope was pruning the dead community branch (civic
+          already routes to CivicFeedShell in DefaultTemplate). */}
       {portalSlug === "yonder" && (
         <>
           <YonderRegionalEscapesSection
@@ -593,11 +468,37 @@ export default function CityPulseShell({ portalSlug, serverHeroUrl, serverFeedDa
         </>
       )}
 
-      {/* Middle sections — order + visibility controlled by feedLayout */}
-      {middleSectionOrder.map((blockId) => {
-        if (hiddenBlockSet.has(blockId)) return null;
-        return renderMiddleSection(blockId);
-      })}
+      {/* Hangs — feature-flagged, inline (was dispatched through feed-block
+          prefs prior to Wave C). */}
+      {ENABLE_HANGS_V1 && (
+        <div
+          id="city-pulse-hangs"
+          data-feed-anchor="true"
+          data-index-label="Hangs"
+          data-block-id="hangs"
+          className="mt-6 scroll-mt-28"
+        >
+          <LazySection minHeight={200}>
+            <HangFeedSection portalSlug={portalSlug} />
+          </LazySection>
+        </div>
+      )}
+
+      {/* Game Day — inline (was dispatched through feed-block prefs prior to Wave C). */}
+      <div
+        id="city-pulse-sports"
+        data-feed-anchor="true"
+        data-index-label="Game Day"
+        data-block-id="sports"
+        className="mt-8 scroll-mt-28"
+      >
+        <div className="h-px bg-[var(--twilight)]" />
+        <div className="pt-6">
+          <LazySection minHeight={200}>
+            <GameDaySection portalSlug={portalSlug} />
+          </LazySection>
+        </div>
+      </div>
 
       {/* Portal teasers — hidden until sibling portals are more built out */}
 

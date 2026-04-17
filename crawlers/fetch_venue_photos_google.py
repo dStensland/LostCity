@@ -1,13 +1,18 @@
 """
 Fetch venue photos from Google Places API (New).
 
-Targets venues that:
-- Have no image_url
-- Are active
-- Optionally filtered by venue_type
+Targets venues that need image enrichment — either no image_url, or
+no gallery_urls in their place_profile. Captures multiple photos per
+place (default top 6 by resolution) and persists to:
+
+- places.image_url  (first photo, only if currently NULL)
+- place_profile.hero_image_url  (first photo, only if currently NULL)
+- place_profile.gallery_urls  (top N photos as array, only if currently NULL)
+
+Idempotent — safe to re-run; skips fields that are already populated.
 
 Uses the Google Places (New) API v1 to search for the venue,
-then fetches the first photo URL via the media endpoint.
+then fetches photo URLs via the media endpoint.
 """
 
 import os
@@ -40,6 +45,9 @@ SKIP_IMAGE_PATTERNS = [
 
 # Max photo width to request (good balance of quality vs size)
 PHOTO_MAX_WIDTH = 800
+
+# Default cap on photos persisted to place_profile.gallery_urls
+DEFAULT_MAX_PHOTOS = 6
 
 
 def search_place_photos(query: str) -> list[dict]:
@@ -105,24 +113,55 @@ def get_photo_url(photo_name: str) -> Optional[str]:
         return None
 
 
+def _collect_photo_urls(photos: list[dict], max_count: int) -> list[str]:
+    """Resolve up to max_count usable photo URLs from a Google Places photos list,
+    sorted by resolution descending. Returns the resolved CDN URLs."""
+    sorted_photos = sorted(
+        photos,
+        key=lambda p: p.get("widthPx", 0) * p.get("heightPx", 0),
+        reverse=True,
+    )
+    urls: list[str] = []
+    # Try up to 2x the cap to allow for failures, then trim to cap
+    for photo in sorted_photos[: max_count * 2]:
+        photo_name = photo.get("name")
+        if not photo_name:
+            continue
+        url = get_photo_url(photo_name)
+        if url:
+            urls.append(url)
+            if len(urls) >= max_count:
+                break
+    return urls
+
+
 def fetch_venue_photos(
     limit: int = 50,
     venue_type: Optional[str] = None,
     dry_run: bool = False,
     skip_with_website: bool = False,
+    max_photos: int = DEFAULT_MAX_PHOTOS,
+    include_with_image: bool = False,
 ) -> dict:
     """
-    Fetch photos from Google Places for venues without images.
+    Fetch photos from Google Places for venues that need image enrichment.
+
+    Default behavior: only places with NULL image_url.
+    With include_with_image=True: also processes places that have image_url
+    but no place_profile.gallery_urls (gallery backfill mode).
     """
     client = get_client()
 
-    # Build query
+    # Build query — for gallery backfill, get all active places
     query = (
         client.table("places")
         .select("id,name,slug,address,city,state,website,image_url,place_type")
         .eq("is_active", True)
-        .is_("image_url", "null")
     )
+
+    if not include_with_image:
+        # Default: only places without any image
+        query = query.is_("image_url", "null")
 
     if venue_type:
         query = query.eq("place_type", venue_type)
@@ -133,6 +172,22 @@ def fetch_venue_photos(
 
     result = query.order("name").limit(limit).execute()
     venues = result.data or []
+
+    # Gallery backfill mode: filter out places that already have gallery_urls
+    if include_with_image and venues:
+        venue_ids = [v["id"] for v in venues]
+        profiles = (
+            client.table("place_profile")
+            .select("place_id,gallery_urls")
+            .in_("place_id", venue_ids)
+            .not_.is_("gallery_urls", "null")
+            .execute()
+        )
+        with_gallery = {p["place_id"] for p in (profiles.data or [])}
+        venues = [v for v in venues if v["id"] not in with_gallery]
+        print(
+            f"Gallery backfill mode: filtered to {len(venues)} places without gallery_urls"
+        )
 
     stats = {
         "total": len(venues),
@@ -177,31 +232,53 @@ def fetch_venue_photos(
             time.sleep(0.5)
             continue
 
-        # Try to get a usable photo URL (prefer larger photos)
-        # Sort by resolution (width * height) descending
-        photos.sort(key=lambda p: p.get("widthPx", 0) * p.get("heightPx", 0), reverse=True)
+        # Resolve top-N usable photo URLs (sorted by resolution)
+        photo_urls = _collect_photo_urls(photos, max_photos)
 
-        photo_url = None
-        for photo in photos[:3]:  # Try top 3
-            photo_name = photo.get("name")
-            if not photo_name:
-                continue
-
-            url = get_photo_url(photo_name)
-            if url:
-                photo_url = url
-                break
-
-        if not photo_url:
-            print("  Could not resolve photo URL")
+        if not photo_urls:
+            print("  Could not resolve any photo URLs")
             stats["failed"] += 1
             time.sleep(0.5)
             continue
 
-        print(f"  FOUND: {photo_url[:80]}...")
+        hero = photo_urls[0]
+        print(f"  FOUND {len(photo_urls)} photos — hero: {hero[:70]}...")
 
         if not dry_run:
-            client.table("places").update({"image_url": photo_url}).eq("id", venue["id"]).execute()
+            # 1. places.image_url — only if currently NULL (backward compat)
+            if not venue.get("image_url"):
+                client.table("places").update({"image_url": hero}).eq(
+                    "id", venue["id"]
+                ).execute()
+
+            # 2. place_profile — upsert hero_image_url + gallery_urls
+            existing = (
+                client.table("place_profile")
+                .select("place_id,hero_image_url,gallery_urls")
+                .eq("place_id", venue["id"])
+                .execute()
+            )
+            if existing.data:
+                # Update only NULL fields (idempotent)
+                row = existing.data[0]
+                update_fields: dict = {}
+                if not row.get("hero_image_url"):
+                    update_fields["hero_image_url"] = hero
+                if not row.get("gallery_urls"):
+                    update_fields["gallery_urls"] = photo_urls
+                if update_fields:
+                    client.table("place_profile").update(update_fields).eq(
+                        "place_id", venue["id"]
+                    ).execute()
+            else:
+                # No profile row yet — insert with hero + gallery
+                client.table("place_profile").insert(
+                    {
+                        "place_id": venue["id"],
+                        "hero_image_url": hero,
+                        "gallery_urls": photo_urls,
+                    }
+                ).execute()
             print("  Updated!")
 
         stats["found"] += 1
@@ -226,6 +303,17 @@ if __name__ == "__main__":
     parser.add_argument("--venue-type", type=str, help="Filter by venue type")
     parser.add_argument("--dry-run", action="store_true", help="Don't update database")
     parser.add_argument("--no-website", action="store_true", help="Only venues without websites")
+    parser.add_argument(
+        "--max-photos",
+        type=int,
+        default=DEFAULT_MAX_PHOTOS,
+        help=f"Cap photos per place (default {DEFAULT_MAX_PHOTOS})",
+    )
+    parser.add_argument(
+        "--include-with-image",
+        action="store_true",
+        help="Also process places that already have image_url (gallery backfill mode)",
+    )
 
     args = parser.parse_args()
 
@@ -238,4 +326,6 @@ if __name__ == "__main__":
         venue_type=args.venue_type,
         dry_run=args.dry_run,
         skip_with_website=args.no_website,
+        max_photos=args.max_photos,
+        include_with_image=args.include_with_image,
     )

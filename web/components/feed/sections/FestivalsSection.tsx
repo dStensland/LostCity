@@ -16,6 +16,7 @@ import { Crown } from "@phosphor-icons/react";
 import FeedSectionHeader from "@/components/feed/FeedSectionHeader";
 import FeedSectionReveal from "@/components/feed/FeedSectionReveal";
 import FeedSectionSkeleton from "@/components/feed/FeedSectionSkeleton";
+import SmartImage from "@/components/SmartImage";
 import type { Festival } from "@/lib/festivals";
 import {
   computeCountdown,
@@ -178,26 +179,33 @@ export default function FestivalsSection({ portalSlug, portalId }: FestivalsSect
             <Link
               key={item.id}
               href={item.href}
-              className="group flex-shrink-0 w-[220px] snap-start rounded-card overflow-hidden border border-[var(--twilight)]/40 bg-[var(--night)] transition-all duration-200 hover:border-[var(--twilight)]/70 hover:-translate-y-0.5 hover:shadow-card-sm"
+              // Motion personality: cinematic, poster-weight.
+              // - Slight hover lift + shadow (existing)
+              // - 3deg tilt on hover via `festival-card-tilt` utility (GPU transform)
+              // - Sharp image does a subtle ken-burns on hover
+              // See docs/plans/feed-elevate-2026-04-16.md Wave B / B5.
+              className="group festival-card-tilt flex-shrink-0 w-[220px] snap-start rounded-card overflow-hidden border border-[var(--twilight)]/40 bg-[var(--night)] transition-all duration-300 ease-out hover:border-[var(--gold)]/40 hover:-translate-y-0.5 hover:shadow-card-md"
             >
               {/* Image — fixed height, blurred fill + sharp contain */}
               <div className="relative h-[116px] overflow-hidden bg-[var(--dusk)]">
                 {item.imageUrl ? (
                   <>
                     {/* Blurred background fill — covers letterbox areas */}
-                    <img
+                    <SmartImage
                       src={item.imageUrl}
                       alt=""
-                      className="absolute inset-0 w-full h-full object-cover scale-110 blur-xl opacity-35"
-                      loading="lazy"
-                      aria-hidden="true"
+                      fill
+                      sizes="220px"
+                      className="object-cover scale-110 blur-xl opacity-35"
+                      aria-hidden
                     />
                     {/* Sharp contained image — full image visible, no crop */}
-                    <img
+                    <SmartImage
                       src={item.imageUrl}
                       alt={item.title}
-                      className="absolute inset-0 w-full h-full object-contain transition-transform duration-500 group-hover:scale-105"
-                      loading="lazy"
+                      fill
+                      sizes="220px"
+                      className="object-contain transition-transform duration-700 ease-out group-hover:scale-[1.04]"
                     />
                   </>
                 ) : (
@@ -205,9 +213,14 @@ export default function FestivalsSection({ portalSlug, portalId }: FestivalsSect
                     <Crown weight="duotone" className="w-8 h-8 text-[var(--gold)]/30" />
                   </div>
                 )}
-                {/* Countdown badge — top right, solid surface, no blur */}
+                {/* Countdown badge — top right, solid surface, no blur.
+                    "Happening Now" urgency gets a slow breathing pulse so it reads as live. */}
                 <span
-                  className="absolute top-2 right-2 inline-flex px-1.5 py-0.5 rounded text-2xs font-mono font-semibold tracking-wide whitespace-nowrap"
+                  className={`absolute top-2 right-2 inline-flex px-1.5 py-0.5 rounded text-2xs font-mono font-semibold tracking-wide whitespace-nowrap ${
+                    item.countdownText === "Happening Now"
+                      ? "festival-badge-pulse"
+                      : ""
+                  }`}
                   style={{
                     backgroundColor: `color-mix(in srgb, ${item.urgencyColor} 18%, var(--night))`,
                     color: item.urgencyColor,

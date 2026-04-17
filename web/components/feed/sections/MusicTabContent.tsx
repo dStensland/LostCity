@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useCallback, useEffect, useState, useMemo } from "react";
 import { MusicNote } from "@phosphor-icons/react";
 import { TonightShowCard } from "@/components/feed/venues/TonightShowCard";
 import { VenueShowCard } from "@/components/feed/venues/VenueShowCard";
 import { GenreFilterStrip } from "@/components/feed/GenreFilterStrip";
 import FeedSectionHeader from "@/components/feed/FeedSectionHeader";
 import FeedSectionReveal from "@/components/feed/FeedSectionReveal";
-import { getGenreBuckets, type GenreBucket } from "@/lib/genre-map";
+import { getGenreBuckets, GENRE_BUCKETS, type GenreBucket } from "@/lib/genre-map";
 import { buildExploreUrl } from "@/lib/find-url";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -71,6 +71,25 @@ export default function LiveMusicSection({
   const [data, setData] = useState<MusicVenueGroup[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeGenre, setActiveGenre] = useState<string | null>(null);
+  const [swapDirection, setSwapDirection] = useState<"left" | "right" | null>(null);
+
+  // Directional swap — genre strip reads "All | Rock | Hip-Hop | ..." so
+  // moving right along the strip slides new content in from the right.
+  // Computed in the handler (at user-click time) rather than in render to
+  // keep swapDirection and activeGenre in sync on the first render that
+  // remounts the content wrapper.
+  const GENRE_ORDER = useMemo(() => [null, ...GENRE_BUCKETS] as const, []);
+  const handleGenreChange = useCallback((next: string | null) => {
+    setActiveGenre((current) => {
+      if (current === next) return current;
+      const oldIdx = GENRE_ORDER.indexOf(current as (typeof GENRE_ORDER)[number]);
+      const newIdx = GENRE_ORDER.indexOf(next as (typeof GENRE_ORDER)[number]);
+      if (oldIdx >= 0 && newIdx >= 0 && oldIdx !== newIdx) {
+        setSwapDirection(newIdx > oldIdx ? "right" : "left");
+      }
+      return next;
+    });
+  }, [GENRE_ORDER]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -187,8 +206,21 @@ export default function LiveMusicSection({
         <div>
           <GenreFilterStrip
             activeGenre={activeGenre}
-            onGenreChange={setActiveGenre}
+            onGenreChange={handleGenreChange}
           />
+
+          {/* Content wrapper — remounts on genre change, triggering the
+              directional slide. Matches Lineup pattern. */}
+          <div
+            key={activeGenre ?? "all"}
+            className={
+              swapDirection === "right"
+                ? "lineup-tab-enter-from-right"
+                : swapDirection === "left"
+                  ? "lineup-tab-enter-from-left"
+                  : "lineup-tab-enter"
+            }
+          >
 
           {tonightShows.length > 0 && (
             <div className="mb-4">
@@ -256,6 +288,7 @@ export default function LiveMusicSection({
               No {activeGenre} shows this week
             </p>
           )}
+          </div>
         </div>
       )}
     </FeedSectionReveal>

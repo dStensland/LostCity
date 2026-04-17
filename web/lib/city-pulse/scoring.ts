@@ -123,19 +123,87 @@ export function contextBoost(event: ScorableEvent, context: FeedContext | null):
   return boost;
 }
 
+// ---------------------------------------------------------------------------
+// Anonymous rank boost — time-of-day + intrinsic quality signals
+// ---------------------------------------------------------------------------
+
+/**
+ * Compute a ranking boost for anonymous (no-signals) feed ordering.
+ * Fixes the "library class at 6pm outranks a $35 City Winery show" problem
+ * by weighting time-of-day relevance, importance tier, and quality proxies.
+ *
+ * Individual signals are capped so that personalization signals (friends going,
+ * followed venues) always dominate when present.
+ */
+export function computeAnonymousRankBoost(
+  event: ScorableEvent & {
+    start_time?: string | null;
+    is_all_day?: boolean;
+    importance?: string | null;
+    cost_tier?: string | null;
+    venue_has_editorial?: boolean;
+  },
+  now: Date,
+): number {
+  let boost = 0;
+
+  // 1. Time-of-day relevance (core fix for the library-class-at-6pm bug)
+  //    Only applies when the event is today; future-day events skip this entirely.
+  const todayISO = now.toISOString().slice(0, 10);
+  if (event.start_date === todayISO && event.start_time && !event.is_all_day) {
+    const parts = event.start_time.split(":").map((s) => parseInt(s, 10));
+    const eventMinutes = parts[0] * 60 + parts[1];
+    const nowMinutes = now.getHours() * 60 + now.getMinutes();
+    const delta = eventMinutes - nowMinutes;
+    //   starts in next 3h (180 min) → +30
+    //   starts in 3–6h              → +20
+    //   starts in 6–12h             → +5
+    //   starts >12h out             → 0
+    //   already started (within 2h window) → +10
+    if (delta >= 0 && delta <= 180) boost += 30;
+    else if (delta > 180 && delta <= 360) boost += 20;
+    else if (delta > 360 && delta <= 720) boost += 5;
+    else if (delta < 0 && delta > -120) boost += 10;
+  }
+
+  // 2. Importance tier (reuses the taxonomy already encoded in tier-assignment.ts)
+  if (event.importance === "flagship") boost += 25;
+  else if (event.importance === "major") boost += 12;
+
+  // 3. Tentpole / festival-linked
+  if (event.is_tentpole) boost += 15;
+
+  // 4. Ticket signal — paid ticketed events are usually curated / higher intent
+  if (event.price_min != null && event.price_min > 0) boost += 8;
+
+  // 5. Image signal — card-quality proxy
+  if (event.image_url) boost += 6;
+
+  // 6. Venue editorial weight
+  if (event.venue_has_editorial) boost += 10;
+
+  return boost;
+}
+
 /**
  * Score an event based on user signals. Returns score + reasons.
  * If no user signals are provided, returns score 0 with no reasons.
  * Optionally accepts feed context for editorial boosting.
+ *
+ * @param now - Reference instant for time-of-day scoring. Defaults to new Date().
+ *              Pass the same value for all events in a render to ensure a consistent
+ *              snapshot across the full scored pool.
  */
 export function scoreEvent(
   event: ScorableEvent,
   signals: UserSignals | null,
   friendsGoingMap: Record<number, FriendGoingInfo[]> = {},
   context?: FeedContext | null,
+  now: Date = new Date(),
 ): ScoredResult {
   const ctxBoost = contextBoost(event, context ?? null);
-  if (!signals) return { score: ctxBoost, reasons: [] };
+  const anonBoost = computeAnonymousRankBoost(event, now);
+  if (!signals) return { score: ctxBoost + anonBoost, reasons: [] };
 
   let score = 0;
   const reasons: RecommendationReason[] = [];
@@ -331,7 +399,7 @@ export function scoreEvent(
   }
 
   return {
-    score: score + ctxBoost,
+    score: score + ctxBoost + Math.round(anonBoost * 0.4),
     reasons: reasons.length > 0 ? reasons : [],
     friends_going: friendsGoing.length > 0 ? friendsGoing : undefined,
   };

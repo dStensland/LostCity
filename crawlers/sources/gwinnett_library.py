@@ -573,6 +573,17 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 "is_recurring": bool(ev.get("recurring_id")),
                 "recurrence_rule": None,
                 "content_hash": content_hash,
+                # Library programming is class-like (structured, scheduled
+                # instruction or workshop session) — flag upstream so the feed
+                # Lineup filter can exclude reliably regardless of category
+                # taxonomy drift. See docs/plans/feed-elevate-2026-04-16.md A3.
+                "is_class": category in (
+                    "education",
+                    "workshops",
+                    "fitness",
+                    "support",
+                    "words",
+                ),
             }
 
             existing = find_event_by_hash(content_hash)

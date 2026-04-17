@@ -45,7 +45,9 @@ export const TonightShowCard = memo(function TonightShowCard({
     <Link
       href={`/${portalSlug}/spots/${venue.slug}`}
       prefetch={false}
-      className="group flex-shrink-0 w-[260px] snap-start rounded-card overflow-hidden bg-[var(--night)] border border-[var(--twilight)]/40 hover:border-[var(--twilight)]/60 transition-colors"
+      // Motion personality: amplified, loud. Neon glow sweep on hover only —
+      // idle list stays calm. See Wave B/B5 motion spec.
+      className="group livemusic-card-glow flex-shrink-0 w-[260px] snap-start rounded-card overflow-hidden bg-[var(--night)] border border-[var(--twilight)]/40 hover:border-[var(--neon-magenta)]/40 transition-colors"
     >
       {/* Image area with gradient overlay */}
       <div className="relative h-[100px] overflow-hidden bg-[var(--dusk)]">

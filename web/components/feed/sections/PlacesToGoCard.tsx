@@ -17,22 +17,25 @@ export function PlacesToGoCard({ card, accentColor }: PlacesToGoCardProps) {
   return (
     <Link
       href={card.href}
-      className="flex items-start gap-3 p-2.5 rounded-lg bg-[var(--night)] border border-[var(--twilight)]/40 border-l-2 hover:bg-[var(--dusk)] transition-colors no-underline"
+      // Motion personality: curated, slow.
+      // Hover tint shift + subtle image push-in. Neighborhood tag picks up
+      // accent on hover. See Wave D / D1 Places to Go motion.
+      className="group/placecard flex items-start gap-3 p-2.5 rounded-lg bg-[var(--night)] border border-[var(--twilight)]/40 border-l-2 hover:bg-[var(--dusk)] transition-colors no-underline"
       style={{ borderLeftColor: accentColor }}
     >
-      {/* Image */}
+      {/* Image — subtle 1.05× zoom on card hover, 600ms ease. */}
       <div className="w-20 h-20 flex-shrink-0 rounded-lg overflow-hidden bg-[var(--twilight)] relative">
         {card.image_url ? (
           <SmartImage
             src={card.image_url}
             alt=""
             fill
-            className="object-cover"
+            className="object-cover transition-transform duration-[600ms] ease-out group-hover/placecard:scale-[1.05]"
             loading="lazy"
           />
         ) : (
           <div
-            className="w-full h-full"
+            className="w-full h-full transition-transform duration-[600ms] ease-out group-hover/placecard:scale-[1.05]"
             style={{
               background: `linear-gradient(135deg, color-mix(in srgb, ${accentColor} 30%, transparent), color-mix(in srgb, ${accentColor} 10%, transparent))`,
             }}
@@ -49,7 +52,12 @@ export function PlacesToGoCard({ card, accentColor }: PlacesToGoCardProps) {
         {/* Subtitle: neighborhood · open status */}
         <p className="text-xs text-[var(--soft)] mt-0.5 flex items-center gap-1">
           {card.neighborhood && (
-            <span className="truncate">{card.neighborhood}</span>
+            <span
+              className="truncate transition-colors group-hover/placecard:text-[color:var(--place-accent)]"
+              style={{ ["--place-accent" as string]: accentColor }}
+            >
+              {card.neighborhood}
+            </span>
           )}
           {card.neighborhood && showOpenStatus && <Dot />}
           {showOpenStatus && (

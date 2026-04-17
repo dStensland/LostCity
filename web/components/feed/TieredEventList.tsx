@@ -84,14 +84,16 @@ export function TieredEventList({
         ))}
       </div>
 
-      {/* Show more */}
+      {/* Show more — promoted treatment: coral outline, small sparkle glyph,
+          feels like an intent-ful continuation rather than a buried footer. */}
       {!expanded && hiddenCount > 0 && (
         <button
           type="button"
           onClick={() => setExpanded(true)}
-          className="w-full py-2.5 text-center font-mono text-xs font-medium text-[var(--soft)] hover:text-[var(--coral)] transition-colors border border-[var(--twilight)]/40 rounded-lg hover:border-[var(--coral)]/30 hover:bg-[var(--coral)]/[0.04] active:scale-[0.99]"
+          className="w-full py-3 text-center font-mono text-xs font-semibold text-[var(--coral)] border border-[var(--coral)]/45 rounded-lg bg-[var(--coral)]/[0.05] hover:bg-[var(--coral)]/[0.12] hover:border-[var(--coral)]/70 active:scale-[0.99] transition-all inline-flex items-center justify-center gap-2 uppercase tracking-[0.08em]"
         >
-          Show {hiddenCount} more event{hiddenCount !== 1 ? "s" : ""}
+          <span>Show {hiddenCount} more event{hiddenCount !== 1 ? "s" : ""}</span>
+          <span aria-hidden className="text-sm leading-none">↓</span>
         </button>
       )}
 

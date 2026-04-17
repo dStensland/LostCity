@@ -9,6 +9,7 @@
 
 import type { TimeSlot } from "./types";
 import type { WeatherSignal } from "@/lib/weather-utils";
+import { buildExploreUrl } from "@/lib/find-url";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -36,19 +37,70 @@ function getDayType(dayOfWeek: string): DayType {
   return weekendDays.includes(dayOfWeek) ? "weekend" : "weekday";
 }
 
+// The three helpers below emit canonical Explore URLs (/{portal}/explore?...).
+// Prior implementation emitted the legacy `?view=find&type=...` root-path form,
+// which violates web/CLAUDE.md hard rule #1. Wave C / C6.
+
+/** Pull well-known Explore filter keys out of an ad-hoc params bag so they
+ *  land on the canonical params of buildExploreUrl rather than extraParams. */
+function splitExploreParams(
+  params: Record<string, string>,
+): {
+  date?: string;
+  categories?: string;
+  genres?: string;
+  tags?: string;
+  vibes?: string;
+  search?: string;
+  rest: Record<string, string>;
+} {
+  const { date, categories, genres, tags, vibes, search, ...rest } = params;
+  return { date, categories, genres, tags, vibes, search, rest };
+}
+
 function buildHref(portalSlug: string, params: Record<string, string>): string {
-  const searchParams = new URLSearchParams({ view: "find", type: "events", ...params });
-  return `/${portalSlug}?${searchParams.toString()}`;
+  const split = splitExploreParams(params);
+  return buildExploreUrl({
+    portalSlug,
+    lane: "events",
+    date: split.date,
+    categories: split.categories,
+    genres: split.genres,
+    tags: split.tags,
+    vibes: split.vibes,
+    search: split.search,
+    extraParams: split.rest,
+  });
 }
 
 function buildVenueHref(portalSlug: string, params: Record<string, string>): string {
-  const searchParams = new URLSearchParams({ view: "find", type: "destinations", ...params });
-  return `/${portalSlug}?${searchParams.toString()}`;
+  const split = splitExploreParams(params);
+  return buildExploreUrl({
+    portalSlug,
+    lane: "places",
+    date: split.date,
+    categories: split.categories,
+    genres: split.genres,
+    tags: split.tags,
+    vibes: split.vibes,
+    search: split.search,
+    extraParams: split.rest,
+  });
 }
 
 function buildRegularsHref(portalSlug: string, params: Record<string, string> = {}): string {
-  const searchParams = new URLSearchParams({ view: "find", type: "regulars", ...params });
-  return `/${portalSlug}?${searchParams.toString()}`;
+  const split = splitExploreParams(params);
+  return buildExploreUrl({
+    portalSlug,
+    lane: "regulars",
+    date: split.date,
+    categories: split.categories,
+    genres: split.genres,
+    tags: split.tags,
+    vibes: split.vibes,
+    search: split.search,
+    extraParams: split.rest,
+  });
 }
 
 

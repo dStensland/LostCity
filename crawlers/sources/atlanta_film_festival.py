@@ -64,8 +64,12 @@ EASTERN = ZoneInfo("America/New_York")
 # Venue data for the festival itself (multi-venue, used as fallback)
 # ---------------------------------------------------------------------------
 FESTIVAL_VENUE_DATA = {
-    "name": "Atlanta Film Festival 2026",
-    "slug": "atlanta-film-festival-2026",
+    # Year-agnostic — matches the canonical persistent place row (id 200) via
+    # slug. Do not append the year: this crawler runs annually and a year-
+    # suffixed slug created a duplicate place (id 6589) for 2026 that had to
+    # be merged. See docs/plans/feed-elevate-2026-04-16.md Wave A / A4.
+    "name": "Atlanta Film Festival",
+    "slug": "atlanta-film-festival",
     "address": "535 Means St NW",
     "neighborhood": "Midtown",
     "city": "Atlanta",

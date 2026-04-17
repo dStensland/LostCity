@@ -363,12 +363,18 @@ function scoreAndSort(
   events: FeedEventData[],
   signals: UserSignals | null,
   friendsGoingMap: Record<number, FriendGoingInfo[]>,
+  now: Date = new Date(),
+  editorialMap?: EditorialMap,
 ): EventWithScore[] {
   // Deduplicate series first — keep only next occurrence
   const deduped = deduplicateSeries(events);
 
   const scored = deduped.map((event) => {
-    const result = scoreEvent(event as never, signals, friendsGoingMap);
+    const venueId = event.venue?.id;
+    const venueHasEditorial =
+      venueId != null && editorialMap != null && (editorialMap[venueId]?.length ?? 0) > 0;
+    const eventWithEditorial = { ...event, venue_has_editorial: venueHasEditorial };
+    const result = scoreEvent(eventWithEditorial as never, signals, friendsGoingMap, undefined, now);
     const seriesId = (event as Record<string, unknown>).series_id as number | null;
     const isRecurring = !!seriesId;
     return {
@@ -990,8 +996,9 @@ export function buildTheSceneSection(
   // 5. Score individually, then sort. No cap — these are compact text rows and
   //    the client handles chip filtering + expand/collapse. Do NOT call
   //    scoreAndSort() which has series-only dedup baked in.
+  const now = new Date();
   const scored = matched.map((event) => {
-    const result = scoreEvent(event as never, signals, friendsGoingMap);
+    const result = scoreEvent(event as never, signals, friendsGoingMap, undefined, now);
     return {
       ...event,
       score: result.score,

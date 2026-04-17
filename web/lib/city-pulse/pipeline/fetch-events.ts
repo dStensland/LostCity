@@ -56,6 +56,25 @@ const EVENT_SELECT_WITHOUT_SERIES_BLURHASH = `
 export const EVENT_SELECT = EVENT_SELECT_WITH_SERIES_BLURHASH;
 export const HORIZON_POOL_FILTER = buildHorizonPoolFilter();
 
+/**
+ * Category IDs excluded from the curated Lineup + interest pools.
+ *
+ * Rationale per exclusion:
+ * - recreation / wellness / exercise / fitness: scheduled classes at rec
+ *   centers, gyms, libraries — not public discovery events
+ * - unknown: unclassified, usually ingestion noise
+ * - support_group / support: AA meetings, grief groups — belong in civic
+ *   portals, never the main Lineup
+ * - religious: services, not events
+ * - community / family: gated into their own portals
+ * - learning / education / workshops: adult-ed, tutorials, library programming,
+ *   craft sessions — class-like content, not open-discovery events. `is_class`
+ *   at the crawler layer is the cleaner upstream signal; this list is the
+ *   defense-in-depth for sources that don't tag reliably.
+ */
+const LINEUP_EXCLUDED_CATEGORIES =
+  "(recreation,unknown,support_group,religious,support,community,family,wellness,exercise,fitness,learning,education,workshops)";
+
 // ---------------------------------------------------------------------------
 // Return types
 // ---------------------------------------------------------------------------
@@ -397,7 +416,7 @@ function buildEventQueryWithSelect(
     // non-festival Atlanta life. The is_tentpole / flagship / major exception
     // is an explicit curator override — not automatic per-event elevation.
     .or("festival_id.is.null,is_tentpole.eq.true,importance.eq.flagship,importance.eq.major")
-    .not("category_id", "in", "(recreation,unknown,support_group,religious,support,community,family,wellness,exercise,learning)");
+    .not("category_id", "in", LINEUP_EXCLUDED_CATEGORIES);
   if (excludeSourceIds.length > 0) {
     q = q.not("source_id", "in", `(${excludeSourceIds.join(",")})`);
   }
@@ -438,7 +457,7 @@ export function buildInterestQueries(
       .is("canonical_event_id", null)
       .or("is_class.eq.false,is_class.is.null")
       .or("is_sensitive.eq.false,is_sensitive.is.null")
-      .not("category_id", "in", "(recreation,unknown,support_group,religious,support,community,family,wellness,exercise,learning)")
+      .not("category_id", "in", LINEUP_EXCLUDED_CATEGORIES)
       .neq("content_kind", "exhibit");
     if (excludeSourceIds.length > 0) {
       q = q.not("source_id", "in", `(${excludeSourceIds.join(",")})`);
@@ -554,7 +573,7 @@ export async function fetchEventPools(
           // Mirror dedup rule from buildEventQueryWithSelect: festival-linked
           // events live in The Big Stuff + festival detail page, not The Lineup.
           .or("festival_id.is.null,is_tentpole.eq.true,importance.eq.flagship,importance.eq.major")
-          .not("category_id", "in", "(recreation,unknown,support_group,religious,support,community,family,wellness,exercise,learning)")
+          .not("category_id", "in", LINEUP_EXCLUDED_CATEGORIES)
           .neq("content_kind", "exhibit");
         if (ymcaSourceIds.length > 0) {
           q = q.not("source_id", "in", `(${ymcaSourceIds.join(",")})`);
@@ -578,7 +597,7 @@ export async function fetchEventPools(
           .or("is_sensitive.eq.false,is_sensitive.is.null")
           // Mirror dedup rule: festival-linked events excluded from Lineup.
           .or("festival_id.is.null,is_tentpole.eq.true,importance.eq.flagship,importance.eq.major")
-          .not("category_id", "in", "(recreation,unknown,support_group,religious,support,community,family,wellness,exercise,learning)")
+          .not("category_id", "in", LINEUP_EXCLUDED_CATEGORIES)
           .neq("content_kind", "exhibit");
         if (ymcaSourceIds.length > 0) {
           q = q.not("source_id", "in", `(${ymcaSourceIds.join(",")})`);
@@ -757,7 +776,7 @@ export async function fetchNewFromSpots(
     .is("canonical_event_id", null)
     .or("is_class.eq.false,is_class.is.null")
     .or("is_sensitive.eq.false,is_sensitive.is.null")
-    .not("category_id", "in", "(recreation,unknown,support_group,religious,support,community,family,wellness,exercise,learning)")
+    .not("category_id", "in", LINEUP_EXCLUDED_CATEGORIES)
     .neq("content_kind", "exhibit")
     .order("start_date", { ascending: true })
     .order("data_quality", { ascending: false, nullsFirst: false })

@@ -262,6 +262,45 @@ export default function LineupSection({
   const chipScrollRef = useRef<HTMLDivElement>(null);
   const [chipOverflow, setChipOverflow] = useState(false);
 
+  // Directional swap animation — new content enters from the side the user
+  // tabbed FROM (tab-right → new content slides in from the right). Refs
+  // hold the previous values during render; useEffect below syncs them after.
+  const prevTabIdRef = useRef(activeTabId);
+  const prevChipIdRef = useRef(activeChipId);
+  const lastSwapDirectionRef = useRef<"left" | "right" | null>(null);
+
+  // Compute direction for THIS render by comparing prev (still old) to current.
+  // "right" = user moved forward in the ordered list (e.g. Today → This Week).
+  const swapDirection = useMemo(() => {
+    const prevTab = prevTabIdRef.current;
+    const prevChip = prevChipIdRef.current;
+    if (prevTab !== activeTabId) {
+      const oldIdx = TABS.findIndex((t) => t.id === prevTab);
+      const newIdx = TABS.findIndex((t) => t.id === activeTabId);
+      if (oldIdx >= 0 && newIdx >= 0 && oldIdx !== newIdx) {
+        return newIdx > oldIdx ? "right" : "left";
+      }
+    }
+    if (prevChip !== activeChipId) {
+      const chipOrder = ["all", ...localInterests];
+      const oldIdx = chipOrder.indexOf(prevChip);
+      const newIdx = chipOrder.indexOf(activeChipId);
+      if (oldIdx >= 0 && newIdx >= 0 && oldIdx !== newIdx) {
+        return newIdx > oldIdx ? "right" : "left";
+      }
+    }
+    // No direction change OR missing chip reference (e.g. chip just removed) —
+    // fall back to the last-known direction so the animation still fires with
+    // physical continuity rather than snapping to the default vertical fade.
+    return lastSwapDirectionRef.current;
+  }, [activeTabId, activeChipId, localInterests]);
+
+  useEffect(() => {
+    if (swapDirection) lastSwapDirectionRef.current = swapDirection;
+    prevTabIdRef.current = activeTabId;
+    prevChipIdRef.current = activeChipId;
+  }, [activeTabId, activeChipId, swapDirection]);
+
   const [isSaving, setIsSaving] = useState(false);
   const handleSave = useCallback(async () => {
     setIsSaving(true);
@@ -316,15 +355,11 @@ export default function LineupSection({
   }, [trackFilterInteraction]);
 
   const handleTabClick = useCallback(async (tabId: string) => {
-    if (typeof document !== "undefined" && "startViewTransition" in document) {
-      (document as unknown as { startViewTransition: (cb: () => void) => void }).startViewTransition(() => {
-        setActiveTabId(tabId);
-        setTabFetchError(null);
-      });
-    } else {
-      setActiveTabId(tabId);
-      setTabFetchError(null);
-    }
+    // Direct setState — we own the swap animation via lineup-tab-enter-from-*
+    // (directional, computed from tab index delta). startViewTransition would
+    // layer a cross-fade on top and conflict with the slide direction.
+    setActiveTabId(tabId);
+    setTabFetchError(null);
     // Filter persists across tabs — do NOT reset activeChipId
     if (tabId !== "today" && !lazyData[tabId] && fetchTab) {
       setLoadingTab(tabId);
@@ -731,9 +766,21 @@ export default function LineupSection({
         </button>
       )}
 
-      {/* Event list — tiered rendering */}
+      {/* Event list — tiered rendering.
+          Wrapper remounts on tab/chip swap via `key`, firing the directional
+          slide animation. Tabbing right → new content enters from the right.
+          Physicality > decoration. Wave B/B4 motion spec. */}
       {loadingTab !== activeTabId && !tabFetchError && (
-        <>
+        <div
+          key={`${activeTabId}:${activeChipId}`}
+          className={
+            swapDirection === "right"
+              ? "lineup-tab-enter-from-right"
+              : swapDirection === "left"
+                ? "lineup-tab-enter-from-left"
+                : "lineup-tab-enter"
+          }
+        >
           <TieredEventList
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             events={visibleItems.map((item) => item.event as any)}
@@ -748,7 +795,7 @@ export default function LineupSection({
               No events matching this filter
             </p>
           )}
-        </>
+        </div>
       )}
 
       {/* See all — glow button, contextual to active chip */}

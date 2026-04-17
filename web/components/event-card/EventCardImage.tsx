@@ -38,18 +38,42 @@ export function EventCardImage({
   eventTitle,
   isAllDay,
 }: EventCardImageProps) {
+  const catColor = getCategoryColor(category);
   return (
     <div
       ref={parallaxContainerRef}
       className={`hidden sm:flex flex-shrink-0 self-stretch relative w-[100px] -ml-3 sm:-ml-3.5 -my-3 sm:-my-3.5 overflow-hidden border-r border-[var(--twilight)]/60 ${
-        hasRailImage ? "list-rail-media" : "bg-[var(--night)]/44"
+        hasRailImage ? "list-rail-media" : ""
       }`}
       style={{
         borderTopLeftRadius: "inherit",
         borderBottomLeftRadius: "inherit",
         viewTransitionName: eventId ? `event-hero-${eventId}` : undefined,
+        // When no image is available, use a category-tinted surface instead of
+        // a flat dark rectangle. Keeps the rail readable and signals the
+        // event's category visually even without a photo. See feed elevate
+        // 2026-04-16 Wave B / B2.
+        ...(hasRailImage
+          ? {}
+          : {
+              background: `linear-gradient(135deg, color-mix(in srgb, ${catColor} 22%, var(--night)) 0%, var(--night) 90%)`,
+            }),
       } as CSSProperties}
     >
+      {!hasRailImage && (
+        <div
+          aria-hidden
+          className="absolute inset-0 flex items-center justify-center pointer-events-none"
+          style={{ color: catColor, opacity: 0.55 }}
+        >
+          <CategoryIcon
+            type={category || "other"}
+            size={36}
+            glow="none"
+            weight="light"
+          />
+        </div>
+      )}
       {railImageUrl && (
         <div
           ref={parallaxImageRef}
@@ -64,13 +88,16 @@ export function EventCardImage({
             className="object-cover"
             fallback={
               <div
-                className="absolute inset-0 flex items-center justify-center bg-[var(--night)]"
-                style={{ color: getCategoryColor(category) }}
+                className="absolute inset-0 flex items-center justify-center"
+                style={{
+                  background: `linear-gradient(135deg, color-mix(in srgb, ${catColor} 22%, var(--night)) 0%, var(--night) 90%)`,
+                  color: catColor,
+                }}
               >
                 <CategoryIcon
                   type={category || "other"}
-                  size={28}
-                  glow="subtle"
+                  size={36}
+                  glow="none"
                   weight="light"
                 />
               </div>

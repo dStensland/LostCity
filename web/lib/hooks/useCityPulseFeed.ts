@@ -136,31 +136,11 @@ export function useCityPulseFeed(options: UseCityPulseFeedOptions) {
     }
   }, [portalSlug, timeSlotOverride, dayOverride]);
 
-  // Keep a stable ref to fetchTab so the prefetch effect doesn't re-run
-  // when the callback identity changes (e.g. after overrides are set).
-  const fetchTabRef = useRef(fetchTab);
-  useEffect(() => { fetchTabRef.current = fetchTab; }, [fetchTab]);
-
-  // Background prefetch for "This Week" and "Coming Up" tabs.
-  // Fires once after initial data resolves — makes tab switching instant
-  // since data is already in-flight (or cached) before the user clicks.
-  const prefetchedRef = useRef(false);
-  useEffect(() => {
-    if (!query.data || prefetchedRef.current) return;
-    prefetchedRef.current = true;
-
-    const prefetch = () => {
-      fetchTabRef.current("this_week").catch(() => {});
-      fetchTabRef.current("coming_up").catch(() => {});
-    };
-
-    if (typeof window !== "undefined" && "requestIdleCallback" in window) {
-      (window as Window & { requestIdleCallback: (cb: () => void) => void })
-        .requestIdleCallback(prefetch);
-    } else {
-      setTimeout(prefetch, 2000);
-    }
-  }, [query.data]);
+  // Tab data is fetched on-click. Previous speculative prefetch of
+  // "this_week" + "coming_up" shipped ~200 KB of extra payload per session
+  // that most users never consumed. React Query's `keepPreviousData` on tab
+  // switch already prevents the skeleton flash; instant-feel wasn't worth
+  // the bandwidth. Removed Wave C / C4.
 
   return {
     data: query.data ?? null,
