@@ -93,6 +93,10 @@ Destinations that exist **only during their season** (haunted houses, pumpkin pa
 Reference implementations:
 - Shape A (continuous nightly): `crawlers/sources/netherworld.py`, `folklore_haunted.py`, `paranoia_haunted.py`, `nightmares_gate.py`
 - Shape C (themed weekends): `crawlers/sources/georgia_ren_fest.py`
+- Shape D (fairgrounds, high-density dated events): `crawlers/sources/north_georgia_state_fair.py`
+- Shape E (multi-season single place): `crawlers/sources/southern_belle_farm.py`
+- Shape F (persistent place + seasonal overlays): `crawlers/sources/stone_mountain_park.py`
+- Shape B (season + recurring rituals): pending — Plan 4 adds Stone Mountain Christmas parade/fireworks/light-show via `series.exhibition_id`
 
 Reference spec: `docs/superpowers/specs/2026-04-17-seasonal-attractions-design.md`.
 
