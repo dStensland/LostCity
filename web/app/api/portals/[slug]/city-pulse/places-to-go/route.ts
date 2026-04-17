@@ -415,6 +415,9 @@ export async function GET(request: NextRequest, { params }: Props) {
         createdDaysAgo,
         hasNewEventsThisWeek: eventData.total > 0,
         todayEventTitle: eventData.todayTitle,
+        // Seasonal fields — populated by Task 12's seasonal query branch.
+        seasonalExhibition: null,
+        seasonState: null,
       };
 
       if (!passesQualityGate(ctx)) continue;

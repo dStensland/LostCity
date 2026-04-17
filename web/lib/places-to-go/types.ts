@@ -1,5 +1,7 @@
 // Places to Go feed section — shared types
 
+import type { SeasonalExhibition, SeasonState } from "@/lib/places/seasonal";
+
 /** Config shape for each of the 12 categories. Defined statically in constants.ts. */
 export interface PlacesToGoCategoryConfig {
   key: string;
@@ -99,4 +101,9 @@ export interface PlaceContext {
   createdDaysAgo: number | null;
   hasNewEventsThisWeek: boolean;
   todayEventTitle: string | null;
+
+  // Seasonal attraction fields (only populated when the place has an active
+  // or pre-open seasonal exhibition).
+  seasonalExhibition: SeasonalExhibition | null;
+  seasonState: SeasonState | null;
 }
