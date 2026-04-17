@@ -9,6 +9,18 @@ export interface PlacesToGoCategoryConfig {
   iconType: string;
   /** Optional: which Find tab's "see all" link should point to (e.g. "eat-drink"). */
   seeAllTab?: string;
+  /**
+   * Optional filter primitive. When set, the query layer uses this instead of
+   * `placeTypes` to select places. Currently only `"has_active_seasonal_exhibition"`.
+   */
+  filter?: "has_active_seasonal_exhibition";
+  /**
+   * Strategy for the category's "See all" link.
+   * - "placeTypes" (default): route to /{portal}/explore/places?venue_type=...
+   * - "seasonal": route to /{portal}/explore/places?seasonal=true (follow-on)
+   * - "none": no See all link (used when no Explore filter exists yet)
+   */
+  seeAllHrefStrategy?: "placeTypes" | "seasonal" | "none";
 }
 
 /** A single place card in an API response category. */
