@@ -14,7 +14,9 @@ Data strategy:
   Calendar link whose dates string encodes UTC start/end time.
 - The page-level <p class="dates"> element provides the season year (e.g.
   "April 11- May 31, 2026"), used to resolve the correct year for each weekend.
-- Also emit one season-window event for the full season run.
+- Emit one seasonal exhibition per year (exhibition_type="seasonal") that
+  carries the season window (opening_date/closing_date) and operating_schedule.
+- Themed-weekend events link back to the exhibition via events.exhibition_id.
 
 Date parsing approach:
 - Extract year from <p class="dates"> (e.g. "April 11- May 31, 2026")
@@ -43,6 +45,7 @@ from db import (
     insert_event,
     smart_update_existing_event,
 )
+from db.exhibitions import insert_exhibition
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -62,8 +65,9 @@ PLACE_DATA = {
     "zip": "30213",
     "lat": 33.5365,
     "lng": -84.5960,
-    "place_type": "festival",
-    "spot_type": "festival",
+    "place_type": "festival_grounds",
+    "spot_type": "festival_grounds",
+    "is_seasonal_only": True,
     "website": BASE_URL,
     "vibes": [
         "family-friendly",
@@ -236,6 +240,7 @@ def scrape_themed_weekends(
     session: requests.Session,
     source_id: int,
     venue_id: int,
+    exhibition_id: Optional[str] = None,
 ) -> tuple[int, int, int]:
     """
     Scrape /themed-weekends and emit one event per themed weekend.
@@ -366,6 +371,7 @@ def scrape_themed_weekends(
                 "is_recurring": False,
                 "recurrence_rule": None,
                 "content_hash": content_hash,
+                "exhibition_id": exhibition_id,
             }
 
             events_found += 1
@@ -392,35 +398,27 @@ def scrape_themed_weekends(
     return events_found, events_new, events_updated
 
 
-def scrape_season_event(
+def create_seasonal_exhibition(
     session: requests.Session,
     source_id: int,
     venue_id: int,
-) -> tuple[int, int, int]:
+) -> Optional[str]:
     """
-    Emit a single season-window event covering the full festival run.
-    This ensures the festival surfaces in date-range searches even when
-    someone is looking weeks before a specific themed weekend.
-
-    Season dates are parsed from <p class='dates'> on the themed-weekends page.
-
-    Returns (found, new, updated).
+    Create (or update) a seasonal exhibition for the current Ren Fest season.
+    The exhibition carries the season window (opening_date, closing_date) and
+    operating_schedule (Sat-Sun 10:30-18:00). Returns exhibition ID or None.
     """
-    events_found = 0
-    events_new = 0
-    events_updated = 0
-
     try:
         resp = session.get(THEMED_WEEKENDS_URL, timeout=20)
         resp.raise_for_status()
     except requests.RequestException as e:
         logger.warning(f"Georgia Ren Fest: could not fetch season dates: {e}")
-        return 0, 0, 0
+        return None
 
     soup = BeautifulSoup(resp.text, "html.parser")
     page_year = _parse_season_year(soup)
 
-    # Parse season-level start and end dates
+    # Parse season-level start and end dates from <p class='dates'>
     dates_p = soup.find("p", class_="dates")
     season_start: Optional[str] = None
     season_end: Optional[str] = None
@@ -438,91 +436,49 @@ def scrape_season_event(
                 season_start = f"{year}-{start_month:02d}-{start_day:02d}"
                 season_end = f"{year}-{end_month:02d}-{end_day:02d}"
 
-    # Fall back to typical season window if parsing failed
+    # Fall back to typical season window
     if not season_start:
         season_start = f"{page_year}-04-11"
     if not season_end:
         season_end = f"{page_year}-05-31"
 
-    today = datetime.now().date()
-
-    # Don't emit if season has already ended
-    try:
-        end_dt = datetime.strptime(season_end, "%Y-%m-%d").date()
-        if end_dt < today - timedelta(days=1):
-            return 0, 0, 0
-    except ValueError:
-        pass
-
-    title = "Georgia Renaissance Festival — Spring Season"
-    description = (
-        "The Georgia Renaissance Festival returns for its annual spring season in "
-        f"Fairburn, GA (25 miles southwest of Atlanta). Running weekends {season_start[5:]} "
-        f"through {season_end[5:]}, the festival features 8 themed weekends including "
-        "Vikings, Celtic, Pirates, Wizards, Cosplay/Clash of Realms, Romance, Pets, and Fae. "
-        "Every weekend includes jousting tournaments, 15 live stages, an artisan market with "
-        "160+ shoppes, food and drink, games, rides, and themed costume contests. "
-        "The Georgia Renaissance Festival has been running for 41 seasons."
-    )
-
-    content_hash = generate_content_hash(
-        title, "Georgia Renaissance Festival", season_start
-    )
-
-    event_record = {
-        "source_id": source_id,
+    year = season_start[:4]
+    exhibition_data = {
+        "slug": f"georgia-renaissance-festival-seasonal-{year}",
         "place_id": venue_id,
-        "title": title,
-        "description": description[:1500],
-        "start_date": season_start,
-        "start_time": "10:30",
-        "end_date": season_end,
-        "end_time": "18:00",
-        "is_all_day": False,
-        "category": "family",
-        "subcategory": None,
-        "tags": [
-            "seasonal",
-            "family-friendly",
-            "outdoor",
-            "all-ages",
-            "ticketed",
-            "entertainment",
-        ],
-        "price_min": 25.95,
-        "price_max": 32.95,
-        "price_note": (
-            "Adult (13+) $25.95–$32.95 by date tier; "
-            "Child (6–12) same pricing; Under 5 free. "
-            "Tickets online only at tickets.garenfest.com/renfest"
+        "source_id": source_id,
+        "title": f"Georgia Renaissance Festival {year} Season",
+        "description": (
+            f"Annual spring season in Fairburn, GA (25 miles SW of Atlanta). "
+            f"Running weekends {season_start[5:]} through {season_end[5:]}, "
+            f"the festival features 8 themed weekends including Vikings, Celtic, "
+            f"Pirates, Wizards, Cosplay, Romance, Pets, and Fae. Each open day "
+            f"includes jousting, 15 live stages, an artisan market with 160+ "
+            f"shoppes, food and drink, games, rides, and costume contests."
         ),
-        "is_free": False,
+        "opening_date": season_start,
+        "closing_date": season_end,
+        "exhibition_type": "seasonal",
+        "admission_type": "ticketed",
+        "admission_url": TICKETS_URL,
         "source_url": THEMED_WEEKENDS_URL,
-        "ticket_url": TICKETS_URL,
-        "image_url": None,
-        "raw_text": f"Season {season_start}–{season_end}",
-        "extraction_confidence": 0.95,
-        "is_recurring": False,
-        "recurrence_rule": None,
-        "content_hash": content_hash,
+        "operating_schedule": {
+            "days": {
+                "saturday": {"open": "10:30", "close": "18:00"},
+                "sunday": {"open": "10:30", "close": "18:00"},
+            },
+            # Memorial Day Monday handled via per-weekend event overrides
+        },
+        "tags": ["seasonal", "family-friendly", "outdoor", "all-ages"],
     }
 
-    events_found += 1
-    existing = find_event_by_hash(content_hash)
-    if existing:
-        smart_update_existing_event(existing, event_record)
-        events_updated += 1
-    else:
-        try:
-            insert_event(event_record)
-            events_new += 1
-            logger.info(
-                f"Georgia Ren Fest: added season event ({season_start}–{season_end})"
-            )
-        except Exception as e:
-            logger.error(f"Georgia Ren Fest: failed to insert season event: {e}")
-
-    return events_found, events_new, events_updated
+    exhibition_id = insert_exhibition(exhibition_data)
+    if exhibition_id:
+        logger.info(
+            f"Georgia Ren Fest: upserted seasonal exhibition "
+            f"({season_start} to {season_end}, id={exhibition_id})"
+        )
+    return exhibition_id
 
 
 # ── Entry point ───────────────────────────────────────────────────────────────
@@ -530,14 +486,11 @@ def scrape_season_event(
 
 def crawl(source: dict) -> tuple[int, int, int]:
     """
-    Crawl Georgia Renaissance Festival themed weekends.
-
+    Crawl Georgia Renaissance Festival.
     Strategy:
-    1. Scrape /themed-weekends for per-weekend events (one event per themed weekend).
-    2. Emit a season-window event spanning the full festival run.
-
-    All events link to the same venue. Per-weekend events carry the theme
-    title, image, description, and precise Sat/Sun (or Mon) dates.
+    1. Upsert the place (seasonal_attraction, is_seasonal_only=True).
+    2. Create/update one seasonal exhibition carrying the season window.
+    3. Emit themed-weekend events linked to the exhibition via exhibition_id.
     """
     source_id = source["id"]
     events_found = 0
@@ -545,42 +498,37 @@ def crawl(source: dict) -> tuple[int, int, int]:
     events_updated = 0
 
     session = requests.Session()
-    session.headers.update(
-        {
-            "User-Agent": (
-                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
-                "AppleWebKit/537.36 (KHTML, like Gecko) "
-                "Chrome/121.0.0.0 Safari/537.36"
-            )
-        }
-    )
+    session.headers.update({
+        "User-Agent": (
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/121.0.0.0 Safari/537.36"
+        )
+    })
 
     try:
         venue_id = get_or_create_place(PLACE_DATA)
 
-        # 1. Per-themed-weekend events
+        # 1. Seasonal exhibition (carries the season window)
         try:
-            f, n, u = scrape_themed_weekends(session, source_id, venue_id)
+            exhibition_id = create_seasonal_exhibition(session, source_id, venue_id)
+        except Exception as e:
+            logger.error(f"Georgia Ren Fest: error creating seasonal exhibition: {e}")
+            exhibition_id = None
+
+        # 2. Themed-weekend events (linked to exhibition via exhibition_id)
+        try:
+            f, n, u = scrape_themed_weekends(session, source_id, venue_id, exhibition_id)
             events_found += f
             events_new += n
             events_updated += u
         except Exception as e:
             logger.error(f"Georgia Ren Fest: error in themed weekends scraper: {e}")
 
-        # 2. Season-window event
-        try:
-            f, n, u = scrape_season_event(session, source_id, venue_id)
-            events_found += f
-            events_new += n
-            events_updated += u
-        except Exception as e:
-            logger.error(f"Georgia Ren Fest: error in season event scraper: {e}")
-
-        # Sanity check: expect 8 weekend events + 1 season = 9 total
-        if events_found < 2:
+        if events_found < 1:
             logger.warning(
-                f"Georgia Ren Fest: only {events_found} events found — "
-                "expected 9+ (8 weekends + 1 season). Site structure may have changed."
+                f"Georgia Ren Fest: only {events_found} themed-weekend events found — "
+                "expected 8. Site structure may have changed."
             )
 
         logger.info(

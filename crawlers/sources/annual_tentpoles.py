@@ -54,9 +54,7 @@ _MONTHS = {
 }
 
 _KNOWN_WINDOWS_BY_SLUG: dict[str, dict[int, tuple[str, str]]] = {
-    "ga-renaissance-festival": {
-        2026: ("2026-04-11", "2026-05-31"),
-    },
+    # Ren Fest now owned by georgia_ren_fest.py (emits seasonal exhibition, not pseudo-event).
     "blue-ridge-trout-fest": {
         2026: ("2026-04-25", "2026-04-25"),
     },
@@ -229,33 +227,11 @@ CONFIGS: dict[str, Config] = {
         tags=("food-festival", "soul-food", "community", "atlanta"),
         is_tentpole=True,
     ),
-    "ga-renaissance-festival": Config(
-        base_title="Georgia Renaissance Festival",
-        urls=("https://www.garenfest.com",),
-        allowed_hosts=("garenfest.com", "www.garenfest.com"),
-        place_data={
-            "name": "Georgia Renaissance Festival Grounds",
-            "slug": "ga-renaissance-festival-grounds",
-            "address": "6905 Virlyn B Smith Rd",
-            "neighborhood": "South Fulton",
-            "city": "Fairburn",
-            "state": "GA",
-            "zip": "30213",
-            "place_type": "organization",
-            "spot_type": "organization",
-            "website": "https://www.garenfest.com",
-        },
-        description=(
-            "Annual Georgia Renaissance Festival with themed weekends, period performances, "
-            "artisan marketplace experiences, and family-friendly fairground programming."
-        ),
-        category="community",
-        subcategory="festival",
-        tags=("renaissance-festival", "fairburn", "multi-weekend", "family-friendly"),
-        is_tentpole=True,
-        force_event_model=True,
-        append_year_to_title=False,
-    ),
+    # Ren Fest now owned by crawlers/sources/georgia_ren_fest.py, which emits a
+    # seasonal exhibition (exhibition_type='seasonal') + themed-weekend events
+    # linked via events.exhibition_id. This tentpole entry was creating a
+    # duplicate place ("Georgia Renaissance Festival Grounds") with a season-
+    # window pseudo-event. Deleted in the seasonal-attractions foundation work.
     "blue-ridge-trout-fest": Config(
         base_title="Blue Ridge Trout & Outdoor Adventures Festival",
         urls=("https://blueridgetroutfest.com",),

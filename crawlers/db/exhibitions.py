@@ -95,7 +95,7 @@ _EXHIBITION_COLUMNS = {
     "slug", "place_id", "source_id", "portal_id", "title", "description",
     "image_url", "opening_date", "closing_date", "medium", "exhibition_type",
     "admission_type", "admission_url", "source_url", "tags", "is_active",
-    "metadata", "related_feature_id",
+    "metadata", "related_feature_id", "operating_schedule",
 }
 
 

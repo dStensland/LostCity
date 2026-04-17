@@ -1,5 +1,7 @@
 // Places to Go feed section — shared types
 
+import type { SeasonalExhibition, SeasonState } from "@/lib/places/seasonal";
+
 /** Config shape for each of the 12 categories. Defined statically in constants.ts. */
 export interface PlacesToGoCategoryConfig {
   key: string;
@@ -9,6 +11,18 @@ export interface PlacesToGoCategoryConfig {
   iconType: string;
   /** Optional: which Find tab's "see all" link should point to (e.g. "eat-drink"). */
   seeAllTab?: string;
+  /**
+   * Optional filter primitive. When set, the query layer uses this instead of
+   * `placeTypes` to select places. Currently only `"has_active_seasonal_exhibition"`.
+   */
+  filter?: "has_active_seasonal_exhibition";
+  /**
+   * Strategy for the category's "See all" link.
+   * - "placeTypes" (default): route to /{portal}/explore/places?venue_type=...
+   * - "seasonal": route to /{portal}/explore/places?seasonal=true (follow-on)
+   * - "none": no See all link (used when no Explore filter exists yet)
+   */
+  seeAllHrefStrategy?: "placeTypes" | "seasonal" | "none";
 }
 
 /** A single place card in an API response category. */
@@ -87,4 +101,9 @@ export interface PlaceContext {
   createdDaysAgo: number | null;
   hasNewEventsThisWeek: boolean;
   todayEventTitle: string | null;
+
+  // Seasonal attraction fields (only populated when the place has an active
+  // or pre-open seasonal exhibition).
+  seasonalExhibition: SeasonalExhibition | null;
+  seasonState: SeasonState | null;
 }

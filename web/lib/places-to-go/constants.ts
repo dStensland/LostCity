@@ -112,6 +112,15 @@ export const PLACES_TO_GO_CATEGORIES: readonly PlacesToGoCategoryConfig[] = [
     accentColor: "#FBBF24",
     iconType: "landmark",
   },
+  {
+    key: "seasonal",
+    label: "This Season",
+    placeTypes: [],
+    accentColor: "#00D4E8",
+    iconType: "calendar",
+    filter: "has_active_seasonal_exhibition",
+    seeAllHrefStrategy: "none",
+  },
 ] as const;
 
 /** Flat array of all place_types across all categories. */

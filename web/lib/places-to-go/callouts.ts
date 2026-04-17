@@ -1,3 +1,4 @@
+import { formatCadence } from "@/lib/places/seasonal";
 import type { PlaceContext } from "./types";
 
 // ---------------------------------------------------------------------------
@@ -49,6 +50,12 @@ type CategoryCalloutConfig = {
 // ---------------------------------------------------------------------------
 
 const CALLOUT_CONFIG: Record<string, CategoryCalloutConfig> = {
+  seasonal: {
+    timeSensitive: [],
+    activity: [],
+    static: [],
+  },
+
   parks_gardens: {
     timeSensitive: [
       {
@@ -352,8 +359,19 @@ const CALLOUT_CONFIG: Record<string, CategoryCalloutConfig> = {
 /**
  * Generate up to 2 callout strings for a place in a given category.
  * Cascade order: timeSensitive → activity → static. Stops at 2 collected.
+ *
+ * The seasonal category bypasses the rule cascade entirely — its callouts are
+ * status-driven (cadence + running/final/opens + multi-season) and ordered.
  */
-export function buildCallouts(categoryKey: string, ctx: PlaceContext): string[] {
+export function buildCallouts(
+  categoryKey: string,
+  ctx: PlaceContext,
+  today: Date = new Date(),
+): string[] {
+  if (categoryKey === "seasonal") {
+    return buildSeasonalCallouts(ctx, today);
+  }
+
   const config = CALLOUT_CONFIG[categoryKey];
   if (!config) return [];
 
@@ -373,6 +391,49 @@ export function buildCallouts(categoryKey: string, ctx: PlaceContext): string[] 
   }
 
   return result;
+}
+
+function buildSeasonalCallouts(ctx: PlaceContext, today: Date): string[] {
+  const ex = ctx.seasonalExhibition;
+  const state = ctx.seasonState;
+  if (!ex || !state) return [];
+
+  const callouts: string[] = [];
+
+  // First callout: cadence (kept visible even under mobile truncation).
+  const cadence = formatCadence(ex.operating_schedule);
+  if (cadence) callouts.push(cadence);
+
+  // Second callout: status line (may truncate).
+  const closing = new Date(ex.closing_date + "T00:00:00");
+  const daysToClose = Math.round(
+    (closing.getTime() - today.getTime()) / (1000 * 60 * 60 * 24),
+  );
+
+  if (state.status === "active") {
+    if (daysToClose >= 0 && daysToClose <= 7) {
+      // Weekend-cadence places get "Final weekend"; others "Final week".
+      const isWeekendOnly =
+        cadence.includes("Sat") && !cadence.includes("Fri");
+      callouts.push(isWeekendOnly ? "Final weekend" : "Final week");
+    } else {
+      callouts.push(`Running through ${formatMonthDay(ex.closing_date)}`);
+    }
+  } else if (state.status === "pre-open") {
+    callouts.push(`Opens ${formatMonthDay(ex.opening_date)}`);
+  }
+
+  // Third callout: multi-season signal (optional).
+  if (state.activeCount >= 2) {
+    callouts.push(`+${state.activeCount - 1} more season running`);
+  }
+
+  return callouts;
+}
+
+function formatMonthDay(isoDate: string): string {
+  const d = new Date(isoDate + "T00:00:00");
+  return d.toLocaleDateString("en-US", { month: "long", day: "numeric" });
 }
 
 // ---------------------------------------------------------------------------
