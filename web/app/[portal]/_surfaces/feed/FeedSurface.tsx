@@ -1,8 +1,6 @@
 import { Suspense } from "react";
 import { getCityPhoto } from "@/lib/city-pulse/header-defaults";
 import { getDayOfWeek, getTimeSlot, getPortalHour } from "@/lib/city-pulse/time-slots";
-import { getServerFeedData } from "@/lib/city-pulse/server-feed";
-import { getServerRegularsData } from "@/lib/server-regulars";
 import { normalizeMarketplacePersona } from "@/lib/marketplace-art";
 import { safeJsonLd } from "@/lib/formats";
 import { toAbsoluteUrl } from "@/lib/site-url";
@@ -52,20 +50,12 @@ async function DefaultCityTemplate({
   portal: Parameters<typeof DefaultTemplate>[0]["portal"];
   serverHeroUrl: string;
 }) {
-  const [feedData, regularsData] = await Promise.all([
-    getServerFeedData(portal.slug),
-    getServerRegularsData(portal.slug),
-  ]);
-
+  // Feed + regulars prefetches now live inside CityPulseServerShell's manifest
+  // loaders. FeedSurface only needs to emit the LCP preload for the hero.
   return (
     <>
       <link rel="preload" as="image" href={serverHeroUrl} fetchPriority="high" />
-      <DefaultTemplate
-        portal={portal}
-        serverHeroUrl={serverHeroUrl}
-        serverFeedData={feedData}
-        serverRegularsData={regularsData}
-      />
+      <DefaultTemplate portal={portal} serverHeroUrl={serverHeroUrl} />
     </>
   );
 }

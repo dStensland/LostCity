@@ -4,9 +4,10 @@
  * RegularHangsSection — standalone section for recurring hangs.
  *
  * Weekly trivia, run clubs, karaoke, open mic — the fabric of city life.
- * Self-fetching via /api/regulars, shares React Query cache with
- * CityPulseShell's prefetch. RecurringStrip handles activity chips,
- * day-of-week filter, and compact row rendering.
+ * Self-fetching via /api/regulars; the feed manifest seeds React Query's
+ * cache via `initialData` so no waterfall fires on first render.
+ * RecurringStrip handles activity chips, day-of-week filter, and compact row
+ * rendering.
  */
 
 import { useMemo } from "react";
@@ -16,13 +17,16 @@ import type { FeedEventData } from "@/components/EventCard";
 import { matchActivityType } from "@/lib/scene-event-routing";
 import { ENABLE_LINEUP_RECURRING } from "@/lib/launch-flags";
 import { RecurringStrip } from "@/components/feed/lineup/RecurringStrip";
+import type { RegularsFeedData } from "@/lib/city-pulse/loaders/load-regulars";
 
 interface RegularHangsSectionProps {
   portalSlug: string;
+  /** Server-preloaded payload from the feed manifest; skips the client fetch when present. */
+  initialData?: RegularsFeedData | null;
 }
 
-export default function RegularHangsSection({ portalSlug }: RegularHangsSectionProps) {
-  // Shares cache key with CityPulseShell prefetch — instant from warm cache
+export default function RegularHangsSection({ portalSlug, initialData }: RegularHangsSectionProps) {
+  // Shares cache key with the server loader's seed — instant from warm cache
   const { data: regularsData } = useQuery<{ events: FeedEventData[] }>({
     queryKey: ["regulars", portalSlug],
     queryFn: async () => {
@@ -41,6 +45,7 @@ export default function RegularHangsSection({ portalSlug }: RegularHangsSectionP
     staleTime: 3 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
     enabled: ENABLE_LINEUP_RECURRING,
+    initialData: initialData ?? undefined,
   });
 
   // Transform to CityPulseEventItem[] — dedup by title+venue

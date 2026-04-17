@@ -18,6 +18,10 @@ import FeedSectionReveal from "@/components/feed/FeedSectionReveal";
 import FeedSectionSkeleton from "@/components/feed/FeedSectionSkeleton";
 import SmartImage from "@/components/SmartImage";
 import type { Festival } from "@/lib/festivals";
+import type {
+  FestivalsFeedData,
+  StandaloneTentpole,
+} from "@/lib/city-pulse/loaders/load-festivals";
 import {
   computeCountdown,
   getUrgencyColor,
@@ -27,26 +31,13 @@ import {
 interface FestivalsSectionProps {
   portalSlug: string;
   portalId: string;
+  /**
+   * Server-preloaded payload. When present (manifest/RSC path), skips the
+   * client-side fetch on mount. Legacy client shell still passes this as
+   * undefined and relies on the useEffect fallback.
+   */
+  initialData?: FestivalsFeedData | null;
 }
-
-type StandaloneTentpole = {
-  id: number;
-  title: string;
-  start_date: string;
-  end_date: string | null;
-  start_time: string | null;
-  end_time: string | null;
-  category: string | null;
-  image_url: string | null;
-  description: string | null;
-  source_id: number | null;
-  venue: {
-    id: number;
-    name: string;
-    slug: string;
-    neighborhood: string | null;
-  } | null;
-};
 
 type BigStuffItem = {
   id: string;
@@ -63,12 +54,21 @@ type BigStuffItem = {
 
 // ── Component ────────────────────────────────────────────────────────
 
-export default function FestivalsSection({ portalSlug, portalId }: FestivalsSectionProps) {
-  const [festivals, setFestivals] = useState<Festival[]>([]);
-  const [standaloneTentpoles, setStandaloneTentpoles] = useState<StandaloneTentpole[]>([]);
-  const [loading, setLoading] = useState(true);
+export default function FestivalsSection({
+  portalSlug,
+  portalId,
+  initialData,
+}: FestivalsSectionProps) {
+  const [festivals, setFestivals] = useState<Festival[]>(
+    initialData?.festivals ?? [],
+  );
+  const [standaloneTentpoles, setStandaloneTentpoles] = useState<
+    StandaloneTentpole[]
+  >(initialData?.standalone_tentpoles ?? []);
+  const [loading, setLoading] = useState(!initialData);
 
   useEffect(() => {
+    if (initialData) return;
     const controller = new AbortController();
 
     fetch(`/api/festivals/upcoming?portal_id=${portalId}`, {
@@ -90,7 +90,7 @@ export default function FestivalsSection({ portalSlug, portalId }: FestivalsSect
       });
 
     return () => controller.abort();
-  }, [portalId]);
+  }, [portalId, initialData]);
 
   // Filter out TBD festivals, compute countdowns, limit to top 4
   const today = useMemo(() => new Date().toISOString().slice(0, 10), []);

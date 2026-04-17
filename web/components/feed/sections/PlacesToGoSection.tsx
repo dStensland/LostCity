@@ -13,9 +13,11 @@ import { buildExploreUrl } from "@/lib/find-url";
 
 interface PlacesToGoSectionProps {
   portalSlug: string;
+  /** Server-preloaded payload from the feed manifest; skips the client fetch when present. */
+  initialData?: PlacesToGoResponse | null;
 }
 
-export function PlacesToGoSection({ portalSlug }: PlacesToGoSectionProps) {
+export function PlacesToGoSection({ portalSlug, initialData }: PlacesToGoSectionProps) {
   const [expandedKey, setExpandedKey] = useState<string | null>(null);
 
   const { data, isLoading, isError } = useQuery<PlacesToGoResponse>({
@@ -38,6 +40,7 @@ export function PlacesToGoSection({ portalSlug }: PlacesToGoSectionProps) {
     gcTime: 10 * 60 * 1000,
     refetchOnWindowFocus: true,
     retry: 1,
+    initialData: initialData ?? undefined,
   });
 
   const handleToggle = useCallback(

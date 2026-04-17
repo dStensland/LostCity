@@ -2,28 +2,19 @@
 
 import { useState, useEffect } from "react";
 import { ContestFeedCard } from "@/components/best-of/ContestFeedCard";
-import type { BestOfContest } from "@/lib/best-of-contests";
-
-interface ActiveContestData {
-  contest: BestOfContest;
-  leader: {
-    name: string;
-    neighborhood: string | null;
-    imageUrl: string | null;
-    voteCount: number;
-  } | null;
-  totalVotes: number;
-  venueCount: number;
-}
+import type { ActiveContestFeedData } from "@/lib/city-pulse/loaders/load-active-contest";
 
 interface ActiveContestSectionProps {
   portalSlug: string;
+  /** Server-preloaded payload from the feed manifest; skips the client fetch when present. */
+  initialData?: ActiveContestFeedData | null;
 }
 
-export default function ActiveContestSection({ portalSlug }: ActiveContestSectionProps) {
-  const [data, setData] = useState<ActiveContestData | null>(null);
+export default function ActiveContestSection({ portalSlug, initialData }: ActiveContestSectionProps) {
+  const [data, setData] = useState<ActiveContestFeedData | null>(initialData ?? null);
 
   useEffect(() => {
+    if (initialData) return;
     let cancelled = false;
 
     async function load() {
@@ -63,7 +54,7 @@ export default function ActiveContestSection({ portalSlug }: ActiveContestSectio
 
     load();
     return () => { cancelled = true; };
-  }, [portalSlug]);
+  }, [portalSlug, initialData]);
 
   if (!data) return null;
 

@@ -17,6 +17,7 @@ import Dot from "@/components/ui/Dot";
 import FeedSectionHeader from "@/components/feed/FeedSectionHeader";
 import FeedSectionReveal from "@/components/feed/FeedSectionReveal";
 import type { NetworkPost } from "./NetworkFeedSection";
+import type { NewsFeedData } from "@/lib/city-pulse/loaders/load-news";
 import {
   getCategoryColor,
   CATEGORY_ICONS,
@@ -26,6 +27,8 @@ import {
 
 export interface TodayInAtlantaSectionProps {
   portalSlug: string;
+  /** Server-preloaded payload from the feed manifest; skips the client fetch when present. */
+  initialData?: NewsFeedData | null;
 }
 
 // ── Category display order — culture-positive first ──────────────────────────
@@ -88,10 +91,10 @@ function NewsRow({ post, isLast }: { post: NetworkPost; isLast: boolean }) {
 
 // ── Main component ───────────────────────────────────────────────────────────
 
-export function TodayInAtlantaSection({ portalSlug }: TodayInAtlantaSectionProps) {
+export function TodayInAtlantaSection({ portalSlug, initialData }: TodayInAtlantaSectionProps) {
   const [activeTab, setActiveTab] = useState<string>("all");
 
-  // ── Fetch via React Query — shares cache with CityPulseShell prefetch ─────
+  // ── Fetch via React Query — seeded by the feed manifest's server loader ──
   const { data: rawPosts, isLoading: loading } = useQuery<NetworkPost[]>({
     queryKey: ["network-feed", portalSlug],
     queryFn: async () => {
@@ -117,6 +120,7 @@ export function TodayInAtlantaSection({ portalSlug }: TodayInAtlantaSectionProps
     },
     staleTime: 5 * 60 * 1000,
     gcTime: 15 * 60 * 1000,
+    initialData: initialData?.posts,
   });
   const posts = rawPosts ?? [];
 

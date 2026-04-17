@@ -1,26 +1,14 @@
-import CityPulseShell from "@/components/feed/CityPulseShell";
+import { CityPulseServerShell } from "@/components/feed/CityPulseServerShell";
 import CivicFeedShell from "@/components/feed/CivicFeedShell";
 import ArtsFeedShell from "@/components/feed/ArtsFeedShell";
 import { AdventureFeed } from "@/components/adventure";
 import type { Portal } from "@/lib/portal-context";
 import { getPortalVertical } from "@/lib/portal";
-import type { CityPulseResponse } from "@/lib/city-pulse/types";
-import type { FeedEventData } from "@/components/EventCard";
 
 interface DefaultTemplateProps {
   portal: Portal;
   /** Server-computed hero image URL for LCP preload optimization. */
   serverHeroUrl?: string;
-  /**
-   * Server-side pre-fetched city-pulse feed data.
-   * Only used by the default city-portal path — not community/adventure/arts.
-   */
-  serverFeedData?: CityPulseResponse | null;
-  /**
-   * Server-side pre-fetched regulars data.
-   * Seeds the React Query cache so RegularHangsSection renders without a client fetch.
-   */
-  serverRegularsData?: { events: FeedEventData[] } | null;
 }
 
 /**
@@ -34,8 +22,6 @@ interface DefaultTemplateProps {
 export async function DefaultTemplate({
   portal,
   serverHeroUrl,
-  serverFeedData,
-  serverRegularsData,
 }: DefaultTemplateProps) {
   const vertical = getPortalVertical(portal);
 
@@ -58,14 +44,7 @@ export async function DefaultTemplate({
     return <ArtsFeedShell portalSlug={portal.slug} />;
   }
 
-  return (
-    <CityPulseShell
-      portalSlug={portal.slug}
-      serverHeroUrl={serverHeroUrl}
-      serverFeedData={serverFeedData}
-      serverRegularsData={serverRegularsData}
-    />
-  );
+  return <CityPulseServerShell portal={portal} serverHeroUrl={serverHeroUrl} />;
 }
 
 export type { DefaultTemplateProps };

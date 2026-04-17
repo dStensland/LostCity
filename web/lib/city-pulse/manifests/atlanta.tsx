@@ -1,0 +1,320 @@
+/**
+ * Atlanta (default) feed manifest.
+ *
+ * Mirrors the legacy `CityPulseShell` render order section-for-section.
+ * Server sections ship their payload through `loader`; client islands stay
+ * client but receive server-pre-loaded `initialData` via the same loader
+ * mechanic — React Query inside the island is seeded so no client waterfall
+ * fires on mount.
+ *
+ * See docs/plans/feed-shell-server-split-2026-04-17.md.
+ */
+import dynamic from "next/dynamic";
+import type { ComponentType } from "react";
+import HolidayHero from "@/components/feed/HolidayHero";
+import { TodayInAtlantaSection } from "@/components/feed/sections/TodayInAtlantaSection";
+import FestivalsSection from "@/components/feed/sections/FestivalsSection";
+import RegularHangsSection from "@/components/feed/sections/RegularHangsSection";
+import { PlacesToGoSection } from "@/components/feed/sections/PlacesToGoSection";
+import ActiveContestSection from "@/components/feed/sections/ActiveContestSection";
+import CityBriefingIsland from "@/components/feed/islands/CityBriefingIsland";
+import LineupIsland from "@/components/feed/islands/LineupIsland";
+import LazySection from "@/components/feed/LazySection";
+import { ENABLE_HANGS_V1 } from "@/lib/launch-flags";
+
+import {
+  loadFestivalsForFeed,
+  type FestivalsFeedData,
+} from "../loaders/load-festivals";
+import {
+  loadNewsForFeed,
+  type NewsFeedData,
+} from "../loaders/load-news";
+import {
+  loadRegularsForFeed,
+  type RegularsFeedData,
+} from "../loaders/load-regulars";
+import { loadPlacesToGoForFeed } from "../loaders/load-places-to-go";
+import {
+  loadActiveContestForFeed,
+  type ActiveContestFeedData,
+} from "../loaders/load-active-contest";
+import {
+  loadHolidayHeroForFeed,
+  type HolidayHeroFeedData,
+} from "../loaders/load-holiday-hero";
+import { loadCityPulseForFeed } from "../loaders/load-city-pulse";
+import type { CityPulseResponse } from "../types";
+import type { PlacesToGoResponse } from "@/lib/places-to-go/types";
+import type {
+  FeedSection,
+  FeedSectionComponentProps,
+} from "../feed-section-contract";
+
+// ── Dynamically-imported client islands (code-split below the fold) ─────────
+
+const NowShowingSection = dynamic(
+  () => import("@/components/feed/sections/NowShowingSection"),
+  { ssr: false },
+);
+const LiveMusicSection = dynamic(
+  () => import("@/components/feed/sections/MusicTabContent"),
+  { ssr: false },
+);
+const GameDaySection = dynamic<{ portalSlug: string }>(
+  () =>
+    import("@/components/feed/sections/GameDaySection").then((m) => ({
+      default: m.default as ComponentType<{ portalSlug: string }>,
+    })),
+  { ssr: false },
+);
+const HangFeedSection = dynamic(
+  () =>
+    import("@/components/feed/sections/HangFeedSection").then((m) => ({
+      default: m.HangFeedSection,
+    })),
+  { ssr: false },
+);
+
+// ── Section island adapters ─────────────────────────────────────────────────
+
+function CityBriefingManifestIsland({ ctx, initialData }: FeedSectionComponentProps) {
+  const data = initialData as CityPulseResponse | null | undefined;
+  return (
+    <CityBriefingIsland
+      portalSlug={ctx.portalSlug}
+      serverHeroUrl={ctx.serverHeroUrl}
+      initialData={data ?? null}
+    />
+  );
+}
+
+function HolidayHeroIsland({ ctx, initialData }: FeedSectionComponentProps) {
+  const data = initialData as HolidayHeroFeedData | null | undefined;
+  return (
+    <HolidayHero
+      portalSlug={ctx.portalSlug}
+      eventCount={data?.eventCount ?? null}
+    />
+  );
+}
+
+function TodayInAtlantaIsland({ ctx, initialData }: FeedSectionComponentProps) {
+  const data = initialData as NewsFeedData | null | undefined;
+  return (
+    <TodayInAtlantaSection
+      portalSlug={ctx.portalSlug}
+      initialData={data ?? null}
+    />
+  );
+}
+
+function LineupManifestIsland({ ctx, initialData }: FeedSectionComponentProps) {
+  const data = initialData as CityPulseResponse | null | undefined;
+  return <LineupIsland portalSlug={ctx.portalSlug} initialData={data ?? null} />;
+}
+
+function FestivalsSectionIsland({ ctx, initialData }: FeedSectionComponentProps) {
+  const data = initialData as FestivalsFeedData | null | undefined;
+  return (
+    <FestivalsSection
+      portalSlug={ctx.portalSlug}
+      portalId={ctx.portalId}
+      initialData={data ?? null}
+    />
+  );
+}
+
+function NowShowingIsland({ ctx }: FeedSectionComponentProps) {
+  return (
+    <>
+      <div className="h-px bg-[var(--twilight)]" />
+      <div className="pt-6">
+        <LazySection minHeight={300}>
+          <NowShowingSection portalSlug={ctx.portalSlug} />
+        </LazySection>
+      </div>
+    </>
+  );
+}
+
+function LiveMusicIsland({ ctx }: FeedSectionComponentProps) {
+  return (
+    <>
+      <div className="h-px bg-[var(--twilight)]" />
+      <div className="pt-6">
+        <LazySection minHeight={300}>
+          <LiveMusicSection portalSlug={ctx.portalSlug} />
+        </LazySection>
+      </div>
+    </>
+  );
+}
+
+function RegularHangsIsland({ ctx, initialData }: FeedSectionComponentProps) {
+  const data = initialData as RegularsFeedData | null | undefined;
+  return (
+    <RegularHangsSection
+      portalSlug={ctx.portalSlug}
+      initialData={data ?? null}
+    />
+  );
+}
+
+function PlacesToGoIsland({ ctx, initialData }: FeedSectionComponentProps) {
+  const data = initialData as PlacesToGoResponse | null | undefined;
+  return (
+    <LazySection minHeight={400}>
+      <PlacesToGoSection
+        portalSlug={ctx.portalSlug}
+        initialData={data ?? null}
+      />
+    </LazySection>
+  );
+}
+
+function ActiveContestIsland({ ctx, initialData }: FeedSectionComponentProps) {
+  const data = initialData as ActiveContestFeedData | null | undefined;
+  return (
+    <ActiveContestSection
+      portalSlug={ctx.portalSlug}
+      initialData={data ?? null}
+    />
+  );
+}
+
+function HangFeedIsland({ ctx }: FeedSectionComponentProps) {
+  return (
+    <LazySection minHeight={200}>
+      <HangFeedSection portalSlug={ctx.portalSlug} />
+    </LazySection>
+  );
+}
+
+function GameDayIsland({ ctx }: FeedSectionComponentProps) {
+  return (
+    <>
+      <div className="h-px bg-[var(--twilight)]" />
+      <div className="pt-6">
+        <LazySection minHeight={200}>
+          <GameDaySection portalSlug={ctx.portalSlug} />
+        </LazySection>
+      </div>
+    </>
+  );
+}
+
+// ── Manifest ────────────────────────────────────────────────────────────────
+
+export const ATLANTA_FEED_MANIFEST: FeedSection[] = [
+  {
+    id: "briefing",
+    mode: "client-island",
+    component: CityBriefingManifestIsland,
+    loader: loadCityPulseForFeed,
+  },
+  {
+    id: "holiday",
+    mode: "server",
+    component: HolidayHeroIsland,
+    loader: loadHolidayHeroForFeed,
+  },
+  {
+    id: "news",
+    mode: "server",
+    component: TodayInAtlantaIsland,
+    loader: loadNewsForFeed,
+  },
+  {
+    id: "lineup",
+    mode: "client-island",
+    component: LineupManifestIsland,
+    loader: loadCityPulseForFeed,
+  },
+  {
+    id: "festivals",
+    mode: "server",
+    component: FestivalsSectionIsland,
+    loader: loadFestivalsForFeed,
+    wrapper: {
+      id: "city-pulse-festivals",
+      className: "scroll-mt-28",
+      dataAnchor: true,
+      indexLabel: "The Big Stuff",
+      blockId: "festivals",
+    },
+    shouldRender: (ctx) => Boolean(ctx.portalId),
+  },
+  {
+    id: "cinema",
+    mode: "client-island",
+    component: NowShowingIsland,
+    wrapper: {
+      id: "city-pulse-cinema",
+      className: "mt-8 scroll-mt-28",
+      dataAnchor: true,
+      indexLabel: "Now Showing",
+      blockId: "cinema",
+    },
+  },
+  {
+    id: "live_music",
+    mode: "client-island",
+    component: LiveMusicIsland,
+    wrapper: {
+      id: "city-pulse-live-music",
+      className: "mt-8 scroll-mt-28",
+      dataAnchor: true,
+      indexLabel: "Live Music",
+      blockId: "live_music",
+    },
+  },
+  {
+    id: "regulars",
+    mode: "server",
+    component: RegularHangsIsland,
+    loader: loadRegularsForFeed,
+  },
+  {
+    id: "places",
+    mode: "server",
+    component: PlacesToGoIsland,
+    loader: loadPlacesToGoForFeed,
+    wrapper: {
+      id: "city-pulse-places-to-go",
+      className: "scroll-mt-28 mt-6",
+      blockId: "places",
+    },
+  },
+  {
+    id: "active_contest",
+    mode: "server",
+    component: ActiveContestIsland,
+    loader: loadActiveContestForFeed,
+  },
+  {
+    id: "hangs",
+    mode: "client-island",
+    component: HangFeedIsland,
+    wrapper: {
+      id: "city-pulse-hangs",
+      className: "mt-6 scroll-mt-28",
+      dataAnchor: true,
+      indexLabel: "Hangs",
+      blockId: "hangs",
+    },
+    shouldRender: () => ENABLE_HANGS_V1,
+  },
+  {
+    id: "sports",
+    mode: "client-island",
+    component: GameDayIsland,
+    wrapper: {
+      id: "city-pulse-sports",
+      className: "mt-8 scroll-mt-28",
+      dataAnchor: true,
+      indexLabel: "Game Day",
+      blockId: "sports",
+    },
+  },
+];
