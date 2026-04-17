@@ -1,4 +1,5 @@
 import { CityPulseServerShell } from "@/components/feed/CityPulseServerShell";
+import { FeedAdminOverrideProvider } from "@/components/feed/FeedAdminOverrideContext";
 import CivicFeedShell from "@/components/feed/CivicFeedShell";
 import ArtsFeedShell from "@/components/feed/ArtsFeedShell";
 import { AdventureFeed } from "@/components/adventure";
@@ -44,7 +45,11 @@ export async function DefaultTemplate({
     return <ArtsFeedShell portalSlug={portal.slug} />;
   }
 
-  return <CityPulseServerShell portal={portal} serverHeroUrl={serverHeroUrl} />;
+  return (
+    <FeedAdminOverrideProvider>
+      <CityPulseServerShell portal={portal} serverHeroUrl={serverHeroUrl} />
+    </FeedAdminOverrideProvider>
+  );
 }
 
 export type { DefaultTemplateProps };

@@ -11,6 +11,7 @@
 import { useMemo } from "react";
 import { useCityPulseFeed } from "@/lib/hooks/useCityPulseFeed";
 import { useFeedPreferences } from "@/lib/hooks/useFeedPreferences";
+import { useFeedAdminOverrides } from "../FeedAdminOverrideContext";
 import { useAuth } from "@/lib/auth-context";
 import { usePortal } from "@/lib/portal-context";
 import LineupSection from "../LineupSection";
@@ -47,6 +48,7 @@ export default function LineupIsland({ portalSlug, initialData }: LineupIslandPr
     handleSaveInterests,
   } = useFeedPreferences({ isAuthenticated });
 
+  const { dayOverride, timeSlotOverride } = useFeedAdminOverrides();
   const {
     sections,
     tabCounts,
@@ -57,6 +59,8 @@ export default function LineupIsland({ portalSlug, initialData }: LineupIslandPr
     portalSlug,
     interests: savedInterests,
     initialData: initialData ?? undefined,
+    dayOverride,
+    timeSlotOverride,
   });
 
   const lineupSections = useMemo(

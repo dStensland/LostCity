@@ -12,6 +12,7 @@ import { useMemo } from "react";
 import Link from "next/link";
 import CityBriefing from "../CityBriefing";
 import { useCityPulseFeed } from "@/lib/hooks/useCityPulseFeed";
+import { useFeedAdminOverrides } from "../FeedAdminOverrideContext";
 import { getDayOfWeek, getDayTheme } from "@/lib/city-pulse/time-slots";
 import {
   getEditorialHeadline,
@@ -78,6 +79,7 @@ export default function CityBriefingIsland({
   serverHeroUrl,
   initialData,
 }: CityBriefingIslandProps) {
+  const { dayOverride, timeSlotOverride } = useFeedAdminOverrides();
   const {
     data,
     context: apiContext,
@@ -87,6 +89,8 @@ export default function CityBriefingIsland({
   } = useCityPulseFeed({
     portalSlug,
     initialData: initialData ?? undefined,
+    dayOverride,
+    timeSlotOverride,
   });
 
   const defaults = useMemo(() => {
