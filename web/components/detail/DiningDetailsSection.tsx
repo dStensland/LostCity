@@ -1,9 +1,8 @@
 "use client";
 
 import { memo } from "react";
-import { Clock, CalendarCheck, BookOpen, UsersThree } from "@phosphor-icons/react";
+import { Clock, CalendarCheck, UsersThree } from "@phosphor-icons/react";
 import type { PlaceDiningDetails, PlaceProfile } from "@/lib/types/places";
-import { SectionHeader } from "@/components/detail/SectionHeader";
 
 interface DiningDetailsSectionProps {
   diningData: PlaceDiningDetails;
@@ -161,8 +160,6 @@ export const DiningDetailsSection = memo(function DiningDetailsSection({
 
   return (
     <div>
-      <SectionHeader title="Dining Details" variant="divider" />
-
       {/* 1. Service info cards (horizontal pair) */}
       {showServiceCards && (
         <div className="flex gap-3 mt-3">

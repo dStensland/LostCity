@@ -106,16 +106,7 @@ export default function PlaceEventsSection({
   };
 
   return (
-    <div className="mt-8">
-      {/* Header */}
-      <div className="mb-4 relative">
-        <h2
-          className="font-mono text-xs font-bold uppercase tracking-[0.14em] text-[var(--muted)]"
-        >
-          More at {venueName}
-        </h2>
-      </div>
-
+    <div>
       {/* Date Selector — compact pill strip */}
       <div className="relative mb-4">
         <div

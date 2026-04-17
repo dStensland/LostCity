@@ -3,7 +3,6 @@
 import { Fragment, useMemo } from "react";
 import { format, parseISO } from "date-fns";
 import { InfoCard } from "@/components/detail";
-import { SectionHeader } from "@/components/detail/SectionHeader";
 import SmartImage from "@/components/SmartImage";
 import Badge from "@/components/ui/Badge";
 import type { ScreeningBundle } from "@/lib/screenings";
@@ -61,8 +60,7 @@ export default function PlaceScreeningsSection({
 
   return (
     <InfoCard accentColor="var(--gold)">
-      <SectionHeader title={title} count={groupedTitles.length} variant="inline" />
-      <div className="mt-4 space-y-4">
+      <div className="space-y-4">
         {groupedTitles.map(({ title: screeningTitle, runs }) => {
           const leadRun = runs[0];
           const visibleDates = Array.from(

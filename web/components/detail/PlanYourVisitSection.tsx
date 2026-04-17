@@ -3,7 +3,6 @@
 import { memo } from "react";
 import { Ticket, Clock, CheckCircle } from "@phosphor-icons/react";
 import type { PlaceProfile, PlaceGoogleDetails } from "@/lib/types/places";
-import { SectionHeader } from "@/components/detail/SectionHeader";
 
 interface PlanYourVisitSectionProps {
   placeProfile: PlaceProfile | null;
@@ -65,8 +64,7 @@ export const PlanYourVisitSection = memo(function PlanYourVisitSection({
 
   return (
     <div>
-      <SectionHeader title="Plan Your Visit" variant="divider" />
-      <div className="flex gap-3 mt-3">
+      <div className="flex gap-3">
         {/* Admission card */}
         <div className="flex-1 flex flex-col gap-1.5 rounded-lg bg-[var(--dusk)] p-3">
           <Ticket size={16} weight="duotone" style={{ color: "#C9874F" }} aria-hidden="true" />

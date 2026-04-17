@@ -7,7 +7,6 @@ import {
   FEATURE_TYPE_LABELS,
 } from "@/lib/place-features";
 import { getFeatureSectionConfig } from "@/lib/place-features-config";
-import { SectionHeader } from "./SectionHeader";
 import ScopedStyles from "@/components/ScopedStyles";
 import { createCssVarClass } from "@/lib/css-utils";
 import Badge from "@/components/ui/Badge";
@@ -233,9 +232,8 @@ export default function PlaceFeaturesSection({
   const hiddenCount = sorted.length - MAX_VISIBLE_FEATURES;
 
   return (
-    <div className="mt-6">
+    <div>
       <ScopedStyles css={colorClass?.css} />
-      <SectionHeader title={config.title} count={features.length} />
       <div className={`${hasImages ? "grid grid-cols-1 sm:grid-cols-2 gap-3" : "space-y-3"}`}>
         {visible.map((feature) => {
           const seasonalLabel = feature.is_seasonal

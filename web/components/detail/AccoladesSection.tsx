@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { ArrowSquareOut } from "@phosphor-icons/react";
-import { SectionHeader } from "./SectionHeader";
 
 // ---------------------------------------------------------------------------
 // Types & constants
@@ -72,7 +71,6 @@ export function AccoladesSection({
 
   return (
     <div>
-      <SectionHeader title={title} variant="divider" />
       <div className="space-y-2">
         {visible.map((m) => {
           const sourceLabel = getEditorialSourceLabel(m.source_key);

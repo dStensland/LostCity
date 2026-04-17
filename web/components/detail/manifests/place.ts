@@ -5,11 +5,9 @@ import type { SectionId } from "@/lib/detail/types";
 const cinemaManifest: SectionId[] = [
   "showtimes",
   "about",
-  "connections",
   "eventsAtVenue",
   "features",
   "planYourVisit",
-  "nearby",
 ];
 
 const restaurantManifest: SectionId[] = [
@@ -19,8 +17,6 @@ const restaurantManifest: SectionId[] = [
   "specials",
   "eventsAtVenue",
   "accolades",
-  "connections",
-  "nearby",
 ];
 
 const museumManifest: SectionId[] = [
@@ -31,8 +27,6 @@ const museumManifest: SectionId[] = [
   "eventsAtVenue",
   "socialProof",
   "accolades",
-  "connections",
-  "nearby",
 ];
 
 const barManifest: SectionId[] = [
@@ -41,8 +35,6 @@ const barManifest: SectionId[] = [
   "occasions",
   "specials",
   "accolades",
-  "connections",
-  "nearby",
 ];
 
 const parkManifest: SectionId[] = [
@@ -51,8 +43,6 @@ const parkManifest: SectionId[] = [
   "eventsAtVenue",
   "planYourVisit",
   "accolades",
-  "connections",
-  "nearby",
 ];
 
 const musicVenueManifest: SectionId[] = [
@@ -61,8 +51,6 @@ const musicVenueManifest: SectionId[] = [
   "occasions",
   "specials",
   "features",
-  "connections",
-  "nearby",
 ];
 
 // ─── Spot Type → Manifest Group Mapping ──────────────────────────
