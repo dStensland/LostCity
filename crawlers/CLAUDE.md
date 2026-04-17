@@ -90,7 +90,11 @@ Destinations that exist **only during their season** (haunted houses, pumpkin pa
 - **Slug uniqueness**: `exhibitions.slug` is UNIQUE — year-scope all seasonal slugs.
 - **Enrichment skip**: seasonal-only places should be excluded by `hydrate_hours_google.py` and `hydrate_venues_foursquare.py` to prevent silent NULL overwrites of season-hours-on-exhibition.
 
-Reference implementation: `crawlers/sources/georgia_ren_fest.py`. Reference spec: `docs/superpowers/specs/2026-04-17-seasonal-attractions-design.md`.
+Reference implementations:
+- Shape A (continuous nightly): `crawlers/sources/netherworld.py`, `folklore_haunted.py`, `paranoia_haunted.py`, `nightmares_gate.py`
+- Shape C (themed weekends): `crawlers/sources/georgia_ren_fest.py`
+
+Reference spec: `docs/superpowers/specs/2026-04-17-seasonal-attractions-design.md`.
 
 ## Project Structure
 
