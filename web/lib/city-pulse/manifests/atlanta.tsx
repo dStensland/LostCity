@@ -82,6 +82,7 @@ function CityBriefingManifestIsland({ ctx, initialData }: FeedSectionComponentPr
   return (
     <CityBriefingIsland
       portalSlug={ctx.portalSlug}
+      portalId={ctx.portalId}
       serverHeroUrl={ctx.serverHeroUrl}
       initialData={data ?? null}
     />

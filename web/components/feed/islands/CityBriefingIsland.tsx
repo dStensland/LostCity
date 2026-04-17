@@ -30,6 +30,7 @@ import type {
 
 interface CityBriefingIslandProps {
   portalSlug: string;
+  portalId: string;
   serverHeroUrl?: string;
   initialData?: CityPulseResponse | null;
 }
@@ -76,6 +77,7 @@ function buildDefaultHeader(
 
 export default function CityBriefingIsland({
   portalSlug,
+  portalId,
   serverHeroUrl,
   initialData,
 }: CityBriefingIslandProps) {
@@ -108,6 +110,7 @@ export default function CityBriefingIsland({
         header={header}
         context={context}
         portalSlug={portalSlug}
+        portalId={portalId}
         quickLinks={quickLinks}
         tabCounts={tabCounts}
         categoryCounts={categoryCounts}
