@@ -26,6 +26,7 @@ from db.client import (
     events_support_field_metadata_columns,
     has_event_extractions_table,
     events_support_taxonomy_v2_columns,
+    events_support_image_dim_columns,
 )
 from db.validation import (
     validate_event,
@@ -630,6 +631,48 @@ def _step_normalize_image(event_data: dict, ctx: InsertContext) -> dict:
             logger.debug(
                 f"Using venue image fallback for: {event_data.get('title', '')[:50]}"
             )
+
+    return event_data
+
+
+def _step_probe_image_dims(event_data: dict, ctx: InsertContext) -> dict:
+    """Probe image_width / image_height from the event's image_url.
+
+    Only runs when:
+      - events.image_width / image_height columns exist in the schema
+      - the event has an image_url
+      - we haven't already probed this URL in the current crawl run (ctx cache)
+
+    On any probe failure the dimensions stay None and the crawl continues.
+    """
+    if not events_support_image_dim_columns():
+        return event_data
+
+    url = event_data.get("image_url")
+    if not url:
+        return event_data
+
+    # Already have dims from a prior step (e.g. crawler set them explicitly)
+    if event_data.get("image_width") is not None and event_data.get("image_height") is not None:
+        return event_data
+
+    # Per-run in-memory cache: InsertContext carries an _image_dim_cache dict
+    cache: dict = getattr(ctx, "_image_dim_cache", None)
+    if cache is None:
+        ctx._image_dim_cache = {}
+        cache = ctx._image_dim_cache
+
+    if url in cache:
+        w, h = cache[url]
+    else:
+        from image_dims import get_image_dimensions
+        w, h = get_image_dimensions(url)
+        cache[url] = (w, h)
+
+    if w is not None:
+        event_data["image_width"] = w
+    if h is not None:
+        event_data["image_height"] = h
 
     return event_data
 
@@ -1580,6 +1623,7 @@ INSERT_PIPELINE = [
     _step_resolve_source,
     _step_resolve_venue,
     _step_normalize_image,
+    _step_probe_image_dims,
     _step_enrich_film,
     _step_parse_artists,
     _step_enrich_music,
@@ -1933,6 +1977,13 @@ def smart_update_existing_event(existing: dict, incoming: dict) -> bool:
     incoming_img = _normalize_image_url(incoming.get("image_url")) or ""
     if _should_use_incoming_image(existing_img, incoming_img):
         updates["image_url"] = incoming_img
+
+    # Propagate image dims if the incoming event was probed and existing is missing them.
+    if events_support_image_dim_columns():
+        if incoming.get("image_width") is not None and existing.get("image_width") is None:
+            updates["image_width"] = incoming["image_width"]
+        if incoming.get("image_height") is not None and existing.get("image_height") is None:
+            updates["image_height"] = incoming["image_height"]
 
     # Fill place_id when existing is NULL and incoming has a resolved venue.
     # This fixes events first inserted by aggregators (Eventbrite/Ticketmaster)

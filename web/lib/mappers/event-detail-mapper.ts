@@ -10,6 +10,22 @@ import {
 } from "@/lib/image-quality-suppression";
 
 /**
+ * Parse `_{w}x{h}.{ext}` patterns from image URLs (e.g. WordPress, common CDNs).
+ * Many image URLs encode dimensions in the filename — used as a fallback when
+ * the DB columns are NULL (pre-backfill).
+ */
+function parseDimensionsFromUrl(
+  imageUrl: string,
+): { width: number; height: number } | null {
+  const match = imageUrl.match(/[-_/](\d{2,5})x(\d{2,5})\.[a-z]{2,5}(?:\?|$|#)/i);
+  if (!match) return null;
+  const w = Number(match[1]);
+  const h = Number(match[2]);
+  if (!Number.isFinite(w) || !Number.isFinite(h) || w < 1 || h < 1) return null;
+  return { width: w, height: h };
+}
+
+/**
  * Determines the hero tier for an event detail page based on image quality signals.
  * Computed server-side to avoid layout shifts on the client.
  */
@@ -21,12 +37,21 @@ export function computeHeroTier(
 ): HeroTier {
   if (!imageUrl) return 'typographic';
   if (galleryUrls.length >= 2) return 'expanded';
-  if (
-    imageWidth != null &&
-    imageHeight != null &&
-    imageWidth >= 1200 &&
-    imageWidth / imageHeight >= 1.3
-  ) {
+
+  // Fallback: parse dimensions from URL filename when DB columns are NULL.
+  // Resolves the pre-backfill case where a landscape image would otherwise
+  // be classified as `compact` simply because dims weren't stored.
+  let w = imageWidth;
+  let h = imageHeight;
+  if (w == null || h == null) {
+    const fromUrl = parseDimensionsFromUrl(imageUrl);
+    if (fromUrl) {
+      w = fromUrl.width;
+      h = fromUrl.height;
+    }
+  }
+
+  if (w != null && h != null && w >= 1200 && w / h >= 1.3) {
     return 'expanded';
   }
   return 'compact';

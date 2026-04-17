@@ -1,4 +1,13 @@
+from datetime import datetime
+from unittest.mock import patch
+
 from sources.georgia_ethics_commission import _extract_meeting_events, _extract_training_events
+
+
+# Pin "today" before the earliest test event date (April 15) so the past-event
+# filter inside _extract_training_events doesn't swallow expected results as
+# the wall clock advances. See feedback memory on calendar roulette.
+_FIXED_NOW = datetime(2026, 4, 1, 12, 0, 0)
 
 
 def test_extract_meeting_events_parses_future_commission_meeting() -> None:
@@ -39,7 +48,11 @@ def test_extract_training_events_parses_visible_training_block() -> None:
     </body></html>
     """
 
-    events = _extract_training_events(home_html)
+    with patch("sources.georgia_ethics_commission.datetime") as mock_dt:
+        mock_dt.now.return_value = _FIXED_NOW
+        mock_dt.strptime = datetime.strptime
+        mock_dt.side_effect = lambda *a, **kw: datetime(*a, **kw)
+        events = _extract_training_events(home_html)
 
     assert [event["title"] for event in events[:2]] == [
         "GAVERO Conference (Athens)",

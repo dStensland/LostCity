@@ -171,6 +171,7 @@ _EVENTS_HAS_CONTENT_KIND_COLUMN: Optional[bool] = None
 _EVENTS_HAS_FIELD_METADATA_COLUMNS: Optional[bool] = None
 _EVENTS_HAS_IS_ACTIVE_COLUMN: Optional[bool] = None
 _EVENTS_HAS_TAXONOMY_V2_COLUMNS: Optional[bool] = None
+_EVENTS_HAS_IMAGE_DIM_COLUMNS: Optional[bool] = None
 _VENUES_HAS_FEATURES_TABLE: Optional[bool] = None
 _VENUES_HAS_DESTINATION_DETAILS_TABLE: Optional[bool] = None
 _VENUES_HAS_LOCATION_DESIGNATOR: Optional[bool] = None
@@ -606,6 +607,32 @@ def events_support_taxonomy_v2_columns() -> bool:
     except Exception:
         _EVENTS_HAS_TAXONOMY_V2_COLUMNS = False
     return _EVENTS_HAS_TAXONOMY_V2_COLUMNS
+
+
+def events_support_image_dim_columns() -> bool:
+    """Detect whether events.image_width / image_height exist."""
+    global _EVENTS_HAS_IMAGE_DIM_COLUMNS
+    if _EVENTS_HAS_IMAGE_DIM_COLUMNS is not None:
+        return _EVENTS_HAS_IMAGE_DIM_COLUMNS
+
+    client = get_client()
+    try:
+        client.table("events").select("image_width,image_height").limit(1).execute()
+        _EVENTS_HAS_IMAGE_DIM_COLUMNS = True
+    except Exception as e:
+        error_str = str(e).lower()
+        if "does not exist" in error_str and (
+            "image_width" in error_str or "image_height" in error_str
+        ):
+            _EVENTS_HAS_IMAGE_DIM_COLUMNS = False
+            logger.warning(
+                "events table missing image_width/image_height columns; "
+                "run migration 20260413100004_add_image_dimensions.sql"
+            )
+        else:
+            raise
+
+    return bool(_EVENTS_HAS_IMAGE_DIM_COLUMNS)
 
 
 def _error_indicates_missing_relation(exc: Exception) -> bool:
