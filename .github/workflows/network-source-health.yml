@@ -1,0 +1,61 @@
+name: Network Source Health Check
+
+on:
+  schedule:
+    # Every Monday at 13:00 UTC (9am EDT / 8am EST)
+    - cron: '0 13 * * 1'
+  workflow_dispatch:
+    inputs:
+      write_errors:
+        description: 'Write fetch_error on stale sources'
+        required: false
+        default: 'true'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
+
+jobs:
+  health-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: crawlers/requirements.txt
+
+      - name: Install dependencies
+        working-directory: crawlers
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run source health check
+        working-directory: crawlers
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: |
+          WRITE="${{ github.event.inputs.write_errors }}"
+          if [ "$WRITE" = "false" ]; then
+            python check_network_source_health.py | tee /tmp/health.txt
+          else
+            python check_network_source_health.py --write-errors | tee /tmp/health.txt
+          fi
+
+      - name: Append report to job summary
+        if: always()
+        run: |
+          echo "## Network Source Health" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          # Strip ANSI color codes before appending
+          sed 's/\x1b\[[0-9;]*m//g' /tmp/health.txt >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY

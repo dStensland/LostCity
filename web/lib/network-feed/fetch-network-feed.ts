@@ -34,6 +34,8 @@ const CIVIC_EXCLUDE_TITLE_KEYWORDS = [
   "restaurant", "dining", "bar", "cocktail", "hawks", "falcons",
   "braves", "united", "concert", "festival", "nightlife", "recipe",
   "wine", "beer", "chef",
+  "draft", "rookie", "quarterback", "playoff", "roster", "mock draft",
+  "touchdown", "home run", "nba", "nfl", "mlb", "wnba",
 ];
 
 function filterCivicPosts(
