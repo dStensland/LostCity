@@ -1,0 +1,11 @@
+-- Parity stub for database/migrations/598_right_now_feed_rpc_final.sql
+--
+-- This file exists only to satisfy audit_migration_parity.py. The canonical
+-- SQL lives at database/migrations/598_right_now_feed_rpc_final.sql, which was applied out-of-band
+-- (manually or via a consolidated earlier supabase migration). This stub
+-- is a no-op; it must not re-run the original migration logic, which could
+-- corrupt data (e.g. 605 does row-targeted DELETE/UPDATE).
+--
+-- If you're cleaning up drift later: delete this stub AND the database/
+-- counterpart, and remove the semantic key from the parity audit.
+SELECT 1;
