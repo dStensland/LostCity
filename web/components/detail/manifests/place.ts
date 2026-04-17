@@ -2,12 +2,20 @@ import type { SectionId } from "@/lib/detail/types";
 
 // ─── Subtype Manifests ────────────────────────────────────────────
 
+// `connections` and `nearby` were temporarily removed during the place
+// detail rebuild because data was sparse (~26% coverage on walkable_neighbors).
+// Re-enabled 2026-04-17 after PostGIS backfill: walkable_neighbors now covers
+// 78% of active places and the count denorm is resynced. Sections that lack
+// data fall through their own trait checks and render nothing.
+
 const cinemaManifest: SectionId[] = [
   "showtimes",
   "about",
+  "connections",
   "eventsAtVenue",
   "features",
   "planYourVisit",
+  "nearby",
 ];
 
 const restaurantManifest: SectionId[] = [
@@ -17,6 +25,8 @@ const restaurantManifest: SectionId[] = [
   "specials",
   "eventsAtVenue",
   "accolades",
+  "connections",
+  "nearby",
 ];
 
 const museumManifest: SectionId[] = [
@@ -27,6 +37,8 @@ const museumManifest: SectionId[] = [
   "eventsAtVenue",
   "socialProof",
   "accolades",
+  "connections",
+  "nearby",
 ];
 
 const barManifest: SectionId[] = [
@@ -35,6 +47,8 @@ const barManifest: SectionId[] = [
   "occasions",
   "specials",
   "accolades",
+  "connections",
+  "nearby",
 ];
 
 const parkManifest: SectionId[] = [
@@ -43,6 +57,8 @@ const parkManifest: SectionId[] = [
   "eventsAtVenue",
   "planYourVisit",
   "accolades",
+  "connections",
+  "nearby",
 ];
 
 const musicVenueManifest: SectionId[] = [
@@ -51,6 +67,8 @@ const musicVenueManifest: SectionId[] = [
   "occasions",
   "specials",
   "features",
+  "connections",
+  "nearby",
 ];
 
 // ─── Spot Type → Manifest Group Mapping ──────────────────────────
