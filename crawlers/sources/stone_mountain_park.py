@@ -56,6 +56,7 @@ from db import (
     insert_event,
     smart_update_existing_event,
 )
+from db.exhibitions import insert_exhibition
 from dedupe import generate_content_hash
 from entity_lanes import SourceEntityCapabilities, TypedEntityEnvelope
 from entity_persistence import persist_typed_entity_envelope
@@ -74,6 +75,13 @@ EVENTS_LISTING_URL = f"{BASE_URL}/activities/events/"
 ATTRACTIONS_URL = f"{BASE_URL}/activities/attractions/"
 
 # ── Venue record ──────────────────────────────────────────────────────────────
+# Stone Mountain Park is a Shape F destination: a persistent year-round park
+# (trails, Summit Skyride, Scenic Railroad, etc. run every day the park is
+# open) with multiple seasonal exhibition overlays across the calendar
+# (Yellow Daisy, Pumpkin, Christmas, Dino Fest, Summer at the Rock). The
+# place itself is NOT seasonal-only — explicitly setting `is_seasonal_only:
+# False` here documents that intent so enrichment scripts and feed filters
+# don't treat the underlying park as a seasonal-only record.
 PLACE_DATA = {
     "name": "Stone Mountain Park",
     "slug": "stone-mountain-park",
@@ -86,6 +94,7 @@ PLACE_DATA = {
     "lng": -84.1460,
     "place_type": "park",
     "spot_type": "park",
+    "is_seasonal_only": False,
     "website": BASE_URL,
     "vibes": ["family-friendly", "outdoor-seating", "good-for-groups", "free-parking"],
     "description": (
@@ -523,6 +532,153 @@ _DEFAULT_META = {
 }
 
 
+# ── Per-slug seasonal-exhibition triage ───────────────────────────────────────
+# True  = multi-week seasonal run → emit as an exhibition (carries the window).
+# False = single-day or 3-day holiday → stay as a regular event record.
+#
+# Keys here are the URL slugs pulled from /activity/events/<slug>/ and must
+# match the keys used in `_FESTIVAL_META` above. When the Stone Mountain site
+# publishes a new festival whose slug is not in this table, the default in
+# `_is_seasonal_exhibition()` below is `False` (conservative — stay as event)
+# so we don't accidentally promote a short-window celebration into a
+# persistent exhibition row.
+#
+# Triage rationale (see plan 2026-04-17-seasonal-attractions-complex-shapes):
+#   - Christmas: ~2-month run with nightly rituals → Shape B exhibition
+#   - Yellow Daisy, Pumpkin, Dino Fest, Summer at the Rock: multi-week
+#     seasonal overlays with ongoing daily operations → Shape E exhibitions
+#   - Easter Sunrise: single-morning religious observance → event
+#   - Memorial Day / Labor Day weekends: 3-day holiday windows → events
+#   - Fantastic Fourth: single-day fireworks programming → event
+#   - Kids' Early NYE: single-day kids countdown → event
+_SLUG_IS_SEASONAL_EXHIBITION: dict[str, bool] = {
+    # Exhibition slugs (5 multi-week seasonal runs)
+    "dino-fest": True,
+    "summer-at-the-rock": True,
+    "yellow-daisy-festival": True,
+    "pumpkin-festival": True,
+    "stone-mountain-christmas": True,
+    # Event slugs (5 short-window holidays/celebrations)
+    "easter-sunrise-service": False,
+    "memorial-day-weekend": False,
+    "fantastic-fourth-celebration": False,
+    "labor-day-weekend-celebration": False,
+    "kids-early-new-years-eve-celebration": False,
+}
+
+
+def _is_seasonal_exhibition(slug: str) -> bool:
+    """Return True if `slug` should be emitted as a seasonal exhibition.
+
+    Unknown slugs default to False (stay as event) per conservative triage.
+    """
+    return _SLUG_IS_SEASONAL_EXHIBITION.get(slug, False)
+
+
+# ── Operating-schedule defaults for exhibitions ──────────────────────────────
+
+
+def _default_park_hours() -> dict:
+    """
+    Fallback operating schedule for Stone Mountain exhibition overlays.
+
+    Matches the park's published default "Attractions Ticket" availability:
+    daily operations with extended Fri/Sat evening hours. Christmas and
+    other evening-focused overlays should pass their own `operating_schedule`
+    on the `_FESTIVAL_META` entry when those differ from the default.
+    """
+    return {
+        "default_hours": {"open": "10:00", "close": "21:00"},
+        "days": {
+            "monday": {"open": "10:00", "close": "21:00"},
+            "tuesday": {"open": "10:00", "close": "21:00"},
+            "wednesday": {"open": "10:00", "close": "21:00"},
+            "thursday": {"open": "10:00", "close": "21:00"},
+            "friday": {"open": "10:00", "close": "22:00"},
+            "saturday": {"open": "10:00", "close": "22:00"},
+            "sunday": {"open": "10:00", "close": "21:00"},
+        },
+        "overrides": {},
+    }
+
+
+def create_sm_exhibition(
+    source_id: int,
+    venue_id: int,
+    slug: str,
+    festival_meta: dict,
+    raw: dict,
+    detail_image: Optional[str],
+    detail_description: Optional[str],
+) -> Optional[str]:
+    """
+    Upsert one seasonal exhibition for a Stone Mountain overlay (Shape E/F).
+
+    Args:
+        source_id: Stone Mountain source row ID.
+        venue_id: Stone Mountain Park place row ID.
+        slug: _FESTIVAL_META key (e.g. "stone-mountain-christmas").
+        festival_meta: _FESTIVAL_META value dict (tags, price, ticket_url, etc.)
+        raw: parsed listing-card dict (carries `title`, `start_date`,
+            `end_date`, `detail_url`, `location_note`).
+        detail_image: higher-res og:image pulled from the detail page.
+        detail_description: og:description pulled from the detail page.
+
+    Returns:
+        Exhibition UUID on successful insert/update, or None on dry-run /
+        failure (matching `insert_exhibition` semantics).
+    """
+    title = raw["title"]
+    start_date = raw["start_date"]
+    end_date = raw.get("end_date") or start_date
+    year = start_date[:4]
+
+    # Year-scoped slug — exhibitions.slug is UNIQUE, and year rollover must
+    # create a new row rather than overwriting last year's historical record.
+    # Normalize prefix so source slugs that already start with "stone-mountain-"
+    # (e.g. "stone-mountain-christmas") don't produce a doubled prefix.
+    if slug.startswith("stone-mountain-"):
+        exhibition_slug = f"{slug}-{year}"
+    else:
+        exhibition_slug = f"stone-mountain-{slug}-{year}"
+
+    description = detail_description or raw.get("description")
+    if description:
+        description = description[:1500]
+        location_note = raw.get("location_note", "")
+        if location_note and location_note not in description:
+            description = f"{description}\n\nLocation: {location_note}"
+
+    image_url = detail_image or raw.get("image_url")
+
+    exhibition_data = {
+        "slug": exhibition_slug,
+        "place_id": venue_id,
+        "source_id": source_id,
+        "title": title,
+        "description": description,
+        "image_url": image_url,
+        "opening_date": start_date,
+        "closing_date": end_date,
+        "exhibition_type": "seasonal",
+        "admission_type": festival_meta.get("admission_type", "ticketed"),
+        "admission_url": festival_meta.get("ticket_url"),
+        "source_url": raw.get("detail_url"),
+        "operating_schedule": (
+            festival_meta.get("operating_schedule") or _default_park_hours()
+        ),
+        "tags": festival_meta.get("tags", ["seasonal", "stone-mountain"]),
+    }
+
+    exhibition_id = insert_exhibition(exhibition_data)
+    if exhibition_id:
+        logger.info(
+            f"Stone Mountain Park: upserted seasonal exhibition "
+            f"'{title}' ({start_date} – {end_date}, id={exhibition_id})"
+        )
+    return exhibition_id
+
+
 def _slug_from_url(url: str) -> str:
     """Extract the last path segment slug from a detail URL."""
     return url.rstrip("/").split("/")[-1]
@@ -771,6 +927,35 @@ def scrape_events(
                 session, raw["detail_url"]
             )
 
+            slug = raw["slug"]
+            meta = _FESTIVAL_META.get(slug, _DEFAULT_META)
+
+            # ── Per-slug triage: exhibition vs. event ─────────────────────
+            # Long-window seasonal runs (Christmas, Yellow Daisy, Pumpkin,
+            # Dino Fest, Summer at the Rock) emit as exhibitions; short-
+            # window holiday celebrations stay as events. See
+            # `_SLUG_IS_SEASONAL_EXHIBITION` above for the full matrix.
+            if _is_seasonal_exhibition(slug):
+                events_found += 1
+                ex_id = create_sm_exhibition(
+                    source_id,
+                    venue_id,
+                    slug,
+                    meta,
+                    raw,
+                    detail_image,
+                    detail_description,
+                )
+                if ex_id:
+                    # `insert_exhibition` handles both insert and update
+                    # via hash/title-venue dedup; we can't easily tell
+                    # which path ran from here, so count new-or-updated
+                    # as `new` (matches the crawler's existing reporting
+                    # granularity for the exhibition path).
+                    events_new += 1
+                continue
+
+            # ── Short-window event path (unchanged) ───────────────────────
             event_record = _build_event_record(
                 raw, source_id, venue_id, detail_image, detail_description
             )

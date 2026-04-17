@@ -38,6 +38,8 @@ from db import (
     insert_event,
     smart_update_existing_event,
 )
+from db.client import writes_enabled
+from db.exhibitions import insert_exhibition
 from dedupe import generate_content_hash
 from entity_lanes import SourceEntityCapabilities, TypedEntityEnvelope
 from entity_persistence import persist_typed_entity_envelope
@@ -75,6 +77,7 @@ PLACE_DATA = {
     "lng": -84.1438,
     "place_type": "outdoor_venue",
     "spot_type": "outdoor_venue",
+    "is_seasonal_only": True,
     "website": BASE_URL,
     "vibes": ["family-friendly", "outdoor-seating", "good-for-groups", "free-parking"],
 }
@@ -107,6 +110,21 @@ SEASON_DEFAULTS: dict[str, dict] = {
         "price_max": 19.95,  # gallon bucket
         "price_note": "U-pick admission $1/person; strawberries from $6.95/qt",
         "is_free": False,
+        # Spring u-pick strawberries: "Market and bakery open Tue-Sun" (closed Mon).
+        # Farm opens 9am Tue-Fri, 10am Sat, close 6pm typical Southern u-pick pattern.
+        "operating_schedule": {
+            "default_hours": {"open": "09:00", "close": "18:00"},
+            "days": {
+                "monday": None,
+                "tuesday": {"open": "09:00", "close": "18:00"},
+                "wednesday": {"open": "09:00", "close": "18:00"},
+                "thursday": {"open": "09:00", "close": "18:00"},
+                "friday": {"open": "09:00", "close": "18:00"},
+                "saturday": {"open": "10:00", "close": "18:00"},
+                "sunday": {"open": "11:00", "close": "18:00"},
+            },
+            "overrides": {},
+        },
     },
     "summer": {
         "title": "Summer U-Pick at Southern Belle Farm",
@@ -131,6 +149,22 @@ SEASON_DEFAULTS: dict[str, dict] = {
         "price_max": 24.95,
         "price_note": "U-pick admission $1/person; fruit from $9.95/qt",
         "is_free": False,
+        # Summer u-pick: "Market open Tue-Sat" (closed Sun/Mon). Opens early
+        # to beat heat — 9am weekdays, 10am Sat. Sunflower Weekend extends to
+        # Sunday; covered via the sub-event record.
+        "operating_schedule": {
+            "default_hours": {"open": "09:00", "close": "17:00"},
+            "days": {
+                "monday": None,
+                "tuesday": {"open": "09:00", "close": "17:00"},
+                "wednesday": {"open": "09:00", "close": "17:00"},
+                "thursday": {"open": "09:00", "close": "17:00"},
+                "friday": {"open": "09:00", "close": "17:00"},
+                "saturday": {"open": "10:00", "close": "17:00"},
+                "sunday": None,
+            },
+            "overrides": {},
+        },
     },
     "fall": {
         "title": "Fall Festival at Southern Belle Farm",
@@ -158,6 +192,23 @@ SEASON_DEFAULTS: dict[str, dict] = {
         "price_max": 24.95,
         "price_note": "Activity admission $18.95–$24.95; market/pumpkin patch free",
         "is_free": False,
+        # Fall festival: core activity weekends (Sat/Sun) plus Columbus Day
+        # Mon override. Weekday hours are shorter (pumpkin patch + market
+        # only); weekends run the full 30+ attractions operation.
+        # Columbus Day override is injected per-year in _extend_fall_overrides().
+        "operating_schedule": {
+            "default_hours": {"open": "10:00", "close": "17:00"},
+            "days": {
+                "monday": None,
+                "tuesday": {"open": "10:00", "close": "17:00"},
+                "wednesday": {"open": "10:00", "close": "17:00"},
+                "thursday": {"open": "10:00", "close": "17:00"},
+                "friday": {"open": "10:00", "close": "18:00"},
+                "saturday": {"open": "10:00", "close": "19:00"},
+                "sunday": {"open": "12:00", "close": "18:00"},
+            },
+            "overrides": {},
+        },
     },
     "christmas": {
         "title": "Farmstead Christmas at Southern Belle Farm",
@@ -184,6 +235,22 @@ SEASON_DEFAULTS: dict[str, dict] = {
         "price_max": 30.95,  # Donut Breakfast with Santa
         "price_note": "Weekend activities $15.95; Santa visit free; Donut Breakfast with Santa $30.95",
         "is_free": False,
+        # Farmstead Christmas runs weekends only (late-Nov through mid-Dec).
+        # Donut Breakfast with Santa is a weekend special at 10:00–11:30;
+        # main activity admission runs through the afternoon. Weekdays closed.
+        "operating_schedule": {
+            "default_hours": {"open": "10:00", "close": "17:00"},
+            "days": {
+                "monday": None,
+                "tuesday": None,
+                "wednesday": None,
+                "thursday": None,
+                "friday": None,
+                "saturday": {"open": "10:00", "close": "17:00"},
+                "sunday": {"open": "12:00", "close": "17:00"},
+            },
+            "overrides": {},
+        },
     },
 }
 
@@ -343,38 +410,15 @@ def _unescape(text: str) -> str:
 # ── Season page scraper ───────────────────────────────────────────────────────
 
 
-def scrape_season_page(
-    session: requests.Session,
-    season: str,
-    source_id: int,
-    venue_id: int,
-) -> tuple[int, int, int]:
+def _resolve_season_window(season: str, text: str) -> tuple[str, str]:
     """
-    Scrape one seasonal landing page and emit 1-2 events:
-    - The season-window event (opening date → closing date)
-    - Any special sub-events explicitly listed with specific dates
-
-    Returns (found, new, updated).
+    Return (start_date, end_date) for a season. Prefers live page dates, falls
+    back to SEASON_DEFAULTS MM-DD strings. Projects to next year if the derived
+    end date is more than 60 days in the past.
     """
     defaults = SEASON_DEFAULTS[season]
-    url = SEASON_URLS[season]
-    events_found = 0
-    events_new = 0
-    events_updated = 0
-
-    try:
-        resp = session.get(url, timeout=20)
-        resp.raise_for_status()
-        text = _page_text(resp.text)
-        text = _unescape(text)
-    except requests.RequestException as e:
-        logger.warning(f"Southern Belle Farm: could not fetch {url}: {e}")
-        text = ""
-
-    # ── Attempt live date extraction from page text ──
     start_date, end_date = parse_date_range_from_text(text)
 
-    # Fall back to defaults if live extraction failed
     today = datetime.now().date()
     today_year = today.year
 
@@ -383,7 +427,6 @@ def scrape_season_page(
     if not end_date:
         end_date = f"{today_year}-{defaults['default_end']}"
 
-    # If the derived end date is in the past, project to next year
     try:
         end_dt = datetime.strptime(end_date, "%Y-%m-%d").date()
         if end_dt < today - timedelta(days=60):
@@ -393,69 +436,96 @@ def scrape_season_page(
     except ValueError:
         pass
 
-    # ── Emit the season-window event ──
-    title = defaults["title"]
-    content_hash = generate_content_hash(title, "Southern Belle Farm", start_date)
+    return start_date, end_date
 
-    # Try to extract a better opening-hours note from page text
-    hours_note = _extract_hours_note(text, season)
 
-    description = defaults["description"]
-    if hours_note:
-        description = f"{description}\n\n{hours_note}"
+def create_season_exhibition(
+    source_id: int,
+    venue_id: int,
+    season_key: str,
+    season_data: dict,
+) -> Optional[str]:
+    """
+    Upsert one seasonal exhibition for Southern Belle. Returns exhibition UUID
+    (or None on dry-run / failure).
 
-    # Build price from live text if richer than defaults
-    price_min_live, price_max_live = parse_price(text[:2000])
-    price_min = price_min_live if price_min_live else defaults.get("price_min")
-    price_max = price_max_live if price_max_live else defaults.get("price_max")
+    `season_key` is one of "spring", "summer", "fall", "christmas".
+    `season_data` is an entry from SEASON_DEFAULTS augmented with resolved
+    `start_date` / `end_date` (YYYY-MM-DD) and optional per-season tweaks.
+    """
+    start_date = season_data["start_date"]
+    end_date = season_data["end_date"]
+    year = start_date[:4]
+    slug = f"southern-belle-farm-{season_key}-{year}"
 
-    event_record = {
-        "source_id": source_id,
+    # Spring + Summer u-pick admission is a token $1 gate — closer to "free"
+    # than "ticketed" — but fall + christmas are full activity admissions.
+    if season_key in ("fall", "christmas"):
+        admission_type = "ticketed"
+        admission_url = f"{BASE_URL}/book-now/"
+    else:
+        admission_type = "ticketed"  # $1/person u-pick admission
+        admission_url = season_data["source_url"]
+
+    exhibition_data = {
+        "slug": slug,
         "place_id": venue_id,
-        "title": title,
-        "description": description[:1500],
-        "start_date": start_date,
-        "start_time": "09:00",  # Farm opens 9am Tue-Fri; 10am Sat
-        "end_date": end_date,
-        "end_time": None,
-        "is_all_day": False,
-        "category": defaults["category"],
-        "subcategory": None,
-        "tags": defaults["tags"],
-        "price_min": price_min,
-        "price_max": price_max,
-        "price_note": defaults.get("price_note"),
-        "is_free": defaults.get("is_free", False),
-        "source_url": url,
-        "ticket_url": (
-            f"{BASE_URL}/book-now/" if season in ("fall", "christmas") else url
-        ),
-        "image_url": _season_image(season),
-        "raw_text": text[:500],
-        "extraction_confidence": 0.90,
-        "is_recurring": False,
-        "recurrence_rule": None,
-        "content_hash": content_hash,
+        "source_id": source_id,
+        "title": season_data["title"],
+        "description": season_data["description"],
+        "image_url": _season_image(season_key),
+        "opening_date": start_date,
+        "closing_date": end_date,
+        "exhibition_type": "seasonal",
+        "admission_type": admission_type,
+        "admission_url": admission_url,
+        "source_url": season_data["source_url"],
+        "operating_schedule": season_data["operating_schedule"],
+        "tags": season_data.get("tags", ["seasonal", "farm"]),
     }
 
-    events_found += 1
-    existing = find_event_by_hash(content_hash)
-    if existing:
-        smart_update_existing_event(existing, event_record)
-        events_updated += 1
-    else:
-        try:
-            insert_event(event_record)
-            events_new += 1
-            logger.info(
-                f"Southern Belle Farm: added {title} ({start_date} – {end_date})"
-            )
-        except Exception as e:
-            logger.error(f"Southern Belle Farm: failed to insert {title}: {e}")
+    exhibition_id = insert_exhibition(exhibition_data)
+    if exhibition_id:
+        logger.info(
+            f"Southern Belle Farm: upserted {season_key} exhibition "
+            f"({start_date} to {end_date}, id={exhibition_id})"
+        )
+    return exhibition_id
+
+
+def scrape_season_page(
+    season: str,
+    source_id: int,
+    venue_id: int,
+    text: str,
+    exhibition_ids: dict[str, Optional[str]],
+) -> tuple[int, int, int]:
+    """
+    Scan the already-fetched season page text for dated sub-events (Columbus
+    Day, Donut Breakfast with Santa, Sunflower Weekend) and emit them with
+    `events.exhibition_id` linking back to the parent season.
+
+    The season-window itself is carried by the exhibition row (created earlier
+    in `crawl()`), not by a pseudo-event in the events table.
+
+    Returns (found, new, updated) for sub-events only.
+    """
+    url = SEASON_URLS[season]
+    events_found = 0
+    events_new = 0
+    events_updated = 0
 
     # ── Extract special sub-events from the season page ──
-    sub_events = _extract_sub_events(text, season, source_id, venue_id, url)
+    # Sub-event → season mapping is determined inside _extract_sub_events by
+    # the `season` key of the page they live on. The caller passes in the
+    # full `exhibition_ids` dict so sub-events that naturally belong to a
+    # different season (e.g. Sunflower Weekend is emitted on the summer page
+    # and linked to the summer exhibition) can still reach that season's UUID.
+    sub_events = _extract_sub_events(
+        text, season, source_id, venue_id, url, exhibition_ids
+    )
     for sub in sub_events:
+        linked_season = sub.pop("_linked_season", None)
         events_found += 1
         sub_hash = sub["content_hash"]
         sub_existing = find_event_by_hash(sub_hash)
@@ -467,7 +537,9 @@ def scrape_season_page(
                 insert_event(sub)
                 events_new += 1
                 logger.info(
-                    f"Southern Belle Farm: added sub-event {sub['title']} ({sub['start_date']})"
+                    f"Southern Belle Farm: added sub-event {sub['title']} "
+                    f"({sub['start_date']}) → {linked_season} exhibition "
+                    f"(exhibition_id={sub.get('exhibition_id')})"
                 )
             except Exception as e:
                 logger.error(
@@ -488,36 +560,25 @@ def _season_image(season: str) -> Optional[str]:
     return images.get(season)
 
 
-def _extract_hours_note(text: str, season: str) -> str:
-    """Pull a concise hours note from the page text."""
-    # Look for a block that describes hours
-    hours_match = re.search(
-        r"((?:Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday|Mon|Tue|Wed|Thu|Fri|Sat|Sun)"
-        r"[^\.]{0,200}"
-        r"(?:am|pm))",
-        text,
-        re.IGNORECASE,
-    )
-    if hours_match:
-        snippet = hours_match.group(1).strip()
-        # Trim to a reasonable length
-        return snippet[:300]
-    return ""
-
-
 def _extract_sub_events(
     text: str,
     season: str,
     source_id: int,
     venue_id: int,
     source_url: str,
+    exhibition_ids: dict[str, Optional[str]],
 ) -> list[dict]:
     """
-    Extract specifically-dated sub-events mentioned in the season page.
-    Examples:
-      - Fall: "Columbus Day October 13th 10am-5pm"
-      - Christmas: "Donut Breakfast with Santa: December 6th and 13th"
-      - Summer: "Sunflower Weekend—Sat, June 28 / Sun, June 29"
+    Extract specifically-dated sub-events mentioned in the season page. Each
+    sub-event carries `exhibition_id` pointing to its parent season:
+
+      - Fall page: Columbus Day (Oct) → fall exhibition
+      - Christmas page: Donut Breakfast with Santa (Dec) → christmas exhibition
+      - Summer page: Sunflower Weekend (Jun) → summer exhibition (June dates
+        fall inside the summer window, not fall)
+
+    `_linked_season` is a sentinel key the caller pops for logging; it is
+    never persisted to the events table.
     """
     events: list[dict] = []
     today = datetime.now().date()
@@ -561,6 +622,7 @@ def _extract_sub_events(
                 {
                     "source_id": source_id,
                     "place_id": venue_id,
+                    "exhibition_id": exhibition_ids.get("christmas"),
                     "title": "Donut Breakfast with Santa at Southern Belle Farm",
                     "description": (
                         "Start your morning with donuts and a visit with Santa at Southern "
@@ -599,6 +661,7 @@ def _extract_sub_events(
                     "content_hash": generate_content_hash(
                         "Donut Breakfast with Santa", "Southern Belle Farm", date_str
                     ),
+                    "_linked_season": "christmas",
                 }
             )
 
@@ -625,6 +688,7 @@ def _extract_sub_events(
                         {
                             "source_id": source_id,
                             "place_id": venue_id,
+                            "exhibition_id": exhibition_ids.get("summer"),
                             "title": "Sunflower Weekend at Southern Belle Farm",
                             "description": (
                                 "A two-day summer celebration featuring Southern Belle Farm's "
@@ -661,6 +725,7 @@ def _extract_sub_events(
                             "content_hash": generate_content_hash(
                                 "Sunflower Weekend", "Southern Belle Farm", start
                             ),
+                            "_linked_season": "summer",
                         }
                     )
 
@@ -684,6 +749,7 @@ def _extract_sub_events(
                                 {
                                     "source_id": source_id,
                                     "place_id": venue_id,
+                                    "exhibition_id": exhibition_ids.get("fall"),
                                     "title": "Columbus Day at Southern Belle Farm",
                                     "description": (
                                         "Southern Belle Farm is open on Columbus Day (Monday) with "
@@ -721,6 +787,7 @@ def _extract_sub_events(
                                         "Southern Belle Farm",
                                         d,
                                     ),
+                                    "_linked_season": "fall",
                                 }
                             )
                     except ValueError:
@@ -784,14 +851,66 @@ def _fetch_post_image(session: requests.Session, media_id: int) -> Optional[str]
     return None
 
 
+def _infer_blog_season(title: str, event_date: str) -> Optional[str]:
+    """
+    Infer which season exhibition a blog post event belongs to.
+
+    Priority: title keywords (christmas/santa/holiday; strawberry/spring;
+    peach/blueberry/blackberry/sunflower; pumpkin/corn maze/fall/harvest)
+    before month-of-year fallback. Returns None if the month doesn't fall
+    into any known season window — the event will still be emitted, just
+    without an exhibition_id.
+    """
+    title_lower = title.lower()
+    if any(kw in title_lower for kw in ("christmas", "santa", "holiday", "farmstead")):
+        return "christmas"
+    if any(kw in title_lower for kw in ("strawberry",)):
+        return "spring"
+    if any(
+        kw in title_lower
+        for kw in ("peach", "blueberry", "blackberry", "sunflower", "berry")
+    ):
+        return "summer"
+    if any(kw in title_lower for kw in ("pumpkin", "corn maze", "fall", "harvest")):
+        return "fall"
+
+    # Month-of-year fallback, aligned with SEASON_DEFAULTS windows.
+    try:
+        month = int(event_date[5:7])
+    except (ValueError, IndexError):
+        return None
+    if month in (4, 5):
+        return "spring"
+    if month in (6, 7, 8):
+        return "summer"
+    if month in (9, 10, 11):
+        # November overlaps with Christmas launch — bias toward fall unless
+        # late-November, where Farmstead Christmas begins.
+        if month == 11:
+            try:
+                day = int(event_date[8:10])
+            except (ValueError, IndexError):
+                return "fall"
+            return "christmas" if day >= 25 else "fall"
+        return "fall"
+    if month == 12:
+        return "christmas"
+    return None
+
+
 def scrape_blog_special_events(
     session: requests.Session,
     source_id: int,
     venue_id: int,
+    exhibition_ids: dict[str, Optional[str]],
 ) -> tuple[int, int, int]:
     """
     Pull recent WP posts and extract special events with specific dates.
     Only processes posts from the current calendar year (avoids stale data).
+
+    Each emitted event carries `exhibition_id` pointing to the inferred
+    parent season (see `_infer_blog_season`). If season inference fails,
+    the event is still emitted but with `exhibition_id=None`.
 
     Returns (found, new, updated).
     """
@@ -899,9 +1018,16 @@ def scrape_blog_special_events(
                 title, "Southern Belle Farm", event_date
             )
 
+            # Infer parent season → exhibition linkage
+            linked_season = _infer_blog_season(title, event_date)
+            linked_exhibition_id = (
+                exhibition_ids.get(linked_season) if linked_season else None
+            )
+
             event_record = {
                 "source_id": source_id,
                 "place_id": venue_id,
+                "exhibition_id": linked_exhibition_id,
                 "title": title,
                 "description": description[:1000] if description else None,
                 "start_date": event_date,
@@ -936,7 +1062,9 @@ def scrape_blog_special_events(
                     insert_event(event_record)
                     events_new += 1
                     logger.info(
-                        f"Southern Belle Farm: added blog event '{title}' ({event_date})"
+                        f"Southern Belle Farm: added blog event '{title}' "
+                        f"({event_date}) → {linked_season or 'unlinked'} exhibition "
+                        f"(exhibition_id={linked_exhibition_id})"
                     )
                 except Exception as e:
                     logger.error(
@@ -1026,20 +1154,36 @@ def _build_destination_envelope(venue_id: int) -> TypedEntityEnvelope:
 # ── Entry point ───────────────────────────────────────────────────────────────
 
 
+def _fetch_season_text(session: requests.Session, season: str) -> str:
+    """Fetch a season landing page and return normalized plain text (or empty)."""
+    url = SEASON_URLS[season]
+    try:
+        resp = session.get(url, timeout=20)
+        resp.raise_for_status()
+        return _unescape(_page_text(resp.text))
+    except requests.RequestException as e:
+        logger.warning(f"Southern Belle Farm: could not fetch {url}: {e}")
+        return ""
+
+
 def crawl(source: dict) -> tuple[int, int, int]:
     """
-    Crawl Southern Belle Farm seasonal events.
+    Crawl Southern Belle Farm as Shape E (4 seasonal exhibitions + linked
+    sub-events).
 
     Strategy:
-    1. For each of the 4 season pages (spring, summer, fall, christmas):
-       - Extract season window dates from live page text
-       - Emit one season-window event (start → end)
-       - Emit specific sub-events (Columbus Day, Donut Breakfast, etc.)
-    2. Pull recent WP blog posts for festival/special event announcements
-       with specific upcoming dates.
+    1. Upsert the place (is_seasonal_only=True).
+    2. For each of the 4 seasons, resolve the season window from the live
+       season page (or fall back to SEASON_DEFAULTS), then upsert one
+       seasonal exhibition row carrying the window + operating_schedule.
+    3. Emit dated sub-events from the season pages (Donut Breakfast with
+       Santa → Christmas, Sunflower Weekend → Summer, Columbus Day → Fall),
+       each linked via events.exhibition_id.
+    4. Emit WP blog-announced events with exhibition_id inferred from title
+       keywords + event month.
 
-    All events use the same venue. Season-window events span the season
-    open date through close date. Special events are single-day.
+    No season-window pseudo-events are emitted into the events table — the
+    exhibition rows are the season carriers.
     """
     source_id = source["id"]
     events_found = 0
@@ -1061,35 +1205,74 @@ def crawl(source: dict) -> tuple[int, int, int]:
         venue_id = get_or_create_place(PLACE_DATA)
         persist_typed_entity_envelope(_build_destination_envelope(venue_id))
 
-        # 1. Scrape all 4 seasonal landing pages
-        for season in ("spring", "summer", "fall", "christmas"):
+        # ── 1. Create 4 seasonal exhibitions (one per season) ──
+        # For each season: fetch the live page to resolve actual dates,
+        # then upsert the exhibition. Store returned UUIDs in a dict so
+        # sub-event emission can link each sub-event to its parent season.
+        exhibition_ids: dict[str, Optional[str]] = {}
+        season_texts: dict[str, str] = {}
+        season_count = 0
+        for season_key in ("spring", "summer", "fall", "christmas"):
+            text = _fetch_season_text(session, season_key)
+            season_texts[season_key] = text
+
+            start_date, end_date = _resolve_season_window(season_key, text)
+            season_data = {
+                **SEASON_DEFAULTS[season_key],
+                "start_date": start_date,
+                "end_date": end_date,
+            }
+
             try:
-                f, n, u = scrape_season_page(session, season, source_id, venue_id)
+                ex_id = create_season_exhibition(
+                    source_id, venue_id, season_key, season_data
+                )
+            except Exception as e:
+                logger.error(
+                    f"Southern Belle Farm: error creating {season_key} exhibition: {e}"
+                )
+                ex_id = None
+
+            exhibition_ids[season_key] = ex_id
+            if ex_id or not writes_enabled():
+                season_count += 1
+
+        logger.info(
+            f"Southern Belle Farm: created/updated {season_count} seasonal "
+            f"exhibitions ({list(exhibition_ids.keys())})"
+        )
+
+        # ── 2. Sub-events from each season page (linked via exhibition_id) ──
+        for season_key, text in season_texts.items():
+            if not text:
+                continue
+            try:
+                f, n, u = scrape_season_page(
+                    season_key, source_id, venue_id, text, exhibition_ids
+                )
                 events_found += f
                 events_new += n
                 events_updated += u
             except Exception as e:
-                logger.error(f"Southern Belle Farm: error on {season} page: {e}")
+                logger.error(
+                    f"Southern Belle Farm: error on {season_key} sub-events: {e}"
+                )
 
-        # 2. Pull special blog events from WP REST API
+        # ── 3. WP blog posts — special events with inferred season link ──
         try:
-            f, n, u = scrape_blog_special_events(session, source_id, venue_id)
+            f, n, u = scrape_blog_special_events(
+                session, source_id, venue_id, exhibition_ids
+            )
             events_found += f
             events_new += n
             events_updated += u
         except Exception as e:
             logger.error(f"Southern Belle Farm: error in blog scraper: {e}")
 
-        # Sanity check — we always expect at least 4 events (one per season)
-        if events_found < 2:
-            logger.warning(
-                f"Southern Belle Farm: only {events_found} events found — "
-                "expected 4+ (one per season). Site structure may have changed."
-            )
-
         logger.info(
-            f"Southern Belle Farm crawl complete: {events_found} found, "
-            f"{events_new} new, {events_updated} updated"
+            f"Southern Belle Farm crawl complete: {season_count} exhibitions, "
+            f"{events_found} sub-events found, {events_new} new, "
+            f"{events_updated} updated"
         )
 
     except Exception as e:
