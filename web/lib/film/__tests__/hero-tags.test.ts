@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { buildHeroTag } from '../hero-tags';
-import type { FilmScreening, HeroReason } from '../types';
+import type { FilmScreening } from '../types';
 
 function makeScreening(overrides: Partial<FilmScreening> = {}): FilmScreening {
   return {
