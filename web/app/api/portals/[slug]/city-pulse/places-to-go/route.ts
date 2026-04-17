@@ -47,6 +47,12 @@ import type {
   PlacesToGoCard,
   PlaceContext,
 } from "@/lib/places-to-go/types";
+import {
+  getPrimarySeasonalExhibition,
+  isPlaceInSeason,
+  type SeasonalExhibition,
+  type SeasonState,
+} from "@/lib/places/seasonal";
 
 // ---------------------------------------------------------------------------
 // Config
@@ -70,6 +76,82 @@ const PLACE_SELECT = `
   place_profile(featured, library_pass),
   place_vertical_details(outdoor)
 `;
+
+/**
+ * Fetch places that have an active or pre-open (<=28d) seasonal exhibition.
+ * Returns rows in the same PlaceRow shape as the main query, plus the
+ * primary seasonal exhibition + season state pre-resolved.
+ *
+ * Two-step (no join) because exhibitions.place_id → places.id is an INTEGER
+ * FK and Supabase's client doesn't expose the typed relation for this
+ * select. Step 1 narrows exhibition rows by date + portal scope; step 2
+ * fetches the matching place rows in the canonical PLACE_SELECT shape.
+ */
+async function fetchSeasonalPlaces(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase: any,
+  portalId: string,
+  today: Date,
+): Promise<
+  Array<
+    PlaceRow & {
+      _seasonalExhibition: SeasonalExhibition;
+      _seasonState: SeasonState;
+    }
+  >
+> {
+  const todayStr = today.toISOString().slice(0, 10);
+  const preOpenCutoff = new Date(today);
+  preOpenCutoff.setDate(preOpenCutoff.getDate() + 28);
+  const preOpenStr = preOpenCutoff.toISOString().slice(0, 10);
+
+  // Exhibitions that are currently active OR within the 28-day pre-open window,
+  // scoped to this portal.
+  const { data: exhibitions } = await supabase
+    .from("exhibitions")
+    .select(
+      "id, place_id, exhibition_type, opening_date, closing_date, operating_schedule, title, portal_id",
+    )
+    .eq("exhibition_type", "seasonal")
+    .eq("is_active", true)
+    .eq("portal_id", portalId)
+    .or(
+      `and(opening_date.lte.${todayStr},closing_date.gte.${todayStr}),and(opening_date.gt.${todayStr},opening_date.lte.${preOpenStr})`,
+    );
+
+  if (!exhibitions || exhibitions.length === 0) return [];
+
+  // Group exhibitions by place_id (a place can host multiple seasonal
+  // exhibitions at once — e.g. Yule Forest's pumpkin + Christmas overlap).
+  const byPlace = new Map<number, SeasonalExhibition[]>();
+  for (const ex of exhibitions as (SeasonalExhibition & {
+    place_id: number;
+  })[]) {
+    const list = byPlace.get(ex.place_id) ?? [];
+    list.push(ex);
+    byPlace.set(ex.place_id, list);
+  }
+
+  const placeIds = [...byPlace.keys()];
+  if (placeIds.length === 0) return [];
+
+  // Fetch the place rows using the same PLACE_SELECT shape the main query uses.
+  const { data: places } = await supabase
+    .from("places")
+    .select(PLACE_SELECT)
+    .in("id", placeIds)
+    .eq("is_active", true);
+
+  if (!places) return [];
+
+  return (places as PlaceRow[]).flatMap((p) => {
+    const exs = byPlace.get(p.id) ?? [];
+    const primary = getPrimarySeasonalExhibition(exs, today);
+    if (!primary) return [];
+    const state = isPlaceInSeason(exs, today);
+    return [{ ...p, _seasonalExhibition: primary, _seasonState: state }];
+  });
+}
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -297,7 +379,23 @@ export async function GET(request: NextRequest, { params }: Props) {
   const categories: PlacesToGoCategory[] = [];
 
   for (const catConfig of PLACES_TO_GO_CATEGORIES) {
-    const bucket = categoryBuckets.get(catConfig.key) ?? [];
+    // Source the places for this category. Filter-based categories
+    // (currently only `has_active_seasonal_exhibition`) run a parallel query
+    // path — the main `places` fetch only pulls rows whose `place_type` is
+    // in `ALL_PLACES_TO_GO_TYPES`, which excludes seasonal-only destinations.
+    let bucket: Array<
+      PlaceRow & {
+        _seasonalExhibition?: SeasonalExhibition;
+        _seasonState?: SeasonState;
+      }
+    >;
+
+    if (catConfig.filter === "has_active_seasonal_exhibition") {
+      bucket = await fetchSeasonalPlaces(supabase, portalData.id, now);
+    } else {
+      bucket = categoryBuckets.get(catConfig.key) ?? [];
+    }
+
     if (bucket.length === 0) continue;
 
     // Score each place
@@ -415,9 +513,11 @@ export async function GET(request: NextRequest, { params }: Props) {
         createdDaysAgo,
         hasNewEventsThisWeek: eventData.total > 0,
         todayEventTitle: eventData.todayTitle,
-        // Seasonal fields — populated by Task 12's seasonal query branch.
-        seasonalExhibition: null,
-        seasonState: null,
+        // Seasonal fields — populated only for the seasonal branch. The
+        // `_seasonalExhibition` / `_seasonState` shims are attached by
+        // `fetchSeasonalPlaces()` above; non-seasonal branches leave both null.
+        seasonalExhibition: place._seasonalExhibition ?? null,
+        seasonState: place._seasonState ?? null,
       };
 
       if (!passesQualityGate(ctx)) continue;
@@ -490,6 +590,15 @@ export async function GET(request: NextRequest, { params }: Props) {
         href: `/${canonicalSlug}/spots/${place.slug}`,
       };
     });
+
+    // Spec: single-item seasonal categories read as a mistake ("Is this all
+    // there is?"). Only render this category when >= 2 places qualify.
+    if (
+      catConfig.filter === "has_active_seasonal_exhibition" &&
+      cards.length < 2
+    ) {
+      continue;
+    }
 
     // Compute aggregate stats for summary
     const summaryStats: Record<string, number | string | undefined> = {
