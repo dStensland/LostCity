@@ -73,11 +73,25 @@ export function PlacesToGoCard({ card, accentColor }: PlacesToGoCardProps) {
           )}
         </p>
 
-        {/* Callouts + event count badge */}
+        {/* Callouts + event count badge.
+            Callouts render as discrete spans so that on mobile (375px) the
+            FIRST callout (e.g. cadence) stays fully visible and truncation
+            kills only the trailing callout. Cap event_count at "9+" for
+            high-density shapes (e.g. fairgrounds with 50+ child events). */}
         <div className="flex items-center gap-2 mt-1">
           {card.callouts.length > 0 && (
-            <p className="text-xs text-[var(--muted)] truncate flex-1">
-              {card.callouts.join(" · ")}
+            <p className="text-xs text-[var(--muted)] flex-1 flex items-center gap-1 min-w-0 overflow-hidden">
+              {card.callouts.map((c, i) => (
+                <span
+                  key={i}
+                  className={`flex items-center gap-1 min-w-0 ${
+                    i === card.callouts.length - 1 ? "flex-1 truncate" : "flex-shrink-0"
+                  }`}
+                >
+                  {i > 0 && <span className="opacity-40 flex-shrink-0">·</span>}
+                  <span className={i === card.callouts.length - 1 ? "truncate" : ""}>{c}</span>
+                </span>
+              ))}
             </p>
           )}
           {hasEventCount && (
@@ -88,7 +102,7 @@ export function PlacesToGoCard({ card, accentColor }: PlacesToGoCardProps) {
                 color: accentColor,
               }}
             >
-              {card.event_count}
+              {card.event_count > 9 ? "9+" : card.event_count}
             </span>
           )}
         </div>
