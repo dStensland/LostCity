@@ -8,6 +8,8 @@ import {
 import { logger } from "@/lib/logger";
 
 export const runtime = "nodejs";
+// Curator-pick flags move at most daily and scheduled shows at most hourly;
+// 60s is a reasonable cache window for a feed-layer read.
 export const revalidate = 60;
 
 export async function GET(

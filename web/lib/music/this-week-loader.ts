@@ -2,26 +2,18 @@ import { createClient } from "@/lib/supabase/server";
 import { getPortalBySlug } from "@/lib/portal";
 import { buildPortalManifest } from "@/lib/portal-manifest";
 import { getPortalSourceAccess } from "@/lib/federation";
-import { applyManifestFederatedScopeToQuery } from "@/lib/portal-scope";
+import {
+  applyManifestFederatedScopeToQuery,
+  excludeSensitiveEvents,
+} from "@/lib/portal-scope";
+import { applyFeedGate } from "@/lib/feed-gate";
 import { logger } from "@/lib/logger";
 import { buildShowPayload, type RawEventRow } from "./build-show-payload";
+import { isoWeekRange } from "./date-windows";
+import { scoreShow } from "./signal-score";
 import type { MusicShowPayload, ThisWeekPayload } from "./types";
 
-/**
- * ISO week (Mon–Sun) containing `today`. Returns inclusive YYYY-MM-DD bounds.
- */
-export function isoWeekRange(today: Date): { start: string; end: string } {
-  const day = (today.getDay() + 6) % 7; // 0=Mon, 6=Sun
-  const start = new Date(today);
-  start.setDate(today.getDate() - day);
-  const end = new Date(start);
-  end.setDate(start.getDate() + 6);
-  const iso = (d: Date) => d.toISOString().slice(0, 10);
-  return { start: iso(start), end: iso(end) };
-}
-
-const ONE_NIGHT_PATTERN =
-  /\b(release party|farewell|finale|residency finale|one night|feat\.)\b/i;
+export { isoWeekRange };
 
 /**
  * Curator-first cascade: pick up to 3 "This Week" music shows.
@@ -67,11 +59,13 @@ export async function loadThisWeek(
     .gte("start_date", start)
     .lte("start_date", end);
 
+  query = applyFeedGate(query);
   query = applyManifestFederatedScopeToQuery(query, manifest, {
     publicOnlyWhenNoPortal: true,
     sourceIds: sourceAccess.sourceIds,
     sourceColumn: "source_id",
   });
+  query = excludeSensitiveEvents(query);
 
   const { data, error } = await query;
   if (error || !data) {
@@ -83,17 +77,8 @@ export async function loadThisWeek(
 
   const rows = data as unknown as RawEventRow[];
 
-  const score = (e: RawEventRow): number => {
-    if (e.is_curator_pick) return 100;
-    if (e.importance === "flagship" || e.is_tentpole) return 80;
-    if (e.importance === "major") return 60;
-    if (e.festival_id) return 50;
-    if (ONE_NIGHT_PATTERN.test(e.title)) return 30;
-    return 0;
-  };
-
   const ranked = rows
-    .map((r) => ({ row: r, s: score(r) }))
+    .map((r) => ({ row: r, s: scoreShow(r) }))
     .filter((x) => x.s > 0)
     .sort((a, b) => b.s - a.s)
     .slice(0, 3);
