@@ -60,6 +60,38 @@ Before submitting a new crawler, verify it captures everything available:
 
 **`is_all_day` should only be `True` when the event is genuinely all-day** (festivals, multi-day conventions, outdoor markets). Never infer it from a missing start_time -- a missing time just means we couldn't parse it.
 
+## Seasonal-only Destinations
+
+Destinations that exist **only during their season** (haunted houses, pumpkin patches, state fairs, seasonal light shows, Ren Fest) use the exhibitions-as-season-carrier pattern. The place persists year-round as a searchable record; the **exhibition** carries the season window.
+
+1. **Place**: real `place_type` (`festival_grounds`, `farm`, `fairgrounds`, `haunted_attraction`, `garden`). Set `is_seasonal_only: True` when the place literally only exists during the season (Ren Fest grounds, Netherworld). Leave `is_seasonal_only: False` (default) for year-round places with seasonal overlays (Atlanta Botanical Garden + Garden Lights).
+2. **Exhibition**: one row per season with `exhibition_type: "seasonal"`, `opening_date`/`closing_date` from the source site, `operating_schedule` JSON with per-day hours, year-scoped slug: `<place-slug>-seasonal-<year>` or `<place-slug>-<season-name>-<year>`.
+3. **Events**: themed dated programming (themed weekends, concerts, special nights) linked via `events.exhibition_id` → the seasonal exhibition.
+4. **Series** (Shape B only): recurring rituals within the season (nightly parade, fireworks) use `series.exhibition_id`.
+
+**Never** emit a season-window pseudo-event in the `events` table. The exhibition carries the window.
+
+### Shape taxonomy
+
+| Shape | Examples | Structure |
+|---|---|---|
+| A. Continuous nightly, no sub-programming | Netherworld, Lake Lanier Lights, Callaway Lights, Burt's Pumpkin | 1 exhibition, 0 events |
+| B. Season + recurring rituals | Stone Mountain Christmas | 1 exhibition + N series (via `series.exhibition_id`) |
+| C. Themed dated weekends | Ren Fest, Buford Corn Maze | 1 exhibition + N events (via `events.exhibition_id`) |
+| D. Fairgrounds | NG State Fair, Georgia National Fair | 1 exhibition + 50-150 events |
+| E. Multi-season single place | Southern Belle, Yule Forest | N exhibitions (one per season), possibly overlapping |
+| F. Persistent place + seasonal overlay | ABG + Garden Lights | `is_seasonal_only=False`, year-round place + seasonal exhibition(s) |
+
+### Lifecycle rules
+
+- **Year rollover**: next year's data creates a NEW exhibition row (year-scoped slug). Never overwrite last year's — historical rows are features.
+- **`is_active` trap**: use `closing_date` to truncate a cancelled season mid-run; never `is_active = FALSE`. `is_active` is for "this row is data junk," not "the season ended early."
+- **Series invariant**: when `series.exhibition_id` is set, `series.place_id` must equal `exhibitions.place_id` for the referenced exhibition.
+- **Slug uniqueness**: `exhibitions.slug` is UNIQUE — year-scope all seasonal slugs.
+- **Enrichment skip**: seasonal-only places should be excluded by `hydrate_hours_google.py` and `hydrate_venues_foursquare.py` to prevent silent NULL overwrites of season-hours-on-exhibition.
+
+Reference implementation: `crawlers/sources/georgia_ren_fest.py`. Reference spec: `docs/superpowers/specs/2026-04-17-seasonal-attractions-design.md`.
+
 ## Project Structure
 
 ```
