@@ -48,15 +48,22 @@ interface FeedPageIndexProps {
 /** Block display labels for edit mode — must match actual section titles */
 const BLOCK_LABELS: Record<FeedBlockId, string> = {
   briefing: "The Briefing",
-  events: "The Lineup",
-  hangs: "Hangs",
-  recurring: "Regular Hangs",
+  holiday: "Holiday Hero",
+  news: "Today in Atlanta",
+  lineup: "The Lineup",
   festivals: "The Big Stuff",
-  experiences: "Things to Do",
-  community: "The Network",
   cinema: "Now Showing",
   live_music: "Live Music",
+  regulars: "Regular Hangs",
+  places: "Places to Go",
+  active_contest: "Active Contest",
+  hangs: "Hangs",
   sports: "Game Day",
+  // Legacy ids kept for back-compat with pre-manifest user prefs.
+  events: "The Lineup",
+  recurring: "Regular Hangs",
+  experiences: "Things to Do",
+  community: "The Network",
   horizon: "On the Horizon",
   browse: "Browse by Category",
 };

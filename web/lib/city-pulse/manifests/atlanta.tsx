@@ -282,6 +282,8 @@ export const ATLANTA_FEED_MANIFEST: FeedSection[] = [
     wrapper: {
       id: "city-pulse-places-to-go",
       className: "scroll-mt-28 mt-6",
+      dataAnchor: true,
+      indexLabel: "Places to Go",
       blockId: "places",
     },
   },

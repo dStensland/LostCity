@@ -1,3 +1,4 @@
+import { cache } from "react";
 import type { CityPulseResponse } from "@/lib/city-pulse/types";
 import { getSharedCacheJson } from "@/lib/shared-cache";
 import { getTimeSlot, getPortalHour, getPortalDateString } from "@/lib/city-pulse/time-slots";
@@ -19,10 +20,15 @@ const CACHE_NAMESPACE = "api:city-pulse";
  *
  * Cache key format mirrors the API route's anonymous key:
  *   `${canonicalSlug}|${timeSlot}|${today}`
+ *
+ * Wrapped in React `cache()` so multiple manifest loaders (briefing + lineup
+ * both declare `loadCityPulseForFeed`) share one execution per request on
+ * both cold and warm paths — without the wrapper the shell would fire two
+ * identical HTTP fallbacks on cache miss.
  */
-export async function getServerFeedData(
+export const getServerFeedData = cache(async (
   portalSlug: string,
-): Promise<CityPulseResponse | null> {
+): Promise<CityPulseResponse | null> => {
   try {
     // Compute the same cache key the API route uses for anonymous requests.
     const now = new Date();
@@ -61,4 +67,4 @@ export async function getServerFeedData(
     // Graceful fallback — client will fetch on hydration
     return null;
   }
-}
+});

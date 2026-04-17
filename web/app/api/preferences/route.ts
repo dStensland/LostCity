@@ -17,8 +17,24 @@ import {
   normalizeEventCategory,
 } from "@/lib/event-taxonomy";
 
+// Mirrors the feed manifest ids in `lib/city-pulse/manifests/*.tsx`. The
+// manifest-driven server shell is the authoritative source — the legacy
+// Wave-C block prefs system was removed, so the only reason this exists is
+// to validate `feed_layout` payloads coming in from the TOC's edit mode. Keep
+// in sync when manifest sections are added or renamed.
 const VALID_BLOCK_IDS: FeedBlockId[] = [
-  "events", "recurring", "festivals", "experiences", "community", "cinema", "browse",
+  "briefing",
+  "holiday",
+  "news",
+  "lineup",
+  "festivals",
+  "cinema",
+  "live_music",
+  "regulars",
+  "places",
+  "active_contest",
+  "hangs",
+  "sports",
 ];
 
 export async function POST(request: NextRequest) {

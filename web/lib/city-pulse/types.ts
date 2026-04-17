@@ -229,8 +229,9 @@ export interface CityPulseSection {
 // Feed Header CMS types
 // ---------------------------------------------------------------------------
 
-/** Layout variants for the GreetingBar hero */
-export type LayoutVariant = "centered" | "bottom-left" | "split" | "editorial";
+/** Layout variants — retained for CMS schema compatibility, but the hero now
+ * renders a single canonical bottom-left layout regardless of value. */
+export type LayoutVariant = "centered" | "bottom-left" | "editorial";
 
 /** Text treatment presets — control how text renders over hero photos */
 export type TextTreatment = "auto" | "clean" | "frosted" | "bold" | "cinematic";
@@ -433,17 +434,33 @@ export interface DashboardCard {
 // Feed layout customization
 // ---------------------------------------------------------------------------
 
+/**
+ * Feed block identifiers. Authoritative source is the feed manifest
+ * (`web/lib/city-pulse/manifests/*.tsx`) — when you add or rename a section
+ * there, mirror the change here so validation + TOC references stay in sync.
+ *
+ * `events` / `horizon` / `browse` are retained for compatibility with saved
+ * `feed_layout` prefs from the pre-manifest era; new code should prefer the
+ * manifest's canonical ids.
+ */
 export type FeedBlockId =
   | "briefing"
-  | "events"
-  | "hangs"
-  | "recurring"
+  | "holiday"
+  | "news"
+  | "lineup"
   | "festivals"
-  | "experiences"
-  | "community"
   | "cinema"
   | "live_music"
+  | "regulars"
+  | "places"
+  | "active_contest"
+  | "hangs"
   | "sports"
+  // Legacy ids kept for back-compat with existing user prefs payloads.
+  | "events"
+  | "recurring"
+  | "experiences"
+  | "community"
   | "horizon"
   | "browse";
 
@@ -470,8 +487,8 @@ export interface FeedLayout {
 export const DEFAULT_FEED_ORDER: FeedBlockId[] = [
   "briefing",
   "events",
-  // "cinema" and "live_music" removed from the dynamic tier — they are now
-  // hard-coded in CityPulseShell JSX so users cannot hide or reorder them.
+  // "cinema" and "live_music" are pinned in the feed manifest and cannot be
+  // hidden or reordered — they live outside the dynamic tier.
   "sports",
   "horizon",
   "browse",
