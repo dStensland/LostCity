@@ -52,28 +52,27 @@ import type {
 } from "../feed-section-contract";
 
 // ── Dynamically-imported client islands (code-split below the fold) ─────────
+//
+// `ssr: false` is intentionally omitted — manifest is imported from a Server
+// Component, and `next/dynamic` disallows `ssr: false` in that context. The
+// underlying section components all carry `"use client"` and are wrapped by
+// `LazySection`, which already defers rendering until the viewport intersects.
 
 const NowShowingSection = dynamic(
   () => import("@/components/feed/sections/NowShowingSection"),
-  { ssr: false },
 );
 const LiveMusicSection = dynamic(
   () => import("@/components/feed/sections/MusicTabContent"),
-  { ssr: false },
 );
-const GameDaySection = dynamic<{ portalSlug: string }>(
-  () =>
-    import("@/components/feed/sections/GameDaySection").then((m) => ({
-      default: m.default as ComponentType<{ portalSlug: string }>,
-    })),
-  { ssr: false },
+const GameDaySection = dynamic<{ portalSlug: string }>(() =>
+  import("@/components/feed/sections/GameDaySection").then((m) => ({
+    default: m.default as ComponentType<{ portalSlug: string }>,
+  })),
 );
-const HangFeedSection = dynamic(
-  () =>
-    import("@/components/feed/sections/HangFeedSection").then((m) => ({
-      default: m.HangFeedSection,
-    })),
-  { ssr: false },
+const HangFeedSection = dynamic(() =>
+  import("@/components/feed/sections/HangFeedSection").then((m) => ({
+    default: m.HangFeedSection,
+  })),
 );
 
 // ── Section island adapters ─────────────────────────────────────────────────

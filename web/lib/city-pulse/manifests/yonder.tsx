@@ -14,13 +14,13 @@ import type {
   FeedSectionComponentProps,
 } from "../feed-section-contract";
 
+// `ssr: false` omitted — manifest is imported from a Server Component and
+// `next/dynamic` rejects it there. Underlying sections are `"use client"`.
 const YonderRegionalEscapesSection = dynamic(
   () => import("@/components/feed/sections/YonderRegionalEscapesSection"),
-  { ssr: false },
 );
 const YonderDestinationNodeQuestsSection = dynamic(
   () => import("@/components/feed/sections/YonderDestinationNodeQuestsSection"),
-  { ssr: false },
 );
 
 function YonderRegionalEscapesIsland({ ctx }: FeedSectionComponentProps) {
