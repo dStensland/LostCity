@@ -83,6 +83,8 @@ export interface EventData {
     title: string;
     slug: string;
     series_type: string;
+    frequency?: string | null;
+    day_of_week?: string | null;
     festival?: {
       id: string;
       name: string;
@@ -388,7 +390,7 @@ export interface ConnectionRow {
   type: "venue" | "series" | "festival" | "org" | "social" | "proximity" | "artist";
   label: string;
   contextLine: string;
-  href: string;
+  href?: string | null;       // null = render as informational, no link/chevron
   imageUrl?: string | null;
   accent?: "gold" | "coral" | null;
   avatars?: string[]; // for social connections

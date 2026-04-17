@@ -175,6 +175,8 @@ export async function getEventById(id: number): Promise<EventWithProducer | null
         series_type,
         image_url,
         genres,
+        frequency,
+        day_of_week,
         festival:festivals(id, slug, name, image_url, festival_type, location, neighborhood)
       )
     `

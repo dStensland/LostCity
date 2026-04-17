@@ -159,6 +159,8 @@ export function mapEventServerDataToViewData(
           title: event.series.title,
           slug: event.series.slug,
           series_type: event.series.series_type,
+          frequency: (event.series as { frequency?: string | null }).frequency ?? null,
+          day_of_week: (event.series as { day_of_week?: string | null }).day_of_week ?? null,
           festival: event.series.festival
             ? {
                 id: event.series.festival.id,

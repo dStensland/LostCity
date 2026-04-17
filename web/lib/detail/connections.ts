@@ -24,6 +24,30 @@ export function resolveConnections(data: EntityData, portalSlug: string): Connec
   }
 }
 
+function formatSeriesContext(series: {
+  series_type: string;
+  frequency?: string | null;
+  day_of_week?: string | null;
+}): string {
+  if (series.series_type === "film") return "Film";
+  const freq = series.frequency?.toLowerCase();
+  const day = series.day_of_week?.toLowerCase();
+  if (freq === "weekly" && day) {
+    const dayLabel = day.charAt(0).toUpperCase() + day.slice(1);
+    return `Weekly series · ${dayLabel}s`;
+  }
+  if (freq === "biweekly" && day) {
+    const dayLabel = day.charAt(0).toUpperCase() + day.slice(1);
+    return `Biweekly series · ${dayLabel}s`;
+  }
+  if (freq === "monthly") return "Monthly series";
+  if (freq === "daily") return "Daily series";
+  if (freq) {
+    return `${freq.charAt(0).toUpperCase() + freq.slice(1)} series`;
+  }
+  return "Series";
+}
+
 function resolveEventConnections(data: EventApiResponse, portalSlug: string): ConnectionRow[] {
   const rows: ConnectionRow[] = [];
   const e = data.event;
@@ -56,8 +80,10 @@ function resolveEventConnections(data: EventApiResponse, portalSlug: string): Co
       id: `series-${e.series.id}`,
       type: "series",
       label: e.series.title,
-      contextLine: e.series.series_type === "film" ? "Film" : "Series",
-      href: `/${portalSlug}?series=${e.series.slug}`,
+      contextLine: formatSeriesContext(e.series),
+      // No href — series detail page adds little beyond what the event
+      // already shows; display cadence inline instead.
+      href: null,
       accent: null,
     });
   }
