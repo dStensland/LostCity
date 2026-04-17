@@ -83,20 +83,6 @@ export function useFeedPreferences({ isAuthenticated }: UseFeedPreferencesOption
     return () => { cancelled = true; };
   }, [isAuthenticated]);
 
-  // Save full layout (optimistic)
-  const handleSaveLayout = useCallback(async (layout: FeedLayout | null) => {
-    setFeedLayout(layout);
-    try {
-      await fetch("/api/preferences", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ feed_layout: layout }),
-      });
-    } catch {
-      // Silently fail — layout is already applied locally
-    }
-  }, []);
-
   // Local-only: update feedLayout interests without persisting or refetching
   const handleInterestsChange = useCallback((interests: string[]) => {
     hasLocalChanges.current = true;
@@ -125,7 +111,6 @@ export function useFeedPreferences({ isAuthenticated }: UseFeedPreferencesOption
   return {
     feedLayout,
     savedInterests,
-    handleSaveLayout,
     handleInterestsChange,
     handleSaveInterests,
   };
