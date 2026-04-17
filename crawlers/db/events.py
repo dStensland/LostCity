@@ -1998,6 +1998,14 @@ def smart_update_existing_event(existing: dict, incoming: dict) -> bool:
     if incoming_festival_id and not existing_festival_id:
         updates["festival_id"] = incoming_festival_id
 
+    # Backfill exhibition_id when a seasonal-attraction crawler starts
+    # emitting the link after previously inserting sub-events without it.
+    # Never downgrade an existing linkage (trusted state).
+    incoming_exhibition_id = incoming.get("exhibition_id")
+    existing_exhibition_id = existing.get("exhibition_id")
+    if incoming_exhibition_id and not existing_exhibition_id:
+        updates["exhibition_id"] = incoming_exhibition_id
+
     incoming_start_time = incoming.get("start_time")
     existing_start_time = existing.get("start_time")
     if incoming_start_time and not existing_start_time:
