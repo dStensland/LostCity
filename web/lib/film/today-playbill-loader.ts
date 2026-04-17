@@ -72,6 +72,21 @@ type RawScreeningTime = {
 // Helpers
 // ---------------------------------------------------------------------------
 
+function isoWeekRangeForDate(date: string): { start: string; end: string } {
+  const d = new Date(date + 'T00:00:00Z');
+  const day = d.getUTCDay();
+  const diffToMonday = day === 0 ? -6 : 1 - day;
+  const monday = new Date(d);
+  monday.setUTCDate(d.getUTCDate() + diffToMonday);
+  monday.setUTCHours(0, 0, 0, 0);
+  const sunday = new Date(monday);
+  sunday.setUTCDate(monday.getUTCDate() + 6);
+  return {
+    start: monday.toISOString().slice(0, 10),
+    end: sunday.toISOString().slice(0, 10),
+  };
+}
+
 async function resolvePortalId(
   supabase: Awaited<ReturnType<typeof createClient>>,
   portalSlug: string,
@@ -102,6 +117,7 @@ export async function loadTodayPlaybill(args: {
 }): Promise<TodayPlaybillPayload> {
   const supabase = await createClient();
   const portalId = await resolvePortalId(supabase, args.portalSlug);
+  const weekRange = isoWeekRangeForDate(args.date);
 
   const { data, error } = await supabase
     .from('screening_times')
@@ -188,7 +204,11 @@ export async function loadTodayPlaybill(args: {
         film_press_source: t.film_press_source,
         is_premiere: t.is_premiere ?? false,
         premiere_scope: t.premiere_scope ?? null,
-        is_curator_pick: r.is_curator_pick ?? false,
+        is_curator_pick:
+          (r.is_curator_pick ?? false) &&
+          (r.curator_pick_week === null ||
+            (r.curator_pick_week >= weekRange.start &&
+              r.curator_pick_week <= weekRange.end)),
         festival_id: r.festival_id,
         festival_name: null,
         venue: group.venue,
