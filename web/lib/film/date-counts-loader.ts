@@ -68,28 +68,26 @@ export async function loadDateCounts(args: {
   const { data, error } = await supabase
     .from('screening_times')
     .select(
-      `start_date, screening_runs!inner (screening_titles!inner (is_premiere), places!inner (portal_id))`,
+      `start_date, screening_runs!inner (screening_titles!inner (is_premiere))`,
     )
     .gte('start_date', args.from)
     .lte('start_date', args.to)
-    .eq('status', 'scheduled');
+    .eq('status', 'scheduled')
+    .eq('screening_runs.portal_id', portalId);
 
   if (error) throw new Error(`loadDateCounts query failed: ${error.message}`);
 
   type RawJoinedRow = {
     start_date: string;
     screening_runs: {
-      places: { portal_id: string };
       screening_titles: { is_premiere: boolean | null };
     } | null;
   };
 
-  const rows: RawRow[] = (data as unknown as RawJoinedRow[])
-    .filter((r) => r.screening_runs?.places?.portal_id === portalId)
-    .map((r) => ({
-      start_date: r.start_date,
-      is_premiere: Boolean(r.screening_runs?.screening_titles?.is_premiere),
-    }));
+  const rows: RawRow[] = (data as unknown as RawJoinedRow[]).map((r) => ({
+    start_date: r.start_date,
+    is_premiere: Boolean(r.screening_runs?.screening_titles?.is_premiere),
+  }));
 
   return summarizeDateCounts(rows, args.from, args.to);
 }
