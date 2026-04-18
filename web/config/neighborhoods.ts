@@ -7,6 +7,12 @@ export interface Neighborhood {
   lng: number;
   radius: number; // meters
   tier: 1 | 2 | 3; // 1=high activity, 2=medium, 3=low
+  /**
+   * Optional curated photo for the detail-page hero. When absent, the page
+   * renders a neighborhood-color gradient composition as the designed base.
+   * See docs/plans/neighborhoods-elevate-2026-04-18.md § Hero image contract.
+   */
+  heroImage?: string;
 }
 
 export const ITP_NEIGHBORHOODS: Neighborhood[] = [
