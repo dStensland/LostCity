@@ -107,10 +107,13 @@ async function getActivityData(portalSlug: string, portalId: string | null): Pro
     weekEndDate.setDate(weekEndDate.getDate() + 7);
     const weekEndStr = getLocalDateString(weekEndDate);
 
-    // Fetch events (with IDs for RSVP lookup) and active hangs in parallel
+    // Fetch events (with IDs for RSVP lookup) and active hangs in parallel.
+    // Uses `places` (not `venues`) — table renamed March 2026, FK constraint
+    // renamed `events_venue_id_fkey` → `events_place_id_fkey` (migration
+    // 20260328300001). Alias stays `venue` for downstream type-guard compat.
     let eventQuery = serviceClient
       .from("events")
-      .select("id, category_id, venue:venues!events_venue_id_fkey(neighborhood)")
+      .select("id, category_id, venue:places!events_place_id_fkey(neighborhood)")
       .eq("is_active", true)
       .is("canonical_event_id", null)
       .gte("start_date", todayStr)
@@ -124,7 +127,7 @@ async function getActivityData(portalSlug: string, portalId: string | null): Pro
       eventQuery,
       serviceClient
         .from("hangs")
-        .select("venue:venues(neighborhood)")
+        .select("venue:places(neighborhood)")
         .eq("status", "active")
         .gt("auto_expire_at", new Date().toISOString()),
     ]);
