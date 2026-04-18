@@ -19,6 +19,7 @@ import { buildExploreUrl } from "@/lib/find-url";
 import Dot from "@/components/ui/Dot";
 import PlaceCard from "@/components/PlaceCard";
 import CategoryIcon from "@/components/CategoryIcon";
+import { resolveFeedPageRequest } from "../../_surfaces/feed/resolve-feed-page-request";
 
 export const revalidate = 300;
 
@@ -75,12 +76,15 @@ async function getNeighborhoodSpots(neighborhoodName: string): Promise<(Spot & {
     .sort((a, b) => b.event_count - a.event_count || a.name.localeCompare(b.name));
 }
 
-async function getNeighborhoodEventCounts(placeIds: number[]): Promise<{ todayCount: number; upcomingCount: number }> {
+async function getNeighborhoodEventCounts(
+  placeIds: number[],
+  portalId: string | null,
+): Promise<{ todayCount: number; upcomingCount: number }> {
   const today = getLocalDateString();
   if (placeIds.length === 0) return { todayCount: 0, upcomingCount: 0 };
 
   // Count all upcoming events (not limited)
-  const { count: upcomingCount } = await supabase
+  let upcomingQuery = supabase
     .from("events")
     .select("id", { count: "exact", head: true })
     .in("place_id", placeIds)
@@ -88,9 +92,15 @@ async function getNeighborhoodEventCounts(placeIds: number[]): Promise<{ todayCo
     .is("canonical_event_id", null)
     .gte("start_date", today)
     .or("is_sensitive.eq.false,is_sensitive.is.null");
+  if (portalId) {
+    upcomingQuery = upcomingQuery.or(
+      `portal_id.eq.${portalId},portal_id.is.null`,
+    );
+  }
+  const { count: upcomingCount } = await upcomingQuery;
 
   // Count today's events
-  const { count: todayCount } = await supabase
+  let todayQuery = supabase
     .from("events")
     .select("id", { count: "exact", head: true })
     .in("place_id", placeIds)
@@ -98,15 +108,24 @@ async function getNeighborhoodEventCounts(placeIds: number[]): Promise<{ todayCo
     .is("canonical_event_id", null)
     .eq("start_date", today)
     .or("is_sensitive.eq.false,is_sensitive.is.null");
+  if (portalId) {
+    todayQuery = todayQuery.or(
+      `portal_id.eq.${portalId},portal_id.is.null`,
+    );
+  }
+  const { count: todayCount } = await todayQuery;
 
   return { todayCount: todayCount ?? 0, upcomingCount: upcomingCount ?? 0 };
 }
 
-async function getNeighborhoodEvents(placeIds: number[]): Promise<Event[]> {
+async function getNeighborhoodEvents(
+  placeIds: number[],
+  portalId: string | null,
+): Promise<Event[]> {
   const today = getLocalDateString();
   if (placeIds.length === 0) return [];
 
-  const { data, error } = await supabase
+  let query = supabase
     .from("events")
     .select(`
       *,
@@ -117,7 +136,11 @@ async function getNeighborhoodEvents(placeIds: number[]): Promise<Event[]> {
     .eq("is_active", true)
     .is("canonical_event_id", null)
     .gte("start_date", today)
-    .or("is_sensitive.eq.false,is_sensitive.is.null")
+    .or("is_sensitive.eq.false,is_sensitive.is.null");
+  if (portalId) {
+    query = query.or(`portal_id.eq.${portalId},portal_id.is.null`);
+  }
+  const { data, error } = await query
     .order("start_date", { ascending: true })
     .order("start_time", { ascending: true })
     .limit(20);
@@ -160,12 +183,18 @@ export default async function NeighborhoodPage({ params }: Props) {
     notFound();
   }
 
+  const request = await resolveFeedPageRequest({
+    portalSlug: portal,
+    pathname: `/${portal}/neighborhoods/${slug}`,
+  });
+  const portalId = request?.portal?.id ?? null;
+
   const spots = await getNeighborhoodSpots(neighborhood.name);
   const placeIds = spots.map((s) => s.id);
 
   const [events, eventCounts] = await Promise.all([
-    getNeighborhoodEvents(placeIds),
-    getNeighborhoodEventCounts(placeIds),
+    getNeighborhoodEvents(placeIds, portalId),
+    getNeighborhoodEventCounts(placeIds, portalId),
   ]);
 
   const description = getNeighborhoodDescription(slug);

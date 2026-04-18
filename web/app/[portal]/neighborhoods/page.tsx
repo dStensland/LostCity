@@ -108,14 +108,20 @@ async function getActivityData(portalSlug: string, portalId: string | null): Pro
     const weekEndStr = getLocalDateString(weekEndDate);
 
     // Fetch events (with IDs for RSVP lookup) and active hangs in parallel
+    let eventQuery = serviceClient
+      .from("events")
+      .select("id, category_id, venue:venues!events_venue_id_fkey(neighborhood)")
+      .eq("is_active", true)
+      .is("canonical_event_id", null)
+      .gte("start_date", todayStr)
+      .lte("start_date", weekEndStr);
+    if (portalId) {
+      eventQuery = eventQuery.or(
+        `portal_id.eq.${portalId},portal_id.is.null`,
+      );
+    }
     const [eventResult, hangResult] = await Promise.all([
-      serviceClient
-        .from("events")
-        .select("id, category_id, venue:venues!events_venue_id_fkey(neighborhood)")
-        .eq("is_active", true)
-        .is("canonical_event_id", null)
-        .gte("start_date", todayStr)
-        .lte("start_date", weekEndStr),
+      eventQuery,
       serviceClient
         .from("hangs")
         .select("venue:venues(neighborhood)")
