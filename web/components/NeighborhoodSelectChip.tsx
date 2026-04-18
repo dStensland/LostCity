@@ -2,7 +2,7 @@
 
 import { memo } from "react";
 
-interface NeighborhoodCardProps {
+interface NeighborhoodSelectChipProps {
   name: string;
   liveCount: number;
   openCount: number;
@@ -10,7 +10,7 @@ interface NeighborhoodCardProps {
   onClick: () => void;
 }
 
-function NeighborhoodCard({ name, liveCount, openCount, isSelected, onClick }: NeighborhoodCardProps) {
+function NeighborhoodSelectChip({ name, liveCount, openCount, isSelected, onClick }: NeighborhoodSelectChipProps) {
   const hasActivity = liveCount > 0 || openCount > 0;
 
   return (
@@ -56,4 +56,4 @@ function NeighborhoodCard({ name, liveCount, openCount, isSelected, onClick }: N
   );
 }
 
-export default memo(NeighborhoodCard);
+export default memo(NeighborhoodSelectChip);
