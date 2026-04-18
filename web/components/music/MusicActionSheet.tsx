@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { buildEventUrl } from "@/lib/entity-urls";
+import { useEntityLinkOptions } from "@/lib/link-context";
 import type { MusicShowPayload } from "@/lib/music/types";
 
 export interface MusicActionSheetProps {
@@ -14,6 +15,7 @@ export interface MusicActionSheetProps {
 
 export function MusicActionSheet({ show, portalSlug, onClose, onAddToPlans }: MusicActionSheetProps) {
   const [visible, setVisible] = useState(false);
+  const { context, existingParams } = useEntityLinkOptions();
 
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
@@ -39,7 +41,7 @@ export function MusicActionSheet({ show, portalSlug, onClose, onAddToPlans }: Mu
 
   const headliner = show.artists.find((a) => a.is_headliner) ?? show.artists[0];
   const supports = show.artists.filter((a) => !a.is_headliner).slice(0, 3);
-  const eventUrl = buildEventUrl(show.id, portalSlug, "overlay");
+  const eventUrl = buildEventUrl(show.id, portalSlug, context, existingParams);
 
   const content = (
     <div

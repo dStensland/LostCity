@@ -1,13 +1,17 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import AroundHereSection, {
   type NearbyDestination,
   type RelatedEvent,
 } from "@/components/detail/AroundHereSection";
-import { buildSpotUrl } from "@/lib/entity-urls";
+import { buildEventUrl, buildSpotUrl } from "@/lib/entity-urls";
+import { useEntityLinkOptions } from "@/lib/link-context";
 import type { SectionProps } from "@/lib/detail/types";
 
 export function NearbySection({ data, portalSlug }: SectionProps) {
+  const router = useRouter();
+  const { context, existingParams } = useEntityLinkOptions();
   let venueEvents: RelatedEvent[] = [];
   let nearbyEvents: RelatedEvent[] = [];
   let destinations: NearbyDestination[] = [];
@@ -44,11 +48,11 @@ export function NearbySection({ data, portalSlug }: SectionProps) {
   if (!hasContent) return null;
 
   const handleSpotClick = (slug: string) => {
-    window.location.href = buildSpotUrl(slug, portalSlug, "canonical");
+    router.push(buildSpotUrl(slug, portalSlug, context, existingParams));
   };
 
   const handleEventClick = (id: number) => {
-    window.location.href = `/${portalSlug}/events/${id}`;
+    router.push(buildEventUrl(id, portalSlug, context, existingParams));
   };
 
   return (

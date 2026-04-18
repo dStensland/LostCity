@@ -5,6 +5,7 @@ import { parseISO, format } from "date-fns";
 import { MapPin, CalendarBlank, Ticket } from "@phosphor-icons/react";
 import { formatEventTime, formatPriceRange } from "@/lib/detail/format";
 import { buildSpotUrl } from "@/lib/entity-urls";
+import { useEntityLinkOptions } from "@/lib/link-context";
 import { getCategoryColor } from "@/lib/category-config";
 import type { EventData } from "@/lib/detail/types";
 
@@ -37,12 +38,13 @@ export const EventIdentity = memo(function EventIdentity({
   portalSlug,
   variant = "sidebar",
 }: EventIdentityProps) {
+  const { context, existingParams } = useEntityLinkOptions();
   const dateDisplay = formatDateDisplay(event.start_date, event.end_date);
   const timeDisplay = formatEventTime(event.is_all_day, event.start_time, event.end_time);
   const priceText = formatPriceRange(event.is_free, event.price_min, event.price_max);
 
   const venueUrl = event.venue
-    ? buildSpotUrl(event.venue.slug, portalSlug, "canonical")
+    ? buildSpotUrl(event.venue.slug, portalSlug, context, existingParams)
     : null;
 
   const venueLabel = event.venue

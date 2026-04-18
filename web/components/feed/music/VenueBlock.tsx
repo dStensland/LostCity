@@ -21,6 +21,7 @@ import Link from "next/link";
 import { CaretRight } from "@phosphor-icons/react";
 import Dot from "@/components/ui/Dot";
 import { buildSpotUrl } from "@/lib/entity-urls";
+import { useEntityLinkOptions } from "@/lib/link-context";
 import { formatArtistName } from "@/lib/music/format-artist-name";
 import { shortVenueName } from "@/lib/music/short-venue-name";
 import type { MusicShowPayload, MusicVenuePayload } from "@/lib/music/types";
@@ -57,9 +58,10 @@ export function VenueBlock({
   portalSlug,
   maxVisibleShows = MAX_SHOWS,
 }: VenueBlockProps) {
+  const { context, existingParams } = useEntityLinkOptions();
   if (shows.length === 0) return null;
 
-  const venueUrl = buildSpotUrl(venue.slug, portalSlug, "overlay");
+  const venueUrl = buildSpotUrl(venue.slug, portalSlug, context, existingParams);
   const visible = shows.slice(0, maxVisibleShows);
   const overflow = Math.max(shows.length - visible.length, 0);
 

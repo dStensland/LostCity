@@ -1,7 +1,16 @@
 import { describe, expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";
+import type { ReactElement } from "react";
+import { LinkContextProvider } from "@/lib/link-context";
 import { VenueBlock } from "./VenueBlock";
 import type { MusicShowPayload, MusicVenuePayload } from "@/lib/music/types";
+
+// VenueBlock lives inside the music feed section — overlay-capable surface.
+// In production it inherits "overlay" context from PortalSurfaceChrome's
+// LinkContextProvider; in tests we wrap explicitly to mirror that.
+function renderInOverlay(node: ReactElement) {
+  return render(<LinkContextProvider value="overlay">{node}</LinkContextProvider>);
+}
 
 function mkVenue(overrides: Partial<MusicVenuePayload> = {}): MusicVenuePayload {
   return {
@@ -51,7 +60,7 @@ function mkShow(overrides: Partial<MusicShowPayload> = {}): MusicShowPayload {
 
 describe("VenueBlock", () => {
   it("renders venue name (shortened) with caret link to spot URL", () => {
-    render(
+    renderInOverlay(
       <VenueBlock
         venue={mkVenue({ name: "The EARL", slug: "the-earl" })}
         shows={[mkShow()]}
@@ -66,7 +75,7 @@ describe("VenueBlock", () => {
   });
 
   it("formats showtime as 12-hour without AM/PM", () => {
-    render(
+    renderInOverlay(
       <VenueBlock
         venue={mkVenue()}
         shows={[mkShow({ start_time: "20:00" })]}
@@ -81,7 +90,7 @@ describe("VenueBlock", () => {
       mkShow({ id: 1, artists: [{ id: "h", slug: "h", name: "Wild Pink", is_headliner: true, billing_order: 1 }] }),
       mkShow({ id: 2, start_time: "22:00", artists: [{ id: "s", slug: "s", name: "Cusses", is_headliner: true, billing_order: 1 }] }),
     ];
-    render(<VenueBlock venue={mkVenue()} shows={shows} portalSlug="atlanta" />);
+    renderInOverlay(<VenueBlock venue={mkVenue()} shows={shows} portalSlug="atlanta" />);
     // Both names appear without legacy "+ " prefix
     expect(screen.getByText("Wild Pink")).toBeInTheDocument();
     expect(screen.getByText("Cusses")).toBeInTheDocument();
@@ -96,7 +105,7 @@ describe("VenueBlock", () => {
       mkShow({ id: 4 }),
       mkShow({ id: 5 }),
     ];
-    render(
+    renderInOverlay(
       <VenueBlock
         venue={mkVenue()}
         shows={shows}
@@ -108,7 +117,7 @@ describe("VenueBlock", () => {
   });
 
   it("does NOT render any kicker decoration (kickers are dropped in feed view)", () => {
-    const { container } = render(
+    const { container } = renderInOverlay(
       <VenueBlock venue={mkVenue()} shows={[mkShow()]} portalSlug="atlanta" />,
     );
     // No kicker label of any tone should appear
@@ -116,14 +125,14 @@ describe("VenueBlock", () => {
   });
 
   it("returns null when shows array is empty", () => {
-    const { container } = render(
+    const { container } = renderInOverlay(
       <VenueBlock venue={mkVenue()} shows={[]} portalSlug="atlanta" />,
     );
     expect(container.firstChild).toBeNull();
   });
 
   it("each show title link points to the venue spot URL", () => {
-    render(
+    renderInOverlay(
       <VenueBlock
         venue={mkVenue({ slug: "terminal-west" })}
         shows={[mkShow()]}

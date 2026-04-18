@@ -7,6 +7,7 @@ import { GenreChip } from "@/components/ActivityChip";
 import { getSeriesTypeLabel, getSeriesTypeColor } from "@/lib/series-utils";
 import { formatRecurrence } from "@/lib/detail/format";
 import { buildSpotUrl } from "@/lib/entity-urls";
+import { useEntityLinkOptions } from "@/lib/link-context";
 import ScopedStyles from "@/components/ScopedStyles";
 import { createCssVarClass } from "@/lib/css-utils";
 import type { SeriesData, VenueShowtime } from "@/lib/detail/types";
@@ -26,6 +27,7 @@ export const SeriesIdentity = memo(function SeriesIdentity({
   venueShowtimes,
   portalSlug,
 }: SeriesIdentityProps) {
+  const { context, existingParams } = useEntityLinkOptions();
   const isFilm = series.series_type === "film";
   const isRecurring = series.series_type === "recurring_show";
 
@@ -42,7 +44,7 @@ export const SeriesIdentity = memo(function SeriesIdentity({
     venueShowtimes.length === 1 ? venueShowtimes[0].venue : null;
 
   const venueUrl = singleVenue
-    ? buildSpotUrl(singleVenue.slug, portalSlug, "canonical")
+    ? buildSpotUrl(singleVenue.slug, portalSlug, context, existingParams)
     : null;
 
   return (
