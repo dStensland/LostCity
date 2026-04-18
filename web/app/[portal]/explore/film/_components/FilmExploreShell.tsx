@@ -1,12 +1,14 @@
 "use client";
 
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import DateStrip from './DateStrip';
 import ViewToggle, { type ExploreView } from './ViewToggle';
 import FilmFilterChips, { DEFAULT_FILTERS, type FilmFilters } from './FilmFilterChips';
 import ThisWeekZone from './ThisWeekZone';
 import ByTheaterView from './ByTheaterView';
+import ByFilmView from './ByFilmView';
 import type {
+  ByFilmPayload,
   ThisWeekPayload,
   TodayPlaybillPayload,
 } from '@/lib/film/types';
@@ -36,6 +38,9 @@ export default function FilmExploreShell({
   const [filters, setFilters] = useState<FilmFilters>(DEFAULT_FILTERS);
   const [playbill, setPlaybill] = useState<TodayPlaybillPayload>(initialPlaybill);
   const [loading, setLoading] = useState(false);
+
+  const [byFilm, setByFilm] = useState<ByFilmPayload | null>(null);
+  const [byFilmLoading, setByFilmLoading] = useState(false);
 
   const handleDateSelect = useCallback(
     (date: string) => {
@@ -69,9 +74,42 @@ export default function FilmExploreShell({
     [portalSlug, initialDate, initialPlaybill],
   );
 
-  // view is owned but only 'by-theater' ships a real view in this plan;
-  // suppress unused-variable lint by referencing it in a render path guard.
-  void view;
+  useEffect(() => {
+    if (view !== 'by-film') return;
+    const date = selectedDate;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10_000);
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- loading flag before async fetch; cascade bounded (setByFilm only called in .then/.catch)
+    setByFilmLoading(true);
+    fetch(`/api/film/by-film?portal=${portalSlug}&date=${date}`, {
+      signal: controller.signal,
+    })
+      .then((r) =>
+        r.ok
+          ? (r.json() as Promise<ByFilmPayload>)
+          : Promise.reject(new Error(`HTTP ${r.status}`)),
+      )
+      .then((p) => setByFilm(p))
+      .catch((err) => {
+        if (err instanceof Error && err.name === 'AbortError') return;
+        setByFilm({
+          portal_slug: portalSlug,
+          date,
+          iso_week_start: '',
+          iso_week_end: '',
+          films: [],
+          total_screenings: 0,
+        });
+      })
+      .finally(() => {
+        clearTimeout(timeoutId);
+        setByFilmLoading(false);
+      });
+    return () => {
+      controller.abort();
+      clearTimeout(timeoutId);
+    };
+  }, [view, selectedDate, portalSlug]);
 
   return (
     <>
@@ -108,8 +146,16 @@ export default function FilmExploreShell({
 
       <ThisWeekZone thisWeek={initialThisWeek} portalSlug={portalSlug} />
 
-      <div className={loading ? 'opacity-60 transition-opacity' : 'transition-opacity'}>
-        <ByTheaterView playbill={playbill} filters={filters} portalSlug={portalSlug} />
+      <div className={(loading || byFilmLoading) ? 'opacity-60 transition-opacity' : 'transition-opacity'}>
+        {view === 'by-film' ? (
+          byFilm ? (
+            <ByFilmView payload={byFilm} filters={filters} portalSlug={portalSlug} />
+          ) : (
+            <div className="h-48 rounded-card-xl bg-[var(--night)] border border-[var(--twilight)] animate-pulse" />
+          )
+        ) : (
+          <ByTheaterView playbill={playbill} filters={filters} portalSlug={portalSlug} />
+        )}
       </div>
     </>
   );
