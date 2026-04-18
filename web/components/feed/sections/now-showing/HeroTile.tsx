@@ -2,7 +2,6 @@
 
 import Link from 'next/link';
 import SmartImage from '@/components/SmartImage';
-import Dot from '@/components/ui/Dot';
 import { buildHeroTag } from '@/lib/film/hero-tags';
 import { formatTime } from '@/lib/formats';
 import { buildSeriesUrl } from '@/lib/entity-urls';
@@ -81,8 +80,9 @@ export default function HeroTile({ hero, portalSlug, density }: HeroTileProps) {
 
       {/* Bottom content */}
       <div className="absolute inset-x-0 bottom-0 p-3 space-y-1">
-        {hero.film_press_quote && (
-          <p className={`text-xs italic text-[var(--cream)]/85 ${density.startsWith('hero-large-') ? '' : 'line-clamp-1'}`}>
+        {/* Press quote only on the larger Explore variant — feed tile stays clean */}
+        {hero.film_press_quote && density.startsWith('hero-large-') && (
+          <p className="text-xs italic text-[var(--cream)]/85">
             &ldquo;{hero.film_press_quote}&rdquo;
             {hero.film_press_source && (
               <span className="not-italic text-[var(--gold)]/80">
@@ -99,14 +99,6 @@ export default function HeroTile({ hero, portalSlug, density }: HeroTileProps) {
         </h3>
         <p className="font-mono text-2xs text-[var(--cream)]/80 flex items-center gap-1.5 flex-wrap">
           <span className="truncate">{metaLine(hero)}</span>
-          {hero.venue.founding_year && !density.endsWith('third') && (
-            <>
-              <Dot />
-              <span className="text-[var(--gold)]/80">
-                est. {hero.venue.founding_year}
-              </span>
-            </>
-          )}
         </p>
       </div>
     </Link>

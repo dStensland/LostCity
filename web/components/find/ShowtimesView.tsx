@@ -667,7 +667,7 @@ export default function ShowtimesView({
   return (
     <div>
       {/* Date pills + summary */}
-      <section className="mb-4 rounded-2xl border border-[var(--twilight)]/80 bg-[var(--void)]/70 backdrop-blur-md p-3 sm:p-4">
+      <section className="mb-4 rounded-2xl border border-[var(--twilight)]/80 bg-[var(--night)] p-3 sm:p-4">
         <div ref={dateScrollRef} className="flex items-center gap-2 -mx-1 px-1 pb-0.5">
           {/* Selected date pill when beyond visible range */}
           {datePills.indexOf(selectedDate) >= 5 && (

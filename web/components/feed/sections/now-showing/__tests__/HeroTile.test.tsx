@@ -54,18 +54,24 @@ describe('HeroTile', () => {
     expect(screen.getByText(/ATL PREMIERE · OPENS THURSDAY/)).toBeInTheDocument();
   });
 
-  it('renders the press quote when present', () => {
+  it('omits the press quote on the compact feed density (consumer surface)', () => {
     const hero = { ...makeHero(), hero_reason: 'curator_pick' as HeroReason };
     render(<HeroTile hero={hero} portalSlug="atlanta" density="third" />);
+    expect(screen.queryByText(/A bruised, brilliant debut\./)).not.toBeInTheDocument();
+  });
+
+  it('renders the press quote on the hero-large Explore density', () => {
+    const hero = { ...makeHero(), hero_reason: 'curator_pick' as HeroReason };
+    render(<HeroTile hero={hero} portalSlug="atlanta" density="hero-large-full" />);
     expect(screen.getByText(/A bruised, brilliant debut\./)).toBeInTheDocument();
   });
 
-  it('omits the press quote when absent', () => {
+  it('omits the press quote when absent (hero-large density)', () => {
     const hero = {
       ...makeHero({ film_press_quote: null, film_press_source: null }),
       hero_reason: 'curator_pick' as HeroReason,
     };
-    render(<HeroTile hero={hero} portalSlug="atlanta" density="third" />);
+    render(<HeroTile hero={hero} portalSlug="atlanta" density="hero-large-full" />);
     expect(screen.queryByText(/A bruised, brilliant debut\./)).not.toBeInTheDocument();
   });
 
