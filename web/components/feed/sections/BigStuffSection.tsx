@@ -54,7 +54,7 @@ export default function BigStuffSection({
       />
 
       <div
-        className="group/ribbon flex flex-row rounded-card overflow-hidden border border-[var(--twilight)] bg-[var(--night)]"
+        className="group/ribbon flex flex-row rounded-card border border-[var(--twilight)] bg-[var(--night)] overflow-x-auto sm:overflow-hidden snap-x snap-mandatory [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
         data-bigstuff-ribbon
       >
         {visibleMonths.map((bucket, idx) => (
@@ -124,7 +124,7 @@ function MonthColumn({
 
   return (
     <div
-      className={`flex-1 min-w-0 flex flex-col gap-2.5 p-[14px] ${
+      className={`flex-shrink-0 sm:flex-shrink snap-start min-w-[110px] sm:min-w-0 sm:flex-1 flex flex-col gap-2.5 p-[14px] ${
         isFirst ? "" : "border-l border-[var(--twilight)]"
       }`}
     >
