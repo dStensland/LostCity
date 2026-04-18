@@ -64,9 +64,7 @@ describe("LiveTonightHeroTile", () => {
     const { container } = render(
       <LiveTonightHeroTile show={show} portalSlug="atlanta" onTap={vi.fn()} />,
     );
-    // No <img> rendered in typographic state
     expect(container.querySelector("img")).not.toBeInTheDocument();
-    // Genre label rendered in the bottom overlay
     expect(screen.getByText("Rock")).toBeInTheDocument();
   });
 
@@ -82,11 +80,43 @@ describe("LiveTonightHeroTile", () => {
     expect(screen.getByText("FESTIVAL")).toBeInTheDocument();
   });
 
-  it("uses smaller headline class for sizeVariant md", () => {
-    const { container } = render(
-      <LiveTonightHeroTile show={mkShow()} portalSlug="atlanta" onTap={vi.fn()} sizeVariant="md" />,
+  it("renders a SOLD OUT coral chip when ticket_status is sold-out", () => {
+    const show = mkShow({ ticket_status: "sold-out" });
+    render(<LiveTonightHeroTile show={show} portalSlug="atlanta" onTap={vi.fn()} />);
+    const chip = screen.getByText("SOLD OUT");
+    expect(chip.className).toContain("bg-[var(--coral)]");
+  });
+
+  it("does NOT render a MAJOR SHOW or FLAGSHIP chip (those signals are gone)", () => {
+    const show = mkShow({ importance: "flagship", is_tentpole: true });
+    render(<LiveTonightHeroTile show={show} portalSlug="atlanta" onTap={vi.fn()} />);
+    expect(screen.queryByText("FLAGSHIP")).not.toBeInTheDocument();
+    expect(screen.queryByText("MAJOR SHOW")).not.toBeInTheDocument();
+  });
+
+  it("renders the venue + showtime in gold mono in the footer", () => {
+    render(
+      <LiveTonightHeroTile show={mkShow()} portalSlug="atlanta" onTap={vi.fn()} />,
     );
-    const headline = container.querySelector(".text-lg");
-    expect(headline).toBeTruthy();
+    const footer = screen.getByText(/The EARL · 8:00 PM/);
+    expect(footer.className).toContain("text-[var(--gold)]");
+    expect(footer.className).toContain("font-mono");
+  });
+
+  it("uses portrait aspect by default and landscape when aspectVariant='landscape'", () => {
+    const { container: portraitContainer } = render(
+      <LiveTonightHeroTile show={mkShow()} portalSlug="atlanta" onTap={vi.fn()} />,
+    );
+    expect(portraitContainer.querySelector('button[class*="aspect-[3/4]"]')).toBeTruthy();
+
+    const { container: landscapeContainer } = render(
+      <LiveTonightHeroTile
+        show={mkShow()}
+        portalSlug="atlanta"
+        onTap={vi.fn()}
+        aspectVariant="landscape"
+      />,
+    );
+    expect(landscapeContainer.querySelector('button[class*="aspect-[16/9]"]')).toBeTruthy();
   });
 });

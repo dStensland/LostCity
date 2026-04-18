@@ -1,6 +1,6 @@
 "use client";
 
-import { LiveTonightHeroTile, type LiveTonightHeroTileSize } from "./LiveTonightHeroTile";
+import { LiveTonightHeroTile, type LiveTonightHeroAspect } from "./LiveTonightHeroTile";
 import type { MusicShowPayload } from "@/lib/music/types";
 
 export interface LiveTonightHeroStripProps {
@@ -9,17 +9,17 @@ export interface LiveTonightHeroStripProps {
   onTileTap: (show: MusicShowPayload) => void;
 }
 
-const SIZE_BY_COUNT: Record<1 | 2 | 3, LiveTonightHeroTileSize> = {
-  1: "xl",
-  2: "lg",
-  3: "md",
+const ASPECT_BY_COUNT: Record<1 | 2 | 3, LiveTonightHeroAspect> = {
+  1: "landscape",
+  2: "portrait",
+  3: "portrait",
 };
 
 export function LiveTonightHeroStrip({ shows, portalSlug, onTileTap }: LiveTonightHeroStripProps) {
   if (shows.length === 0) return null;
 
   const n = Math.min(shows.length, 3) as 1 | 2 | 3;
-  const sizeVariant = SIZE_BY_COUNT[n];
+  const aspectVariant = ASPECT_BY_COUNT[n];
 
   return (
     <section aria-label="This week's significant shows" className="mb-4">
@@ -45,7 +45,7 @@ export function LiveTonightHeroStrip({ shows, portalSlug, onTileTap }: LiveTonig
             show={show}
             portalSlug={portalSlug}
             onTap={onTileTap}
-            sizeVariant={sizeVariant}
+            aspectVariant={aspectVariant}
           />
         ))}
       </div>
