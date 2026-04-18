@@ -15,9 +15,9 @@ describe('ViewToggle', () => {
     expect(screen.getByRole('button', { name: /By Theater/i }).getAttribute('aria-pressed')).toBe('true');
   });
 
-  it('disables By Film and Schedule (v1)', () => {
+  it('disables only Schedule (v1 ships by-film)', () => {
     render(<ViewToggle view="by-theater" onChange={() => {}} />);
-    expect(screen.getByRole('button', { name: /By Film/i }).hasAttribute('disabled')).toBe(true);
+    expect(screen.getByRole('button', { name: /By Film/i }).hasAttribute('disabled')).toBe(false);
     expect(screen.getByRole('button', { name: /Schedule/i }).hasAttribute('disabled')).toBe(true);
   });
 
@@ -26,5 +26,12 @@ describe('ViewToggle', () => {
     render(<ViewToggle view="by-theater" onChange={onChange} />);
     fireEvent.click(screen.getByRole('button', { name: /By Theater/i }));
     expect(onChange).toHaveBeenCalledWith('by-theater');
+  });
+
+  it('fires onChange("by-film") when By Film is clicked', () => {
+    const onChange = vi.fn();
+    render(<ViewToggle view="by-theater" onChange={onChange} />);
+    fireEvent.click(screen.getByRole('button', { name: /By Film/i }));
+    expect(onChange).toHaveBeenCalledWith('by-film');
   });
 });
