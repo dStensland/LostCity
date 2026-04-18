@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import type { LogEntry, GoblinTag, TMDBSearchResult } from "@/lib/goblin-log-utils";
+import type { LogEntry, GoblinTag, LogList, TMDBSearchResult } from "@/lib/goblin-log-utils";
 
 interface UseGoblinLogState {
   entries: LogEntry[];
   tags: GoblinTag[];
+  lists: LogList[];
   loading: boolean;
   year: number;
 }
@@ -18,6 +19,7 @@ interface UseGoblinLogActions {
     note?: string;
     watched_with?: string;
     tag_ids?: number[];
+    list_id?: number | null;
   }) => Promise<boolean>;
   updateEntry: (
     entryId: number,
@@ -27,6 +29,7 @@ interface UseGoblinLogActions {
       watched_with: string;
       tag_ids: number[];
       sort_order: number;
+      list_id: number | null;
     }>
   ) => Promise<boolean>;
   deleteEntry: (entryId: number) => Promise<boolean>;
@@ -44,6 +47,7 @@ export function useGoblinLog(
 ): UseGoblinLogState & UseGoblinLogActions {
   const [entries, setEntries] = useState<LogEntry[]>([]);
   const [tags, setTags] = useState<GoblinTag[]>([]);
+  const [lists, setLists] = useState<LogList[]>([]);
   const [loading, setLoading] = useState(true);
   const [year, setYear] = useState(new Date().getFullYear());
 
@@ -69,6 +73,21 @@ export function useGoblinLog(
     }
   }, []);
 
+  const fetchLists = useCallback(async () => {
+    try {
+      const res = await fetch("/api/goblinday/me/lists");
+      if (!res.ok) return;
+      const data = await res.json();
+      // /me/lists includes movie_ids/count metadata we don't need here —
+      // keep LogList slim to {id, name, slug}.
+      interface RawList { id: number; name: string; slug: string | null }
+      const raw: RawList[] = data.lists || [];
+      setLists(raw.map((l) => ({ id: l.id, name: l.name, slug: l.slug })));
+    } catch {
+      // Non-critical
+    }
+  }, []);
+
   // Fetch on mount + year change
   /* eslint-disable react-hooks/set-state-in-effect --
      Fetch-on-year-or-auth-change loading pattern: short-circuits loading
@@ -81,10 +100,10 @@ export function useGoblinLog(
       return;
     }
     setLoading(true);
-    Promise.all([fetchEntries(year), fetchTags()]).finally(() =>
+    Promise.all([fetchEntries(year), fetchTags(), fetchLists()]).finally(() =>
       setLoading(false)
     );
-  }, [isAuthenticated, year, fetchEntries, fetchTags]);
+  }, [isAuthenticated, year, fetchEntries, fetchTags, fetchLists]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
   const addEntry = useCallback(
@@ -261,6 +280,7 @@ export function useGoblinLog(
   return {
     entries,
     tags,
+    lists,
     loading,
     year,
     setYear,

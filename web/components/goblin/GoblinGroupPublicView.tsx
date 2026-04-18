@@ -18,8 +18,46 @@ interface Movie {
 }
 
 interface QueueEntry {
-  id: number;
+  section: string | null;
+  section_sort: number | null;
   movie: Movie;
+}
+
+interface SectionGroup {
+  name: string | null; // null → unsorted fallback
+  entries: QueueEntry[];
+}
+
+// Groups entries by `section` preserving the narrative ordering: section
+// display order is the minimum position each section's entries appear in the
+// incoming array (which is already sorted by global sort_order in the server
+// loader). Within a section, section_sort asc, falling back to the incoming
+// order. Entries without a section land in a trailing "Unsorted" group.
+function groupEntriesBySection(entries: QueueEntry[]): SectionGroup[] {
+  const order: (string | null)[] = [];
+  const buckets = new Map<string | null, QueueEntry[]>();
+  for (const e of entries) {
+    const key = e.section ?? null;
+    if (!buckets.has(key)) {
+      buckets.set(key, []);
+      order.push(key);
+    }
+    buckets.get(key)!.push(e);
+  }
+  for (const bucket of buckets.values()) {
+    bucket.sort((a, b) => {
+      const aSort = a.section_sort ?? Number.MAX_SAFE_INTEGER;
+      const bSort = b.section_sort ?? Number.MAX_SAFE_INTEGER;
+      return aSort - bSort;
+    });
+  }
+  // Move null ("Unsorted") to the end even if it appeared earlier.
+  const nullIdx = order.indexOf(null);
+  if (nullIdx !== -1 && nullIdx !== order.length - 1) {
+    order.splice(nullIdx, 1);
+    order.push(null);
+  }
+  return order.map((name) => ({ name, entries: buckets.get(name)! }));
 }
 
 interface PublicRecommendation {
@@ -382,34 +420,58 @@ export function GoblinGroupPublicView({ user, slug, group, entries, recommendati
           </div>
         </div>
 
-        {/* Poster grid */}
+        {/* Sectioned poster grid */}
         {entries.length > 0 ? (
-          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2 sm:gap-3 mb-12">
-            {entries.map((entry) => (
-              <div key={entry.id} className="flex flex-col">
-                <div className="aspect-[2/3] relative rounded-sm overflow-hidden bg-zinc-900 border border-zinc-800/50">
-                  {entry.movie.poster_path ? (
-                    <SmartImage
-                      src={`${TMDB_POSTER_W342}${entry.movie.poster_path}`}
-                      alt={entry.movie.title}
-                      fill
-                      className="object-cover"
-                    />
-                  ) : (
-                    <div className="absolute inset-0 flex items-center justify-center p-2">
-                      <span className="text-2xs text-zinc-600 text-center leading-tight font-mono">
-                        {entry.movie.title}
-                      </span>
-                    </div>
-                  )}
+          <div className="mb-12 space-y-10">
+            {groupEntriesBySection(entries).map((section) => (
+              <section key={section.name ?? "__unsorted__"}>
+                <div className="mb-3 flex items-baseline justify-between gap-4">
+                  <h2
+                    className="text-2xs text-amber-600/80 tracking-[0.4em] uppercase font-mono"
+                    style={{ textShadow: "0 0 6px rgba(255,217,61,0.15)" }}
+                  >
+                    {section.name ?? "Unsorted"}
+                  </h2>
+                  <span className="text-2xs text-zinc-600 tracking-[0.2em] uppercase tabular-nums font-mono">
+                    {section.entries.length}
+                  </span>
                 </div>
-                <p className="text-2xs text-zinc-500 mt-1 leading-tight truncate font-mono">
-                  {entry.movie.title}
-                  {entry.movie.year ? (
-                    <span className="text-zinc-700"> {entry.movie.year}</span>
-                  ) : null}
-                </p>
-              </div>
+                <div
+                  className="h-px mb-4"
+                  style={{
+                    background:
+                      "linear-gradient(to right, rgba(120,53,15,0.35), rgba(120,53,15,0.05) 60%, transparent)",
+                  }}
+                />
+                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2 sm:gap-3">
+                  {section.entries.map((entry) => (
+                    <div key={entry.movie.id} className="flex flex-col">
+                      <div className="aspect-[2/3] relative rounded-sm overflow-hidden bg-zinc-900 border border-zinc-800/50">
+                        {entry.movie.poster_path ? (
+                          <SmartImage
+                            src={`${TMDB_POSTER_W342}${entry.movie.poster_path}`}
+                            alt={entry.movie.title}
+                            fill
+                            className="object-cover"
+                          />
+                        ) : (
+                          <div className="absolute inset-0 flex items-center justify-center p-2">
+                            <span className="text-2xs text-zinc-600 text-center leading-tight font-mono">
+                              {entry.movie.title}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                      <p className="text-2xs text-zinc-500 mt-1 leading-tight truncate font-mono">
+                        {entry.movie.title}
+                        {entry.movie.year ? (
+                          <span className="text-zinc-700"> {entry.movie.year}</span>
+                        ) : null}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </section>
             ))}
           </div>
         ) : (
