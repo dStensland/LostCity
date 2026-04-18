@@ -55,6 +55,33 @@ export default function GoblinWatchlistView({ isAuthenticated }: Props) {
   const [createGroupOpen, setCreateGroupOpen] = useState(false);
   const [addToGroupId, setAddToGroupId] = useState<number | null>(null);
 
+  // Queue collapse state — persisted in localStorage, default collapsed.
+  const [queueCollapsed, setQueueCollapsed] = useState<boolean>(true);
+
+  /* eslint-disable react-hooks/set-state-in-effect --
+     Mount-only hydration from localStorage — runs once, no cascade. */
+  useEffect(() => {
+    try {
+      const v = localStorage.getItem("goblin.queue.collapsed");
+      if (v !== null) setQueueCollapsed(v === "1");
+    } catch {
+      /* ignore */
+    }
+  }, []);
+  /* eslint-enable react-hooks/set-state-in-effect */
+
+  const toggleQueueCollapsed = useCallback(() => {
+    setQueueCollapsed((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem("goblin.queue.collapsed", next ? "1" : "0");
+      } catch {
+        /* ignore */
+      }
+      return next;
+    });
+  }, []);
+
   useEffect(() => {
     if (!isAuthenticated) return;
     fetch("/api/auth/profile")
@@ -196,15 +223,23 @@ export default function GoblinWatchlistView({ isAuthenticated }: Props) {
           className="flex items-end justify-between gap-4 pb-4"
           style={{ borderBottom: "1px solid rgba(255,217,61,0.15)" }}
         >
-          <div>
+          <button
+            type="button"
+            onClick={toggleQueueCollapsed}
+            aria-expanded={!queueCollapsed}
+            className="text-left group/queue-toggle"
+          >
             <h2
-              className="text-2xl sm:text-3xl font-black text-white uppercase tracking-[0.25em] leading-none"
+              className="text-2xl sm:text-3xl font-black text-white uppercase tracking-[0.25em] leading-none flex items-center gap-3"
               style={{
                 textShadow:
                   "0 0 30px rgba(255,217,61,0.2), 0 0 60px rgba(255,217,61,0.05)",
               }}
             >
               The Queue
+              <span className="text-amber-500/60 text-lg font-mono" aria-hidden>
+                {queueCollapsed ? "▾" : "▴"}
+              </span>
             </h2>
             <p className="text-2xs text-zinc-600 font-mono mt-2 tracking-[0.3em] uppercase">
               {filteredEntries.length} film{filteredEntries.length !== 1 ? "s" : ""}
@@ -212,7 +247,7 @@ export default function GoblinWatchlistView({ isAuthenticated }: Props) {
                 <span className="text-amber-400/70"> / #{activeTag}</span>
               )}
             </p>
-          </div>
+          </button>
           <div className="flex items-center gap-2">
             {username && (
               <button
@@ -249,7 +284,7 @@ export default function GoblinWatchlistView({ isAuthenticated }: Props) {
         </div>
 
         {/* Tag filters */}
-        {tags.length > 0 && (
+        {!queueCollapsed && tags.length > 0 && (
           <div
             className="flex items-center gap-1.5 mt-4 overflow-x-auto scrollbar-hide
               [mask-image:linear-gradient(to_right,black_calc(100%-2rem),transparent)] sm:[mask-image:none]"
@@ -358,8 +393,8 @@ export default function GoblinWatchlistView({ isAuthenticated }: Props) {
         </div>
       )}
 
-      {/* Loading skeleton */}
-      {loading ? (
+      {/* Loading skeleton / list body — hidden when the queue is collapsed */}
+      {!queueCollapsed && (loading ? (
         <div className="space-y-1">
           {Array.from({ length: 5 }).map((_, i) => (
             <div
@@ -422,7 +457,7 @@ export default function GoblinWatchlistView({ isAuthenticated }: Props) {
             />
           ))}
         </div>
-      )}
+      ))}
 
       {/* Group sections */}
       {groupsHook.groups.length > 0 && (
