@@ -37,7 +37,12 @@ function isResidencyShow(show: MusicShowPayload): boolean {
 }
 
 export interface DeriveKickerInput {
-  venue: MusicVenuePayload;
+  /**
+   * Reserved for v2 venue-aware logic (e.g. "FREE TONIGHT" only fires when
+   * the venue is NOT typically free — needs venue baseline). v1 doesn't
+   * read it, but the parameter shape locks the contract for callers.
+   */
+  venue?: MusicVenuePayload;
   shows: MusicShowPayload[];
 }
 
@@ -52,10 +57,7 @@ export interface DeriveKickerInput {
  *   3. FREE — affordability hook
  *   4. LATE — informational; lowest priority
  */
-export function deriveKicker({
-  venue: _venue,
-  shows,
-}: DeriveKickerInput): KickerDescriptor | null {
+export function deriveKicker({ shows }: DeriveKickerInput): KickerDescriptor | null {
   if (shows.length === 0) return null;
 
   const allSoldOut = shows.every((s) => s.ticket_status === "sold-out");
