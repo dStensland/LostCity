@@ -8,6 +8,8 @@ import { getNeighborhoodDescription, getNeighborhoodByName } from "@/config/neig
 import { getNeighborhoodColor } from "@/lib/neighborhood-colors";
 import { formatTime, decodeHtmlEntities } from "@/lib/formats";
 import { hexToRgb, formatCategoryLabel } from "@/lib/neighborhood-utils";
+import { useEntityLinkOptions } from "@/lib/link-context";
+import { buildEventUrl, buildNeighborhoodUrl } from "@/lib/entity-urls";
 import type { NeighborhoodActivity } from "./NeighborhoodMap";
 
 type DrillDownEvent = {
@@ -48,8 +50,9 @@ function DrillDownContent({
 }: Props & { events: DrillDownEvent[]; loading: boolean }) {
   const description = getNeighborhoodDescription(slug);
   const hasDetailPage = !!getNeighborhoodByName(name);
+  const { context, existingParams } = useEntityLinkOptions();
   const exploreHref = hasDetailPage
-    ? `/${portalSlug}/neighborhoods/${slug}`
+    ? buildNeighborhoodUrl(slug, portalSlug, context, existingParams)
     : `/${portalSlug}/find?neighborhood=${encodeURIComponent(name)}`;
 
   // Derive the neighborhood color and its RGB components for dynamic tinting
@@ -172,7 +175,7 @@ function DrillDownContent({
             {events.map((ev) => (
               <li key={ev.id}>
                 <Link
-                  href={`/${portalSlug}/events/${ev.id}`}
+                  href={buildEventUrl(ev.id, portalSlug, context, existingParams)}
                   className="flex items-stretch gap-2.5 py-2.5 group"
                 >
                   {/* Left accent bar per event row */}

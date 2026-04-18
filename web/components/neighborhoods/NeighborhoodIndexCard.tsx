@@ -1,4 +1,8 @@
+"use client";
+
 import Link from "next/link";
+import { useEntityLinkOptions } from "@/lib/link-context";
+import { buildNeighborhoodUrl } from "@/lib/entity-urls";
 
 /**
  * Minimalist neighborhood card for the /atlanta/neighborhoods index grid.
@@ -9,6 +13,11 @@ import Link from "next/link";
  * background, no activity-score opacity, no category icons (per Pencil atom
  * `eoLUe` / rework per `NeighborhoodIndexCard` spec in
  * docs/plans/neighborhoods-elevate-2026-04-18.md).
+ *
+ * Resolves overlay vs canonical via ambient `useEntityLinkOptions()` —
+ * inside an overlay-capable surface (explore/feed) the card opens the
+ * neighborhood as `?neighborhood=slug` overlay; on standalone pages it
+ * navigates to the canonical `/[portal]/neighborhoods/[slug]` route.
  */
 interface NeighborhoodIndexCardProps {
   name: string;
@@ -29,10 +38,12 @@ export default function NeighborhoodIndexCard({
   venueCount,
 }: NeighborhoodIndexCardProps) {
   const isActive = eventsTodayCount > 0;
+  const { context, existingParams } = useEntityLinkOptions();
+  const href = buildNeighborhoodUrl(slug, portalSlug, context, existingParams);
 
   return (
     <Link
-      href={`/${portalSlug}/neighborhoods/${slug}`}
+      href={href}
       className="block p-4 rounded-card border border-[var(--twilight)] bg-[var(--night)] transition-colors hover:border-[var(--muted)]"
     >
       <div className="flex items-center gap-2">

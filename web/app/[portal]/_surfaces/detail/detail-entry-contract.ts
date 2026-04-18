@@ -11,6 +11,7 @@ export const DETAIL_ENTRY_PARAM_KEYS = [
   "festival",
   "org",
   "artist",
+  "neighborhood",
 ] as const;
 
 export type DetailEntryParamKey = (typeof DETAIL_ENTRY_PARAM_KEYS)[number];
@@ -28,7 +29,8 @@ export type DetailOverlayTarget =
   | { kind: "series"; slug: string }
   | { kind: "festival"; slug: string }
   | { kind: "org"; slug: string }
-  | { kind: "artist"; slug: string };
+  | { kind: "artist"; slug: string }
+  | { kind: "neighborhood"; slug: string };
 
 export function resolveDetailOverlayTarget(
   searchParams: SearchParamReader,
@@ -64,6 +66,11 @@ export function resolveDetailOverlayTarget(
   const artistSlug = searchParams.get("artist");
   if (artistSlug) {
     return { kind: "artist", slug: artistSlug };
+  }
+
+  const neighborhoodSlug = searchParams.get("neighborhood");
+  if (neighborhoodSlug) {
+    return { kind: "neighborhood", slug: neighborhoodSlug };
   }
 
   return null;

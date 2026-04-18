@@ -15,6 +15,7 @@ type OverlaySearchParams = {
   series?: string;
   festival?: string;
   org?: string;
+  neighborhood?: string;
 };
 
 /**
@@ -134,6 +135,7 @@ function resolveOverlay(
           series: searchParams.get("series") ?? undefined,
           festival: searchParams.get("festival") ?? undefined,
           org: searchParams.get("org") ?? undefined,
+          neighborhood: searchParams.get("neighborhood") ?? undefined,
         }
       : searchParams;
 

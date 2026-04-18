@@ -108,3 +108,16 @@ export function buildOrgUrl(
   const query = buildOverlayQuery("org", slug, existingParams);
   return `/${portalSlug}?${query}`;
 }
+
+export function buildNeighborhoodUrl(
+  slug: string,
+  portalSlug: string,
+  context: LinkContext,
+  existingParams?: URLSearchParams,
+): string {
+  if (context === "overlay") {
+    const query = buildOverlayQuery("neighborhood", slug, existingParams);
+    return `/${portalSlug}?${query}`;
+  }
+  return `/${portalSlug}/neighborhoods/${slug}`;
+}
