@@ -25,6 +25,12 @@ import {
 const HORIZON_MONTHS = 6;
 const MONTH_NAMES = ["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"];
 
+/** Title-case version of a 1-based month index, e.g. 5 → "May". */
+function shortMonth(monthIndex1Based: number): string {
+  const name = MONTH_NAMES[monthIndex1Based - 1];
+  return name.charAt(0) + name.slice(1).toLowerCase();
+}
+
 interface BigStuffSectionProps {
   portalSlug: string;
   portalId: string;
@@ -46,10 +52,12 @@ export default function BigStuffSection({
   const visibleMonths = trimVisibleMonths(months);
   if (visibleMonths.length === 0) return null;
 
+  const seeAllHref = `/${portalSlug}/festivals`;
+
   return (
     <FeedSectionReveal className="pb-2">
       <BigStuffHeader
-        portalSlug={portalSlug}
+        seeAllHref={seeAllHref}
         currentMonthLabel={currentMonthLabel}
       />
 
@@ -62,7 +70,7 @@ export default function BigStuffSection({
             key={bucket.monthKey}
             bucket={bucket}
             isFirst={idx === 0}
-            portalSlug={portalSlug}
+            seeAllHref={seeAllHref}
           />
         ))}
       </div>
@@ -71,21 +79,21 @@ export default function BigStuffSection({
 }
 
 function BigStuffHeader({
-  portalSlug,
+  seeAllHref,
   currentMonthLabel,
 }: {
-  portalSlug: string;
+  seeAllHref: string;
   currentMonthLabel: string;
 }) {
   return (
     <div className="mb-3">
-      <p className="font-mono text-[10px] tracking-[0.15em] uppercase text-[var(--muted)]">
+      <p className="font-mono text-2xs tracking-[0.15em] uppercase text-[var(--muted)]">
         THE BIG STUFF — 6 months of plans
       </p>
       <div className="mt-1 flex items-center gap-3">
         <span className="inline-flex items-center gap-1.5 rounded px-[7px] py-[3px] border border-[var(--gold)]/40 bg-[var(--gold)]/10">
           <Crown weight="duotone" className="w-3 h-3 text-[var(--gold)]" aria-hidden />
-          <span className="font-mono text-[9px] font-bold tracking-[0.08em] text-[var(--gold)]">
+          <span className="font-mono text-2xs font-bold tracking-[0.08em] text-[var(--gold)]">
             {currentMonthLabel}
           </span>
         </span>
@@ -94,8 +102,8 @@ function BigStuffHeader({
         </h3>
         <div className="flex-1" />
         <Link
-          href={`/${portalSlug}/festivals`}
-          className="font-mono text-xs text-[var(--gold)] hover:opacity-80 transition-opacity"
+          href={seeAllHref}
+          className="font-mono text-xs text-[var(--gold)] hover:opacity-80 transition-opacity focus-ring"
         >
           See all →
         </Link>
@@ -107,11 +115,11 @@ function BigStuffHeader({
 function MonthColumn({
   bucket,
   isFirst,
-  portalSlug,
+  seeAllHref,
 }: {
   bucket: BigStuffMonthBucket;
   isFirst: boolean;
-  portalSlug: string;
+  seeAllHref: string;
 }) {
   const isSparse = bucket.items.length < 2;
   const labelClass = [
@@ -144,8 +152,8 @@ function MonthColumn({
 
       {bucket.overflowCount > 0 && (
         <Link
-          href={`/${portalSlug}/festivals`}
-          className="font-mono text-[10px] text-[var(--muted)] hover:text-[var(--gold)] transition-colors tracking-[0.2em] uppercase"
+          href={seeAllHref}
+          className="font-mono text-2xs text-[var(--muted)] hover:text-[var(--gold)] transition-colors tracking-[0.2em] uppercase focus-ring"
         >
           +{bucket.overflowCount} more
         </Link>
@@ -156,37 +164,36 @@ function MonthColumn({
 
 function ItemRow({ item }: { item: BigStuffItem }) {
   // Hover cascade: on a ribbon hover, siblings dim to 75%. The hovered item
-  // itself has a more-specific :hover rule that wins the cascade and restores
-  // opacity to 100% — no !important needed.
+  // needs `hover:!opacity-100` (!important) because `.group/ribbon:hover
+  // .group-hover/ribbon:opacity-75` has higher specificity (3 tokens) than
+  // the direct `.hover:opacity-100:hover` selector (2 tokens).
   return (
     <Link
       href={item.href}
-      className="group/item block min-w-0 transition-opacity duration-200 group-hover/ribbon:opacity-75 hover:opacity-100"
+      className="group/item block min-w-0 transition-opacity duration-200 group-hover/ribbon:opacity-75 hover:!opacity-100"
     >
       <p className="text-sm font-semibold text-[var(--cream)] leading-snug truncate group-hover/item:underline decoration-[var(--gold)] underline-offset-[3px]">
         {item.title}
       </p>
-      <p className="font-mono text-[10px] text-[var(--muted)] mt-0.5 tracking-[0.2em] truncate">
+      <p className="font-mono text-2xs text-[var(--muted)] mt-0.5 tracking-[0.2em] truncate">
         {formatItemDate(item.startDate, item.endDate)}
       </p>
     </Link>
   );
 }
 
-const SHORT_MONTH = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-
 function formatItemDate(startDate: string, endDate: string | null): string {
   const [sy, sm, sd] = startDate.split("-").map((v) => parseInt(v, 10));
-  const startLabel = `${SHORT_MONTH[sm - 1]} ${sd}`;
+  const startLabel = `${shortMonth(sm)} ${sd}`;
   if (!endDate || endDate === startDate) return startLabel;
   const [ey, em, ed] = endDate.split("-").map((v) => parseInt(v, 10));
   if (sy === ey && sm === em) {
-    return `${SHORT_MONTH[sm - 1]} ${sd} – ${ed}`;
+    return `${shortMonth(sm)} ${sd} – ${ed}`;
   }
   if (sy !== ey) {
-    return `${startLabel} – ${SHORT_MONTH[em - 1]} ${ed}, ${ey}`;
+    return `${startLabel} – ${shortMonth(em)} ${ed}, ${ey}`;
   }
-  return `${startLabel} – ${SHORT_MONTH[em - 1]} ${ed}`;
+  return `${startLabel} – ${shortMonth(em)} ${ed}`;
 }
 
 /**
@@ -223,4 +230,3 @@ function monthLabel(monthKey: string): string {
   const [, m] = monthKey.split("-");
   return MONTH_NAMES[parseInt(m, 10) - 1];
 }
-
