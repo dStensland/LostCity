@@ -6,6 +6,8 @@ description: Extract visual specs from Pencil comps and verify implementation fi
 
 $ARGUMENTS
 
+**First read:** root `CLAUDE.md` → `docs/design-truth.md`. Before extracting, confirm the Pencil node maps to a registry entry; if it doesn't, flag it — new patterns need justification, not drive-by registry additions.
+
 ## Usage
 
 - `/design-handoff extract <node-id-or-name>` — Extract a Pencil comp into a visual spec with CSS values + screenshot

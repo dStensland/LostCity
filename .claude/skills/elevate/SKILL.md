@@ -6,6 +6,8 @@ description: Holistic page/feature audit and rebuild. Multi-lens analysis (desig
 
 $ARGUMENTS
 
+**First read:** root `CLAUDE.md` → `docs/design-truth.md`. Use the registry + anti-pattern gallery + taste exemplars to ground the audit — "more like Now Showing or more like Plan 2?" is the coherence lens.
+
 ## Usage
 
 - `/elevate [page-or-feature]` — Full audit and rebuild of a specific page or feature
