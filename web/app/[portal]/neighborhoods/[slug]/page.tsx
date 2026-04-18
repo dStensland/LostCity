@@ -7,24 +7,34 @@ import {
   getNeighborhoodsByTier,
   type Neighborhood,
 } from "@/config/neighborhoods";
-import { supabase } from "@/lib/supabase";
 import type { Event } from "@/lib/supabase";
-import type { Spot } from "@/lib/spots-constants";
-import { getLocalDateString, decodeHtmlEntities, formatSmartDate } from "@/lib/formats";
 import { safeJsonLd } from "@/lib/formats";
 import { toAbsoluteUrl } from "@/lib/site-url";
 import { getNeighborhoodColor } from "@/lib/neighborhood-colors";
-import { hexToRgb, formatCategoryLabel, NOISE_CATEGORIES } from "@/lib/neighborhood-utils";
 import { buildExploreUrl } from "@/lib/find-url";
-import Dot from "@/components/ui/Dot";
 import PlaceCard from "@/components/PlaceCard";
-import CategoryIcon from "@/components/CategoryIcon";
+import NeighborhoodDetailTabs, {
+  type NeighborhoodDetailTab,
+} from "@/components/neighborhoods/NeighborhoodDetailTabs";
+import ScheduleRow, {
+  type ScheduleRowEvent,
+} from "@/components/shared/ScheduleRow";
+import { getNeighborhoodHeroStyle } from "@/components/neighborhoods/NeighborhoodHeroStyle";
+import {
+  getNeighborhoodEvents,
+  getNeighborhoodEventCounts,
+  getNeighborhoodSpots,
+} from "@/lib/neighborhoods/loaders";
+import { bucketEvents } from "@/lib/neighborhoods/bucket-events";
 import { resolveFeedPageRequest } from "../../_surfaces/feed/resolve-feed-page-request";
 
 export const revalidate = 300;
 
+const PORTAL_TZ = "America/New_York";
+
 type Props = {
   params: Promise<{ portal: string; slug: string }>;
+  searchParams: Promise<{ tab?: string }>;
 };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -37,146 +47,50 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   return {
     title,
-    description: description || `Discover events, venues, and things to do in ${neighborhood.name}, Atlanta.`,
+    description:
+      description ||
+      `Discover events, venues, and things to do in ${neighborhood.name}, Atlanta.`,
     alternates: {
       canonical: toAbsoluteUrl(`/${portal}/neighborhoods/${slug}`),
     },
   };
 }
 
-async function getNeighborhoodSpots(neighborhoodName: string): Promise<(Spot & { event_count: number })[]> {
-  const today = getLocalDateString();
-
-  const { data: venues, error } = await supabase
-    .from("places")
-    .select("*")
-    .eq("neighborhood", neighborhoodName)
-    .eq("is_active", true)
-    .order("name");
-
-  if (error || !venues) return [];
-
-  const venueIds = venues.map((v: Spot) => v.id);
-  if (venueIds.length === 0) return venues.map((v: Spot) => ({ ...v, event_count: 0 }));
-
-  const { data: eventCounts } = await supabase
-    .from("events")
-    .select("place_id")
-    .in("place_id", venueIds)
-    .gte("start_date", today)
-    .or("is_sensitive.eq.false,is_sensitive.is.null");
-
-  const countMap = new Map<number, number>();
-  for (const ev of (eventCounts || []) as { place_id: number | null }[]) {
-    if (ev.place_id) countMap.set(ev.place_id, (countMap.get(ev.place_id) || 0) + 1);
-  }
-
-  return (venues as Spot[])
-    .map((v) => ({ ...v, event_count: countMap.get(v.id) || 0 }))
-    .sort((a, b) => b.event_count - a.event_count || a.name.localeCompare(b.name));
-}
-
-async function getNeighborhoodEventCounts(
-  placeIds: number[],
-  portalId: string | null,
-): Promise<{ todayCount: number; upcomingCount: number }> {
-  const today = getLocalDateString();
-  if (placeIds.length === 0) return { todayCount: 0, upcomingCount: 0 };
-
-  // Count all upcoming events (not limited)
-  let upcomingQuery = supabase
-    .from("events")
-    .select("id", { count: "exact", head: true })
-    .in("place_id", placeIds)
-    .eq("is_active", true)
-    .is("canonical_event_id", null)
-    .gte("start_date", today)
-    .or("is_sensitive.eq.false,is_sensitive.is.null");
-  if (portalId) {
-    upcomingQuery = upcomingQuery.or(
-      `portal_id.eq.${portalId},portal_id.is.null`,
-    );
-  }
-  const { count: upcomingCount } = await upcomingQuery;
-
-  // Count today's events
-  let todayQuery = supabase
-    .from("events")
-    .select("id", { count: "exact", head: true })
-    .in("place_id", placeIds)
-    .eq("is_active", true)
-    .is("canonical_event_id", null)
-    .eq("start_date", today)
-    .or("is_sensitive.eq.false,is_sensitive.is.null");
-  if (portalId) {
-    todayQuery = todayQuery.or(
-      `portal_id.eq.${portalId},portal_id.is.null`,
-    );
-  }
-  const { count: todayCount } = await todayQuery;
-
-  return { todayCount: todayCount ?? 0, upcomingCount: upcomingCount ?? 0 };
-}
-
-async function getNeighborhoodEvents(
-  placeIds: number[],
-  portalId: string | null,
-): Promise<Event[]> {
-  const today = getLocalDateString();
-  if (placeIds.length === 0) return [];
-
-  let query = supabase
-    .from("events")
-    .select(`
-      *,
-      venue:places!inner(id, name, slug, address, neighborhood, city, state),
-      series:series(id, slug, title, series_type, image_url)
-    `)
-    .in("place_id", placeIds)
-    .eq("is_active", true)
-    .is("canonical_event_id", null)
-    .gte("start_date", today)
-    .or("is_sensitive.eq.false,is_sensitive.is.null");
-  if (portalId) {
-    query = query.or(`portal_id.eq.${portalId},portal_id.is.null`);
-  }
-  const { data, error } = await query
-    .order("start_date", { ascending: true })
-    .order("start_time", { ascending: true })
-    .limit(20);
-
-  if (error || !data) return [];
-  return data as Event[];
-}
-
-/** Split a time string into display parts for the time column. */
-function formatTimeParts(time: string | null, isAllDay?: boolean): { main: string; period: string } | null {
-  if (isAllDay) return { main: "ALL", period: "DAY" };
-  if (!time) return null;
-  const [h, m] = time.split(":").map(Number);
-  const period = h >= 12 ? "PM" : "AM";
-  const hr = h === 0 ? 12 : h > 12 ? h - 12 : h;
-  const main = m === 0 ? `${hr}:00` : `${hr}:${m.toString().padStart(2, "0")}`;
-  return { main, period };
-}
-
 function getRelatedNeighborhoods(current: Neighborhood): Neighborhood[] {
-  // Same tier or geographically close
-  const allSameTier = getNeighborhoodsByTier(current.tier).filter((n) => n.id !== current.id);
-
-  // Sort by distance to current
+  const allSameTier = getNeighborhoodsByTier(current.tier).filter(
+    (n) => n.id !== current.id,
+  );
   const withDist = allSameTier.map((n) => {
     const dLat = n.lat - current.lat;
     const dLng = n.lng - current.lng;
     return { ...n, dist: Math.sqrt(dLat * dLat + dLng * dLng) };
   });
   withDist.sort((a, b) => a.dist - b.dist);
-
   return withDist.slice(0, 6);
 }
 
-export default async function NeighborhoodPage({ params }: Props) {
+function toScheduleRowEvent(ev: Event): ScheduleRowEvent {
+  const venue = (ev as Event & { venue?: { name: string; slug?: string } | null })
+    .venue;
+  return {
+    id: ev.id,
+    title: ev.title,
+    start_date: ev.start_date,
+    start_time: ev.start_time,
+    is_all_day: ev.is_all_day ?? null,
+    place: venue ? { name: venue.name, slug: venue.slug } : null,
+    category_id:
+      (ev as Event & { category_id?: string | null }).category_id ?? null,
+    image_url: ev.image_url ?? null,
+  };
+}
+
+export default async function NeighborhoodPage({
+  params,
+  searchParams,
+}: Props) {
   const { portal, slug } = await params;
+  const { tab: tabParam } = await searchParams;
   const neighborhood = getNeighborhoodById(slug);
 
   if (!neighborhood) {
@@ -200,29 +114,14 @@ export default async function NeighborhoodPage({ params }: Props) {
   const description = getNeighborhoodDescription(slug);
   const related = getRelatedNeighborhoods(neighborhood);
 
-  // Neighborhood color for visual continuity with map + drill-down
   const color = getNeighborhoodColor(neighborhood.name);
-  const { r, g, b } = hexToRgb(color);
-  const rgb = `${r}, ${g}, ${b}`;
+  const heroStyle = getNeighborhoodHeroStyle(color, neighborhood.heroImage);
 
-  // Derive top categories from events
-  const catCounts: Record<string, number> = {};
-  for (const ev of events) {
-    const cat = (ev as Event & { category_id?: string | null }).category_id;
-    if (cat && !NOISE_CATEGORIES.has(cat)) {
-      catCounts[cat] = (catCounts[cat] ?? 0) + 1;
-    }
-  }
-  const topCats = Object.entries(catCounts)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 5)
-    .map(([c]) => c);
+  const { todayCount, upcomingCount } = eventCounts;
+  const buckets = bucketEvents(events, new Date(), PORTAL_TZ);
 
-  // Real counts from separate query (not capped by display limit)
-  const { todayCount } = eventCounts;
-
-  // Top spots for display (full list available via "See all")
-  const displaySpots = spots.slice(0, 10);
+  const initialTab: NeighborhoodDetailTab =
+    tabParam === "places" ? "places" : "events";
 
   const placeSchema = {
     "@context": "https://schema.org",
@@ -241,6 +140,19 @@ export default async function NeighborhoodPage({ params }: Props) {
     },
   };
 
+  const kicker =
+    todayCount > 0
+      ? `${neighborhood.name.toUpperCase()} · ALIVE TONIGHT`
+      : neighborhood.name.toUpperCase();
+
+  const statsParts: string[] = [];
+  if (todayCount > 0)
+    statsParts.push(
+      `${todayCount} ${todayCount === 1 ? "event" : "events"} tonight`,
+    );
+  if (upcomingCount > todayCount) statsParts.push(`${upcomingCount} this week`);
+  statsParts.push(`${spots.length} ${spots.length === 1 ? "spot" : "spots"}`);
+
   return (
     <div className="max-w-5xl mx-auto px-4 pb-20">
       <script
@@ -248,244 +160,108 @@ export default async function NeighborhoodPage({ params }: Props) {
         dangerouslySetInnerHTML={{ __html: safeJsonLd(placeSchema) }}
       />
 
-      {/* Breadcrumb */}
-      <nav aria-label="Breadcrumb" className="pt-4 pb-2">
-        <div className="flex items-center gap-1.5 text-xs font-mono text-[var(--muted)]">
-          <Link
-            href={`/${portal}/neighborhoods`}
-            className="hover:text-[var(--cream)] transition-colors"
-          >
-            Neighborhoods
-          </Link>
-          <span className="opacity-40">/</span>
-          <span className="text-[var(--soft)]">{neighborhood.name}</span>
-        </div>
+      <nav aria-label="Breadcrumb" className="pt-4 pb-3">
+        <Link
+          href={`/${portal}/neighborhoods`}
+          className="inline-flex items-center gap-1.5 font-mono text-xs text-[var(--soft)] hover:text-[var(--cream)] transition-colors"
+        >
+          ← Neighborhoods
+        </Link>
       </nav>
 
-      {/* Hero — color-accented, matching drill-down */}
-      <section className="pt-4 pb-6">
-        <div className="flex items-start gap-4">
-          {/* Color accent bar — threads from map drill-down */}
+      <section
+        className="relative overflow-hidden rounded-card-xl border border-[var(--twilight)] h-[280px] sm:h-[320px]"
+        style={heroStyle.gradient}
+      >
+        {heroStyle.imageSrc && (
           <div
-            className="w-1.5 self-stretch rounded-sm flex-shrink-0 mt-1"
-            style={{ backgroundColor: color }}
+            className="absolute inset-0 bg-cover bg-center opacity-80"
+            style={{ backgroundImage: `url(${heroStyle.imageSrc})` }}
+            aria-hidden="true"
           />
-          <div className="min-w-0 flex-1">
-            <h1 className="text-2xl sm:text-3xl font-bold uppercase tracking-wide text-[var(--cream)] leading-tight">
-              {neighborhood.name}
-            </h1>
-            {description && (
-              <p className="mt-2 text-sm text-[var(--soft)] leading-relaxed max-w-2xl">
-                {description}
-              </p>
-            )}
-          </div>
-        </div>
-
-        {/* Activity strip — mirrors drill-down stats */}
-        <div className="flex items-center gap-3 mt-4">
-          {todayCount > 0 && (
-            <div className="flex items-center gap-1.5">
-              <span
-                className="w-1.5 h-1.5 rounded-full flex-shrink-0"
-                style={{ backgroundColor: "var(--coral)" }}
-              />
-              <span className="text-xs font-semibold" style={{ color: "var(--coral)" }}>
-                {todayCount} {todayCount === 1 ? "event" : "events"} today
-              </span>
-            </div>
-          )}
-          <span className="text-2xs text-[var(--muted)]">
-            {spots.length} {spots.length === 1 ? "spot" : "spots"}
-          </span>
-        </div>
-
-        {/* Vibe pills — neighborhood-colored, matching drill-down */}
-        {topCats.length > 0 && (
-          <div className="flex flex-wrap items-center gap-1.5 mt-3">
-            {topCats.map((cat) => (
-              <span
-                key={cat}
-                className="inline-flex items-center gap-1 text-2xs font-medium px-2 py-0.5 rounded-full whitespace-nowrap"
-                style={{
-                  backgroundColor: `rgba(${rgb}, 0.08)`,
-                  border: `1px solid rgba(${rgb}, 0.20)`,
-                  color: color,
-                }}
-              >
-                <CategoryIcon type={cat} size={12} glow="none" />
-                {formatCategoryLabel(cat)}
-              </span>
-            ))}
-          </div>
         )}
+        <div
+          className="absolute inset-x-0 bottom-0 h-3/5 pointer-events-none"
+          style={{
+            background:
+              "linear-gradient(180deg, transparent 0%, rgba(9,9,11,0.75) 60%, rgba(9,9,11,0.95) 100%)",
+          }}
+          aria-hidden="true"
+        />
+        <div className="absolute inset-x-0 bottom-0 p-6 sm:p-8 flex flex-col gap-2">
+          <div className="flex items-center gap-2">
+            <span
+              className="w-[7px] h-[7px] rounded-full flex-shrink-0"
+              style={{ backgroundColor: color }}
+              aria-hidden="true"
+            />
+            <span
+              className="font-mono text-2xs font-bold uppercase tracking-[0.14em]"
+              style={{ color: todayCount > 0 ? color : "var(--muted)" }}
+            >
+              {kicker}
+            </span>
+          </div>
+          <h1 className="text-3xl sm:text-4xl font-bold text-[var(--cream)] leading-none">
+            {neighborhood.name}
+          </h1>
+          <p className="text-sm text-[var(--soft)]">{statsParts.join(" · ")}</p>
+        </div>
       </section>
 
-      {/* Divider — color-tinted */}
-      <div
-        className="h-px mb-6"
-        style={{ background: `linear-gradient(to right, rgba(${rgb}, 0.30), transparent)` }}
-      />
-
-      {/* Upcoming Events — drill-down-style rows for visual continuity */}
-      {events.length > 0 && (
-        <section>
-          <div className="flex items-center justify-between mb-3">
-            <span
-              className="font-mono text-xs font-bold tracking-[0.12em] uppercase"
-              style={{ color: color }}
-            >
-              Upcoming Events
-            </span>
-            <Link
-              href={`/${portal}/find?neighborhood=${encodeURIComponent(neighborhood.name)}`}
-              className="text-xs font-medium transition-opacity hover:opacity-70"
-              style={{ color: color }}
-            >
-              See all →
-            </Link>
-          </div>
-          <ul className="divide-y divide-[var(--twilight)]/50">
-            {events.map((ev) => {
-              const smartDate = formatSmartDate(ev.start_date);
-              const timeParts = formatTimeParts(ev.start_time, ev.is_all_day);
-              const category = (ev as Event & { category_id?: string | null }).category_id;
-              return (
-              <li key={ev.id}>
-                <Link
-                  href={`/${portal}/events/${ev.id}`}
-                  className="flex items-stretch gap-2.5 py-3 group"
-                >
-                  {/* Time column — prominent, right-aligned */}
-                  <div className="w-14 flex-shrink-0 flex flex-col items-end justify-center">
-                    {timeParts ? (
-                      <>
-                        <span className="font-mono text-base font-bold text-[var(--cream)] leading-none tabular-nums">
-                          {timeParts.main}
-                        </span>
-                        <span className="font-mono text-2xs font-medium uppercase tracking-[0.12em] text-[var(--muted)]">
-                          {timeParts.period}
-                        </span>
-                      </>
-                    ) : (
-                      <span className="font-mono text-2xs text-[var(--muted)]">TBD</span>
-                    )}
-                  </div>
-                  {/* Accent bar */}
-                  <div
-                    className="w-1 self-stretch rounded-sm flex-shrink-0 opacity-70 group-hover:opacity-100 transition-opacity"
-                    style={{ backgroundColor: color }}
-                  />
-                  {/* Content */}
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-1.5">
-                      {category && (
-                        <CategoryIcon type={category} size={14} glow="none" />
-                      )}
-                      <p className="text-sm font-medium text-[var(--cream)] leading-snug group-hover:text-white transition-colors line-clamp-1">
-                        {decodeHtmlEntities(ev.title)}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-1.5 mt-0.5">
-                      <span
-                        className="text-2xs font-mono font-medium flex-shrink-0 px-1.5 py-0.5 rounded"
-                        style={smartDate.isHighlight
-                          ? { backgroundColor: `rgba(${rgb}, 0.12)`, color: color }
-                          : { color: "var(--muted)" }
-                        }
-                      >
-                        {smartDate.label}
-                      </span>
-                      {(ev as Event & { venue?: { name: string } | null }).venue && (
-                        <>
-                          <Dot />
-                          <span className="text-xs text-[var(--muted)] truncate">
-                            {(ev as Event & { venue: { name: string } }).venue.name}
-                          </span>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                  <span
-                    className="text-sm flex-shrink-0 self-center opacity-40 group-hover:opacity-100 transition-opacity"
-                    style={{ color: color }}
-                  >
-                    →
-                  </span>
-                </Link>
-              </li>
-              );
-            })}
-          </ul>
-        </section>
+      {description && (
+        <p className="mt-5 text-sm text-[var(--soft)] leading-relaxed max-w-2xl">
+          {description}
+        </p>
       )}
 
-      {/* Popular Spots — top 10 by event count */}
-      {displaySpots.length > 0 && (
-        <section className="mt-8">
-          <div className="flex items-center justify-between mb-3">
-            <span
-              className="font-mono text-xs font-bold tracking-[0.12em] uppercase"
-              style={{ color: color }}
-            >
-              Popular Spots
-            </span>
-            <Link
-              href={buildExploreUrl({
-                portalSlug: portal,
-                lane: "places",
-                extraParams: { neighborhood: neighborhood.name },
-              })}
-              className="text-xs font-medium transition-opacity hover:opacity-70"
-              style={{ color: color }}
-            >
-              {spots.length > displaySpots.length ? `All ${spots.length}` : "See all"} →
-            </Link>
-          </div>
-          <div className="space-y-1">
-            {spots.map((spot, i) => (
-              <PlaceCard
-                key={spot.id}
-                venue={spot}
-                index={i}
-                portalSlug={portal}
-                variant="compact"
-                hideNeighborhood
-              />
-            ))}
-          </div>
-        </section>
-      )}
+      <div className="mt-7">
+        <NeighborhoodDetailTabs
+          initialTab={initialTab}
+          accentColor={color}
+          eventsCount={events.length}
+          placesCount={spots.length}
+          eventsContent={
+            <EventsView
+              buckets={buckets}
+              accentColor={color}
+              portalSlug={portal}
+              neighborhoodName={neighborhood.name}
+              totalUpcoming={upcomingCount}
+            />
+          }
+          placesContent={
+            <PlacesView
+              spots={spots}
+              portalSlug={portal}
+              neighborhoodName={neighborhood.name}
+            />
+          }
+        />
+      </div>
 
-      {/* Explore Nearby — color-tinted cards */}
       {related.length > 0 && (
-        <section className="mt-8">
-          <span className="font-mono text-xs font-bold tracking-[0.12em] uppercase text-[var(--muted)] mb-3 block">
-            Explore Nearby
-          </span>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+        <section className="mt-10">
+          <h2 className="font-mono text-xs font-bold uppercase tracking-[0.14em] text-[var(--muted)] mb-3">
+            Nearby Neighborhoods
+          </h2>
+          <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide pb-1">
             {related.map((n) => {
               const nColor = getNeighborhoodColor(n.name);
-              const nRgb = hexToRgb(nColor);
-              const nDesc = getNeighborhoodDescription(n.id);
               return (
                 <Link
                   key={n.id}
                   href={`/${portal}/neighborhoods/${n.id}`}
-                  className="p-3 rounded-xl border transition-all hover:scale-[1.02] active:scale-[0.98]"
-                  style={{
-                    backgroundColor: `rgba(${nRgb.r}, ${nRgb.g}, ${nRgb.b}, 0.05)`,
-                    borderColor: `rgba(${nRgb.r}, ${nRgb.g}, ${nRgb.b}, 0.15)`,
-                  }}
+                  className="flex-shrink-0 inline-flex items-center gap-2 px-3.5 py-2 rounded-full border border-[var(--twilight)] bg-[var(--night)] hover:border-[var(--muted)] transition-colors"
                 >
-                  <div className="text-sm font-semibold text-[var(--cream)] truncate">
+                  <span
+                    className="w-[7px] h-[7px] rounded-full flex-shrink-0"
+                    style={{ backgroundColor: nColor }}
+                    aria-hidden="true"
+                  />
+                  <span className="text-sm text-[var(--cream)] whitespace-nowrap">
                     {n.name}
-                  </div>
-                  {nDesc && (
-                    <div className="text-2xs text-[var(--muted)] mt-0.5 line-clamp-1">
-                      {nDesc}
-                    </div>
-                  )}
+                  </span>
                 </Link>
               );
             })}
@@ -493,7 +269,6 @@ export default async function NeighborhoodPage({ params }: Props) {
         </section>
       )}
 
-      {/* Empty state */}
       {events.length === 0 && spots.length === 0 && (
         <div className="py-16 text-center space-y-3">
           <p className="font-mono text-sm text-[var(--muted)]">
@@ -501,10 +276,174 @@ export default async function NeighborhoodPage({ params }: Props) {
           </p>
           <Link
             href={`/${portal}/neighborhoods`}
-            className="inline-block font-mono text-xs transition-opacity hover:opacity-80"
-            style={{ color: color }}
+            className="inline-block font-mono text-xs text-[var(--coral)] hover:opacity-80 transition-opacity"
           >
             ← All neighborhoods
+          </Link>
+        </div>
+      )}
+    </div>
+  );
+}
+
+interface EventsViewProps {
+  buckets: ReturnType<typeof bucketEvents<Event>>;
+  accentColor: string;
+  portalSlug: string;
+  neighborhoodName: string;
+  totalUpcoming: number;
+}
+
+function EventsView({
+  buckets,
+  accentColor,
+  portalSlug,
+  neighborhoodName,
+  totalUpcoming,
+}: EventsViewProps) {
+  const hasAny =
+    buckets.tonight.length > 0 ||
+    buckets.weekend.length > 0 ||
+    buckets.nextWeek.length > 0 ||
+    buckets.later.length > 0;
+
+  if (!hasAny) {
+    return (
+      <p className="mt-8 text-sm text-[var(--muted)]">
+        No upcoming events in {neighborhoodName}.
+      </p>
+    );
+  }
+
+  return (
+    <div className="mt-6 space-y-8">
+      <BucketSection
+        label="Tonight"
+        kickerColor="var(--coral)"
+        count={buckets.tonight.length}
+        events={buckets.tonight}
+        accentColor={accentColor}
+        portalSlug={portalSlug}
+      />
+      <BucketSection
+        label="This Weekend"
+        kickerColor="var(--muted)"
+        count={buckets.weekend.length}
+        events={buckets.weekend}
+        accentColor={accentColor}
+        portalSlug={portalSlug}
+      />
+      <BucketSection
+        label="Next Week"
+        kickerColor="var(--muted)"
+        count={buckets.nextWeek.length}
+        events={buckets.nextWeek}
+        accentColor={accentColor}
+        portalSlug={portalSlug}
+      />
+      {totalUpcoming > 20 && (
+        <div className="pt-2">
+          <Link
+            href={`/${portalSlug}/find?neighborhood=${encodeURIComponent(neighborhoodName)}`}
+            className="inline-flex items-center font-mono text-xs text-[var(--coral)] hover:opacity-80 transition-opacity"
+          >
+            View all {totalUpcoming} events →
+          </Link>
+        </div>
+      )}
+    </div>
+  );
+}
+
+interface BucketSectionProps {
+  label: string;
+  kickerColor: string;
+  count: number;
+  events: Event[];
+  accentColor: string;
+  portalSlug: string;
+}
+
+function BucketSection({
+  label,
+  kickerColor,
+  count,
+  events,
+  accentColor,
+  portalSlug,
+}: BucketSectionProps) {
+  if (events.length === 0) return null;
+  return (
+    <section>
+      <div className="flex items-center justify-between pt-3 border-t border-[var(--twilight)] mb-3">
+        <div className="flex items-center gap-3">
+          <span
+            className="font-mono text-xs font-bold uppercase tracking-[0.14em]"
+            style={{ color: kickerColor }}
+          >
+            {label}
+          </span>
+          <span className="font-mono text-2xs tabular-nums text-[var(--muted)]">
+            {count}
+          </span>
+        </div>
+      </div>
+      <div className="space-y-2.5">
+        {events.map((ev) => (
+          <ScheduleRow
+            key={ev.id}
+            event={toScheduleRowEvent(ev)}
+            accentColor={accentColor}
+            portalSlug={portalSlug}
+            context="page"
+          />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+interface PlacesViewProps {
+  spots: Awaited<ReturnType<typeof getNeighborhoodSpots>>;
+  portalSlug: string;
+  neighborhoodName: string;
+}
+
+function PlacesView({ spots, portalSlug, neighborhoodName }: PlacesViewProps) {
+  if (spots.length === 0) {
+    return (
+      <p className="mt-8 text-sm text-[var(--muted)]">
+        No spots in {neighborhoodName} yet.
+      </p>
+    );
+  }
+
+  const displaySpots = spots.slice(0, 20);
+  const hasMore = spots.length > displaySpots.length;
+
+  return (
+    <div className="mt-6 space-y-2">
+      {displaySpots.map((spot, i) => (
+        <PlaceCard
+          key={spot.id}
+          venue={spot}
+          index={i}
+          portalSlug={portalSlug}
+          variant="compact"
+          hideNeighborhood
+        />
+      ))}
+      {hasMore && (
+        <div className="pt-3">
+          <Link
+            href={buildExploreUrl({
+              portalSlug,
+              lane: "places",
+              extraParams: { neighborhood: neighborhoodName },
+            })}
+            className="inline-flex items-center font-mono text-xs text-[var(--coral)] hover:opacity-80 transition-opacity"
+          >
+            All {spots.length} spots →
           </Link>
         </div>
       )}
