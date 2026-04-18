@@ -136,13 +136,16 @@ function NowShowingIsland({ ctx }: FeedSectionComponentProps) {
   );
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function LiveTonightIsland({ ctx }: FeedSectionComponentProps) {
   return (
     <>
       <div className="h-px bg-[var(--twilight)]" />
       <div className="pt-6">
-        <LazySection minHeight={320}>
+        {/* Estimated rendered height: hero strip ~250-410px + ticker ~32px +
+            tonight sub-header ~32px + 6 venue blocks × ~80px + footer link ~28px
+            ≈ 800-1000px. Use 800 as the placeholder so the lazy section
+            doesn't collapse before paint. */}
+        <LazySection minHeight={800}>
           <LiveTonightSection portalSlug={ctx.portalSlug} />
         </LazySection>
       </div>
@@ -270,23 +273,18 @@ export const ATLANTA_FEED_MANIFEST: FeedSection[] = [
       blockId: "cinema",
     },
   },
-  // Live Tonight section temporarily hidden pending /elevate rebuild.
-  // Loader returns 36 venues including non-music venues (skating rinks, rec
-  // centers, restaurants) because tonight/this-week loaders don't gate on
-  // places.music_programming_style. Re-enable after rebuild + data fix.
-  // See: https://github.com/dStensland/LostCity/pull/38 post-merge audit.
-  // {
-  //   id: "live_tonight",
-  //   render: "client-island",
-  //   component: LiveTonightIsland,
-  //   wrapper: {
-  //     id: "city-pulse-live-tonight",
-  //     className: "mt-8 scroll-mt-28",
-  //     dataAnchor: true,
-  //     indexLabel: "Live Tonight",
-  //     blockId: "live_tonight",
-  //   },
-  // },
+  {
+    id: "live_tonight",
+    render: "client-island",
+    component: LiveTonightIsland,
+    wrapper: {
+      id: "city-pulse-live-tonight",
+      className: "mt-8 scroll-mt-28",
+      dataAnchor: true,
+      indexLabel: "Live Tonight",
+      blockId: "live_tonight",
+    },
+  },
   {
     id: "regulars",
     render: "server",
