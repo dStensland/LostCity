@@ -20,6 +20,7 @@ export interface TierableEvent {
   featured_blurb?: string | null;
   importance?: "flagship" | "major" | "standard" | null;
   venue_has_editorial?: boolean;
+  is_curator_pick?: boolean;
 }
 
 /**
@@ -33,6 +34,7 @@ export interface TierableEvent {
  */
 export function computeIntrinsicScore(event: TierableEvent): number {
   let score = 0;
+  if (event.is_curator_pick) score += 50;
   if (event.is_tentpole) score += 40;
   if (event.importance === "flagship") score += 40;
   if (event.importance === "major") score += 20;
@@ -53,6 +55,7 @@ export function getCardTier(
   event: TierableEvent,
   friendsGoingCount = 0,
 ): CardTier {
+  if (event.is_curator_pick) return "hero";
   const intrinsic = computeIntrinsicScore(event);
   if (intrinsic >= 30 || event.is_tentpole) return "hero";
   if (intrinsic >= 15 || friendsGoingCount > 0) return "featured";

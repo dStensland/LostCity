@@ -15,6 +15,7 @@ from playwright.sync_api import sync_playwright
 
 from db import get_or_create_place, insert_event, find_event_by_hash, find_existing_event_for_insert, smart_update_existing_event
 from dedupe import generate_content_hash
+from extractors.doors_time import extract_doors_time
 
 logger = logging.getLogger(__name__)
 
@@ -164,6 +165,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     # Parse time from excerpt
                     start_time = parse_time(excerpt)
 
+                    # Extract doors time from excerpt
+                    doors_time = extract_doors_time(excerpt)
+
                     # Parse price from excerpt
                     price_min, price_max, price_note = parse_price(excerpt)
                     is_free = price_note == "Free"
@@ -190,6 +194,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "description": excerpt if excerpt else None,
                         "start_date": start_date,
                         "start_time": start_time,
+                        "doors_time": doors_time,
                         "end_date": None,
                         "end_time": None,
                         "is_all_day": False,

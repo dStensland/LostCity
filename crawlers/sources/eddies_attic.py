@@ -18,6 +18,7 @@ from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeo
 from classify import classify_rules
 from db import get_or_create_place, insert_event, find_event_by_hash
 from dedupe import generate_content_hash
+from extractors.doors_time import extract_doors_time
 from utils import extract_images_from_page
 
 logger = logging.getLogger(__name__)
@@ -295,6 +296,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         # Try to parse time
                         start_time = parse_time_text(element_text)
 
+                        # Extract doors time separately from the element text
+                        doors_time = extract_doors_time(element_text)
+
                         # Extract price info
                         price_min, price_max, price_note, is_free = extract_price_info(element_text)
 
@@ -355,6 +359,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             "description": description,
                             "start_date": start_date,
                             "start_time": start_time,
+                            "doors_time": doors_time,
                             "end_date": None,
                             "end_time": None,
                             "is_all_day": False,
