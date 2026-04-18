@@ -130,7 +130,7 @@ function NowShowingIsland({ ctx }: FeedSectionComponentProps) {
     <>
       <div className="h-px bg-[var(--twilight)]" />
       <div className="pt-6">
-        <LazySection minHeight={300}>
+        <LazySection minHeight={220}>
           <NowShowingSection portalSlug={ctx.portalSlug} />
         </LazySection>
       </div>
