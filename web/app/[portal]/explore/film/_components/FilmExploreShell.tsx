@@ -7,6 +7,7 @@ import FilmFilterChips, { DEFAULT_FILTERS, type FilmFilters } from './FilmFilter
 import ThisWeekZone from './ThisWeekZone';
 import ByTheaterView from './ByTheaterView';
 import ByFilmView from './ByFilmView';
+import ScheduleView from './ScheduleView';
 import type {
   ByFilmPayload,
   ThisWeekPayload,
@@ -147,13 +148,17 @@ export default function FilmExploreShell({
       <ThisWeekZone thisWeek={initialThisWeek} portalSlug={portalSlug} />
 
       <div className={(loading || byFilmLoading) ? 'opacity-60 transition-opacity' : 'transition-opacity'}>
-        {view === 'by-film' ? (
+        {view === 'by-film' && (
           byFilm ? (
             <ByFilmView payload={byFilm} filters={filters} portalSlug={portalSlug} />
           ) : (
             <div className="h-48 rounded-card-xl bg-[var(--night)] border border-[var(--twilight)] animate-pulse" />
           )
-        ) : (
+        )}
+        {view === 'schedule' && (
+          <ScheduleView playbill={playbill} filters={filters} portalSlug={portalSlug} />
+        )}
+        {view === 'by-theater' && (
           <ByTheaterView playbill={playbill} filters={filters} portalSlug={portalSlug} />
         )}
       </div>
