@@ -57,7 +57,10 @@ export async function loadThisWeek(
     .eq("is_active", true)
     .is("canonical_event_id", null)
     .gte("start_date", start)
-    .lte("start_date", end);
+    .lte("start_date", end)
+    // Gate: only events at venues with an editorial OR marquee music
+    // classification. Excludes events tagged "music" at non-music venues.
+    .not("places.music_programming_style", "is", null);
 
   query = applyFeedGate(query);
   query = applyManifestFederatedScopeToQuery(query, manifest, {

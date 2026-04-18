@@ -8,7 +8,13 @@ export interface ClassifiableVenue {
 }
 
 export function classifyMusicVenue(v: ClassifiableVenue): MusicDisplayTier {
+  // 'marquee' is the explicit programming-style for arena/theater-tier music
+  // venues that aren't editorial-curated (Tabernacle, Coca-Cola Roxy, Fox,
+  // State Farm Arena, etc.). Backfilled in 20260417000003.
+  if (v.music_programming_style === "marquee") return "marquee";
   if (v.music_programming_style) return "editorial";
+  // Capacity fallback kept as a defense for any future marquee-class venue
+  // whose style hasn't been explicitly seeded yet.
   if (v.capacity != null && v.capacity >= 1000) return "marquee";
   return "additional";
 }

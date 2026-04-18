@@ -44,11 +44,7 @@ export function LiveTonightClient({
         portalSlug={portalSlug}
         onTileTap={setActiveShow}
       />
-      <LiveTonightPlaybill
-        payload={tonightPayload}
-        portalSlug={portalSlug}
-        onShowTap={setActiveShow}
-      />
+      <LiveTonightPlaybill payload={tonightPayload} portalSlug={portalSlug} />
       <MusicActionSheet
         show={activeShow}
         portalSlug={portalSlug}

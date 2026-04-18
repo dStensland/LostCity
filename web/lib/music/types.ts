@@ -5,7 +5,8 @@ export type MusicProgrammingStyle =
   | "curated_indie"
   | "jazz_club"
   | "dj_electronic"
-  | "drive_in_amph";
+  | "drive_in_amph"
+  | "marquee";
 
 export type MusicDisplayTier = "editorial" | "marquee" | "additional";
 
