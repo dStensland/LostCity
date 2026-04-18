@@ -132,7 +132,7 @@ function MonthColumn({
 
   return (
     <div
-      className={`flex-shrink-0 sm:flex-shrink snap-start min-w-[110px] sm:min-w-0 sm:flex-1 flex flex-col gap-2.5 p-[14px] ${
+      className={`flex-shrink-0 sm:flex-shrink snap-start min-w-[130px] sm:min-w-0 sm:flex-1 flex flex-col gap-2.5 p-3 sm:p-[14px] ${
         isFirst ? "" : "border-l border-[var(--twilight)]"
       }`}
     >
