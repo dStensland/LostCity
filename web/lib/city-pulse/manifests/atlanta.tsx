@@ -61,8 +61,8 @@ import type {
 const NowShowingSection = dynamic(
   () => import("@/components/feed/sections/NowShowingSection"),
 );
-const LiveMusicSection = dynamic(
-  () => import("@/components/feed/sections/MusicTabContent"),
+const LiveTonightSection = dynamic(
+  () => import("@/components/feed/sections/LiveTonightSection"),
 );
 const GameDaySection = dynamic<{ portalSlug: string }>(() =>
   import("@/components/feed/sections/GameDaySection").then((m) => ({
@@ -138,13 +138,13 @@ function NowShowingIsland({ ctx }: FeedSectionComponentProps) {
   );
 }
 
-function LiveMusicIsland({ ctx }: FeedSectionComponentProps) {
+function LiveTonightIsland({ ctx }: FeedSectionComponentProps) {
   return (
     <>
       <div className="h-px bg-[var(--twilight)]" />
       <div className="pt-6">
-        <LazySection minHeight={300}>
-          <LiveMusicSection portalSlug={ctx.portalSlug} />
+        <LazySection minHeight={320}>
+          <LiveTonightSection portalSlug={ctx.portalSlug} />
         </LazySection>
       </div>
     </>
@@ -272,11 +272,11 @@ export const ATLANTA_FEED_MANIFEST: FeedSection[] = [
     },
   },
   {
-    id: "live_music",
+    id: "live_tonight",
     render: "client-island",
-    component: LiveMusicIsland,
+    component: LiveTonightIsland,
     wrapper: {
-      id: "city-pulse-live-music",
+      id: "city-pulse-live-tonight",
       className: "mt-8 scroll-mt-28",
       dataAnchor: true,
       indexLabel: "Live Music",
