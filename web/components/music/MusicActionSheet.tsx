@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { buildEventUrl } from "@/lib/entity-urls";
 import type { MusicShowPayload } from "@/lib/music/types";
@@ -13,6 +13,8 @@ export interface MusicActionSheetProps {
 }
 
 export function MusicActionSheet({ show, portalSlug, onClose, onAddToPlans }: MusicActionSheetProps) {
+  const [visible, setVisible] = useState(false);
+
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
@@ -27,6 +29,11 @@ export function MusicActionSheet({ show, portalSlug, onClose, onAddToPlans }: Mu
     };
   }, [show, onClose]);
 
+  useEffect(() => {
+    const raf = requestAnimationFrame(() => setVisible(Boolean(show)));
+    return () => cancelAnimationFrame(raf);
+  }, [show]);
+
   if (!show) return null;
   if (typeof document === "undefined") return null;
 
@@ -36,7 +43,11 @@ export function MusicActionSheet({ show, portalSlug, onClose, onAddToPlans }: Mu
 
   const content = (
     <div
-      className="fixed inset-0 z-[140] bg-black/70"
+      className={[
+        "fixed inset-0 z-[140] bg-black/70",
+        "transition-opacity duration-200",
+        visible ? "opacity-100" : "opacity-0",
+      ].join(" ")}
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div
@@ -46,7 +57,10 @@ export function MusicActionSheet({ show, portalSlug, onClose, onAddToPlans }: Mu
           "rounded-t-2xl shadow-2xl",
           "max-h-[85vh] overflow-y-auto",
           "md:top-0 md:left-auto md:right-0 md:w-[420px] md:rounded-none md:border-t-0 md:border-l",
-          "transition-transform duration-300",
+          "transition-transform duration-300 ease-out",
+          visible
+            ? "translate-y-0 md:translate-x-0"
+            : "translate-y-full md:translate-x-full md:translate-y-0",
         ].join(" ")}
       >
         <div className="flex justify-center pt-3 pb-2" aria-hidden="true">

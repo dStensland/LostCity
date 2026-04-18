@@ -113,9 +113,12 @@ export function LiveTonightHeroTile({
           </div>
         )}
         <div
-          className={[headlineCls, "font-bold text-[var(--cream)] leading-tight drop-shadow-lg"].join(
-            " ",
-          )}
+          data-tile-headline
+          className={[
+            headlineCls,
+            "font-bold text-[var(--cream)] leading-tight drop-shadow-lg",
+            "transition-transform duration-[240ms] ease-out group-hover:-translate-y-0.5",
+          ].join(" ")}
         >
           {headliner}
         </div>

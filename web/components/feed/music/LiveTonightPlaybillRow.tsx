@@ -27,7 +27,7 @@ export function LiveTonightPlaybillRow({
     <div className="flex items-start gap-3 py-2 border-b border-[var(--twilight)]/40 last:border-b-0">
       <a
         href={venueUrl}
-        className="w-[110px] flex-shrink-0 pt-1.5 font-mono text-xs font-bold tracking-[2.2px] uppercase text-[var(--cream)] hover:text-[var(--vibe)] transition-colors truncate"
+        className="w-[110px] flex-shrink-0 pt-1.5 font-mono text-xs font-bold tracking-[2.2px] uppercase text-[var(--cream)] hover:text-[var(--vibe)] border-l-2 border-transparent hover:border-l-[var(--vibe)] hover:pl-2 transition-[color,border-color,padding-left] duration-200 truncate"
       >
         {venueName}
       </a>

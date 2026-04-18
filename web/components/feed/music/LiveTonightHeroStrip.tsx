@@ -40,14 +40,19 @@ export function LiveTonightHeroStrip({ shows, portalSlug, onTileTap }: LiveTonig
             : "grid-cols-3 h-[200px]",
         ].join(" ")}
       >
-        {shows.slice(0, n).map((show) => (
-          <LiveTonightHeroTile
+        {shows.slice(0, n).map((show, i) => (
+          <div
             key={show.id}
-            show={show}
-            portalSlug={portalSlug}
-            onTap={onTileTap}
-            sizeVariant={sizeVariant}
-          />
+            className="motion-safe:animate-fade-in"
+            style={{ animationDelay: `${i * 80}ms`, animationFillMode: "backwards" }}
+          >
+            <LiveTonightHeroTile
+              show={show}
+              portalSlug={portalSlug}
+              onTap={onTileTap}
+              sizeVariant={sizeVariant}
+            />
+          </div>
         ))}
       </div>
     </section>
