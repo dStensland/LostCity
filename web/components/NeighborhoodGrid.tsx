@@ -1,7 +1,7 @@
 "use client";
 
 import { memo, useMemo } from "react";
-import NeighborhoodCard from "./NeighborhoodCard";
+import NeighborhoodSelectChip from "./NeighborhoodSelectChip";
 
 interface NeighborhoodStats {
   name: string;
@@ -85,7 +85,7 @@ function NeighborhoodGrid({
       </div>
       <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
         {visibleNeighborhoods.map((hood) => (
-          <NeighborhoodCard
+          <NeighborhoodSelectChip
             key={hood.name}
             name={hood.name}
             liveCount={hood.liveCount}
