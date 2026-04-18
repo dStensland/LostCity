@@ -29,6 +29,7 @@ from db import (
 )
 from dedupe import generate_content_hash
 from description_fetcher import fetch_detail_html_playwright
+from extractors.doors_time import extract_doors_time
 from pipeline.detail_enrich import enrich_from_detail
 from pipeline.models import DetailConfig
 
@@ -515,6 +516,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     is_free = None
 
                 description = _clean_text(payload_event.get("description") or payload_event.get("bio")) or None
+                doors_time = extract_doors_time(description)
                 image_url = _extract_best_image(payload_event)
 
                 hash_key = f"{start_date}|{start_time}" if start_time else start_date
@@ -526,6 +528,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     "description": description,
                     "start_date": start_date,
                     "start_time": start_time,
+                    "doors_time": doors_time,
                     "end_date": None,
                     "end_time": None,
                     "is_all_day": False,

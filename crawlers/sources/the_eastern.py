@@ -255,6 +255,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             evt["price_max"] = fields["price_max"]
                         if fields.get("description") and not evt.get("description"):
                             evt["description"] = fields["description"]
+                        if fields.get("doors_time") and not evt.get("doors_time"):
+                            evt["doors_time"] = fields["doors_time"]
                         if fields.get("image_url") and not evt.get("image_url"):
                             evt["image_url"] = fields["image_url"]
                     detail_fetches += 1

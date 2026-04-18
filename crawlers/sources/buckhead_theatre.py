@@ -16,6 +16,7 @@ from playwright.sync_api import sync_playwright
 
 from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
+from extractors.doors_time import extract_doors_time
 from utils import extract_images_from_page, enrich_event_record
 
 logger = logging.getLogger(__name__)
@@ -197,6 +198,10 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                         category, subcategory, tags = determine_category(title)
 
+                        # Extract doors time from description if present
+                        description_text = event_data.get("description", "")
+                        doors_time = extract_doors_time(description_text) if description_text else None
+
                         # Get image from JSON-LD if available
                         image_url = None
                         image_data = event_data.get("image")
@@ -222,6 +227,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             "description": event_data.get("description", f"{title} at Buckhead Theatre"),
                             "start_date": start_date,
                             "start_time": start_time,
+                            "doors_time": doors_time,
                             "end_date": None,
                             "end_time": None,
                             "is_all_day": False,

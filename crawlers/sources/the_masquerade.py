@@ -25,6 +25,7 @@ from db import (
     smart_update_existing_event,
 )
 from dedupe import generate_content_hash
+from extractors.doors_time import extract_doors_time
 from description_quality import is_likely_truncated_description
 from utils import extract_images_from_page, extract_event_links, find_event_url, enrich_event_record
 
@@ -325,6 +326,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         opener = None
                         room = None
                         start_time = None
+                        doors_time = None
                         is_cancelled = False
                         is_sold_out = False
 
@@ -347,6 +349,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             # Check for time (Doors X:XX pm)
                             if not start_time and "doors" in check_line.lower():
                                 start_time = parse_time(check_line)
+                                if not doors_time:
+                                    doors_time = extract_doors_time(check_line)
 
                             # Check status
                             if check_upper == "CANCELED" or check_upper == "CANCELLED":
@@ -434,6 +438,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             "description": None,
                             "start_date": start_date,
                             "start_time": start_time,
+                            "doors_time": doors_time,
                             "end_date": None,
                             "end_time": None,
                             "is_all_day": False,
