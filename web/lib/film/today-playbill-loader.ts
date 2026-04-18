@@ -37,7 +37,6 @@ type RawPlace = {
   slug: string;
   name: string;
   neighborhood: string | null;
-  portal_id: string;
   programming_style: ProgrammingStyle | null;
   venue_formats: FormatToken[] | null;
   founding_year: number | null;
@@ -134,14 +133,14 @@ export async function loadTodayPlaybill(args: {
           director, year, runtime_minutes, rating
         ),
         places!inner (
-          id, slug, name, neighborhood, portal_id,
+          id, slug, name, neighborhood,
           programming_style, venue_formats, founding_year,
-          place_vertical_details
+          place_vertical_details (google)
         )
       )
     `)
     .eq('start_date', args.date)
-    .eq('screening_runs.places.portal_id', portalId)
+    .eq('screening_runs.portal_id', portalId)
     .order('start_time');
 
   if (error) {
