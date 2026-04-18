@@ -126,3 +126,54 @@ export function generateEditorialCallout(
 }
 
 export { CATEGORY_LABELS, getTimingPhrase };
+
+// ---------------------------------------------------------------------------
+// Neighborhoods overlay (index page map)
+// ---------------------------------------------------------------------------
+
+export interface NeighborhoodsOverlayContext {
+  tonightNeighborhoodCount: number;
+  weekNeighborhoodCount: number;
+  cityName?: string;
+}
+
+export type NeighborhoodsOverlayKind = "alive_tonight" | "week_scope" | "none";
+
+export interface NeighborhoodsOverlay {
+  kind: NeighborhoodsOverlayKind;
+  kicker: string | null;
+  headline: string | null;
+}
+
+/**
+ * Editorial copy for the neighborhoods index page map overlay.
+ *
+ * Locked string variants (do not inline concatenate elsewhere):
+ *   alive_tonight: "ALIVE TONIGHT" + "N neighborhoods have events starting soon"
+ *                  Renders only when tonightNeighborhoodCount > 0.
+ *   week_scope:    "THIS WEEK" + "Across {cityName}"
+ *                  Renders when tonight === 0 AND weekNeighborhoodCount > 0.
+ *   none:          both counts are 0. Render nothing (no zero-state copy).
+ */
+export function generateNeighborhoodsOverlay(
+  ctx: NeighborhoodsOverlayContext,
+): NeighborhoodsOverlay {
+  const city = ctx.cityName ?? "Atlanta";
+
+  if (ctx.tonightNeighborhoodCount > 0) {
+    const n = ctx.tonightNeighborhoodCount;
+    return {
+      kind: "alive_tonight",
+      kicker: "ALIVE TONIGHT",
+      headline: `${n} ${n === 1 ? "neighborhood has" : "neighborhoods have"} events starting soon`,
+    };
+  }
+  if (ctx.weekNeighborhoodCount > 0) {
+    return {
+      kind: "week_scope",
+      kicker: "THIS WEEK",
+      headline: `Across ${city}`,
+    };
+  }
+  return { kind: "none", kicker: null, headline: null };
+}
