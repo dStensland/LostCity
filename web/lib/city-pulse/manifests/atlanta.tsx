@@ -13,7 +13,7 @@ import dynamic from "next/dynamic";
 import type { ComponentType } from "react";
 import HolidayHero from "@/components/feed/HolidayHero";
 import { TodayInAtlantaSection } from "@/components/feed/sections/TodayInAtlantaSection";
-import FestivalsSection from "@/components/feed/sections/FestivalsSection";
+import BigStuffSection from "@/components/feed/sections/BigStuffSection";
 import RegularHangsSection from "@/components/feed/sections/RegularHangsSection";
 import { PlacesToGoSection } from "@/components/feed/sections/PlacesToGoSection";
 import ActiveContestSection from "@/components/feed/sections/ActiveContestSection";
@@ -24,9 +24,9 @@ import LazySection from "@/components/feed/LazySection";
 import { ENABLE_HANGS_V1 } from "@/lib/launch-flags";
 
 import {
-  loadFestivalsForFeed,
-  type FestivalsFeedData,
-} from "../loaders/load-festivals";
+  loadBigStuffForFeed,
+  type BigStuffFeedData,
+} from "../loaders/load-big-stuff";
 import {
   loadNewsForFeed,
   type NewsFeedData,
@@ -112,10 +112,10 @@ function LineupManifestIsland({ ctx, initialData }: FeedSectionComponentProps) {
   return <LineupIsland portalSlug={ctx.portalSlug} initialData={data ?? null} />;
 }
 
-function FestivalsSectionIsland({ ctx, initialData }: FeedSectionComponentProps) {
-  const data = initialData as FestivalsFeedData | null | undefined;
+function BigStuffSectionIsland({ ctx, initialData }: FeedSectionComponentProps) {
+  const data = initialData as BigStuffFeedData | null | undefined;
   return (
-    <FestivalsSection
+    <BigStuffSection
       portalSlug={ctx.portalSlug}
       portalId={ctx.portalId}
       initialData={data ?? null}
@@ -250,8 +250,8 @@ export const ATLANTA_FEED_MANIFEST: FeedSection[] = [
   {
     id: "festivals",
     render: "server",
-    component: FestivalsSectionIsland,
-    loader: loadFestivalsForFeed,
+    component: BigStuffSectionIsland,
+    loader: loadBigStuffForFeed,
     wrapper: {
       id: "city-pulse-festivals",
       className: "scroll-mt-28",

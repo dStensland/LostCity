@@ -55,6 +55,56 @@ export default function GoblinWatchlistView({ isAuthenticated }: Props) {
   const [createGroupOpen, setCreateGroupOpen] = useState(false);
   const [addToGroupId, setAddToGroupId] = useState<number | null>(null);
 
+  // Queue collapse state — persisted in localStorage, default collapsed.
+  const [queueCollapsed, setQueueCollapsed] = useState<boolean>(true);
+
+  // Focus mode — when set, only the group with this slug renders.
+  // Synced to the `?g=` URL param via replaceState (no Next.js navigation).
+  const [focusGroupSlug, setFocusGroupSlug] = useState<string | null>(null);
+
+  /* eslint-disable react-hooks/set-state-in-effect --
+     Mount-only hydration from URL — runs once. */
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const g = params.get("g");
+    if (g) setFocusGroupSlug(g);
+  }, []);
+  /* eslint-enable react-hooks/set-state-in-effect */
+
+  const updateFocusSlug = useCallback((slug: string | null) => {
+    setFocusGroupSlug(slug);
+    if (typeof window === "undefined") return;
+    const url = new URL(window.location.href);
+    if (slug) url.searchParams.set("g", slug);
+    else url.searchParams.delete("g");
+    window.history.replaceState({}, "", url.toString());
+  }, []);
+
+  /* eslint-disable react-hooks/set-state-in-effect --
+     Mount-only hydration from localStorage — runs once, no cascade. */
+  useEffect(() => {
+    try {
+      const v = localStorage.getItem("goblin.queue.collapsed");
+      if (v !== null) setQueueCollapsed(v === "1");
+    } catch {
+      /* ignore */
+    }
+  }, []);
+  /* eslint-enable react-hooks/set-state-in-effect */
+
+  const toggleQueueCollapsed = useCallback(() => {
+    setQueueCollapsed((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem("goblin.queue.collapsed", next ? "1" : "0");
+      } catch {
+        /* ignore */
+      }
+      return next;
+    });
+  }, []);
+
   useEffect(() => {
     if (!isAuthenticated) return;
     fetch("/api/auth/profile")
@@ -93,6 +143,21 @@ export default function GoblinWatchlistView({ isAuthenticated }: Props) {
     if (!activeTag) return entries;
     return entries.filter((e) => e.tags.some((t) => t.name === activeTag));
   }, [entries, activeTag]);
+
+  const focusedGroup = useMemo(() => {
+    if (!focusGroupSlug) return null;
+    return groupsHook.groups.find((g) => g.slug === focusGroupSlug) ?? null;
+  }, [focusGroupSlug, groupsHook.groups]);
+
+  /* eslint-disable react-hooks/set-state-in-effect --
+     Recovery from a stale URL slug (?g=does-not-exist) once groups have
+     loaded. Cascade bounded — only fires when the resolver couldn't match. */
+  useEffect(() => {
+    if (focusGroupSlug && !focusedGroup && groupsHook.groups.length > 0) {
+      updateFocusSlug(null);
+    }
+  }, [focusGroupSlug, focusedGroup, groupsHook.groups.length, updateFocusSlug]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const swapEntries = useCallback(
     async (indexA: number, indexB: number) => {
@@ -190,21 +255,32 @@ export default function GoblinWatchlistView({ isAuthenticated }: Props) {
 
   return (
     <div className="max-w-3xl mx-auto relative">
+      {/* Queue + Recommendations + list body — all hidden in group focus mode */}
+      {!focusedGroup && (
+      <>
       {/* Header */}
       <div className="mb-8 relative z-10">
         <div
           className="flex items-end justify-between gap-4 pb-4"
           style={{ borderBottom: "1px solid rgba(255,217,61,0.15)" }}
         >
-          <div>
+          <button
+            type="button"
+            onClick={toggleQueueCollapsed}
+            aria-expanded={!queueCollapsed}
+            className="text-left group/queue-toggle"
+          >
             <h2
-              className="text-2xl sm:text-3xl font-black text-white uppercase tracking-[0.25em] leading-none"
+              className="text-2xl sm:text-3xl font-black text-white uppercase tracking-[0.25em] leading-none flex items-center gap-3"
               style={{
                 textShadow:
                   "0 0 30px rgba(255,217,61,0.2), 0 0 60px rgba(255,217,61,0.05)",
               }}
             >
               The Queue
+              <span className="text-amber-500/60 text-lg font-mono" aria-hidden>
+                {queueCollapsed ? "▾" : "▴"}
+              </span>
             </h2>
             <p className="text-2xs text-zinc-600 font-mono mt-2 tracking-[0.3em] uppercase">
               {filteredEntries.length} film{filteredEntries.length !== 1 ? "s" : ""}
@@ -212,7 +288,7 @@ export default function GoblinWatchlistView({ isAuthenticated }: Props) {
                 <span className="text-amber-400/70"> / #{activeTag}</span>
               )}
             </p>
-          </div>
+          </button>
           <div className="flex items-center gap-2">
             {username && (
               <button
@@ -249,7 +325,7 @@ export default function GoblinWatchlistView({ isAuthenticated }: Props) {
         </div>
 
         {/* Tag filters */}
-        {tags.length > 0 && (
+        {!queueCollapsed && tags.length > 0 && (
           <div
             className="flex items-center gap-1.5 mt-4 overflow-x-auto scrollbar-hide
               [mask-image:linear-gradient(to_right,black_calc(100%-2rem),transparent)] sm:[mask-image:none]"
@@ -358,8 +434,8 @@ export default function GoblinWatchlistView({ isAuthenticated }: Props) {
         </div>
       )}
 
-      {/* Loading skeleton */}
-      {loading ? (
+      {/* Loading skeleton / list body — hidden when the queue is collapsed */}
+      {!queueCollapsed && (loading ? (
         <div className="space-y-1">
           {Array.from({ length: 5 }).map((_, i) => (
             <div
@@ -422,10 +498,63 @@ export default function GoblinWatchlistView({ isAuthenticated }: Props) {
             />
           ))}
         </div>
+      ))}
+      </>
+      )}
+
+      {/* Group chip row — sibling-group selector. Hidden in focus mode. */}
+      {!focusedGroup && groupsHook.groups.length > 0 && (
+        <div
+          className="mt-6 mb-2 flex items-center gap-1.5 overflow-x-auto scrollbar-hide relative z-10
+            [mask-image:linear-gradient(to_right,black_calc(100%-2rem),transparent)] sm:[mask-image:none]"
+        >
+          {groupsHook.groups.map((g) => (
+            <button
+              key={g.id}
+              onClick={() => g.slug && updateFocusSlug(g.slug)}
+              disabled={!g.slug}
+              className="flex-shrink-0 px-2.5 py-1 rounded-full font-mono text-2xs font-medium
+                border border-zinc-700 text-zinc-400
+                hover:text-amber-300 hover:border-amber-700
+                disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+              title={g.slug ? undefined : "Recommendations list — not shareable"}
+            >
+              {g.name}
+              <span className="ml-1.5 text-zinc-600">{g.movies.length}</span>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Focus-mode back link */}
+      {focusedGroup && (
+        <button
+          onClick={() => updateFocusSlug(null)}
+          className="mt-4 mb-4 text-2xs font-mono tracking-[0.2em] uppercase text-amber-500/70 hover:text-amber-300 transition-colors relative z-10"
+        >
+          ← All groups
+        </button>
       )}
 
       {/* Group sections */}
-      {groupsHook.groups.length > 0 && (
+      {focusedGroup ? (
+        <div className="mt-2 relative z-10">
+          <GoblinGroupSection
+            key={focusedGroup.id}
+            group={focusedGroup}
+            username={username}
+            onFocus={updateFocusSlug}
+            isFocused
+            onAddMovie={() => setAddToGroupId(focusedGroup.id)}
+            onRemoveMovie={groupsHook.removeMovie}
+            onMarkWatched={groupsHook.markWatched}
+            onDeleteGroup={groupsHook.deleteGroup}
+            onReorderMovies={handleGroupReorderMovies}
+            logTags={logHook.tags}
+            onCreateLogTag={logHook.createTag}
+          />
+        </div>
+      ) : groupsHook.groups.length > 0 && (
         <div className="mt-10 space-y-6 relative z-10">
           <div
             className="h-px"
@@ -435,6 +564,9 @@ export default function GoblinWatchlistView({ isAuthenticated }: Props) {
             <GoblinGroupSection
               key={group.id}
               group={group}
+              username={username}
+              onFocus={updateFocusSlug}
+              isFocused={false}
               onAddMovie={() => setAddToGroupId(group.id)}
               onRemoveMovie={groupsHook.removeMovie}
               onMarkWatched={groupsHook.markWatched}

@@ -27,6 +27,11 @@ interface Props {
   ) => Promise<void>;
   logTags: { id: number; name: string; color: string | null }[];
   onCreateLogTag: (name: string) => Promise<{ id: number; name: string; color: string | null } | null>;
+  // Share + focus — only functional when username AND group.slug are set, and
+  // the group is not is_recommendations. Parent is responsible for that guard.
+  username: string | null;
+  onFocus: (slug: string | null) => void;
+  isFocused: boolean;
 }
 
 function groupMovieToWatchlistEntry(gm: GoblinGroupMovie): WatchlistEntry {
@@ -50,12 +55,26 @@ export default function GoblinGroupSection({
   onReorderMovies,
   logTags,
   onCreateLogTag,
+  username,
+  onFocus,
+  isFocused,
 }: Props) {
   const [collapsed, setCollapsed] = useState(false);
   const [watchedMovie, setWatchedMovie] = useState<GoblinGroupMovie | null>(null);
   const [showMenu, setShowMenu] = useState(false);
   const [dragFrom, setDragFrom] = useState<number | null>(null);
   const [dragOver, setDragOver] = useState<number | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  const canShare = Boolean(username && group.slug && !group.is_recommendations);
+
+  const handleShare = useCallback(() => {
+    if (!username || !group.slug) return;
+    const url = `https://lostcity.ai/goblinday/queue/${username}/g/${group.slug}`;
+    navigator.clipboard.writeText(url);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }, [username, group.slug]);
 
   const handleDrop = useCallback(
     async (toIndex: number) => {
@@ -122,6 +141,31 @@ export default function GoblinGroupSection({
             </p>
           )}
         </div>
+
+        {/* Share + Focus — share URL + enter focus mode */}
+        {canShare && !isFocused && (
+          <div
+            className="flex items-center gap-1.5 flex-shrink-0"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={handleShare}
+              className="px-2 py-1 text-2xs font-mono font-bold tracking-[0.2em] uppercase
+                border border-zinc-700 text-zinc-500
+                hover:text-amber-300 hover:border-amber-700 transition-all"
+            >
+              {copied ? "COPIED!" : "SHARE"}
+            </button>
+            <button
+              onClick={() => onFocus(group.slug)}
+              className="px-2 py-1 text-2xs font-mono font-bold tracking-[0.2em] uppercase
+                border border-zinc-700 text-zinc-500
+                hover:text-amber-300 hover:border-amber-700 transition-all"
+            >
+              FOCUS
+            </button>
+          </div>
+        )}
 
         {/* Overflow menu button */}
         <div

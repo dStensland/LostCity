@@ -248,6 +248,11 @@ export default function GoblinWatchlistCard({
             className="py-1 text-emerald-600 hover:text-emerald-400 font-bold transition-colors">
             [WATCHED]
           </button>
+          <button onClick={() => onRemove(entry.id)}
+            className="py-1 text-zinc-500 hover:text-amber-400 font-bold transition-colors"
+            title="Mark as seen (removes without logging)">
+            [SEEN]
+          </button>
           <button onClick={() => setShowInfo(!showInfo)}
             className={`py-1 transition-colors ${showInfo ? "text-amber-400" : "hover:text-amber-500"}`}>
             [{showInfo ? "−" : "i"}]
