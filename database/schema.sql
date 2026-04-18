@@ -2444,6 +2444,7 @@ CREATE TABLE IF NOT EXISTS screening_runs (
   place_id INTEGER REFERENCES places(id) ON DELETE SET NULL,
   festival_id TEXT REFERENCES festivals(id) ON DELETE SET NULL,
   source_id INTEGER REFERENCES sources(id) ON DELETE SET NULL,
+  portal_id UUID NOT NULL REFERENCES portals(id) ON DELETE CASCADE,
   label TEXT NOT NULL,
   start_date DATE NOT NULL,
   end_date DATE NOT NULL,
@@ -2480,6 +2481,12 @@ CREATE INDEX IF NOT EXISTS idx_screening_runs_festival_start_date
 
 CREATE INDEX IF NOT EXISTS idx_screening_runs_source_id
   ON screening_runs (source_id);
+
+CREATE INDEX IF NOT EXISTS idx_screening_runs_portal_id
+  ON screening_runs(portal_id);
+
+CREATE INDEX IF NOT EXISTS idx_screening_runs_portal_dates
+  ON screening_runs(portal_id, start_date, end_date);
 
 CREATE INDEX IF NOT EXISTS idx_screening_times_run_start
   ON screening_times (screening_run_id, start_date, start_time);
