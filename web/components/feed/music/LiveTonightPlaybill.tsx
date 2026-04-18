@@ -38,12 +38,15 @@ function totalShows(groups: VenueGroup[]): number {
 interface SubHeaderProps {
   left: string;
   right?: string;
+  /** When "muted", left label uses muted gray (structural/contextual). Default "soft". */
+  leftTone?: "soft" | "muted";
 }
 
-function ZoneSubHeader({ left, right }: SubHeaderProps) {
+function ZoneSubHeader({ left, right, leftTone = "soft" }: SubHeaderProps) {
+  const leftColor = leftTone === "muted" ? "text-[var(--muted)]" : "text-[var(--soft)]";
   return (
     <div className="flex items-center justify-between gap-3 mt-4 pb-3 border-b border-[var(--twilight)]/40">
-      <span className="font-mono text-xs font-bold uppercase tracking-[0.12em] text-[var(--soft)]">
+      <span className={`font-mono text-xs font-bold uppercase tracking-[0.12em] ${leftColor}`}>
         {left}
       </span>
       {right && (
@@ -69,10 +72,11 @@ function renderBlocks(
   groups: VenueGroup[],
   portalSlug: string,
   kickerOverride: Map<number, KickerDescriptor> = new Map(),
+  inLateBand: boolean = false,
 ) {
   return groups.map(({ venue, shows }) => {
     const override = kickerOverride.get(venue.id);
-    const kicker = override ?? deriveKicker({ venue, shows });
+    const kicker = override ?? deriveKicker({ venue, shows, inLateBand });
     return (
       <VenueBlock
         key={venue.id}
@@ -160,8 +164,9 @@ export function LiveTonightPlaybill({ payload, portalSlug }: LiveTonightPlaybill
           <ZoneSubHeader
             left="Late · After 9 PM"
             right={`${lateVisible.length} of ${lateGroups.length} venues`}
+            leftTone="muted"
           />
-          <div>{renderBlocks(lateVisible, portalSlug)}</div>
+          <div>{renderBlocks(lateVisible, portalSlug, new Map(), true)}</div>
         </>
       )}
 

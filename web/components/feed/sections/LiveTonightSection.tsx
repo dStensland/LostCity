@@ -1,4 +1,4 @@
-import { Microphone } from "@phosphor-icons/react/dist/ssr";
+import { MusicNotes } from "@phosphor-icons/react/dist/ssr";
 import FeedSectionHeader from "@/components/feed/FeedSectionHeader";
 import { loadThisWeek } from "@/lib/music/this-week-loader";
 import { loadTonight } from "@/lib/music/tonight-loader";
@@ -31,8 +31,8 @@ export async function LiveTonightSection({ portalSlug }: LiveTonightSectionProps
       <FeedSectionHeader
         title="Live Tonight"
         priority="secondary"
-        accentColor="var(--coral)"
-        icon={<Microphone weight="duotone" className="w-3.5 h-3.5" />}
+        accentColor="var(--vibe)"
+        icon={<MusicNotes weight="duotone" className="w-5 h-5" />}
         seeAllHref={`/${portalSlug}/explore/music`}
       />
 

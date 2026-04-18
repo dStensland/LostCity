@@ -120,4 +120,30 @@ describe("deriveKicker", () => {
     const shows = [mkShow({ is_free: true, doors_time: "22:00" })];
     expect(deriveKicker({ venue: mkVenue(), shows })?.label).toBe("FREE TONIGHT");
   });
+
+  it("suppresses LATE kicker when inLateBand is true (avoid duplicate band header)", () => {
+    const show = mkShow({ doors_time: "21:30", start_time: "22:00" });
+    expect(deriveKicker({ venue: mkVenue(), shows: [show], inLateBand: true })).toBeNull();
+  });
+
+  it("still returns SOLD OUT when inLateBand is true (only LATE is suppressed)", () => {
+    const show = mkShow({ doors_time: "21:30", ticket_status: "sold-out" });
+    expect(deriveKicker({ venue: mkVenue(), shows: [show], inLateBand: true })?.label).toBe(
+      "SOLD OUT TONIGHT",
+    );
+  });
+
+  it("still returns RESIDENCY when inLateBand is true", () => {
+    const show = mkShow({ doors_time: "21:30", tags: ["residency"] });
+    expect(deriveKicker({ venue: mkVenue(), shows: [show], inLateBand: true })?.label).toBe(
+      "RESIDENCY NIGHT",
+    );
+  });
+
+  it("still returns FREE when inLateBand is true", () => {
+    const show = mkShow({ doors_time: "21:30", is_free: true });
+    expect(deriveKicker({ venue: mkVenue(), shows: [show], inLateBand: true })?.label).toBe(
+      "FREE TONIGHT",
+    );
+  });
 });

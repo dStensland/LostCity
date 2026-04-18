@@ -14,6 +14,7 @@
  */
 
 import SmartImage from "@/components/SmartImage";
+import { formatArtistName } from "@/lib/music/format-artist-name";
 import type { MusicShowPayload } from "@/lib/music/types";
 
 export type LiveTonightHeroAspect = "landscape" | "portrait";
@@ -44,7 +45,7 @@ function pickChip(show: MusicShowPayload): ChipDescriptor | null {
 
 function headlinerName(show: MusicShowPayload): string {
   const headliner = show.artists.find((a) => a.is_headliner);
-  return headliner?.name ?? show.title;
+  return formatArtistName(headliner?.name ?? show.title);
 }
 
 function supportLine(show: MusicShowPayload): string | null {

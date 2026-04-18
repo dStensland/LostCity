@@ -44,6 +44,13 @@ export interface DeriveKickerInput {
    */
   venue?: MusicVenuePayload;
   shows: MusicShowPayload[];
+  /**
+   * When true, the venue is being rendered inside a dedicated Late Night
+   * sub-band (which already carries its own "LATE · AFTER 9 PM" header).
+   * Suppress the per-venue LATE kicker to avoid visible duplication.
+   * Other kicker types (SOLD OUT, RESIDENCY, FREE) still fire.
+   */
+  inLateBand?: boolean;
 }
 
 /**
@@ -57,7 +64,7 @@ export interface DeriveKickerInput {
  *   3. FREE — affordability hook
  *   4. LATE — informational; lowest priority
  */
-export function deriveKicker({ shows }: DeriveKickerInput): KickerDescriptor | null {
+export function deriveKicker({ shows, inLateBand = false }: DeriveKickerInput): KickerDescriptor | null {
   if (shows.length === 0) return null;
 
   const allSoldOut = shows.every((s) => s.ticket_status === "sold-out");
@@ -69,6 +76,10 @@ export function deriveKicker({ shows }: DeriveKickerInput): KickerDescriptor | n
 
   const allFree = shows.every((s) => s.is_free);
   if (allFree) return { label: "FREE TONIGHT", tone: "gold" };
+
+  // Suppress LATE kicker when the venue is rendered inside the dedicated
+  // Late Night sub-band — the band header already carries that label.
+  if (inLateBand) return null;
 
   const earliest = shows
     .map(effectiveStart)

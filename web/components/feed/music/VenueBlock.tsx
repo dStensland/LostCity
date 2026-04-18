@@ -15,6 +15,7 @@
 
 import { buildSpotUrl } from "@/lib/entity-urls";
 import type { KickerTone } from "@/lib/music/derive-kicker";
+import { formatArtistName } from "@/lib/music/format-artist-name";
 import type { MusicShowPayload, MusicVenuePayload } from "@/lib/music/types";
 
 const KICKER_COLOR: Record<KickerTone, string> = {
@@ -51,7 +52,7 @@ function formatShowtime(t: string | null): string {
 
 function headlinerName(show: MusicShowPayload): string {
   const headliner = show.artists.find((a) => a.is_headliner);
-  return headliner?.name ?? show.title;
+  return formatArtistName(headliner?.name ?? show.title);
 }
 
 export function VenueBlock({

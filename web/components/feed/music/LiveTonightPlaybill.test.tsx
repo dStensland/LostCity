@@ -98,8 +98,10 @@ describe("LiveTonightPlaybill", () => {
     };
     render(<LiveTonightPlaybill payload={payload} portalSlug="atlanta" />);
     expect(screen.getByText(/Tonight ·/i)).toBeInTheDocument();
-    // 2+ late venues → separate sub-band header (one) + a kicker per venue (two)
-    expect(screen.getAllByText(/LATE · AFTER 9 PM/i).length).toBeGreaterThanOrEqual(2);
+    // 2+ late venues → separate sub-band header. Per-venue LATE kickers are
+    // suppressed inside the band (avoid duplicate label). Exactly ONE LATE
+    // label rendered: the band sub-header itself.
+    expect(screen.getAllByText(/LATE · AFTER 9 PM/i)).toHaveLength(1);
   });
 
   it("caps at 6 venue blocks and shows footer link with the total count", () => {
