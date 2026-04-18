@@ -13,6 +13,26 @@ if [ -e "$REPO_ROOT/.git/MERGE_HEAD" ] || [ -d "$REPO_ROOT/.git/rebase-merge" ] 
     exit 0
 fi
 
+# Refuse direct commits on main. Squash-merged PRs and direct commits on the
+# same branch produce drift that can't be cleanly rebased (different patch IDs,
+# same content). Forces every change through feature-branch → PR → squash merge.
+BRANCH="$(git rev-parse --abbrev-ref HEAD 2>/dev/null)"
+if [ "$BRANCH" = "main" ]; then
+    cat >&2 <<'EOF'
+✖ pre-commit: direct commits on `main` are forbidden.
+
+Create a feature branch first:
+  git checkout -b feat/<scope>-<description>
+  git commit ...
+  git push -u origin HEAD
+  gh pr create
+
+Escape hatch (use sparingly):
+  git commit --no-verify
+EOF
+    exit 1
+fi
+
 STAGED=$(git diff --cached --name-only --diff-filter=ACM)
 if [ -z "$STAGED" ]; then
     exit 0

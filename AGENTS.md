@@ -68,6 +68,7 @@ npx vitest run    # tests
 
 ## Commit & Pull Request Guidelines
 
+- **Never commit directly to `main`.** Feature-branch → PR → squash merge. The pre-commit hook in `.githooks/pre-commit` enforces this locally; escape hatch is `git commit --no-verify` (use sparingly). Parallel agents/worktrees that all commit to `main` produce drift that can't be cleanly rebased.
 - Commit messages: short, imperative summaries (e.g., `Add Special Events page to Plaza Theatre crawler`).
 - PRs: brief summary, testing notes, screenshots for UI changes. Link related issues.
 
@@ -75,6 +76,7 @@ npx vitest run    # tests
 
 - Copy `.env.example` to `.env` and set `SUPABASE_URL`, `SUPABASE_KEY`, `ANTHROPIC_API_KEY`. Optional API keys unlock specific sources.
 - Initialize Supabase with `database/schema.sql` before running crawlers.
+- After cloning or in any new worktree, activate the repo's git hooks: `git config core.hooksPath .githooks`. This turns on the pre-commit checks (tsc, eslint, vitest, pytest) **and** the guard that forbids direct commits on `main`.
 
 ---
 
