@@ -160,7 +160,10 @@ export async function loadByVenue(
     .eq("category_id", "music")
     .eq("is_active", true)
     .is("canonical_event_id", null)
-    .eq("start_date", resolvedDate);
+    .eq("start_date", resolvedDate)
+    // Gate: only events at venues with an editorial OR marquee music
+    // classification. Excludes events tagged "music" at non-music venues.
+    .not("places.music_programming_style", "is", null);
 
   query = applyFeedGate(query);
   query = applyManifestFederatedScopeToQuery(query, manifest, {
