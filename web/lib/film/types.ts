@@ -101,3 +101,48 @@ export type SchedulePayload = {
     screenings: FilmScreening[];
   }>;
 };
+
+// --- By Film view (Plan 5) -------------------------------------------------
+
+export type EditorialGroup = 'opens' | 'now' | 'closes';
+
+export type FilmByFilmEntry = {
+  film: {
+    screening_title_id: string;
+    slug: string;
+    title: string;
+    director: string | null;
+    year: number | null;
+    runtime_minutes: number | null;
+    rating: string | null;
+    image_url: string | null;
+    editorial_blurb: string | null;
+    film_press_quote: string | null;
+    film_press_source: string | null;
+    is_premiere: boolean;
+    premiere_scope: 'atl' | 'us' | 'world' | null;
+    genres: string[] | null;
+  };
+  editorial_group: EditorialGroup;
+  run_first_date: string;
+  run_last_date: string;
+  venues: Array<{
+    venue: FilmVenue;
+    times: Array<{
+      id: string;
+      start_date: string;
+      start_time: string | null;
+      format_labels: FormatToken[];
+      status: 'scheduled' | 'cancelled' | 'sold_out';
+    }>;
+  }>;
+};
+
+export type ByFilmPayload = {
+  portal_slug: string;
+  date: string;
+  iso_week_start: string;
+  iso_week_end: string;
+  films: FilmByFilmEntry[];
+  total_screenings: number;
+};
