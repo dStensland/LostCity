@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { withAuth } from "@/lib/api-middleware";
 import { ensureMovie } from "@/lib/goblin-movie-utils";
+import { generateUniqueGroupSlug } from "@/lib/goblin-slug";
 
 export const dynamic = "force-dynamic";
 
 interface ListRow {
   id: number;
+  slug: string | null;
   name: string;
   description: string | null;
   sort_order: number | null;
@@ -58,7 +60,7 @@ type ListMovieEntry = Omit<ListMovieJoinRow, "list_id">;
 export const GET = withAuth(async (_request: NextRequest, { user, serviceClient }) => {
   const { data: lists, error } = await serviceClient
     .from("goblin_lists")
-    .select("id, name, description, sort_order, is_recommendations, created_at")
+    .select("id, slug, name, description, sort_order, is_recommendations, created_at")
     .eq("user_id", user.id)
     .order("sort_order", { ascending: true, nullsFirst: false })
     .order("created_at", { ascending: true })
@@ -128,16 +130,18 @@ export const POST = withAuth(async (request: NextRequest, { user, serviceClient 
     .maybeSingle<SortOrderRow>();
 
   const nextSortOrder = (maxRow?.sort_order ?? 0) + 1;
+  const slug = await generateUniqueGroupSlug(serviceClient, user.id, name);
 
   const { data: list, error: listError } = await serviceClient
     .from("goblin_lists")
     .insert({
       user_id: user.id,
+      slug,
       name,
       description: description?.trim() || null,
       sort_order: nextSortOrder,
     } as never)
-    .select("id, name, description, sort_order, is_recommendations, created_at")
+    .select("id, slug, name, description, sort_order, is_recommendations, created_at")
     .single<ListRow>();
 
   if (listError || !list) {
