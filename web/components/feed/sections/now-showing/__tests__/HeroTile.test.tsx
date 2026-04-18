@@ -82,4 +82,10 @@ describe('HeroTile', () => {
     expect(link).toHaveAttribute('href', expect.stringContaining('/atlanta/'));
     expect(link).toHaveAttribute('href', expect.stringContaining('bunnylovr'));
   });
+
+  it('renders larger title for hero-large-full density', () => {
+    const hero = { ...makeHero(), hero_reason: 'curator_pick' as HeroReason };
+    const { container } = render(<HeroTile hero={hero} portalSlug="atlanta" density="hero-large-full" />);
+    expect(container.querySelector('h3')?.className).toContain('text-4xl');
+  });
 });
