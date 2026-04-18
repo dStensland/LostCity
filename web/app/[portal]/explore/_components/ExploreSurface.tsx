@@ -80,7 +80,11 @@ export async function ExploreSurface({
   );
 
   return (
-    <PortalSurfaceChrome surface="explore" request={request}>
+    <PortalSurfaceChrome
+      surface="explore"
+      request={request}
+      searchParams={rawParams}
+    >
       {content}
     </PortalSurfaceChrome>
   );
