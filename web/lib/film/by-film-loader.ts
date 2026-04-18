@@ -1,12 +1,14 @@
 // web/lib/film/by-film-loader.ts
 import 'server-only';
 import { createClient } from '@/lib/supabase/server';
+import { classifyVenue } from './classification';
 import type {
   ByFilmPayload,
   EditorialGroup,
   FilmByFilmEntry,
   FilmVenue,
   FormatToken,
+  ProgrammingStyle,
 } from './types';
 
 // --------------------------------------------------------------------------
@@ -165,13 +167,200 @@ export function transposeToFilms(
 }
 
 // --------------------------------------------------------------------------
-// Supabase wrapper — stub until Task 3
+// Supabase wrapper
 // --------------------------------------------------------------------------
 
-export async function loadByFilm(_args: {
+// ---------------------------------------------------------------------------
+// Raw Supabase row shapes (narrowed from the joined select)
+// ---------------------------------------------------------------------------
+
+type RawByFilmScreeningTitle = {
+  id: string;
+  canonical_title: string;
+  slug: string;
+  poster_image_url: string | null;
+  synopsis: string | null;
+  genres: string[] | null;
+  editorial_blurb: string | null;
+  film_press_quote: string | null;
+  film_press_source: string | null;
+  is_premiere: boolean | null;
+  premiere_scope: 'atl' | 'us' | 'world' | null;
+  director: string | null;
+  year: number | null;
+  runtime_minutes: number | null;
+  rating: string | null;
+};
+
+type RawByFilmPlace = {
+  id: number;
+  slug: string;
+  name: string;
+  neighborhood: string | null;
+  portal_id: string;
+  programming_style: ProgrammingStyle | null;
+  venue_formats: FormatToken[] | null;
+  founding_year: number | null;
+  place_vertical_details: { google?: { rating?: number | null } | null } | null;
+};
+
+type RawByFilmScreeningRun = {
+  id: string;
+  start_date: string;
+  end_date: string;
+  screen_name: string | null;
+  screening_titles: RawByFilmScreeningTitle;
+  places: RawByFilmPlace;
+};
+
+type RawByFilmTime = {
+  id: string;
+  start_date: string;
+  start_time: string | null;
+  end_time: string | null;
+  format_labels: FormatToken[] | null;
+  status: 'scheduled' | 'cancelled' | 'sold_out';
+  ticket_url: string | null;
+  event_id: number | null;
+  screening_runs: RawByFilmScreeningRun;
+};
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+function isoWeekRangeForDate(date: string): { start: string; end: string } {
+  const d = new Date(date + 'T00:00:00Z');
+  const day = d.getUTCDay();
+  const diffToMonday = day === 0 ? -6 : 1 - day;
+  const monday = new Date(d);
+  monday.setUTCDate(d.getUTCDate() + diffToMonday);
+  monday.setUTCHours(0, 0, 0, 0);
+  const sunday = new Date(monday);
+  sunday.setUTCDate(monday.getUTCDate() + 6);
+  return {
+    start: monday.toISOString().slice(0, 10),
+    end: sunday.toISOString().slice(0, 10),
+  };
+}
+
+async function resolvePortalId(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  portalSlug: string,
+): Promise<string> {
+  const { data, error } = await supabase
+    .from('portals')
+    .select('id')
+    .eq('slug', portalSlug)
+    .eq('status', 'active')
+    .maybeSingle();
+
+  if (error) throw new Error(`resolvePortalId failed: ${error.message}`);
+  if (!data) throw new Error(`Portal not found: ${portalSlug}`);
+
+  const row = data as { id: string };
+  return row.id;
+}
+
+// ---------------------------------------------------------------------------
+// Main loader
+// ---------------------------------------------------------------------------
+
+export async function loadByFilm(args: {
   portalSlug: string;
   date: string;
 }): Promise<ByFilmPayload> {
-  void createClient;
-  throw new Error('loadByFilm not yet implemented — see Task 3');
+  const supabase = await createClient();
+  const portalId = await resolvePortalId(supabase, args.portalSlug);
+  const week = isoWeekRangeForDate(args.date);
+
+  const { data, error } = await supabase
+    .from('screening_times')
+    .select(`
+      id, start_date, start_time, end_time, format_labels,
+      status, ticket_url, event_id,
+      screening_runs!inner (
+        id, start_date, end_date, screen_name,
+        screening_titles!inner (
+          id, canonical_title, slug, poster_image_url, synopsis, genres,
+          editorial_blurb, film_press_quote, film_press_source,
+          is_premiere, premiere_scope,
+          director, year, runtime_minutes, rating
+        ),
+        places!inner (
+          id, slug, name, neighborhood, portal_id,
+          programming_style, venue_formats, founding_year,
+          place_vertical_details
+        )
+      )
+    `)
+    .eq('start_date', args.date)
+    .eq('screening_runs.places.portal_id', portalId)
+    .order('start_time');
+
+  if (error) {
+    throw new Error(`loadByFilm query failed: ${error.message}`);
+  }
+
+  const rows = (data ?? []) as unknown as RawByFilmTime[];
+
+  const inputRows: TransposeInputRow[] = rows.map((st) => {
+    const r = st.screening_runs;
+    const t = r.screening_titles;
+    const p = r.places;
+    return {
+      time: {
+        id: st.id,
+        start_date: st.start_date,
+        start_time: st.start_time,
+        end_time: st.end_time,
+        format_labels: (st.format_labels ?? []) as FormatToken[],
+        status: st.status,
+        ticket_url: st.ticket_url,
+        event_id: st.event_id,
+      },
+      run: {
+        start_date: r.start_date,
+        end_date: r.end_date,
+      },
+      venue: {
+        id: p.id,
+        slug: p.slug,
+        name: p.name,
+        neighborhood: p.neighborhood,
+        classification: classifyVenue({
+          programming_style: p.programming_style,
+          venue_formats: (p.venue_formats ?? []) as FormatToken[],
+        }),
+        programming_style: p.programming_style,
+        venue_formats: (p.venue_formats ?? []) as FormatToken[],
+        founding_year: p.founding_year,
+        google_rating: p.place_vertical_details?.google?.rating ?? null,
+      },
+      title: {
+        id: t.id,
+        canonical_title: t.canonical_title,
+        slug: t.slug,
+        poster_image_url: t.poster_image_url,
+        synopsis: t.synopsis,
+        genres: t.genres,
+        editorial_blurb: t.editorial_blurb,
+        film_press_quote: t.film_press_quote,
+        film_press_source: t.film_press_source,
+        is_premiere: Boolean(t.is_premiere),
+        premiere_scope: t.premiere_scope,
+        director: t.director,
+        year: t.year,
+        runtime_minutes: t.runtime_minutes,
+        rating: t.rating,
+      },
+    };
+  });
+
+  return transposeToFilms(inputRows, {
+    portalSlug: args.portalSlug,
+    date: args.date,
+    weekStart: week.start,
+    weekEnd: week.end,
+  });
 }
