@@ -1,5 +1,10 @@
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { summarizeDateCounts } from '../date-counts-loader';
+import { createSupabaseSpy } from './_supabase-spy';
+
+vi.mock('@/lib/supabase/server', () => ({
+  createClient: vi.fn(),
+}));
 
 describe('summarizeDateCounts', () => {
   it('returns zero-count entries for every date in the window', () => {
@@ -38,5 +43,27 @@ describe('summarizeDateCounts', () => {
     ];
     const result = summarizeDateCounts(rows, '2026-04-17', '2026-04-18');
     expect(result.every((r) => r.count === 0)).toBe(true);
+  });
+});
+
+describe('loadDateCounts — portal scoping regression', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('filters via screening_runs.portal_id (not places.portal_id)', async () => {
+    const { client, eqCalls } = createSupabaseSpy([]);
+
+    const { createClient } = await import('@/lib/supabase/server');
+    vi.mocked(createClient).mockResolvedValue(client as never);
+
+    const { loadDateCounts } = await import('../date-counts-loader');
+
+    await loadDateCounts({ portalSlug: 'atlanta', from: '2026-04-18', to: '2026-05-01' });
+
+    const columns = eqCalls.map((c) => c[0]);
+    expect(columns).toContain('screening_runs.portal_id');
+    expect(columns).not.toContain('places.portal_id');
+    expect(columns).not.toContain('screening_runs.places.portal_id');
   });
 });

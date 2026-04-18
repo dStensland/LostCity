@@ -1,6 +1,11 @@
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { classifyEditorialGroup, transposeToFilms } from '../by-film-loader';
 import type { EditorialGroup, FormatToken } from '../types';
+import { createSupabaseSpy } from './_supabase-spy';
+
+vi.mock('@/lib/supabase/server', () => ({
+  createClient: vi.fn(),
+}));
 
 describe('classifyEditorialGroup', () => {
   const weekStart = '2026-04-20';
@@ -101,5 +106,27 @@ describe('transposeToFilms', () => {
     const payload = transposeToFilms(rows, base);
     expect(payload.iso_week_start).toBe(base.weekStart);
     expect(payload.iso_week_end).toBe(base.weekEnd);
+  });
+});
+
+describe('loadByFilm — portal scoping regression', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('filters via screening_runs.portal_id (not places.portal_id)', async () => {
+    const { client, eqCalls } = createSupabaseSpy([]);
+
+    const { createClient } = await import('@/lib/supabase/server');
+    vi.mocked(createClient).mockResolvedValue(client as never);
+
+    const { loadByFilm } = await import('../by-film-loader');
+
+    await loadByFilm({ portalSlug: 'atlanta', date: '2026-04-18' });
+
+    const columns = eqCalls.map((c) => c[0]);
+    expect(columns).toContain('screening_runs.portal_id');
+    expect(columns).not.toContain('places.portal_id');
+    expect(columns).not.toContain('screening_runs.places.portal_id');
   });
 });
