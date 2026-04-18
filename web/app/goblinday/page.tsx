@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 import GoblinDayPage from "@/components/goblin/GoblinDayPage";
 import type { Metadata } from "next";
 
@@ -30,8 +31,11 @@ export default async function Page() {
     .select("*")
     .order("release_date", { ascending: true, nullsFirst: false });
 
-  // Check for active session (planning or live)
-  const { data: activeSession } = await supabase
+  // Check for active session (planning or live). Uses the service client
+  // because goblin_sessions isn't in the generated database.types.ts, and
+  // the typed anon client's .from() stub does not expose .in().
+  const serviceClient = createServiceClient();
+  const { data: activeSession } = await serviceClient
     .from("goblin_sessions")
     .select("id")
     .in("status", ["planning", "live"])
