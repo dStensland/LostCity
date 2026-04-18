@@ -102,11 +102,22 @@ vi.mock("@/components/find/gameday/TeamChip", () => ({
 describe("seeded Explore lane views", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.stubGlobal("fetch", vi.fn());
+    // Default fetch mock returns an empty payload (resolves silently). ShowtimesView
+    // fires /api/film/this-week on mount regardless of seeded data — this is the
+    // editorial strip's independent data path, not the showtimes query.
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((_input: RequestInfo | URL) =>
+        Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ heroes: [] }),
+        } as Response),
+      ),
+    );
     mockExploreState.params = new URLSearchParams();
   });
 
-  it("renders seeded film showtimes without an initial client fetch", () => {
+  it("renders seeded film showtimes without a showtimes-endpoint fetch", () => {
     render(
       <ShowtimesView
         portalId="portal-1"
@@ -151,7 +162,11 @@ describe("seeded Explore lane views", () => {
 
     expect(screen.getByText("Seeded Cinema")).toBeInTheDocument();
     expect(screen.getByText("Seeded Film")).toBeInTheDocument();
-    expect(global.fetch).not.toHaveBeenCalled();
+    // The this-week strip fetch is allowed; the showtimes endpoint must not be called
+    // when the seeded payload already provides theaters/films.
+    const calls = (global.fetch as unknown as { mock: { calls: Array<[RequestInfo | URL]> } }).mock.calls;
+    const showtimesCalls = calls.filter(([url]) => String(url).includes("/api/showtimes"));
+    expect(showtimesCalls).toHaveLength(0);
   });
 
   it("renders seeded regulars without an initial client fetch", () => {
