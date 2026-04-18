@@ -31,7 +31,7 @@ export function LiveTonightHeroStrip({ shows, portalSlug, onTileTap }: LiveTonig
 
       <div
         className={[
-          "grid gap-px bg-[var(--void)] rounded-xl overflow-hidden",
+          "grid gap-px bg-[var(--void)] rounded-xl overflow-hidden motion-stagger",
           n === 1
             ? "grid-cols-1 h-[240px]"
             : n === 2
@@ -39,19 +39,14 @@ export function LiveTonightHeroStrip({ shows, portalSlug, onTileTap }: LiveTonig
             : "grid-cols-3 h-[200px]",
         ].join(" ")}
       >
-        {shows.slice(0, n).map((show, i) => (
-          <div
+        {shows.slice(0, n).map((show) => (
+          <LiveTonightHeroTile
             key={show.id}
-            className="motion-safe:animate-fade-in"
-            style={{ animationDelay: `${i * 80}ms`, animationFillMode: "backwards" }}
-          >
-            <LiveTonightHeroTile
-              show={show}
-              portalSlug={portalSlug}
-              onTap={onTileTap}
-              sizeVariant={sizeVariant}
-            />
-          </div>
+            show={show}
+            portalSlug={portalSlug}
+            onTap={onTileTap}
+            sizeVariant={sizeVariant}
+          />
         ))}
       </div>
     </section>

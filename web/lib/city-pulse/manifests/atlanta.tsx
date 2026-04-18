@@ -17,6 +17,7 @@ import FestivalsSection from "@/components/feed/sections/FestivalsSection";
 import RegularHangsSection from "@/components/feed/sections/RegularHangsSection";
 import { PlacesToGoSection } from "@/components/feed/sections/PlacesToGoSection";
 import ActiveContestSection from "@/components/feed/sections/ActiveContestSection";
+import { LiveTonightSection } from "@/components/feed/sections/LiveTonightSection";
 import CityBriefingIsland from "@/components/feed/islands/CityBriefingIsland";
 import LineupIsland from "@/components/feed/islands/LineupIsland";
 import LazySection from "@/components/feed/LazySection";
@@ -60,9 +61,6 @@ import type {
 
 const NowShowingSection = dynamic(
   () => import("@/components/feed/sections/NowShowingSection"),
-);
-const LiveTonightSection = dynamic(
-  () => import("@/components/feed/sections/LiveTonightSection"),
 );
 const GameDaySection = dynamic<{ portalSlug: string }>(() =>
   import("@/components/feed/sections/GameDaySection").then((m) => ({

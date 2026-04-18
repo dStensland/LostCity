@@ -44,7 +44,7 @@ export function MusicShowtimeChip({
       type="button"
       onClick={onTap}
       className={[
-        "inline-flex items-center gap-2 px-2.5 py-1.5 rounded-lg",
+        "inline-flex items-center gap-2 px-2.5 py-2 rounded-lg",
         "bg-[var(--twilight)]/40 hover:bg-[var(--twilight)]/60",
         "border border-[var(--twilight)] active:scale-95 transition",
         "font-mono text-xs",

@@ -80,6 +80,7 @@ export function LiveTonightHeroTile({
     <button
       type="button"
       onClick={() => onTap(show)}
+      aria-label={`${headliner} at ${show.venue.name}`}
       className={[
         "group relative w-full h-full min-h-[200px] overflow-hidden",
         "bg-[var(--night)] text-left transition-transform active:scale-[0.98]",
@@ -117,7 +118,7 @@ export function LiveTonightHeroTile({
           className={[
             headlineCls,
             "font-bold text-[var(--cream)] leading-tight drop-shadow-lg",
-            "transition-transform duration-[240ms] ease-out group-hover:-translate-y-0.5",
+            "transition-transform duration-200 [transition-timing-function:var(--ease-out)] group-hover:-translate-y-0.5",
           ].join(" ")}
         >
           {headliner}

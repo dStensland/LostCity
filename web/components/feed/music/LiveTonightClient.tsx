@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { LiveTonightHeroStrip } from "./LiveTonightHeroStrip";
 import { LiveTonightPlaybill } from "./LiveTonightPlaybill";
 import { MusicActionSheet } from "@/components/music/MusicActionSheet";
@@ -19,18 +19,23 @@ export function LiveTonightClient({
 }: LiveTonightClientProps) {
   const [activeShow, setActiveShow] = useState<MusicShowPayload | null>(null);
 
-  const handleAddToPlans = async (show: MusicShowPayload) => {
+  const closeSheet = useCallback(() => setActiveShow(null), []);
+
+  const handleAddToPlans = useCallback(async (show: MusicShowPayload) => {
     try {
-      await fetch("/api/plans/add", {
+      const res = await fetch("/api/plans/add", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ event_id: show.id }),
       });
-    } catch {
-      // Surface via Plans toast infra elsewhere; swallow here.
+      if (!res.ok) {
+        console.warn("[live-tonight] add to plans failed:", res.status);
+      }
+    } catch (err) {
+      console.warn("[live-tonight] add to plans error:", err);
     }
     setActiveShow(null);
-  };
+  }, []);
 
   return (
     <>
@@ -47,7 +52,7 @@ export function LiveTonightClient({
       <MusicActionSheet
         show={activeShow}
         portalSlug={portalSlug}
-        onClose={() => setActiveShow(null)}
+        onClose={closeSheet}
         onAddToPlans={handleAddToPlans}
       />
     </>

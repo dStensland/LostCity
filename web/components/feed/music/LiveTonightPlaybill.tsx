@@ -3,6 +3,13 @@
 import { LiveTonightPlaybillRow } from "./LiveTonightPlaybillRow";
 import type { MusicShowPayload, MusicVenuePayload, TonightPayload } from "@/lib/music/types";
 
+function formatTonightDate(iso: string): string {
+  // payload.date is YYYY-MM-DD; parse as local date to avoid TZ shifts.
+  const [y, m, d] = iso.split("-").map(Number);
+  const date = new Date(y, m - 1, d);
+  return date.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+}
+
 export interface LiveTonightPlaybillProps {
   payload: TonightPayload;
   portalSlug: string;
@@ -53,7 +60,7 @@ export function LiveTonightPlaybill({ payload, portalSlug, onShowTap }: LiveToni
     <div>
       {hasTonight && (
         <div>
-          <BandHeader label={`Tonight · ${payload.date}`} />
+          <BandHeader label={`Tonight · ${formatTonightDate(payload.date)}`} />
           <div>{renderGroups(payload.tonight, portalSlug, onShowTap)}</div>
         </div>
       )}
