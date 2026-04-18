@@ -8,18 +8,24 @@ import { formatTime } from '@/lib/formats';
 import { buildSeriesUrl } from '@/lib/entity-urls';
 import type { FilmScreening, HeroReason } from '@/lib/film/types';
 
-type Density = 'full' | 'half' | 'third';
+type Density = 'full' | 'half' | 'third' | 'hero-large-full' | 'hero-large-half' | 'hero-large-third';
 
 const HEIGHT: Record<Density, string> = {
   full: 'h-[240px]',
   half: 'h-[220px]',
   third: 'h-[200px]',
+  'hero-large-full': 'h-[300px]',
+  'hero-large-half': 'h-[280px]',
+  'hero-large-third': 'h-[240px]',
 };
 
 const TITLE_SIZE: Record<Density, string> = {
   full: 'text-3xl',
   half: 'text-2xl',
   third: 'text-lg',
+  'hero-large-full': 'text-4xl',
+  'hero-large-half': 'text-3xl',
+  'hero-large-third': 'text-2xl',
 };
 
 const WEEKDAY = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -76,7 +82,7 @@ export default function HeroTile({ hero, portalSlug, density }: HeroTileProps) {
       {/* Bottom content */}
       <div className="absolute inset-x-0 bottom-0 p-3 space-y-1">
         {hero.film_press_quote && (
-          <p className="text-xs italic text-[var(--cream)]/85 line-clamp-1">
+          <p className={`text-xs italic text-[var(--cream)]/85 ${density.startsWith('hero-large-') ? '' : 'line-clamp-1'}`}>
             &ldquo;{hero.film_press_quote}&rdquo;
             {hero.film_press_source && (
               <span className="not-italic text-[var(--gold)]/80">
@@ -93,7 +99,7 @@ export default function HeroTile({ hero, portalSlug, density }: HeroTileProps) {
         </h3>
         <p className="font-mono text-2xs text-[var(--cream)]/80 flex items-center gap-1.5 flex-wrap">
           <span className="truncate">{metaLine(hero)}</span>
-          {hero.venue.founding_year && density !== 'third' && (
+          {hero.venue.founding_year && !density.endsWith('third') && (
             <>
               <Dot />
               <span className="text-[var(--gold)]/80">
