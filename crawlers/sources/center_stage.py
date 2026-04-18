@@ -18,6 +18,7 @@ from playwright.sync_api import sync_playwright
 
 from db import get_or_create_place, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
+from extractors.doors_time import extract_doors_time
 from utils import extract_images_from_page, extract_event_links, find_event_url, enrich_event_record
 
 logger = logging.getLogger(__name__)
@@ -269,6 +270,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         presenter = None
                         age_restriction = None
                         start_time = None
+                        doors_time = None
                         for j in range(3, 7):
                             if i + j >= len(lines):
                                 break
@@ -281,6 +283,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
                                 age_restriction = next_line
                             elif "Doors" in next_line or "Show" in next_line:
                                 start_time = parse_time(next_line)
+                                if not doors_time:
+                                    doors_time = extract_doors_time(next_line)
 
                         event_key = f"{title}|{start_date}|{venue_key}"
                         if event_key in seen_events:
@@ -331,6 +335,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             "description": description,
                             "start_date": start_date,
                             "start_time": start_time,
+                            "doors_time": doors_time,
                             "end_date": None,
                             "end_time": None,
                             "is_all_day": False,
