@@ -12,6 +12,10 @@ import {
 import Dot from "@/components/ui/Dot";
 import { prefetchEventDetail, formatShowtime, toLocalIsoDate } from "@/lib/show-card-utils";
 import { useExploreUrlState } from "@/lib/explore-platform/url-state";
+import ThisWeekStrip, {
+  type Hero,
+} from "@/components/feed/sections/now-showing/ThisWeekStrip";
+import type { ThisWeekPayload } from "@/lib/film/types";
 import type {
   ShowsFilmInitialData,
   ShowtimeEntry,
@@ -411,6 +415,29 @@ export default function ShowtimesView({
   const [error, setError] = useState<string | null>(null);
   const zeroResultsSignatureRef = useRef<string | null>(null);
 
+  // This Week editorial strip — persistent top module, does not rekey on date.
+  // One-shot fetch per portal; silent fallback on error (strip simply doesn't render).
+  const [thisWeekHeroes, setThisWeekHeroes] = useState<Hero[] | null>(null);
+  useEffect(() => {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10_000);
+    fetch(`/api/film/this-week?portal=${portalSlug}`, {
+      signal: controller.signal,
+    })
+      .then((r) => (r.ok ? (r.json() as Promise<ThisWeekPayload>) : null))
+      .then((payload) => {
+        if (payload) setThisWeekHeroes(payload.heroes);
+      })
+      .catch(() => {
+        // Silent — strip just doesn't render
+      })
+      .finally(() => clearTimeout(timeoutId));
+    return () => {
+      clearTimeout(timeoutId);
+      controller.abort();
+    };
+  }, [portalSlug]);
+
   const dateScrollRef = useRef<HTMLDivElement>(null);
   const filmDateInputRef = useRef<HTMLInputElement>(null);
 
@@ -664,109 +691,111 @@ export default function ShowtimesView({
     viewMode,
   ]);
 
+  // Avoid lint warnings on vars we intentionally no longer render but still compute
+  // for analytics / zero-results tracking.
+  void filmCount;
+  void theaterCount;
+
   return (
     <div>
-      {/* Date pills + summary */}
-      <section className="mb-4 rounded-2xl border border-[var(--twilight)]/80 bg-[var(--night)] p-3 sm:p-4">
-        <div ref={dateScrollRef} className="flex items-center gap-2 -mx-1 px-1 pb-0.5">
-          {/* Selected date pill when beyond visible range */}
-          {datePills.indexOf(selectedDate) >= 5 && (
+      {/* This Week — persistent editorial strip. Does not rekey on date. */}
+      {thisWeekHeroes && thisWeekHeroes.length > 0 && (
+        <section className="mb-6">
+          <ThisWeekStrip
+            heroes={thisWeekHeroes}
+            portalSlug={portalSlug}
+            variant="lane"
+          />
+        </section>
+      )}
+
+      {/* Date pills — sit on the page surface, no container card */}
+      <div ref={dateScrollRef} className="flex items-center gap-2 mb-4 -mx-1 px-1 overflow-x-auto scrollbar-hide">
+        {/* Selected date pill when beyond visible range */}
+        {datePills.indexOf(selectedDate) >= 5 && (
+          <button
+            type="button"
+            className="flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap bg-[var(--cream)] text-[var(--void)]"
+          >
+            {formatDatePill(selectedDate)}
+          </button>
+        )}
+        {datePills.slice(0, 5).map((dateStr) => {
+          const isActive = selectedDate === dateStr;
+          return (
+            <button
+              key={dateStr}
+              onClick={() => {
+                setSelectedDate(dateStr);
+                state.setLaneParams({ date: dateStr }, "replace");
+              }}
+              className={`flex-shrink-0 px-4 py-2 rounded-full text-sm whitespace-nowrap transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cream)]/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--void)] ${
+                isActive
+                  ? "bg-[var(--cream)] text-[var(--void)] font-medium"
+                  : "text-[var(--soft)] hover:text-[var(--cream)]"
+              }`}
+            >
+              {formatDatePill(dateStr)}
+            </button>
+          );
+        })}
+        {datePills.length > 5 && (
+          <div className="relative flex-shrink-0">
             <button
               type="button"
-              className="flex-shrink-0 px-3.5 py-2 rounded-full font-mono text-xs whitespace-nowrap bg-gradient-to-r from-[var(--gold)] to-[var(--coral)] text-[var(--void)] font-semibold shadow-[0_4px_12px_rgba(0,0,0,0.25)]"
+              onClick={() => filmDateInputRef.current?.showPicker()}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-full text-sm whitespace-nowrap text-[var(--soft)] hover:text-[var(--cream)] transition-colors"
             >
-              {formatDatePill(selectedDate)}
+              <CalendarBlank weight="regular" size={16} />
+              <span className="hidden sm:inline">More</span>
             </button>
-          )}
-          {datePills.slice(0, 5).map((dateStr) => {
-            const isActive = selectedDate === dateStr;
-            return (
-              <button
-                key={dateStr}
-                onClick={() => {
-                  setSelectedDate(dateStr);
-                  state.setLaneParams({ date: dateStr }, "replace");
-                }}
-                className={`flex-shrink-0 px-3.5 py-2 rounded-full font-mono text-xs whitespace-nowrap transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--coral)]/70 focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--void)] ${
-                  isActive
-                    ? "bg-gradient-to-r from-[var(--gold)] to-[var(--coral)] text-[var(--void)] font-semibold shadow-[0_4px_12px_rgba(0,0,0,0.25)]"
-                    : "bg-[var(--night)]/70 border border-[var(--twilight)]/70 text-[var(--muted)] hover:text-[var(--cream)] hover:border-[var(--coral)]/40"
-                }`}
-              >
-                {formatDatePill(dateStr)}
-              </button>
-            );
-          })}
-          {datePills.length > 5 && (
-            <div className="relative flex-shrink-0">
-              <button
-                type="button"
-                onClick={() => filmDateInputRef.current?.showPicker()}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-full font-mono text-xs whitespace-nowrap bg-[var(--night)]/70 border border-[var(--twilight)]/70 text-[var(--muted)] hover:text-[var(--cream)] hover:border-[var(--coral)]/40 transition-all"
-              >
-                <CalendarBlank weight="bold" size={14} />
-                <span className="hidden sm:inline">Pick date</span>
-              </button>
-              <input
-                ref={filmDateInputRef}
-                type="date"
-                className="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
-                tabIndex={-1}
-                min={datePills[0]}
-                max={datePills[datePills.length - 1]}
-                value={selectedDate}
-                onChange={(e) => {
-                  if (e.target.value) {
-                    setSelectedDate(e.target.value);
-                    state.setLaneParams({ date: e.target.value }, "replace");
-                  }
-                }}
-              />
-            </div>
-          )}
-        </div>
-
-        {!metaLoading && (filmCount > 0 || theaterCount > 0) && (
-          <div className="flex flex-wrap items-center gap-3 mt-2.5 pt-2 border-t border-[var(--twilight)]/40">
-            <span className="font-mono text-xs text-[var(--muted)] uppercase tracking-[0.1em]">
-              {filmCount} {filmCount === 1 ? "film" : "films"}
-            </span>
-            <Dot className="text-[var(--muted)]/40" />
-            <span className="font-mono text-xs text-[var(--muted)] uppercase tracking-[0.1em]">
-              {theaterCount} {theaterCount === 1 ? "theater" : "theaters"}
-            </span>
+            <input
+              ref={filmDateInputRef}
+              type="date"
+              className="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
+              tabIndex={-1}
+              min={datePills[0]}
+              max={datePills[datePills.length - 1]}
+              value={selectedDate}
+              onChange={(e) => {
+                if (e.target.value) {
+                  setSelectedDate(e.target.value);
+                  state.setLaneParams({ date: e.target.value }, "replace");
+                }
+              }}
+            />
           </div>
         )}
-      </section>
+      </div>
 
-      {/* Controls row: view mode toggle */}
-      <div className="flex items-center gap-2 mb-3">
-        <div className="inline-flex rounded-lg border border-[var(--twilight)]/60 overflow-hidden">
-          <button
-            onClick={() => {
-              setViewMode("by-movie");
-              state.setLaneParams({ mode: "by-movie" }, "replace");
-            }}
-            className={`px-3 py-1.5 font-mono text-xs transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--coral)]/70 focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--void)] ${
-              viewMode === "by-movie"
-                ? "bg-[var(--coral)]/20 text-[var(--coral)] font-semibold"
-                : "bg-[var(--night)]/40 text-[var(--muted)] hover:text-[var(--cream)]"
-            }`}
-          >
-            By Movie
-          </button>
+      {/* View toggle — subtle segmented control */}
+      <div className="flex items-center mb-5">
+        <div className="inline-flex items-center gap-1 rounded-full bg-[var(--twilight)]/40 p-1">
           <button
             onClick={() => {
               setViewMode("by-theater");
               state.setLaneParams({ mode: "by-theater" }, "replace");
             }}
-            className={`px-3 py-1.5 font-mono text-xs border-l border-[var(--twilight)]/60 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--coral)]/70 focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--void)] ${
+            className={`px-4 py-1.5 rounded-full text-sm transition-colors ${
               viewMode === "by-theater"
-                ? "bg-[var(--coral)]/20 text-[var(--coral)] font-semibold"
-                : "bg-[var(--night)]/40 text-[var(--muted)] hover:text-[var(--cream)]"
+                ? "bg-[var(--cream)] text-[var(--void)] font-medium"
+                : "text-[var(--soft)] hover:text-[var(--cream)]"
             }`}
           >
             By Theater
+          </button>
+          <button
+            onClick={() => {
+              setViewMode("by-movie");
+              state.setLaneParams({ mode: "by-movie" }, "replace");
+            }}
+            className={`px-4 py-1.5 rounded-full text-sm transition-colors ${
+              viewMode === "by-movie"
+                ? "bg-[var(--cream)] text-[var(--void)] font-medium"
+                : "text-[var(--soft)] hover:text-[var(--cream)]"
+            }`}
+          >
+            By Movie
           </button>
         </div>
       </div>
@@ -846,16 +875,9 @@ export default function ShowtimesView({
             (viewMode === "by-movie" && films.length === 0) ||
             (viewMode === "by-theater" && theaters.length === 0)
           ) && (
-            <div className="py-12 sm:py-16 text-center">
-              <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-[var(--twilight)]/25 border border-[var(--twilight)]/50 mb-4">
-                <CategoryIcon type="film" size={28} glow="subtle" />
-              </div>
-              <div className="text-[var(--muted)] font-mono text-sm">
-                No showtimes found for this date
-              </div>
-              <div className="text-[var(--muted)]/60 font-mono text-xs mt-2">
-                Try a different day or check back later
-              </div>
+            <div className="py-16 text-center">
+              <p className="text-[var(--soft)] text-base">Nothing playing on this date.</p>
+              <p className="text-[var(--muted)] text-sm mt-1">Try another day.</p>
             </div>
           )}
         </div>
