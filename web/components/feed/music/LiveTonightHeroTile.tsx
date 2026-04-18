@@ -3,12 +3,12 @@
 /**
  * LiveTonightHeroTile — single hero tile in the "This Week · N Headliners" strip.
  *
- * Per spec (`docs/design-specs/live-tonight-widget-{desktop,mobile}.md`):
- * - Portrait (3:4) aspect when 2-up or 3-up; landscape when 1-up.
+ * Density-fix posture: landscape-only. The strip is a fixed-height band that
+ * always renders 16/9-ish landscape tiles regardless of count (1-up = full
+ * width, 2-up / 3-up = side-by-side narrower). No portrait variant.
+ *
  * - Image fills with a bottom gradient mask for legibility.
  * - Earned chip in top-left: CURATOR PICK (gold), FESTIVAL (gold), SOLD OUT (coral).
- *   The wider chipLabel() enum (MAJOR SHOW, FLAGSHIP) is gone — those signals
- *   live in tier weighting, not tile decoration.
  * - Headliner cream, "with {support}" soft, footer "Venue · 8:00 PM" in
  *   gold mono tabular-nums (the temporal accent across the entire widget).
  */
@@ -17,13 +17,10 @@ import SmartImage from "@/components/SmartImage";
 import { formatArtistName } from "@/lib/music/format-artist-name";
 import type { MusicShowPayload } from "@/lib/music/types";
 
-export type LiveTonightHeroAspect = "landscape" | "portrait";
-
 export interface LiveTonightHeroTileProps {
   show: MusicShowPayload;
   portalSlug: string;
   onTap: (show: MusicShowPayload) => void;
-  aspectVariant?: LiveTonightHeroAspect;
 }
 
 interface ChipDescriptor {
@@ -71,7 +68,6 @@ export function LiveTonightHeroTile({
   show,
   portalSlug: _portalSlug,
   onTap,
-  aspectVariant = "portrait",
 }: LiveTonightHeroTileProps) {
   const img = pickImage(show);
   const chip = pickChip(show);
@@ -80,32 +76,17 @@ export function LiveTonightHeroTile({
   const primaryGenre = show.genre_buckets[0];
   const venueTime = formatTimeWithPeriod(show.start_time ?? show.doors_time);
 
-  const aspectClass =
-    aspectVariant === "portrait" ? "aspect-[3/4]" : "aspect-[16/9] min-h-[200px]";
-
-  // Headline size scales with aspect — portrait tiles are narrower so the
-  // type ramps down to keep ~2 lines max for typical artist names.
-  const headlineCls =
-    aspectVariant === "portrait"
-      ? "text-lg sm:text-xl"
-      : "text-2xl sm:text-3xl";
-
-  const chipClass =
-    chip?.tone === "coral"
-      ? "bg-[var(--coral)] text-[var(--void)]"
-      : "bg-[var(--gold)] text-[var(--void)]";
-
   return (
     <button
       type="button"
       onClick={() => onTap(show)}
       aria-label={`${headliner} at ${show.venue.name}`}
       className={[
-        "group relative w-full overflow-hidden",
+        "group relative w-full h-full overflow-hidden",
+        "aspect-[16/9]",
         "bg-[var(--night)] text-left",
         "transition-transform duration-200 ease-out active:scale-[0.985]",
         "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--gold)]",
-        aspectClass,
       ].join(" ")}
     >
       {img ? (
@@ -126,26 +107,28 @@ export function LiveTonightHeroTile({
       {chip && (
         <span
           className={[
-            "absolute top-3 left-3",
-            "font-mono text-xs font-bold uppercase tracking-[0.12em]",
-            "px-2 py-1 rounded-none",
-            chipClass,
+            "absolute top-2 left-2",
+            "font-mono text-2xs font-bold uppercase tracking-[0.12em]",
+            "px-1.5 py-0.5 rounded-none",
+            chip.tone === "coral"
+              ? "bg-[var(--coral)] text-[var(--void)]"
+              : "bg-[var(--gold)] text-[var(--void)]",
           ].join(" ")}
         >
           {chip.label}
         </span>
       )}
 
-      <div className="absolute inset-x-0 bottom-0 p-4">
+      <div className="absolute inset-x-0 bottom-0 p-3">
         {!img && primaryGenre && (
-          <div className="font-mono text-xs font-bold tracking-[0.12em] uppercase text-[var(--gold)] mb-1">
+          <div className="font-mono text-2xs font-bold tracking-[0.12em] uppercase text-[var(--gold)] mb-0.5">
             {primaryGenre}
           </div>
         )}
         <div
           data-tile-headline
           className={[
-            headlineCls,
+            "text-base sm:text-lg",
             "font-semibold text-[var(--cream)] leading-tight drop-shadow-lg",
             "transition-transform duration-200 ease-out group-hover:-translate-y-0.5",
           ].join(" ")}
@@ -153,9 +136,9 @@ export function LiveTonightHeroTile({
           {headliner}
         </div>
         {support && (
-          <div className="text-sm text-white/80 mt-1 drop-shadow">{support}</div>
+          <div className="text-xs text-white/80 mt-0.5 drop-shadow truncate">{support}</div>
         )}
-        <div className="font-mono text-xs text-[var(--gold)] tabular-nums mt-2 drop-shadow">
+        <div className="font-mono text-xs text-[var(--gold)] tabular-nums mt-1 drop-shadow truncate">
           {show.venue.name}
           {venueTime ? ` · ${venueTime}` : ""}
         </div>

@@ -141,11 +141,11 @@ function LiveTonightIsland({ ctx }: FeedSectionComponentProps) {
     <>
       <div className="h-px bg-[var(--twilight)]" />
       <div className="pt-6">
-        {/* Estimated rendered height: hero strip ~250-410px + ticker ~32px +
-            tonight sub-header ~32px + 6 venue blocks × ~80px + footer link ~28px
-            ≈ 800-1000px. Use 800 as the placeholder so the lazy section
-            doesn't collapse before paint. */}
-        <LazySection minHeight={800}>
+        {/* Density-fix posture (mirrors cinema widget): hero strip cap 200px +
+            tonight sub-header ~28px + 4 venue rows × ~32px + footer link ~24px
+            ≈ 380px max. Use 320 as the placeholder (matches cinema's typical
+            height) so the lazy section doesn't collapse before paint. */}
+        <LazySection minHeight={320}>
           <LiveTonightSection portalSlug={ctx.portalSlug} />
         </LazySection>
       </div>

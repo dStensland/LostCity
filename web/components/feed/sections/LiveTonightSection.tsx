@@ -23,7 +23,7 @@ export async function LiveTonightSection({ portalSlug }: LiveTonightSectionProps
   }
 
   return (
-    <section className="rounded-xl border border-[var(--twilight)]/40 bg-[var(--night)] overflow-hidden p-4 sm:p-6">
+    <section className="rounded-xl border border-[var(--twilight)]/40 bg-[var(--night)] overflow-hidden p-4">
       {/* Per spec: secondary-priority header with coral mic icon, mono uppercase
           "LIVE TONIGHT", soft "See all →" on the right. The badge is dropped —
           the spec puts venue/show counts in the Tonight zone sub-header inside

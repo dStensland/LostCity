@@ -50,17 +50,19 @@ function mkShow(overrides: Partial<MusicShowPayload> = {}): MusicShowPayload {
 }
 
 describe("VenueBlock", () => {
-  it("renders venue name in uppercase mono with a spot link", () => {
+  it("renders venue name (shortened) with caret link to spot URL", () => {
     render(
       <VenueBlock
-        venue={mkVenue()}
+        venue={mkVenue({ name: "The EARL", slug: "the-earl" })}
         shows={[mkShow()]}
         portalSlug="atlanta"
       />,
     );
-    const link = screen.getByRole("link");
-    expect(link.getAttribute("href")).toBe("/atlanta?spot=terminal-west");
-    expect(screen.getByText("Terminal West")).toBeInTheDocument();
+    // shortVenueName strips leading "The "
+    expect(screen.getByText("EARL")).toBeInTheDocument();
+    // Caret arrow is the navigation target
+    const caret = screen.getByRole("link", { name: /See all The EARL shows/i });
+    expect(caret.getAttribute("href")).toBe("/atlanta?spot=the-earl");
   });
 
   it("formats showtime as 12-hour without AM/PM", () => {
@@ -74,47 +76,43 @@ describe("VenueBlock", () => {
     expect(screen.getByText("8:00")).toBeInTheDocument();
   });
 
-  it("renders headliner cream + support with '+' prefix in soft", () => {
+  it("renders a single row with multiple shows separated, no '+' prefix", () => {
     const shows = [
       mkShow({ id: 1, artists: [{ id: "h", slug: "h", name: "Wild Pink", is_headliner: true, billing_order: 1 }] }),
       mkShow({ id: 2, start_time: "22:00", artists: [{ id: "s", slug: "s", name: "Cusses", is_headliner: true, billing_order: 1 }] }),
     ];
     render(<VenueBlock venue={mkVenue()} shows={shows} portalSlug="atlanta" />);
+    // Both names appear without legacy "+ " prefix
     expect(screen.getByText("Wild Pink")).toBeInTheDocument();
-    // Second show is rendered with "+ {name}" prefix
-    expect(screen.getByText("+ Cusses")).toBeInTheDocument();
+    expect(screen.getByText("Cusses")).toBeInTheDocument();
+    expect(screen.queryByText(/\+ Cusses/)).not.toBeInTheDocument();
   });
 
-  it("renders kicker with the requested tone color", () => {
-    render(
-      <VenueBlock
-        venue={mkVenue()}
-        shows={[mkShow()]}
-        portalSlug="atlanta"
-        kicker={{ label: "SOLD OUT TONIGHT", tone: "coral" }}
-      />,
-    );
-    const kicker = screen.getByText("SOLD OUT TONIGHT");
-    expect(kicker.className).toContain("text-[var(--coral)]");
-  });
-
-  it("does NOT render a kicker DOM element when kicker is null", () => {
-    const { container } = render(
-      <VenueBlock venue={mkVenue()} shows={[mkShow()]} portalSlug="atlanta" />,
-    );
-    // The marquee row should only contain the venue-name span
-    expect(container.textContent).not.toMatch(/SOLD OUT|RESIDENCY|FREE|LATE/);
-  });
-
-  it("renders '+N more' link when shows exceed maxVisibleShows", () => {
+  it("renders '+N more' text when shows exceed maxVisibleShows", () => {
     const shows = [
       mkShow({ id: 1 }),
       mkShow({ id: 2 }),
       mkShow({ id: 3 }),
       mkShow({ id: 4 }),
+      mkShow({ id: 5 }),
     ];
-    render(<VenueBlock venue={mkVenue()} shows={shows} portalSlug="atlanta" />);
-    expect(screen.getByText("+2 more →")).toBeInTheDocument();
+    render(
+      <VenueBlock
+        venue={mkVenue()}
+        shows={shows}
+        portalSlug="atlanta"
+        maxVisibleShows={3}
+      />,
+    );
+    expect(screen.getByText("+2 more")).toBeInTheDocument();
+  });
+
+  it("does NOT render any kicker decoration (kickers are dropped in feed view)", () => {
+    const { container } = render(
+      <VenueBlock venue={mkVenue()} shows={[mkShow()]} portalSlug="atlanta" />,
+    );
+    // No kicker label of any tone should appear
+    expect(container.textContent).not.toMatch(/SOLD OUT|RESIDENCY|FREE TONIGHT|LATE · AFTER/);
   });
 
   it("returns null when shows array is empty", () => {
@@ -122,5 +120,17 @@ describe("VenueBlock", () => {
       <VenueBlock venue={mkVenue()} shows={[]} portalSlug="atlanta" />,
     );
     expect(container.firstChild).toBeNull();
+  });
+
+  it("each show title link points to the venue spot URL", () => {
+    render(
+      <VenueBlock
+        venue={mkVenue({ slug: "terminal-west" })}
+        shows={[mkShow()]}
+        portalSlug="atlanta"
+      />,
+    );
+    const titleLink = screen.getByRole("link", { name: "Kishi Bashi" });
+    expect(titleLink.getAttribute("href")).toBe("/atlanta?spot=terminal-west");
   });
 });

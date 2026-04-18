@@ -46,7 +46,7 @@ function mkShow(overrides: Partial<MusicShowPayload> & { venue: MusicVenuePayloa
 }
 
 describe("LiveTonightPlaybill", () => {
-  it("renders an empty-state link when no shows tonight or late", () => {
+  it("renders an empty-state link when no shows tonight", () => {
     const payload: TonightPayload = { date: "2026-04-17", tonight: [], late_night: [] };
     render(<LiveTonightPlaybill payload={payload} portalSlug="atlanta" />);
     expect(screen.getByRole("link").getAttribute("href")).toBe("/atlanta/explore/music");
@@ -64,7 +64,7 @@ describe("LiveTonightPlaybill", () => {
     expect(screen.getByText(/1 of 1 venues/i)).toBeInTheDocument();
   });
 
-  it("merges a single late-night venue as a kicker on the tonight band (no separate Late header)", () => {
+  it("ignores late_night data in feed view (no separate Late band, no merged kicker)", () => {
     const venue1 = mkVenue(1, "The Earl", "the-earl");
     const lateVenue = mkVenue(2, "Velvet Note", "velvet-note");
     const payload: TonightPayload = {
@@ -74,57 +74,15 @@ describe("LiveTonightPlaybill", () => {
     };
     render(<LiveTonightPlaybill payload={payload} portalSlug="atlanta" />);
 
-    // Exactly ONE LATE label rendered — the kicker on the late venue's block.
-    // No separate sub-header in the merge case.
-    const lateMatches = screen.getAllByText(/LATE · AFTER 9 PM/i);
-    expect(lateMatches).toHaveLength(1);
-
-    // Both venues visible
-    expect(screen.getByText("The Earl")).toBeInTheDocument();
-    expect(screen.getByText("Velvet Note")).toBeInTheDocument();
+    // No LATE label anywhere — late shows don't render in feed view
+    expect(screen.queryByText(/LATE · AFTER 9 PM/i)).not.toBeInTheDocument();
+    // Late venue is not rendered
+    expect(screen.queryByText("Velvet Note")).not.toBeInTheDocument();
+    // Tonight venue still renders
+    expect(screen.getByText("Earl")).toBeInTheDocument();
   });
 
-  it("renders a separate Late band when 2+ late venues exist", () => {
-    const venue = mkVenue(1, "The Earl", "the-earl");
-    const late1 = mkVenue(2, "Velvet Note", "velvet-note");
-    const late2 = mkVenue(3, "Apache Cafe", "apache");
-    const payload: TonightPayload = {
-      date: "2026-04-17",
-      tonight: [{ venue, shows: [mkShow({ venue })] }],
-      late_night: [
-        { venue: late1, shows: [mkShow({ venue: late1, doors_time: "22:00" })] },
-        { venue: late2, shows: [mkShow({ venue: late2, doors_time: "22:30" })] },
-      ],
-    };
-    render(<LiveTonightPlaybill payload={payload} portalSlug="atlanta" />);
-    expect(screen.getByText(/Tonight ·/i)).toBeInTheDocument();
-    // 2+ late venues → separate sub-band header. Per-venue LATE kickers are
-    // suppressed inside the band (avoid duplicate label). Exactly ONE LATE
-    // label rendered: the band sub-header itself.
-    expect(screen.getAllByText(/LATE · AFTER 9 PM/i)).toHaveLength(1);
-  });
-
-  it("caps at 6 venue blocks and shows footer link with the total count", () => {
-    const venues = Array.from({ length: 9 }, (_, i) =>
-      mkVenue(i + 1, `Venue ${i + 1}`, `venue-${i + 1}`),
-    );
-    const payload: TonightPayload = {
-      date: "2026-04-17",
-      tonight: venues.map((venue) => ({ venue, shows: [mkShow({ venue })] })),
-      late_night: [],
-    };
-    render(<LiveTonightPlaybill payload={payload} portalSlug="atlanta" />);
-
-    // First 6 venues visible; rest hidden
-    expect(screen.getByText("Venue 1")).toBeInTheDocument();
-    expect(screen.getByText("Venue 6")).toBeInTheDocument();
-    expect(screen.queryByText("Venue 7")).not.toBeInTheDocument();
-    expect(screen.queryByText("Venue 9")).not.toBeInTheDocument();
-
-    expect(screen.getByText(/See all 9 venues tonight/i)).toBeInTheDocument();
-  });
-
-  it("derives a SOLD OUT TONIGHT kicker when all of a venue's shows are sold out", () => {
+  it("does NOT render any kicker labels (kickers are dropped in feed view)", () => {
     const venue = mkVenue(1, "The Earl", "the-earl");
     const payload: TonightPayload = {
       date: "2026-04-17",
@@ -134,6 +92,27 @@ describe("LiveTonightPlaybill", () => {
       late_night: [],
     };
     render(<LiveTonightPlaybill payload={payload} portalSlug="atlanta" />);
-    expect(screen.getByText("SOLD OUT TONIGHT")).toBeInTheDocument();
+    // Even though all shows sold out, the SOLD OUT TONIGHT kicker is suppressed in feed view
+    expect(screen.queryByText("SOLD OUT TONIGHT")).not.toBeInTheDocument();
+  });
+
+  it("caps at 4 venue rows and shows footer link with the total venue count", () => {
+    const venues = Array.from({ length: 7 }, (_, i) =>
+      mkVenue(i + 1, `Venue ${i + 1}`, `venue-${i + 1}`),
+    );
+    const payload: TonightPayload = {
+      date: "2026-04-17",
+      tonight: venues.map((venue) => ({ venue, shows: [mkShow({ venue })] })),
+      late_night: [],
+    };
+    render(<LiveTonightPlaybill payload={payload} portalSlug="atlanta" />);
+
+    // First 4 venues visible; rest hidden
+    expect(screen.getByText("Venue 1")).toBeInTheDocument();
+    expect(screen.getByText("Venue 4")).toBeInTheDocument();
+    expect(screen.queryByText("Venue 5")).not.toBeInTheDocument();
+    expect(screen.queryByText("Venue 7")).not.toBeInTheDocument();
+
+    expect(screen.getByText(/See all 7 venues tonight/i)).toBeInTheDocument();
   });
 });

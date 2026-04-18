@@ -1,41 +1,37 @@
 "use client";
 
 /**
- * VenueBlock — Letterboard playbill row for the Live Tonight widget.
+ * VenueBlock — Single-row playbill entry for the Live Tonight widget.
  *
- * Per spec (`docs/design-specs/live-tonight-widget-{desktop,mobile}.md`):
- * - Marquee header: VENUE NAME in mono uppercase + optional editorial kicker
- * - Indented show entries (headliner cream, "+ support" soft, gold mono showtime)
- * - Hairline top border (var(--twilight)) — letterboard rule between blocks
- * - Whole block is a single <a> link to the venue detail (NO caret arrows)
- * - "+N more" link nested when more than 2 shows
+ * Density-fix rebuild: this component now mirrors the cinema widget's
+ * `PlaybillRow` (web/components/feed/sections/now-showing/PlaybillRow.tsx).
+ * One row per venue. NO marquee header, NO indented show stack, NO kicker.
  *
- * Pure presentational. Time formatting handled here so loaders stay payload-agnostic.
+ * Layout: [110px venue name] [shows + showtimes] [caret arrow]
+ *   - Venue: shortVenueName() compressed, font-display uppercase tight tracking
+ *   - Shows: headliner link + showtime in gold mono, separated by <Dot />
+ *   - Overflow: "+N more" after a <Dot /> when shows beyond cap
+ *   - Caret: small CaretRight Phosphor icon linking to venue detail
+ *
+ * The whole row links to the venue spot URL via the caret arrow column;
+ * each show title is a Link to the venue spot URL too (no per-show page yet).
  */
 
+import Link from "next/link";
+import { CaretRight } from "@phosphor-icons/react";
+import Dot from "@/components/ui/Dot";
 import { buildSpotUrl } from "@/lib/entity-urls";
-import type { KickerTone } from "@/lib/music/derive-kicker";
 import { formatArtistName } from "@/lib/music/format-artist-name";
+import { shortVenueName } from "@/lib/music/short-venue-name";
 import type { MusicShowPayload, MusicVenuePayload } from "@/lib/music/types";
 
-const KICKER_COLOR: Record<KickerTone, string> = {
-  vibe: "text-[var(--vibe)]",
-  gold: "text-[var(--gold)]",
-  coral: "text-[var(--coral)]",
-  muted: "text-[var(--muted)]",
-};
-
-export interface VenueBlockKicker {
-  label: string;
-  tone: KickerTone;
-}
+const MAX_SHOWS = 3;
 
 export interface VenueBlockProps {
   venue: MusicVenuePayload;
   shows: MusicShowPayload[];
   portalSlug: string;
-  kicker?: VenueBlockKicker | null;
-  /** Maximum show entries rendered before showing the "+N more" link. */
+  /** Override max shows shown before "+N more" overflow link. */
   maxVisibleShows?: number;
 }
 
@@ -59,74 +55,63 @@ export function VenueBlock({
   venue,
   shows,
   portalSlug,
-  kicker = null,
-  maxVisibleShows = 2,
+  maxVisibleShows = MAX_SHOWS,
 }: VenueBlockProps) {
   if (shows.length === 0) return null;
 
   const venueUrl = buildSpotUrl(venue.slug, portalSlug, "feed");
   const visible = shows.slice(0, maxVisibleShows);
-  const overflow = shows.length - visible.length;
+  const overflow = Math.max(shows.length - visible.length, 0);
 
   return (
-    <a
-      href={venueUrl}
-      aria-label={`${venue.name} — ${shows.length} show${shows.length === 1 ? "" : "s"} tonight`}
-      className={[
-        "block border-t border-[var(--twilight)]/40",
-        "px-1 pt-3.5 pb-3",
-        "transition-colors duration-150 ease-out",
-        "hover:bg-[var(--cream)]/[0.03]",
-        "focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--gold)]",
-      ].join(" ")}
-    >
-      {/* Marquee: venue name + optional kicker */}
-      <div className="flex items-center justify-between gap-3 mb-2">
-        <span className="font-mono text-base sm:text-lg font-bold uppercase tracking-[1.5px] sm:tracking-[1.8px] text-[var(--cream)]">
-          {venue.name}
-        </span>
-        {kicker && (
-          <span
-            className={[
-              "font-mono text-xs uppercase tracking-[0.12em] font-bold text-right shrink-0",
-              KICKER_COLOR[kicker.tone],
-            ].join(" ")}
-          >
-            {kicker.label}
-          </span>
-        )}
-      </div>
+    <div className="grid grid-cols-[110px_1fr_auto] items-center gap-3 px-2 py-1.5 rounded hover:bg-[var(--cream)]/[0.03] transition-colors">
+      {/* Venue column */}
+      <span className="font-display text-sm tracking-[0.16em] uppercase text-[var(--cream)] truncate">
+        {shortVenueName(venue.name)}
+      </span>
 
-      {/* Indented show rows */}
-      <div className="pl-[18px] flex flex-col gap-1">
+      {/* Shows column */}
+      <div className="flex items-center gap-1.5 flex-wrap overflow-hidden">
         {visible.map((show, idx) => {
-          const isPrimary = idx === 0;
-          const name = headlinerName(show);
+          const time = formatShowtime(show.start_time ?? show.doors_time);
           return (
-            <div key={show.id} className="flex items-center justify-between gap-3">
-              <span
-                className={
-                  isPrimary
-                    ? "text-sm font-semibold text-[var(--cream)]"
-                    : "text-sm text-[var(--soft)]"
-                }
+            <span key={show.id} className="flex items-center gap-1.5">
+              <Link
+                href={venueUrl}
+                prefetch={false}
+                className="text-sm font-semibold text-[var(--cream)] hover:text-[var(--vibe)] transition-colors"
               >
-                {isPrimary ? name : `+ ${name}`}
-              </span>
-              <span className="font-mono text-xs text-[var(--gold)] tabular-nums shrink-0">
-                {formatShowtime(show.start_time ?? show.doors_time)}
-              </span>
-            </div>
+                {headlinerName(show)}
+              </Link>
+              {time && (
+                <span className="font-mono text-xs text-[var(--gold)] tabular-nums">
+                  {time}
+                </span>
+              )}
+              {idx < visible.length - 1 && <Dot />}
+            </span>
           );
         })}
-
         {overflow > 0 && (
-          <span className="font-mono text-xs uppercase tracking-[0.12em] text-[var(--soft)] mt-0.5">
-            +{overflow} more →
-          </span>
+          <>
+            <Dot />
+            <span className="text-xs font-mono text-[var(--muted)]">
+              +{overflow} more
+            </span>
+          </>
         )}
       </div>
-    </a>
+
+      {/* Arrow column */}
+      <Link
+        href={venueUrl}
+        prefetch={false}
+        aria-label={`See all ${venue.name} shows`}
+        className="p-1 text-[var(--vibe)] hover:text-[var(--cream)] transition-colors"
+      >
+        <CaretRight weight="bold" className="w-3.5 h-3.5" />
+      </Link>
+    </div>
   );
 }
 

@@ -1,26 +1,26 @@
 "use client";
 
 /**
- * LiveTonightPlaybill — Letterboard playbill of venues with shows tonight.
+ * LiveTonightPlaybill — Single-band cinema-style playbill of venues with
+ * shows tonight (feed view).
  *
- * Per spec (`docs/design-specs/live-tonight-widget-{desktop,mobile}.md`):
+ * Density-fix posture: this is the FEED widget. It mirrors the cinema
+ * widget's density rules — sub-header + N single-row venue entries +
+ * footer link. No second sub-band. No editorial kickers. No ticker.
+ *
  * - Sub-header: "TONIGHT · FRI APR 17 · N SHOWS" left + "X OF Y VENUES" right
- * - Up to 6 venue blocks (hard cap). Footer link reveals the rest.
- * - Late-Night band rule:
- *     · 0 late shows  → no band rendered
- *     · 1 late venue  → merged as a "LATE · AFTER 9 PM" muted kicker on
- *                       that venue's block, no separate sub-band
- *     · 2+ late venues → separate sub-band with its own sub-header
- * - Each block uses VenueBlock, which is the link target (no caret arrows).
+ * - Up to 4 venue rows (hard cap; cinema-density). Footer link reveals the rest.
+ * - Late-night data still flows in via payload.late_night, but the feed view
+ *   does NOT render it. Late shows belong on /explore/music.
+ * - No kickers in feed view (derive-kicker remains for explore-page use).
  */
 
 import { VenueBlock } from "./VenueBlock";
-import { deriveKicker, type KickerDescriptor } from "@/lib/music/derive-kicker";
 import type { MusicShowPayload, MusicVenuePayload, TonightPayload } from "@/lib/music/types";
 
 type VenueGroup = { venue: MusicVenuePayload; shows: MusicShowPayload[] };
 
-const HARD_VENUE_CAP = 6;
+const HARD_VENUE_CAP = 4;
 
 function formatTonightDate(iso: string): string {
   // payload.date is YYYY-MM-DD; parse as local to avoid TZ shifts.
@@ -38,15 +38,12 @@ function totalShows(groups: VenueGroup[]): number {
 interface SubHeaderProps {
   left: string;
   right?: string;
-  /** When "muted", left label uses muted gray (structural/contextual). Default "soft". */
-  leftTone?: "soft" | "muted";
 }
 
-function ZoneSubHeader({ left, right, leftTone = "soft" }: SubHeaderProps) {
-  const leftColor = leftTone === "muted" ? "text-[var(--muted)]" : "text-[var(--soft)]";
+function ZoneSubHeader({ left, right }: SubHeaderProps) {
   return (
-    <div className="flex items-center justify-between gap-3 mt-4 pb-3 border-b border-[var(--twilight)]/40">
-      <span className={`font-mono text-xs font-bold uppercase tracking-[0.12em] ${leftColor}`}>
+    <div className="flex items-baseline justify-between pb-1.5 mb-1 border-b border-[var(--twilight)]">
+      <span className="font-mono text-xs font-bold uppercase tracking-[0.12em] text-[var(--muted)]">
         {left}
       </span>
       {right && (
@@ -63,39 +60,13 @@ export interface LiveTonightPlaybillProps {
   portalSlug: string;
 }
 
-/**
- * Render N venue blocks. Each kicker is derived per-venue from its shows
- * (or overridden via the `kickerOverride` map — used to inject the LATE
- * kicker when we merge a single late venue into the tonight band).
- */
-function renderBlocks(
-  groups: VenueGroup[],
-  portalSlug: string,
-  kickerOverride: Map<number, KickerDescriptor> = new Map(),
-  inLateBand: boolean = false,
-) {
-  return groups.map(({ venue, shows }) => {
-    const override = kickerOverride.get(venue.id);
-    const kicker = override ?? deriveKicker({ venue, shows, inLateBand });
-    return (
-      <VenueBlock
-        key={venue.id}
-        venue={venue}
-        shows={shows}
-        portalSlug={portalSlug}
-        kicker={kicker}
-      />
-    );
-  });
-}
-
 export function LiveTonightPlaybill({ payload, portalSlug }: LiveTonightPlaybillProps) {
+  // Feed view: tonight zone ONLY. Late-night data is preserved on the
+  // payload but not surfaced here — it belongs on /explore/music.
   const tonightGroups = payload.tonight;
-  const lateGroups = payload.late_night;
   const hasTonight = tonightGroups.length > 0;
-  const hasLate = lateGroups.length > 0;
 
-  if (!hasTonight && !hasLate) {
+  if (!hasTonight) {
     return (
       <a
         href={`/${portalSlug}/explore/music`}
@@ -106,85 +77,45 @@ export function LiveTonightPlaybill({ payload, portalSlug }: LiveTonightPlaybill
     );
   }
 
-  // Late Night band rule. Per spec:
-  //   - 1 late venue → merge into tonight as a kicker on that venue's block
-  //   - 2+ late venues → separate band with its own sub-header
-  const mergeLateAsKicker = lateGroups.length === 1 && hasTonight;
-  let mergedTonight = tonightGroups;
-  const kickerOverride = new Map<number, KickerDescriptor>();
-  if (mergeLateAsKicker) {
-    const lateGroup = lateGroups[0];
-    // If the late venue also has tonight shows, merge into its existing block.
-    // Otherwise append the late venue as its own block in the tonight zone.
-    const existing = tonightGroups.find((g) => g.venue.id === lateGroup.venue.id);
-    if (existing) {
-      mergedTonight = tonightGroups.map((g) =>
-        g.venue.id === lateGroup.venue.id
-          ? { ...g, shows: [...g.shows, ...lateGroup.shows] }
-          : g,
-      );
-    } else {
-      mergedTonight = [...tonightGroups, lateGroup];
-    }
-    kickerOverride.set(lateGroup.venue.id, { label: "LATE · AFTER 9 PM", tone: "muted" });
-  }
+  // Cap at 4 venue rows (cinema-density). Footer link reveals the rest.
+  const visible = tonightGroups.slice(0, HARD_VENUE_CAP);
+  const hidden = tonightGroups.length - visible.length;
 
-  // Cap at 6 venue blocks. Footer link reveals the rest.
-  const tonightVisible = mergedTonight.slice(0, HARD_VENUE_CAP);
-  const tonightHidden = mergedTonight.length - tonightVisible.length;
-
-  // Total counts for the sub-header right-side text
-  const tonightShowCount = totalShows(mergedTonight);
-  const tonightVenueCount = mergedTonight.length;
-
-  // Show separate Late band ONLY if we did NOT merge (i.e. 2+ late venues).
-  const showSeparateLateBand = !mergeLateAsKicker && hasLate;
-  const lateVisible = showSeparateLateBand ? lateGroups.slice(0, HARD_VENUE_CAP) : [];
-  const lateHidden = showSeparateLateBand ? lateGroups.length - lateVisible.length : 0;
-
-  // Aggregate footer counts: total venues across both zones (post-merge)
-  const totalVenues = tonightVenueCount + (showSeparateLateBand ? lateGroups.length : 0);
-  const visibleVenues = tonightVisible.length + lateVisible.length;
-  const totalHidden = tonightHidden + lateHidden;
+  const tonightShowCount = totalShows(tonightGroups);
+  const tonightVenueCount = tonightGroups.length;
 
   return (
     <div>
-      {hasTonight && (
-        <>
-          <ZoneSubHeader
-            left={`Tonight · ${formatTonightDate(payload.date)} · ${tonightShowCount} ${tonightShowCount === 1 ? "show" : "shows"}`}
-            right={`${tonightVisible.length} of ${tonightVenueCount} venues`}
+      <ZoneSubHeader
+        left={`Tonight · ${formatTonightDate(payload.date)} · ${tonightShowCount} ${tonightShowCount === 1 ? "show" : "shows"}`}
+        right={`${visible.length} of ${tonightVenueCount} venues`}
+      />
+      <div className="space-y-0.5">
+        {visible.map(({ venue, shows }) => (
+          <VenueBlock
+            key={venue.id}
+            venue={venue}
+            shows={shows}
+            portalSlug={portalSlug}
           />
-          <div>{renderBlocks(tonightVisible, portalSlug, kickerOverride)}</div>
-        </>
-      )}
+        ))}
+      </div>
 
-      {showSeparateLateBand && (
-        <>
-          <ZoneSubHeader
-            left="Late · After 9 PM"
-            right={`${lateVisible.length} of ${lateGroups.length} venues`}
-            leftTone="muted"
-          />
-          <div>{renderBlocks(lateVisible, portalSlug, new Map(), true)}</div>
-        </>
-      )}
-
-      {totalHidden > 0 && (
+      {hidden > 0 && (
         <a
           href={`/${portalSlug}/explore/music`}
-          className="block mt-4 font-mono text-xs uppercase tracking-[0.12em] text-[var(--soft)] hover:text-[var(--cream)] transition-colors"
+          className="block mt-3 font-mono text-xs uppercase tracking-[0.12em] text-[var(--soft)] hover:text-[var(--cream)] transition-colors"
         >
-          See all {totalVenues} venues tonight →
+          See all {tonightVenueCount} venues tonight →
         </a>
       )}
 
-      {totalHidden === 0 && visibleVenues >= HARD_VENUE_CAP && (
+      {hidden === 0 && visible.length >= HARD_VENUE_CAP && (
         // Edge case: exactly at cap, nothing hidden — still surface the
         // explore link so users have a path forward.
         <a
           href={`/${portalSlug}/explore/music`}
-          className="block mt-4 font-mono text-xs uppercase tracking-[0.12em] text-[var(--soft)] hover:text-[var(--cream)] transition-colors"
+          className="block mt-3 font-mono text-xs uppercase tracking-[0.12em] text-[var(--soft)] hover:text-[var(--cream)] transition-colors"
         >
           Browse all music tonight →
         </a>

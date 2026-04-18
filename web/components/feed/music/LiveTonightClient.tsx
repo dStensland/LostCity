@@ -3,7 +3,6 @@
 import { useCallback, useState } from "react";
 import { LiveTonightHeroStrip } from "./LiveTonightHeroStrip";
 import { LiveTonightPlaybill } from "./LiveTonightPlaybill";
-import { DoorsImminentTicker } from "./DoorsImminentTicker";
 import { MusicActionSheet } from "@/components/music/MusicActionSheet";
 import type { MusicShowPayload, TonightPayload } from "@/lib/music/types";
 
@@ -45,7 +44,6 @@ export function LiveTonightClient({
         portalSlug={portalSlug}
         onTileTap={setActiveShow}
       />
-      <DoorsImminentTicker payload={tonightPayload} portalSlug={portalSlug} />
       <LiveTonightPlaybill payload={tonightPayload} portalSlug={portalSlug} />
       <MusicActionSheet
         show={activeShow}

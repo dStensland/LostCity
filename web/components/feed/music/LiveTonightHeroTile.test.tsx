@@ -103,20 +103,12 @@ describe("LiveTonightHeroTile", () => {
     expect(footer.className).toContain("font-mono");
   });
 
-  it("uses portrait aspect by default and landscape when aspectVariant='landscape'", () => {
-    const { container: portraitContainer } = render(
+  it("always uses landscape (16/9) aspect — no portrait variant", () => {
+    const { container } = render(
       <LiveTonightHeroTile show={mkShow()} portalSlug="atlanta" onTap={vi.fn()} />,
     );
-    expect(portraitContainer.querySelector('button[class*="aspect-[3/4]"]')).toBeTruthy();
-
-    const { container: landscapeContainer } = render(
-      <LiveTonightHeroTile
-        show={mkShow()}
-        portalSlug="atlanta"
-        onTap={vi.fn()}
-        aspectVariant="landscape"
-      />,
-    );
-    expect(landscapeContainer.querySelector('button[class*="aspect-[16/9]"]')).toBeTruthy();
+    expect(container.querySelector('button[class*="aspect-[16/9]"]')).toBeTruthy();
+    // Portrait class should never appear
+    expect(container.querySelector('button[class*="aspect-[3/4]"]')).toBeFalsy();
   });
 });
