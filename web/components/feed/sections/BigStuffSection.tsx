@@ -20,7 +20,7 @@ import {
   type BigStuffFeedData,
   type BigStuffMonthBucket,
   type BigStuffItem,
-} from "@/lib/city-pulse/loaders/load-big-stuff";
+} from "@/lib/city-pulse/loaders/big-stuff-shared";
 
 const HORIZON_MONTHS = 6;
 const MONTH_NAMES = ["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"];

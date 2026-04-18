@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { groupItemsByMonth, type BigStuffItem } from "./load-big-stuff";
+import { groupItemsByMonth, type BigStuffItem } from "./big-stuff-shared";
 
 const mkItem = (partial: Partial<BigStuffItem>): BigStuffItem => ({
   id: partial.id ?? "x",
