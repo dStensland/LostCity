@@ -35,19 +35,16 @@ const loadClassesLane = () =>
   import("@/components/explore-platform/lanes/ExploreClassesLane").then(
     (mod) => mod.ExploreClassesLane,
   );
+const loadNeighborhoodsLane = () =>
+  import("@/components/explore-platform/lanes/ExploreNeighborhoodsLane").then(
+    (mod) => mod.ExploreNeighborhoodsLane,
+  );
 
 function isConsumerPortal(portal: Portal): boolean {
   return !["hotel", "dog", "marketplace"].includes(
     String(portal.settings?.vertical ?? "city"),
   );
 }
-
-// Neighborhoods is a nav-only lane — clicking navigates to /{portal}/neighborhoods.
-// loadComponent is a no-op stub; it is never invoked because navigationHref redirects first.
-const loadNeighborhoodsLane = () =>
-  Promise.resolve(() => null) as Promise<
-    import("react").ComponentType<import("./types").ExploreLaneComponentProps>
-  >;
 
 const ALL_LANES: Record<ExploreLaneId, ExploreLaneDefinition> = {
   events: {
@@ -151,7 +148,7 @@ const ALL_LANES: Record<ExploreLaneId, ExploreLaneDefinition> = {
     label: "Neighborhoods",
     icon: Compass,
     accentToken: "var(--neon-cyan)",
-    description: "Browse Atlanta's neighborhoods.",
+    description: "Atlanta, block by block.",
     enabled: isConsumerPortal,
     preload: loadNeighborhoodsLane,
     loadComponent: loadNeighborhoodsLane,
@@ -159,9 +156,8 @@ const ALL_LANES: Record<ExploreLaneId, ExploreLaneDefinition> = {
     analyticsKey: "explore_neighborhoods_lane",
     searchPrompts: [],
     supportsSearch: false,
-    supportsMap: false,
+    supportsMap: true,
     supportsCalendar: false,
-    navigationHref: (portalSlug: string) => `/${portalSlug}/neighborhoods`,
   },
 };
 

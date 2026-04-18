@@ -162,7 +162,7 @@ export default async function NeighborhoodPage({
 
       <nav aria-label="Breadcrumb" className="pt-4 pb-3">
         <Link
-          href={`/${portal}/neighborhoods`}
+          href={`/${portal}/explore?lane=neighborhoods`}
           className="inline-flex items-center gap-1.5 font-mono text-xs text-[var(--soft)] hover:text-[var(--cream)] transition-colors"
         >
           ← Neighborhoods
@@ -275,7 +275,7 @@ export default async function NeighborhoodPage({
             No spots or events in {neighborhood.name} yet.
           </p>
           <Link
-            href={`/${portal}/neighborhoods`}
+            href={`/${portal}/explore?lane=neighborhoods`}
             className="inline-block font-mono text-xs text-[var(--coral)] hover:opacity-80 transition-opacity"
           >
             ← All neighborhoods
