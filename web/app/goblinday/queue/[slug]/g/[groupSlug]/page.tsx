@@ -24,8 +24,10 @@ interface GroupRow {
 }
 
 interface GroupMovieRow {
-  id: number;
+  movie_id: number;
   sort_order: number | null;
+  section: string | null;
+  section_sort: number | null;
   added_at: string;
   movie: GroupMovieDetailRow;
 }
@@ -123,11 +125,14 @@ export default async function PublicGroupPage({ params }: PageProps) {
     notFound();
   }
 
-  // Fetch movies in the group ordered by sort_order asc, added_at asc
+  // Fetch movies in the group ordered by sort_order (narrative order).
+  // The view groups entries by `section` itself; section display order is
+  // derived from each section's minimum sort_order, so we only need the flat
+  // stream here.
   const { data: movieRows } = await serviceClient
     .from("goblin_list_movies")
     .select(`
-      id, sort_order, added_at,
+      movie_id, sort_order, section, section_sort, added_at,
       movie:goblin_movies!movie_id (
         id, tmdb_id, title, poster_path, release_date, genres,
         runtime_minutes, director, year
@@ -158,7 +163,9 @@ export default async function PublicGroupPage({ params }: PageProps) {
   const entries = (movieRows || [])
     .filter((r) => r.movie !== null)
     .map((r) => ({
-      id: r.id,
+      movie_id: r.movie_id,
+      section: r.section,
+      section_sort: r.section_sort,
       movie: r.movie as GroupMovieDetailRow,
     }));
 
