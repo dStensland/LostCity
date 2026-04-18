@@ -29,6 +29,7 @@ export interface GoblinGroupMovie {
 
 export interface GoblinGroup {
   id: number;
+  slug: string | null;
   name: string;
   description: string | null;
   sort_order: number | null;
