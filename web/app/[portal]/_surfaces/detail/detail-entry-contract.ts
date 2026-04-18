@@ -1,4 +1,10 @@
-const DETAIL_ENTRY_PARAM_KEYS = [
+/**
+ * The query-param keys that DetailOverlayRouter recognizes as
+ * overlay-target indicators. Exported so URL builders can clear sibling
+ * keys atomically when producing a new overlay URL (swap-not-stack —
+ * see docs/plans/explore-overlay-architecture-2026-04-18.md § Component 3).
+ */
+export const DETAIL_ENTRY_PARAM_KEYS = [
   "event",
   "spot",
   "series",
@@ -6,6 +12,8 @@ const DETAIL_ENTRY_PARAM_KEYS = [
   "org",
   "artist",
 ] as const;
+
+export type DetailEntryParamKey = (typeof DETAIL_ENTRY_PARAM_KEYS)[number];
 
 type SearchParamReader = {
   get(name: string): string | null;
