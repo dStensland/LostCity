@@ -51,7 +51,6 @@ type RawPlace = {
   slug: string;
   name: string;
   neighborhood: string | null;
-  portal_id: string;
   programming_style: string | null;
   venue_formats: string[] | null;
   founding_year: number | null;
@@ -141,16 +140,16 @@ export async function loadThisWeek(args: {
         director, year, runtime_minutes, rating
       ),
       places!inner (
-        id, slug, name, neighborhood, portal_id,
+        id, slug, name, neighborhood,
         programming_style, venue_formats, founding_year,
-        place_vertical_details
+        place_vertical_details (google)
       ),
       screening_times!inner (
         id, start_date, start_time, end_time, format_labels,
         status, ticket_url, event_id
       )
     `)
-    .eq('places.portal_id', portalId)
+    .eq('portal_id', portalId)
     .gte('end_date', week.start)
     .lte('start_date', week.end)
     .order('start_date');
