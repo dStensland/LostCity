@@ -6,6 +6,8 @@ description: Product design review, UX analysis, and visual consistency audits
 
 $ARGUMENTS
 
+**First read:** root `CLAUDE.md` → `docs/design-truth.md`. The registry + anti-pattern gallery is the taste anchor for every review.
+
 ## Usage
 
 - `/design site` - Full design audit across the entire platform

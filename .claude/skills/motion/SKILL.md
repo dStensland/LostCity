@@ -6,6 +6,8 @@ description: Design and implement motion, interaction, and micro-animation patte
 
 $ARGUMENTS
 
+**First read:** root `CLAUDE.md` → `docs/design-truth.md`. Motion must compose with the registry patterns; improvised motion on improvised components is how drift starts.
+
 ## Usage
 
 - `/motion audit <page-or-url>` — Audit a page for missing interaction patterns. Browser-test and identify where motion would improve the experience.
