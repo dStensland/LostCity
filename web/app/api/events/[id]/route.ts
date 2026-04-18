@@ -11,6 +11,7 @@ import { getDisplayParticipants, type EventArtist } from "@/lib/artists-utils";
 import { buildDisplayDescription } from "@/lib/event-description";
 import { resolvePortalQueryContext } from "@/lib/portal-query-context";
 import { applyPortalScopeToQuery, filterByPortalCity } from "@/lib/portal-scope";
+import { getCanonicalPortalRedirect } from "@/lib/portal-access";
 import { getSharedCacheJson, setSharedCacheJson } from "@/lib/shared-cache";
 import {
   calculatePreShowDiningTiming,
@@ -557,7 +558,36 @@ export async function GET(
   }
 
   // Cast to access properties
-  const eventData = event as EventDataShape;
+  const eventData = event as EventDataShape & { source_id?: number | null };
+
+  // Portal-attribution check — overlay parity with canonical page.
+  //
+  // The canonical /[portal]/events/[id] route runs getCanonicalPortalRedirect
+  // and 308-redirects to the canonical portal when the event's source isn't
+  // federated to the current portal. Without the same check here, the overlay
+  // path (?event=123) would render the event in the wrong portal — i.e.,
+  // forth.lostcity.ai/atlanta/explore?event=123 could show an Atlanta-only
+  // event in the FORTH portal context.
+  //
+  // Fail-closed: 404 with `canonical_url` in the body so a future client
+  // can offer a "View in {portal}" affordance. Today the overlay closes
+  // on 404 via the existing detail-view error path. Portal-isolation is
+  // P0 per docs/plans/explore-overlay-architecture-2026-04-18.md § Phase 5.
+  if (eventData.source_id != null && portalContext.portalId) {
+    const canonicalPortal = await getCanonicalPortalRedirect(
+      eventData.source_id,
+      portalContext.portalId,
+    );
+    if (canonicalPortal && canonicalPortal !== portalContext.portalSlug) {
+      return Response.json(
+        {
+          error: "Event not found",
+          canonical_url: `/${canonicalPortal}/events/${eventId}`,
+        },
+        { status: 404 },
+      );
+    }
+  }
 
   // Get today's date for filtering related events
   const today = getLocalDateString();
