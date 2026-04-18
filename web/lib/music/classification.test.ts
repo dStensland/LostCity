@@ -7,12 +7,19 @@ import {
 } from "./classification";
 
 describe("classifyMusicVenue", () => {
-  it("returns editorial when programming_style is set", () => {
+  it("returns editorial when programming_style is an editorial style", () => {
     expect(classifyMusicVenue({ music_programming_style: "listening_room", capacity: 200 })).toBe("editorial");
     expect(classifyMusicVenue({ music_programming_style: "curated_indie", capacity: 5000 })).toBe("editorial");
   });
 
-  it("returns marquee when style null AND capacity >= 1000", () => {
+  it("returns marquee when programming_style is explicitly 'marquee'", () => {
+    // Backfilled on Tabernacle, Coca-Cola Roxy, Fox, State Farm, etc.
+    // See migration 20260417000003_backfill_marquee_music_venues.
+    expect(classifyMusicVenue({ music_programming_style: "marquee", capacity: 2600 })).toBe("marquee");
+    expect(classifyMusicVenue({ music_programming_style: "marquee", capacity: null })).toBe("marquee");
+  });
+
+  it("returns marquee when style null AND capacity >= 1000 (legacy fallback)", () => {
     expect(classifyMusicVenue({ music_programming_style: null, capacity: 1000 })).toBe("marquee");
     expect(classifyMusicVenue({ music_programming_style: null, capacity: 2600 })).toBe("marquee");
   });
