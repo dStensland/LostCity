@@ -14,6 +14,7 @@
 import Link from "next/link";
 import { Crown } from "@phosphor-icons/react";
 import FeedSectionReveal from "@/components/feed/FeedSectionReveal";
+import { getLocalDateString } from "@/lib/formats";
 import {
   groupItemsByMonth,
   type BigStuffFeedData,
@@ -38,13 +39,10 @@ export default function BigStuffSection({
 
   // Compute today-derived values at render so crossing midnight while the
   // loader cache is warm doesn't corrupt the "you are here" marker.
-  const today = localTodayISO();
+  const today = getLocalDateString();
   const currentMonthLabel = formatCurrentMonthLabel(today);
 
   const months = groupItemsByMonth(items, today, HORIZON_MONTHS);
-  const totalItems = months.reduce((sum, m) => sum + m.items.length, 0);
-  if (totalItems === 0) return null;
-
   const visibleMonths = trimVisibleMonths(months);
   if (visibleMonths.length === 0) return null;
 
@@ -91,9 +89,9 @@ function BigStuffHeader({
             {currentMonthLabel}
           </span>
         </span>
-        <h2 className="text-xl font-bold text-[var(--cream)] tracking-[-0.01em]">
+        <h3 className="text-xl font-bold text-[var(--cream)] tracking-[-0.01em]">
           The Big Stuff
-        </h2>
+        </h3>
         <div className="flex-1" />
         <Link
           href={`/${portalSlug}/festivals`}
@@ -106,21 +104,86 @@ function BigStuffHeader({
   );
 }
 
-/** Placeholder — real implementation in Task 6. */
 function MonthColumn({
   bucket,
+  isFirst,
+  portalSlug,
 }: {
   bucket: BigStuffMonthBucket;
   isFirst: boolean;
   portalSlug: string;
 }) {
+  const isSparse = bucket.items.length < 2;
+  const labelClass = [
+    "flex items-center gap-1.5",
+    "font-mono text-xs font-bold tracking-[0.12em] uppercase text-[var(--cream)]",
+    isSparse && !bucket.isCurrentMonth ? "opacity-40" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+
   return (
-    <div className="flex-1 p-[14px]">
-      <p className="font-mono text-xs font-bold tracking-[0.12em] uppercase text-[var(--cream)]">
-        {monthLabel(bucket.monthKey)}
-      </p>
+    <div
+      className={`flex-1 min-w-0 flex flex-col gap-2.5 p-[14px] ${
+        isFirst ? "" : "border-l border-[var(--twilight)]"
+      }`}
+    >
+      <div className={labelClass}>
+        {bucket.isCurrentMonth && (
+          <span
+            aria-hidden
+            className="inline-block w-[5px] h-[5px] rounded-full bg-[var(--gold)]"
+          />
+        )}
+        <span>{monthLabel(bucket.monthKey)}</span>
+      </div>
+
+      {bucket.items.map((item) => (
+        <ItemRow key={item.id} item={item} />
+      ))}
+
+      {bucket.overflowCount > 0 && (
+        <Link
+          href={`/${portalSlug}/festivals`}
+          className="font-mono text-[10px] text-[var(--muted)] hover:text-[var(--gold)] transition-colors tracking-[0.2em] uppercase"
+        >
+          +{bucket.overflowCount} more
+        </Link>
+      )}
     </div>
   );
+}
+
+function ItemRow({ item }: { item: BigStuffItem }) {
+  // Hover cascade: on a ribbon hover, siblings dim to 75%. The hovered item
+  // itself has a more-specific :hover rule that wins the cascade and restores
+  // opacity to 100% — no !important needed.
+  return (
+    <Link
+      href={item.href}
+      className="group/item block min-w-0 transition-opacity duration-200 group-hover/ribbon:opacity-75 hover:opacity-100"
+    >
+      <p className="text-sm font-semibold text-[var(--cream)] leading-snug truncate group-hover/item:underline decoration-[var(--gold)] underline-offset-[3px]">
+        {item.title}
+      </p>
+      <p className="font-mono text-[10px] text-[var(--muted)] mt-0.5 tracking-[0.2em] truncate">
+        {formatItemDate(item.startDate, item.endDate)}
+      </p>
+    </Link>
+  );
+}
+
+const SHORT_MONTH = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
+function formatItemDate(startDate: string, endDate: string | null): string {
+  const [sy, sm, sd] = startDate.split("-").map((v) => parseInt(v, 10));
+  const startLabel = `${SHORT_MONTH[sm - 1]} ${sd}`;
+  if (!endDate || endDate === startDate) return startLabel;
+  const [ey, em, ed] = endDate.split("-").map((v) => parseInt(v, 10));
+  if (sy === ey && sm === em) {
+    return `${SHORT_MONTH[sm - 1]} ${sd} – ${ed}`;
+  }
+  return `${startLabel} – ${SHORT_MONTH[em - 1]} ${ed}`;
 }
 
 /**
@@ -148,14 +211,6 @@ function trimVisibleMonths(
   return months.slice(start, end + 1);
 }
 
-function localTodayISO(): string {
-  const d = new Date();
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
-}
-
 function formatCurrentMonthLabel(today: string): string {
   const [y, m] = today.split("-");
   return `${MONTH_NAMES[parseInt(m, 10) - 1]} ${y}`;
@@ -166,5 +221,3 @@ function monthLabel(monthKey: string): string {
   return MONTH_NAMES[parseInt(m, 10) - 1];
 }
 
-// Re-export BigStuffItem type for consumers that need the shape.
-export type { BigStuffItem };
