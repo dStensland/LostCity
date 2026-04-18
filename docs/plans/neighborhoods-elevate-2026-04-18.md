@@ -44,7 +44,7 @@ Apply these to the Pencil comps before `/design-handoff extract`:
 ### From product-designer
 
 1. **Mode filter pill** — Confirm the `Tonight / This Week / All` pill drives distinct visual state on the map (fill-opacity expression change, not just overlay copy). If it cannot, drop it. Decision point.
-2. **Neon-gradient hero fallback** — Spec must cite photo coverage: "X of N neighborhoods have curated photos as of [date]. Gradient fallback used for the remainder. Revisit at M-photo threshold." Gradient cannot be the permanent default.
+2. **Neon-gradient hero is the designed base, not a fallback.** Per product-designer follow-up: cinematic minimalism calls for "solid surfaces with atmospheric glow." A well-executed gradient keyed to neighborhood color IS atmospheric glow. The correct architecture: gradient is always present as a compositional base; `SmartImage` renders the photo on top when `heroImage` is populated. **No retirement threshold** — at 100% coverage, gradient stays as a compositional element behind the image. Phase 0 must still lock the current photo-coverage count in the comp annotation before `/design-handoff extract` runs (so the implementer knows how many neighborhoods ship with photos on day one), but "retire the fallback at N%" framing is dropped.
 3. **Category chip color source** — The `data-category` attribute system (already in `globals.css`) drives the category chip color inside event rows, **NOT** the neighborhood color. Prevents a third competing accent on each row.
 4. **Map 22px time** → map to `text-xl font-bold font-mono tabular-nums` (20px via Tailwind scale, not arbitrary `text-[22px]`).
 5. **No `mask-fade-x`** on the NEARBY NEIGHBORHOODS chip row — confirm in implementation.
@@ -57,15 +57,21 @@ Apply these to the Pencil comps before `/design-handoff extract`:
 9. **Extract loaders** out of page files into `web/lib/neighborhoods/loaders.ts` (matches `lib/marketplace-data.ts` pattern). Page files import + call; any future API route wraps the same function. Hard Rule 7 conformant.
 10. **Narrow card props.** `NeighborhoodIndexCard` takes a 3-field view model `{ eventsTodayCount, eventsWeekCount, venueCount }` + color + name + slug + portalSlug. NOT the full `NeighborhoodActivity` type.
 11. **Hero image contract.** Add `heroImage?: string` field to `web/config/neighborhoods.ts`. Ship gradient-only initially for all 45 neighborhoods. Photo curation is a follow-on workstream — NOT part of this elevate. Use `SmartImage` with `fallback` prop; NEVER `next/image` directly.
-12. **Editorial overlay copy** routes through `web/lib/editorial-templates.ts` (template key: `neighborhoods_alive_tonight`, `neighborhoods_week_scope`). NOT inline concatenated strings.
+12. **Editorial overlay copy** routes through `web/lib/editorial-templates.ts`. NOT inline concatenated strings. Template string literals locked below (do not re-invent during implementation):
+    - `neighborhoods_alive_tonight` → `"ALIVE TONIGHT — {n} neighborhoods have events starting soon"` (render only when `n > 0`)
+    - `neighborhoods_week_scope` → `"This week across Atlanta"` (render when `eventsTonightCount === 0` but `eventsWeekCount > 0`)
+    - When both counts are 0, render no overlay (not a 0-state copy variant).
 
 ---
 
-## Incidental Cleanup (picked up during rebuild)
+## Incidental Cleanup
 
-These are things architect-review flagged in shipped code that make sense to fix as part of this PR rather than separately:
+### Split into its own PR (lands before Phase 1 of the elevate)
 
-13. **Stale `venues` joins** — `getActivityData` uses `venue:venues!events_venue_id_fkey(...)`. The March 2026 rename made `venues` → `places`. Migrate joins to `place:places!events_place_id_fkey(neighborhood)` where correct, update downstream type guards. Check carefully — some joins may silently work today via FK aliases.
+13. **Stale `venues` joins** — `getActivityData` uses `venue:venues!events_venue_id_fkey(...)`. The March 2026 rename made `venues` → `places`. Migrate joins to `place:places!events_place_id_fkey(neighborhood)`, update downstream type guards. Some joins silently work today via FK aliases — confirm by turning off the aliases in a branch and observing what breaks. **Per architect-review: ship as standalone PR** (cross-cutting rename, diff hardness, silent regression risk). Blocks Phase 1.
+
+### Bundled with the elevate rebuild
+
 14. **Explicit cache directive on `/api/neighborhoods/events`** — the drill-down fetches this and it has no runtime policy. Add `export const revalidate = 120` or equivalent per Hard Rule 9.
 15. **Structured logging in `getActivityData`** — the silent `catch {}` wrapping the RSVP RPC call currently eats errors. Log via the `logger` util with `{ error: err.message }` instead of the bare comment.
 16. **Boundaries fetch** — `/api/neighborhoods/boundaries` returns static GeoJSON with no cache directive. Add `force-cache` or convert to a static import. Not critical for this PR but document if deferred.
@@ -81,13 +87,21 @@ web/components/neighborhoods/
   NeighborhoodIndexCard.tsx          — minimalist atom (dot + name + status line)
   NeighborhoodsMapMode.tsx           — mode filter pill component (Tonight/Week/All)
   NeighborhoodsEditorialOverlay.tsx  — "ALIVE TONIGHT" kicker, conditional render
+  NeighborhoodHeroStyle.ts           — getNeighborhoodHeroStyle(color, heroImage?) helper
+                                       returns { gradient: CSSProperties, imageSrc?: string }
+                                       used by both server render + SmartImage fallback to
+                                       prevent fallback-logic duplication
 
-web/components/schedule/               (or feed/, pending ls)
-  ScheduleRow.tsx                    — prominent time-column row; used by neighborhood detail + any future schedule surface
+web/components/shared/                 — ScheduleRow lives in shared, NOT schedule/ (circular-import risk)
+  ScheduleRow.tsx                    — prominent time-column row; used by neighborhood detail
+                                       + any future schedule surface (venue detail, series detail)
 
 web/lib/neighborhoods/
-  loaders.ts                         — extracted getNeighborhoodSpots, getNeighborhoodEvents, getNeighborhoodEventCounts, getNeighborhoodsIndex
-  bucket-events.ts                   — pure util: bucketEvents(events, now) → { tonight, weekend, nextWeek, later }
+  loaders.ts                         — extracted getNeighborhoodSpots, getNeighborhoodEvents,
+                                       getNeighborhoodEventCounts, getNeighborhoodsIndex
+  bucket-events.ts                   — pure util: bucketEvents(events, now, timezone)
+                                       → { tonight, weekend, nextWeek, later }
+                                       timezone param is REQUIRED (no hardcoded America/New_York)
   loaders.test.ts                    — portal isolation fixtures
   bucket-events.test.ts              — time window edges (midnight, Fri-Sun weekend, DST transition)
 ```
@@ -141,6 +155,12 @@ interface NeighborhoodIndexCardProps {
 
 **`ScheduleRow` props** (confirm against `t5jrF` Pencil node before finalizing)
 ```ts
+// Typography constants — DO NOT override during implementation.
+// Shipped 14px time column was too timid; product-designer locked the new scale.
+// time column: `text-xl font-bold font-mono tabular-nums text-[var(--cream)] leading-none`
+// period (AM/PM): `text-2xs font-mono text-[var(--muted)] tracking-[0.14em]`
+// accent bar: neighborhood color at ≤70% opacity, 3×48px, 2px radius
+
 interface ScheduleRowProps {
   event: {
     id: number | string;
@@ -148,8 +168,8 @@ interface ScheduleRowProps {
     startDate: string;
     startTime: string | null;
     isAllDay: boolean;
-    venue?: { name: string; slug?: string } | null;
-    categoryId?: string | null;
+    place?: { name: string; slug?: string } | null;   // RENAMED from `venue` — matches places refactor
+    categoryId?: string | null;                        // colored via data-category attribute, NOT accentColor
     imageUrl?: string | null;
   };
   accentColor: string;              // neighborhood color, rendered on left bar at ≤70% opacity
@@ -158,9 +178,13 @@ interface ScheduleRowProps {
 }
 ```
 
-**`bucketEvents(events, now)` contract**
+**`bucketEvents(events, now, timezone)` contract**
 ```ts
-type EventBuckets<T> = {
+function bucketEvents<T extends EventLike>(
+  events: T[],
+  now: Date,
+  timezone: string,   // REQUIRED — e.g., 'America/New_York'. Never hardcode inside the util.
+): {
   tonight: T[];     // start_date === today AND (is_all_day OR start_time >= 17:00)
   weekend: T[];     // start_date in Sat/Sun OR (Fri AND start_time >= 17:00), excluding tonight
   nextWeek: T[];    // start_date within 8-14 days from today
@@ -168,7 +192,7 @@ type EventBuckets<T> = {
 };
 ```
 
-Boundaries require care: DST transitions, timezone (Atlanta = `America/New_York`), events in the past silently filtered upstream. Tests must cover Friday night → Saturday AM overlap and week rollover.
+Boundaries require care: DST transitions, timezone passed explicitly (NOT hardcoded), events in the past silently filtered upstream. Tests must cover Friday night → Saturday AM overlap, week rollover, DST spring-forward and fall-back.
 
 ---
 
@@ -178,8 +202,10 @@ Each phase is sized so that a subagent (or sequential work) can land it as a rev
 
 ### Phase 0 — Prerequisites (do first, independently)
 - [ ] PR #53 (portal attribution fix) merged to main
-- [ ] Apply 6 product-designer revisions to Pencil comps (update node props, add photo-coverage note, map 22px → text-xl, confirm no mask-fade-x, conditional "ALIVE TONIGHT")
-- [ ] Confirm with user: mode filter pill (Note 1 from product-designer) — does the existing `NeighborhoodMap.tsx` paint expression have a hook for opacity modulation based on active events, or is this a larger refactor than a pill state change?
+- [ ] **Places rename PR** — item 13 above. Migrate `venues` → `places` joins in `getActivityData` + downstream type guards. Lands before Phase 1, reviewed in isolation.
+- [ ] Apply 6 product-designer revisions to Pencil comps (update node props, document gradient-as-designed-base, map 22px → text-xl, confirm no mask-fade-x, conditional "ALIVE TONIGHT", lock literal editorial strings)
+- [ ] **Lock the photo coverage count** in the comp annotation: count how many of the 45 neighborhoods have `heroImage` populated in `config/neighborhoods.ts` as of the extract date. Written into the annotation before `/design-handoff extract` runs — not deferred.
+- [ ] **BLOCK-level resolution**: mode filter pill feasibility. Read `NeighborhoodMap.tsx` paint expression. Confirm it can drive `fill-opacity` from a per-polygon active-events flag. If it can't, **drop the pill in this elevate** and adjust the Index comp accordingly. Resolve here, not during coding.
 
 ### Phase 1 — Data layer foundation
 1. Create `web/lib/neighborhoods/loaders.ts`:
@@ -187,16 +213,22 @@ Each phase is sized so that a subagent (or sequential work) can land it as a rev
    - Add `getNeighborhoodsIndex` (moved from index page's `getActivityData`) — fold in the `venues` → `places` join migration here
    - All event loaders take `portalId` and apply the standard `portal_id.eq.{id},portal_id.is.null` filter (PR #53 merged → pattern is established)
 2. Create `web/lib/neighborhoods/bucket-events.ts` + tests. Test DST, midnight, Friday 5pm weekend boundary, empty, all-past, all-future.
-3. Create `web/lib/neighborhoods/loaders.test.ts` — portal isolation fixture: mixed-portal events, assert only requested portal + null leak through.
+3. Create `web/lib/neighborhoods/loaders.test.ts` — portal isolation fixture:
+   - Fixture shape: **3 events on portal A, 2 events on portal B, 1 event with `portal_id IS NULL`**
+   - Include BOTH same `place_id` across portals (catches join-leakage) AND distinct `place_id`s per portal (catches filter-clause-missing)
+   - Assert A-scoped query returns 4 (A + null), B-scoped returns 3 (B + null), no-portal query returns all 6
 4. Add `heroImage?: string` field to `Neighborhood` type in `web/config/neighborhoods.ts` (don't populate yet).
 5. Add editorial template keys to `web/lib/editorial-templates.ts`.
 
 ### Phase 2 — Atoms + rename
 1. Rename `web/components/NeighborhoodCard.tsx` → `web/components/NeighborhoodSelectChip.tsx`. Update the two callers (`ForYouOnboarding.tsx`, `NeighborhoodMap.tsx`) in the same commit.
 2. Create `web/components/neighborhoods/NeighborhoodIndexCard.tsx` per props contract above. Storybook or simple test for coral-vs-muted status line branch.
-3. Confirm existing `ScheduleRow` implementation: `ls web/components/{schedule,feed,detail}/ScheduleRow*` — if absent, create at `web/components/schedule/ScheduleRow.tsx` per Pencil `t5jrF` spec.
-4. Create `web/components/neighborhoods/NeighborhoodsEditorialOverlay.tsx` — conditional render using editorial-templates + `eventsTonightCount` threshold.
-5. Create `web/components/neighborhoods/NeighborhoodsMapMode.tsx` — mode filter pill with URL state or lifted state (decide in code review).
+3. Confirm existing `ScheduleRow` implementation: `ls web/components/{shared,schedule,feed,detail}/ScheduleRow*` — if absent, create at `web/components/shared/ScheduleRow.tsx` per Pencil `t5jrF` spec. Typography constants are in the props contract comment — treat them as locked.
+4. Create `web/components/neighborhoods/NeighborhoodsEditorialOverlay.tsx` — conditional render using editorial-templates + `eventsTonightCount` threshold. Literal strings locked in Revisions § 12.
+5. Create `web/components/neighborhoods/NeighborhoodsMapMode.tsx` — mode filter pill with URL state or lifted state (decide in code review). **Only if Phase 0 confirmed paint-expression feasibility.**
+6. Create `web/components/neighborhoods/NeighborhoodHeroStyle.ts` — `getNeighborhoodHeroStyle(color, heroImage?)` helper. Single source of truth for gradient + photo layer composition; used by both server render and `SmartImage` fallback to prevent duplication.
+
+**Phase 2 → Phase 3 gate (composite-atoms checkpoint per `feedback_composite_with_siblings.md`):** Before starting the page rebuild, render the new atoms at page-representative density — 12 `NeighborhoodIndexCard` in the grid, 8 `ScheduleRow` in a section — and screenshot against the comp. Fidelity-to-atom ≠ fitness-for-context. Catch sizing/spacing drift here, not after Phase 3 lands.
 
 ### Phase 3 — Page rebuilds
 1. **Index page** (`web/app/[portal]/neighborhoods/page.tsx`):
@@ -219,16 +251,27 @@ Each phase is sized so that a subagent (or sequential work) can land it as a rev
    - TONIGHT (coral) / THIS WEEKEND / NEXT WEEK section dividers
    - `ScheduleRow` event rows (kill the inline 14px time column list)
    - POPULAR SPOTS via existing `PlaceCard` with `variant="compact"` (keep)
-   - NEARBY chip row (kill color-tinted Link cards; chip = color dot + name + `rounded-full` border)
-5. **API route cache directive** — `/api/neighborhoods/events`
+   - NEARBY chip row spec (lock these to prevent drift):
+     - chip = 7px color dot + name + `rounded-full` border
+     - border color: `border border-[var(--twilight)]` (NOT color-tinted)
+     - row overflow: horizontal scroll (`overflow-x-auto scrollbar-hide`), NO `mask-fade-x` (violates anti-pattern)
+     - max visible: 5 chips on desktop, 3 on mobile; remainder reachable via scroll
+     - kill the existing color-tinted `Link` card pattern entirely
+5. **API route cache directive** — `/api/neighborhoods/events` — add `export const revalidate = 120`
+6. **Server bucketing × tab state**: `bucketEvents` runs server-side. PLACES tab still pays for the event fetch even when user never activates it. **Choose one:**
+   - (a) Accept the cost as-is (events are already fetched for EVENTS tab, so the waste is only the bucketing CPU — negligible). Default recommendation.
+   - (b) Lazy-load events only when `?tab=events` is active via `useSWR` or similar. More complex; only worth it if events fetch is measurably slow.
+   Decide in code review based on observed timing.
 
 ### Phase 4 — Verification
 1. `npm run lint` clean
 2. `npx tsc --noEmit` clean
 3. `npx vitest run lib/neighborhoods` passes (bucket + loaders)
 4. `/design-handoff verify` against `0xWTr` + `WxF6c` on desktop; `dlvfh` + `Zqxgk` on mobile
-5. Manual browser QA: `/atlanta/neighborhoods`, `/atlanta/neighborhoods/midtown`, `/atlanta/neighborhoods/old-fourth-ward`, at 1440×900 and 375×812. Check empty state: navigate to a neighborhood with 0 tonight events, verify overlay falls back gracefully.
+5. Manual browser QA: `/atlanta/neighborhoods`, `/atlanta/neighborhoods/midtown`, `/atlanta/neighborhoods/old-fourth-ward`, at 1440×900 and 375×812. Check empty state: navigate to a neighborhood with **zero tonight events AND zero week events** (end-to-end empty bucket), verify overlay renders nothing and the TONIGHT/THIS WEEKEND/NEXT WEEK sections degrade gracefully.
 6. Portal smoke: if FORTH has neighborhoods routing enabled, load `/forth/neighborhoods/midtown` and confirm event scoping via DevTools Network tab.
+7. **Lighthouse LCP spot-check** on `/atlanta/neighborhoods` — hero `SmartImage` + map is LCP-sensitive. Baseline before rebuild, compare after.
+8. **Console check**: zero new errors or warnings introduced during portal-scoped fetches. Distinguish from pre-existing `HangFeedSection`/`server-feed.ts` noise (tracked separately).
 
 ### Phase 5 — Follow-ups (NOT in this PR)
 - `/motion design` pass applies the motion annotations baked into the comps (entrance stagger, map polygon breathing, tab slide, hover glow). Tracked separately.
@@ -264,10 +307,14 @@ Each phase is sized so that a subagent (or sequential work) can land it as a rev
 
 ## Open Questions
 
-1. **Mode filter pill — does it ship?** Requires confirming `NeighborhoodMap.tsx` paint expression can drive opacity off an active-events flag. If the answer is "not without bigger refactor," drop the pill in this PR and just fix the editorial overlay copy.
-2. **ScheduleRow location** — `components/schedule/` vs. `components/feed/` vs. `components/detail/`. Defer to `ls` findings in Phase 2 step 3.
-3. **Hero image coverage threshold** — what percentage curated before we hide the gradient fallback entirely? Guess: 80%. Open for discussion.
-4. **Tab URL state** — `?tab=events|places` via `window.history.replaceState` (per web/CLAUDE.md client-side filter pattern, no router.push). Confirm this is the right pattern for tab state.
+Resolved during review — remaining unknowns:
+
+1. **Tab URL state** — `?tab=events|places` via `window.history.replaceState` (per web/CLAUDE.md client-side filter pattern, no router.push). Confirm this is the right pattern for tab state.
+
+Previously open, now closed:
+- ~~Mode filter pill feasibility~~ → **Phase 0 BLOCK**; resolve before coding, not during
+- ~~ScheduleRow location~~ → `components/shared/` per architect-review (avoid circular-import risk)
+- ~~Hero image coverage threshold~~ → No threshold. Gradient is designed base; photos layer on top. Per product-designer.
 
 ---
 
@@ -276,7 +323,11 @@ Each phase is sized so that a subagent (or sequential work) can land it as a rev
 Before merge:
 - [ ] `product-designer` returns **PASS** (not just PASS-WITH-NOTES) after reviewing the shipped pages at both viewports
 - [ ] `/design-handoff verify` passes for all four comps (`0xWTr`, `dlvfh`, `WxF6c`, `Zqxgk`)
-- [ ] Portal isolation test green
+- [ ] Portal isolation test green (fixture: 3 A + 2 B + 1 null, A-scope returns 4, B-scope returns 3)
+- [ ] Bucket-events tests green (DST spring-forward, fall-back, Fri 5pm weekend boundary, week rollover)
+- [ ] Composite-atoms checkpoint passed before Phase 3 started (12-card grid + 8-row schedule section vs comp)
 - [ ] `npm run lint` + `npx tsc --noEmit` clean
-- [ ] Manual QA in browser at 1440 + 375, zero console errors introduced
+- [ ] Lighthouse LCP on `/atlanta/neighborhoods` is within 10% of pre-rebuild baseline (or improved)
+- [ ] Manual QA in browser at 1440 + 375, zero console errors or warnings introduced (distinguish from pre-existing noise)
+- [ ] Empty-bucket neighborhood E2E verified (zero tonight AND zero week events — page degrades gracefully, no phantom overlay)
 - [ ] No new anti-patterns from the design-truth gallery shipped (glassmorphism, mask-fade-x, count-badges-as-headers, etc.)
