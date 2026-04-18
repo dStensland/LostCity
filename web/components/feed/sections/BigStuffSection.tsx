@@ -183,6 +183,9 @@ function formatItemDate(startDate: string, endDate: string | null): string {
   if (sy === ey && sm === em) {
     return `${SHORT_MONTH[sm - 1]} ${sd} – ${ed}`;
   }
+  if (sy !== ey) {
+    return `${startLabel} – ${SHORT_MONTH[em - 1]} ${ed}, ${ey}`;
+  }
   return `${startLabel} – ${SHORT_MONTH[em - 1]} ${ed}`;
 }
 
