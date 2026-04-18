@@ -10,7 +10,7 @@ interface ViewToggleProps {
 const OPTIONS: Array<{ id: ExploreView; label: string; disabled: boolean }> = [
   { id: 'by-theater', label: 'By Theater', disabled: false },
   { id: 'by-film', label: 'By Film', disabled: false },
-  { id: 'schedule', label: 'Schedule', disabled: true },
+  { id: 'schedule', label: 'Schedule', disabled: false },
 ];
 
 export default function ViewToggle({ view, onChange }: ViewToggleProps) {
