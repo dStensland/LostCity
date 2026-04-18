@@ -23,16 +23,15 @@ export function LiveTonightHeroStrip({ shows, portalSlug, onTileTap }: LiveTonig
 
   return (
     <section aria-label="This week's significant shows" className="mb-4">
-      <div className="flex items-baseline justify-between mb-2">
+      <div className="mb-2">
         <div className="font-mono text-xs font-bold tracking-[0.12em] uppercase text-[var(--gold)]">
           This Week · {shows.length} significant show{shows.length === 1 ? "" : "s"}
         </div>
-        <div className="text-xs italic text-[var(--muted)]">Not to miss.</div>
       </div>
 
       <div
         className={[
-          "grid gap-px bg-black rounded-md overflow-hidden",
+          "grid gap-px bg-[var(--void)] rounded-xl overflow-hidden",
           n === 1
             ? "grid-cols-1 h-[240px]"
             : n === 2

@@ -108,7 +108,7 @@ export function LiveTonightHeroTile({
 
       <div className="absolute inset-x-0 bottom-0 p-4">
         {!img && primaryGenre && (
-          <div className="font-mono text-2xs font-bold tracking-[2px] uppercase text-[var(--gold)] mb-1">
+          <div className="font-mono text-xs font-bold tracking-[2px] uppercase text-[var(--gold)] mb-1">
             {primaryGenre}
           </div>
         )}
@@ -123,9 +123,9 @@ export function LiveTonightHeroTile({
           {headliner}
         </div>
         {support && (
-          <div className="text-xs italic text-[var(--cream)]/80 mt-1 drop-shadow">{support}</div>
+          <div className="text-xs italic text-white/80 mt-1 drop-shadow">{support}</div>
         )}
-        <div className="font-mono text-xs text-[var(--cream)]/80 mt-2 tracking-wider uppercase drop-shadow">
+        <div className="font-mono text-xs text-white/80 mt-2 tracking-wider uppercase drop-shadow">
           {metaLine(show)}
         </div>
       </div>

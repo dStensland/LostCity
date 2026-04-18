@@ -68,7 +68,7 @@ export function MusicActionSheet({ show, portalSlug, onClose, onAddToPlans }: Mu
         </div>
 
         <div className="px-4 pb-5">
-          <div className="font-mono text-2xs text-[var(--muted)] uppercase tracking-wider mb-2">
+          <div className="font-mono text-xs text-[var(--muted)] uppercase tracking-wider mb-2">
             {show.venue.name}{show.venue.neighborhood ? ` · ${show.venue.neighborhood}` : ""}
           </div>
           <h2 className="text-xl font-semibold text-[var(--cream)] mb-1">

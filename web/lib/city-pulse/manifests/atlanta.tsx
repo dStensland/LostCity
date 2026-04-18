@@ -279,8 +279,8 @@ export const ATLANTA_FEED_MANIFEST: FeedSection[] = [
       id: "city-pulse-live-tonight",
       className: "mt-8 scroll-mt-28",
       dataAnchor: true,
-      indexLabel: "Live Music",
-      blockId: "live_music",
+      indexLabel: "Live Tonight",
+      blockId: "live_tonight",
     },
   },
   {
