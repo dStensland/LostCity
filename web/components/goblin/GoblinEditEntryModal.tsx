@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
 import SmartImage from "@/components/SmartImage";
 import GoblinTagPicker from "./GoblinTagPicker";
-import { TMDB_POSTER_W185, TAG_COLORS, type LogEntry, type GoblinTag } from "@/lib/goblin-log-utils";
+import { TMDB_POSTER_W185, TAG_COLORS, type LogEntry, type GoblinTag, type LogList } from "@/lib/goblin-log-utils";
 
 interface Props {
   entry: LogEntry | null;
@@ -19,10 +19,12 @@ interface Props {
       tag_ids?: number[];
       tier_name?: string | null;
       tier_color?: string | null;
+      list_id?: number | null;
     }
   ) => Promise<boolean>;
   onDelete: (entryId: number) => Promise<boolean>;
   tags: GoblinTag[];
+  lists: LogList[];
   onCreateTag: (name: string) => Promise<GoblinTag | null>;
 }
 
@@ -33,12 +35,14 @@ export default function GoblinEditEntryModal({
   onSave,
   onDelete,
   tags,
+  lists,
   onCreateTag,
 }: Props) {
   const [watchedDate, setWatchedDate] = useState("");
   const [note, setNote] = useState("");
   const [watchedWith, setWatchedWith] = useState("");
   const [selectedTagIds, setSelectedTagIds] = useState<number[]>([]);
+  const [selectedListId, setSelectedListId] = useState<number | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [tierEnabled, setTierEnabled] = useState(false);
@@ -56,6 +60,7 @@ export default function GoblinEditEntryModal({
       setNote(entry.note || "");
       setWatchedWith(entry.watched_with || "");
       setSelectedTagIds(entry.tags.map((t) => t.id));
+      setSelectedListId(entry.list_id ?? null);
       setConfirmDelete(false);
       setTierEnabled(!!entry.tier_name);
       setTierName(entry.tier_name || "");
@@ -89,6 +94,7 @@ export default function GoblinEditEntryModal({
       tag_ids: selectedTagIds,
       tier_name: tierEnabled ? tierName.trim() || undefined : null,
       tier_color: tierEnabled ? tierColor : null,
+      list_id: selectedListId,
     });
     setSubmitting(false);
     if (success) onClose();
@@ -205,6 +211,42 @@ export default function GoblinEditEntryModal({
               focus:outline-none focus:border-[var(--coral)] transition-colors"
           />
         </div>
+
+        {/* List (project) */}
+        {lists.length > 0 && (
+          <div className="mb-4">
+            <label className="font-mono text-xs text-[var(--muted)] uppercase tracking-wider mb-1.5 block">
+              List
+            </label>
+            <div className="flex flex-wrap gap-1.5">
+              <button
+                type="button"
+                onClick={() => setSelectedListId(null)}
+                className={`px-2.5 py-1 rounded-full font-mono text-2xs font-medium border transition-colors ${
+                  selectedListId === null
+                    ? "border-[var(--coral)] text-[var(--coral)] bg-[var(--coral)]/10"
+                    : "border-[var(--twilight)] text-[var(--muted)] hover:border-[var(--soft)]"
+                }`}
+              >
+                none
+              </button>
+              {lists.map((list) => (
+                <button
+                  key={list.id}
+                  type="button"
+                  onClick={() => setSelectedListId(list.id)}
+                  className={`px-2.5 py-1 rounded-full font-mono text-2xs font-medium border transition-colors ${
+                    selectedListId === list.id
+                      ? "border-[var(--coral)] text-[var(--coral)] bg-[var(--coral)]/10"
+                      : "border-[var(--twilight)] text-[var(--muted)] hover:border-[var(--soft)]"
+                  }`}
+                >
+                  {list.name}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Tags */}
         <div className="mb-6">
