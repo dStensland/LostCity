@@ -59,6 +59,28 @@ export interface BigStuffFeedData {
   items: BigStuffItem[];
 }
 
+/** Festivals row shape — matches the SELECT in fetchBigStuffForPortal. */
+type BigStuffFestivalRow = {
+  id: string;
+  name: string;
+  slug: string | null;
+  neighborhood: string | null;
+  location: string | null;
+  announced_start: string;
+  announced_end: string | null;
+};
+
+/** Tentpole event row shape — matches the SELECT in fetchBigStuffForPortal. */
+type BigStuffTentpoleRow = {
+  id: number;
+  title: string;
+  start_date: string;
+  end_date: string | null;
+  category: string | null;
+  source_id: number | null;
+  venue: { id: number; name: string; slug: string; neighborhood: string | null } | null;
+};
+
 /** Feed-contract loader. Errors are swallowed so the feed stays up. */
 export async function loadBigStuffForFeed(
   ctx: FeedSectionContext,
@@ -126,7 +148,7 @@ async function fetchBigStuffForPortal(
   portalId: string | null | undefined,
   portalSlug: string,
 ): Promise<BigStuffItem[]> {
-  const cacheKey = `${portalId ?? "none"}|big-stuff-v1`;
+  const cacheKey = `${portalId ?? "none"}|${getLocalDateString()}|big-stuff-v1`;
 
   return getOrSetSharedCacheJson<BigStuffItem[]>(
     "api:big-stuff",
@@ -165,15 +187,7 @@ async function fetchBigStuffForPortal(
       const { data: festivalsData, error: festivalsError } = festivalsResult;
       if (festivalsError) throw festivalsError;
 
-      const festivals: BigStuffItem[] = ((festivalsData ?? []) as Array<{
-        id: string;
-        name: string;
-        slug: string | null;
-        neighborhood: string | null;
-        location: string | null;
-        announced_start: string;
-        announced_end: string | null;
-      }>).map((f) => ({
+      const festivals: BigStuffItem[] = ((festivalsData ?? []) as BigStuffFestivalRow[]).map((f) => ({
         id: `festival:${f.id}`,
         kind: "festival",
         title: f.name,
@@ -218,15 +232,7 @@ async function fetchBigStuffForPortal(
             error: tentpoleError.message,
           });
         } else {
-          const raw = (tentpoleData ?? []) as Array<{
-            id: number;
-            title: string;
-            start_date: string;
-            end_date: string | null;
-            category: string | null;
-            source_id: number | null;
-            venue: { id: number; name: string; slug: string; neighborhood: string | null } | null;
-          }>;
+          const raw = (tentpoleData ?? []) as BigStuffTentpoleRow[];
           tentpoles = raw
             .filter((event) =>
               isEventCategoryAllowedForSourceAccess(
