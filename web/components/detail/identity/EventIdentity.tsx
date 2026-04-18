@@ -42,7 +42,7 @@ export const EventIdentity = memo(function EventIdentity({
   const priceText = formatPriceRange(event.is_free, event.price_min, event.price_max);
 
   const venueUrl = event.venue
-    ? buildSpotUrl(event.venue.slug, portalSlug, "page")
+    ? buildSpotUrl(event.venue.slug, portalSlug, "canonical")
     : null;
 
   const venueLabel = event.venue

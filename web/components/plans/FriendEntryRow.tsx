@@ -19,7 +19,7 @@ interface FriendEntryRowProps {
 }
 
 export function FriendEntryRow({ event, friend, portalSlug }: FriendEntryRowProps) {
-  const url = buildEventUrl(event.id, portalSlug, "page");
+  const url = buildEventUrl(event.id, portalSlug, "canonical");
 
   return (
     <a

@@ -59,7 +59,7 @@ export function VenueBlock({
 }: VenueBlockProps) {
   if (shows.length === 0) return null;
 
-  const venueUrl = buildSpotUrl(venue.slug, portalSlug, "feed");
+  const venueUrl = buildSpotUrl(venue.slug, portalSlug, "overlay");
   const visible = shows.slice(0, maxVisibleShows);
   const overflow = Math.max(shows.length - visible.length, 0);
 

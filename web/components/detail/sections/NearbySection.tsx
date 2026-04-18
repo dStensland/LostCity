@@ -44,7 +44,7 @@ export function NearbySection({ data, portalSlug }: SectionProps) {
   if (!hasContent) return null;
 
   const handleSpotClick = (slug: string) => {
-    window.location.href = buildSpotUrl(slug, portalSlug, "page");
+    window.location.href = buildSpotUrl(slug, portalSlug, "canonical");
   };
 
   const handleEventClick = (id: number) => {

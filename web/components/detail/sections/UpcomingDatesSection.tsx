@@ -58,7 +58,7 @@ export function UpcomingDatesSection({ data, portalSlug }: SectionProps) {
   return (
     <div className="space-y-1">
       {visible.map((event, index) => {
-        const href = buildEventUrl(event.id, portalSlug, "page");
+        const href = buildEventUrl(event.id, portalSlug, "canonical");
         return (
           <a
             key={event.id}
