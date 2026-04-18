@@ -173,6 +173,21 @@ export const POST = withAuth(async (request: NextRequest, { user, serviceClient 
     return NextResponse.json({ error: "Failed to find or create movie" }, { status: 500 });
   }
 
+  // Validate list_id belongs to the user — list_id is user input at a system
+  // boundary, and the column is a raw FK without RLS-backed ownership checks
+  // on this path (we use the service client), so verify here.
+  if (list_id != null) {
+    const { data: ownedList } = await serviceClient
+      .from("goblin_lists")
+      .select("id")
+      .eq("id", list_id)
+      .eq("user_id", user.id)
+      .maybeSingle();
+    if (!ownedList) {
+      return NextResponse.json({ error: "Invalid list_id" }, { status: 400 });
+    }
+  }
+
   // Create log entry
   const { data: entry, error } = await serviceClient
     .from("goblin_log_entries")
