@@ -169,6 +169,8 @@ Single enum `BigStuffType`:
 | `community`   | `--neon-green`| `festivals.festival_type = 'community'` OR title matches `/parade|streets alive|juneteenth|pride/i` |
 | `other`       | `--muted`     | fallback — rare                                                                        |
 
+**Palette-balance note (from designer review 2026-04-18):** Four type accent colors (gold + vibe + cyan + green) will appear stacked when a month has one of each type. The 2px `border-l` is subtle enough for them to coexist, but the ribbon-of-row-accents risks reading as a status board rather than an editorial calendar. Mitigation: this is a **verify gate, not a pre-emptive redesign**. The `/design-handoff verify` pass (Task 11) includes a check for "does the page feel rainbow-y?" — if yes, the fix is to tone specific accents (reduce `border-l` to 1px, or lower type pill saturation). Do NOT change the palette up-front; ship the 4-color version and let the browser render decide.
+
 Derivation is a pure function `getBigStuffType(item): BigStuffType` in `web/lib/big-stuff/type-derivation.ts`, fully unit-tested with fixtures covering:
 - Each festival_type value
 - Tentpole titles that should match each bucket (FIFA World Cup → sports, DragonCon → convention, AJC Peachtree Road Race → sports, Juneteenth Atlanta Parade & Music Festival → community, etc.)
@@ -181,6 +183,7 @@ Derivation runs once in the loader, baked into `BigStuffPageItem.type`. No clien
 - Horizontal row above the ribbon, using `FilterChip` from `web/components/filters/FilterChip.tsx`.
 - Labels: `All <N>`, `Festivals <N>`, `Conventions <N>`, `Sports <N>`, `Community <N>`. Counts are derived from unfiltered data (constant across selection).
 - "Other" bucket is NOT a chip. Items in "other" are included in `All` but not filterable.
+- **Chips with count < 2 are hidden entirely** (not shown at zero-count or near-zero). The chip row is adaptive to data density — a filter that can only narrow to 1 item isn't a useful filter.
 - Default active: `All`.
 - Click behavior:
   - Click an inactive chip → exclusive select (replaces current selection).
@@ -206,7 +209,7 @@ Derivation runs once in the loader, baked into `BigStuffPageItem.type`. No clien
 ### Collapsed-sticky strip (on scroll)
 
 - Activated when the full ribbon scrolls past the top of the viewport.
-- ~32px tall, pinned `position: sticky; top: 0`, z-index above body content.
+- Height: **`min-h-[44px]` on mobile** (touch target minimum), `h-8` (32px) on desktop via `sm:h-8`. Pinned `position: sticky; top: 0`, z-index above body content.
 - Contains just a row of month pills (no counts, no label label row), `text-xs font-mono tracking-[0.08em] uppercase`, `px-2 py-1`.
 - Active month pill (the one the user is currently scrolled to) has `bg-[var(--gold)]/15 text-[var(--gold)]` + underline.
 - Active-month tracking: IntersectionObserver on each `<BigStuffMonthSection>` with `rootMargin: "-40px 0px -70% 0px"` (i.e., a section counts as active when its top crosses below the collapsed strip and before it's scrolled past the viewport midpoint). Multiple sections may be intersecting; the one with the highest `top` value (closest-to-top) wins. Update is throttled via `requestAnimationFrame` to avoid layout thrash.
@@ -267,6 +270,12 @@ export interface BigStuffPageItem extends BigStuffItem {
 
 Check `web/components/detail/DescriptionTeaser.tsx` — if a `extractTeaser` helper is already exported there or from `web/lib/`, import and reuse. If the logic is inline inside the component, extract to `web/lib/teaser.ts` as part of this workstream (a small refactor; the existing component also switches to the imported helper).
 
+**DB coverage audit (2026-04-18):**
+- Festivals (Atlanta, `announced_2026 = true`, next 6 months): **25/25 rows, 100%** have `description` ≥ 30 chars.
+- Tentpole events (Atlanta, forward-looking, no festival_id): **35/49 rows, 71%** have `description` ≥ 30 chars.
+
+Festivals (which dominate the hero-tier slot) are fully covered. Tentpoles (which are usually compact rows, not heroes — compact rows don't render teaser anyway) are 71% covered. The hero card's null-teaser fallback (just title + meta, no teaser block) will fire rarely; no special visual treatment needed.
+
 ## Empty states
 
 - No events in any month (e.g., portal with zero `announced_2026` data): render the page header + a centered empty state ("Nothing on the 6-month horizon yet. Check back soon."). Ribbon hidden.
@@ -323,7 +332,7 @@ Check `web/components/detail/DescriptionTeaser.tsx` — if a `extractTeaser` hel
 
 - Below 640px (`sm:` breakpoint):
   - Full ribbon: horizontal snap-scroll, 3 visible months at ~110px each.
-  - Collapsed strip: same horizontal snap-scroll, 28px tall.
+  - Collapsed strip: horizontal snap-scroll, `min-h-[44px]` (touch target).
   - Filter chips: horizontal scroll chip strip (`FilterChip` default mobile).
   - Hero card: `aspect-[16/9]` image instead of 21:9.
   - Compact rows: thumbnail `56×56`, type pill wraps below meta.

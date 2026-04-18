@@ -907,6 +907,17 @@ describe("BigStuffFilterChips", () => {
     expect(container.querySelector('[role="tablist"]')).toBeDefined();
     expect(container.querySelectorAll('[role="tab"]').length).toBeGreaterThanOrEqual(5);
   });
+
+  it("hides a chip when count < 2", () => {
+    const sparseCounts = { festival: 28, convention: 11, sports: 1, community: 0, other: 0 };
+    const { queryByText } = render(
+      <BigStuffFilterChips counts={sparseCounts} active="all" onChange={vi.fn()} />,
+    );
+    expect(queryByText(/Sports/i)).toBeNull();
+    expect(queryByText(/Community/i)).toBeNull();
+    // All is always shown, regardless of count.
+    expect(queryByText(/All/i)).not.toBeNull();
+  });
 });
 ```
 
@@ -972,7 +983,7 @@ export default function BigStuffFilterChips({
           active={active === "all"}
         />
       </button>
-      {BUCKETS.map((b) => (
+      {BUCKETS.filter((b) => counts[b.value] >= 2).map((b) => (
         <button
           key={b.value}
           role="tab"
@@ -1556,7 +1567,7 @@ export default function BigStuffCollapsedStrip({
     <div
       role="navigation"
       aria-label="Jump to month (compact)"
-      className="sticky top-0 z-30 h-8 bg-[var(--void)]/95 border-b border-[var(--twilight)] backdrop-blur-sm"
+      className="sticky top-0 z-30 min-h-[44px] sm:h-8 sm:min-h-0 bg-[var(--void)]/95 border-b border-[var(--twilight)] backdrop-blur-sm"
     >
       <div className="flex items-center h-full overflow-x-auto snap-x snap-mandatory px-4 gap-4 max-w-6xl mx-auto">
         {monthKeys.map((key) => {
@@ -1950,7 +1961,7 @@ gh pr create --title "feat(festivals): rebuild Big Stuff see-all as calendar + h
 
 ## Test plan
 - [x] Unit: `teaser` (7), `type-derivation` (14), `load-big-stuff-page` (12).
-- [x] Component: `BigStuffFilterChips` (5), `BigStuffHeroCard` + `BigStuffRow` (9).
+- [x] Component: `BigStuffFilterChips` (6), `BigStuffHeroCard` + `BigStuffRow` (9).
 - [x] `tsc --noEmit` clean. Lint clean on touched files.
 - [x] Browser desktop verify (qa agent).
 - [x] `/design-handoff verify` against the Pencil comp.
