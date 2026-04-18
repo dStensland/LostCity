@@ -103,7 +103,7 @@ describe('PlaybillRow', () => {
     expect(screen.getByText(/drive-in/i)).toBeInTheDocument();
   });
 
-  it('links the row arrow to the explore-film page for that venue', () => {
+  it('links the row arrow to the shows lane film tab for that venue', () => {
     const { container } = render(
       <PlaybillRow
         venue={venue()}
@@ -113,7 +113,7 @@ describe('PlaybillRow', () => {
     );
     const link = container.querySelector('a[aria-label*="Plaza"]');
     expect(link).toBeTruthy();
-    expect(link?.getAttribute('href')).toContain('/atlanta/explore/film');
+    expect(link?.getAttribute('href')).toContain('/atlanta/explore?lane=shows&tab=film');
     expect(link?.getAttribute('href')).toContain('venue=plaza-theatre');
   });
 });

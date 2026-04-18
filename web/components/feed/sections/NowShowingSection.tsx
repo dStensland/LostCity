@@ -85,7 +85,7 @@ export default function NowShowingSection({
     };
   }, [portalSlug]);
 
-  const exploreHref = `/${portalSlug}/explore/film`;
+  const exploreHref = `/${portalSlug}/explore?lane=shows&tab=film`;
 
   if (loading) {
     return (

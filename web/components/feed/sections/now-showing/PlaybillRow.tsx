@@ -31,7 +31,7 @@ export default function PlaybillRow({
 }: PlaybillRowProps) {
   const shown = screenings.slice(0, MAX_FILMS);
   const overflow = Math.max(screenings.length - MAX_FILMS, 0);
-  const href = `/${portalSlug}/explore/film?venue=${venue.slug}`;
+  const href = `/${portalSlug}/explore?lane=shows&tab=film&venue=${venue.slug}`;
   const isDriveIn = venue.programming_style === 'drive_in';
 
   return (
