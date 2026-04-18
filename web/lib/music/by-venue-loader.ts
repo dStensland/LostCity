@@ -10,6 +10,7 @@ import { applyFeedGate } from "@/lib/feed-gate";
 import { logger } from "@/lib/logger";
 import { getLocalDateString } from "@/lib/formats";
 import { buildShowPayload, type RawEventRow } from "./build-show-payload";
+import { filterGhostVenues } from "./classification";
 import { effectiveStart } from "./tonight-loader";
 import type {
   MusicShowPayload,
@@ -186,8 +187,12 @@ export async function loadByVenue(
     includeAdditional,
   );
 
+  const pinned = new Set(pinnedSlugs);
   return {
     date: resolvedDate,
-    ...partitioned,
+    my_venues: filterGhostVenues(partitioned.my_venues, { pinned }),
+    editorial: filterGhostVenues(partitioned.editorial, { pinned }),
+    marquee: filterGhostVenues(partitioned.marquee, { pinned }),
+    additional: filterGhostVenues(partitioned.additional, { pinned }),
   };
 }
