@@ -48,6 +48,34 @@ const initialHadOverlayParam =
   );
 let initialOverlayConsumed = false;
 
+/**
+ * Build a selector that can re-find a triggering element after React may
+ * have replaced its DOM node during reconciliation. Prefers `id` (stable),
+ * then `href` (stable for Link elements), then a kind-tag fallback.
+ * Returns `null` when we can't build anything reliable.
+ */
+function buildFocusSelector(el: HTMLElement): string | null {
+  if (el.id) return `#${CSS.escape(el.id)}`;
+  const href = el.getAttribute("href");
+  if (href) {
+    // Escape any embedded double quotes for the attribute-value context.
+    const escaped = href.replace(/"/g, '\\"');
+    return `a[href="${escaped}"]`;
+  }
+  return null;
+}
+
+/** aria-label per overlay kind — announces entity type to assistive tech. */
+const ARIA_LABELS: Record<string, string> = {
+  event: "Event detail overlay",
+  spot: "Place detail overlay",
+  series: "Series detail overlay",
+  festival: "Festival detail overlay",
+  org: "Organization detail overlay",
+  artist: "Artist detail overlay",
+  neighborhood: "Neighborhood detail overlay",
+};
+
 interface DetailOverlayRouterProps {
   portalSlug: string;
   children: React.ReactNode;
@@ -57,6 +85,7 @@ function AnimatedDetailWrapper({
   children,
   onNavigateClose,
   animateEnter,
+  ariaLabel,
 }: {
   children: React.ReactNode;
   onNavigateClose: () => void;
@@ -66,9 +95,16 @@ function AnimatedDetailWrapper({
    * overlay. Animation still plays on swap and on subsequent click-to-open.
    */
   animateEnter: boolean;
+  /** aria-label for the dialog, e.g. "Event detail overlay". */
+  ariaLabel: string;
 }) {
   const [closing, setClosing] = useState(false);
   const navigatingRef = useRef(false);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  // Capture identifying info for the triggering element — a raw node ref
+  // doesn't survive React's reconciliation when the lane un-hides on close.
+  // The selector resolves back to an equivalent element on restore.
+  const triggerSelectorRef = useRef<string | null>(null);
 
   const handleAnimatedClose = useCallback(() => {
     if (navigatingRef.current) return;
@@ -82,6 +118,83 @@ function AnimatedDetailWrapper({
     }
   }, [closing, onNavigateClose]);
 
+  // Defensive fallback: if the exit animation's `animationend` event doesn't
+  // fire within the animation duration + a small buffer — e.g. the tab is
+  // background-throttled, or the user has an animation-blocker — force the
+  // close anyway so the user isn't trapped in a non-closing overlay. Matches
+  // --motion-fast (200ms) + margin.
+  useEffect(() => {
+    if (!closing || navigatingRef.current) return;
+    const id = setTimeout(() => {
+      if (!navigatingRef.current) {
+        navigatingRef.current = true;
+        onNavigateClose();
+      }
+    }, 500);
+    return () => clearTimeout(id);
+  }, [closing, onNavigateClose]);
+
+  // Capture trigger + move focus to overlay on mount.
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    const trigger = document.activeElement;
+    if (trigger instanceof HTMLElement && trigger.tagName !== "BODY") {
+      triggerSelectorRef.current = buildFocusSelector(trigger);
+    }
+    containerRef.current?.focus({ preventScroll: true });
+    return () => {
+      // Restore focus on unmount. Defer beyond the next paint — the lane was
+      // `display:none` while the overlay was active, and the browser refuses
+      // to move focus to display:none elements; React needs to re-render the
+      // lane un-hidden before focus() works. Selector (not a raw node ref)
+      // because React reconciliation may replace the original DOM node
+      // during the close — the selector re-queries the equivalent element.
+      const sel = triggerSelectorRef.current;
+      if (!sel) return;
+      setTimeout(() => {
+        const target = document.querySelector(sel);
+        if (target instanceof HTMLElement) {
+          target.focus({ preventScroll: true });
+        }
+      }, 0);
+    };
+  }, []);
+
+  // Escape closes + focus trap.
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        handleAnimatedClose();
+        return;
+      }
+      if (e.key !== "Tab") return;
+      // Focus trap — cycle Tab / Shift+Tab within the overlay container.
+      const container = containerRef.current;
+      if (!container) return;
+      const focusables = container.querySelectorAll<HTMLElement>(
+        'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      );
+      if (focusables.length === 0) {
+        e.preventDefault();
+        container.focus();
+        return;
+      }
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+      const active = document.activeElement as HTMLElement | null;
+      if (e.shiftKey && (active === first || active === container)) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && active === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [handleAnimatedClose]);
+
   const animClass = closing
     ? "animate-detail-exit"
     : animateEnter
@@ -90,7 +203,12 @@ function AnimatedDetailWrapper({
 
   return (
     <div
+      ref={containerRef}
       className={animClass}
+      role="dialog"
+      aria-modal="true"
+      aria-label={ariaLabel}
+      tabIndex={-1}
       onAnimationEnd={handleAnimationEnd}
     >
       {typeof children === "object" && children !== null && "props" in (children as React.ReactElement)
@@ -173,6 +291,7 @@ export default function DetailOverlayRouter({
           key={`event-${detailTarget.id}`}
           onNavigateClose={navigateClose}
           animateEnter={!isColdLoadMount}
+          ariaLabel={ARIA_LABELS[detailTarget.kind]}
         >
           <EventDetailView
             eventId={detailTarget.id}
@@ -193,6 +312,7 @@ export default function DetailOverlayRouter({
           key={`spot-${detailTarget.slug}`}
           onNavigateClose={navigateClose}
           animateEnter={!isColdLoadMount}
+          ariaLabel={ARIA_LABELS[detailTarget.kind]}
         >
           <PlaceDetailView
             slug={detailTarget.slug}
@@ -213,6 +333,7 @@ export default function DetailOverlayRouter({
           key={`series-${detailTarget.slug}`}
           onNavigateClose={navigateClose}
           animateEnter={!isColdLoadMount}
+          ariaLabel={ARIA_LABELS[detailTarget.kind]}
         >
           <SeriesDetailView
             slug={detailTarget.slug}
@@ -233,6 +354,7 @@ export default function DetailOverlayRouter({
           key={`festival-${detailTarget.slug}`}
           onNavigateClose={navigateClose}
           animateEnter={!isColdLoadMount}
+          ariaLabel={ARIA_LABELS[detailTarget.kind]}
         >
           <FestivalDetailView
             slug={detailTarget.slug}
@@ -253,6 +375,7 @@ export default function DetailOverlayRouter({
           key={`org-${detailTarget.slug}`}
           onNavigateClose={navigateClose}
           animateEnter={!isColdLoadMount}
+          ariaLabel={ARIA_LABELS[detailTarget.kind]}
         >
           <OrgDetailView
             slug={detailTarget.slug}
@@ -276,6 +399,7 @@ export default function DetailOverlayRouter({
           key={`neighborhood-${detailTarget.slug}`}
           onNavigateClose={navigateClose}
           animateEnter={!isColdLoadMount}
+          ariaLabel={ARIA_LABELS[detailTarget.kind]}
         >
           <NeighborhoodDetailView
             slug={detailTarget.slug}
@@ -297,9 +421,23 @@ export default function DetailOverlayRouter({
     setFeedVisible(!isDetailActive);
   }, [isDetailActive]);
 
+  // Polite live-region announcement so screen readers hear "Event detail
+  // opened" (etc.) when the overlay opens or swaps. Rendered outside the
+  // animated wrapper so it's unaffected by mount/unmount flicker.
+  const announcement = detailTarget
+    ? `${ARIA_LABELS[detailTarget.kind]?.replace(" overlay", "") ?? "Detail"} opened`
+    : "";
+
   return (
     <>
       <div className={isDetailActive ? "hidden" : "contents"}>{children}</div>
+      <div
+        role="status"
+        aria-live="polite"
+        className="sr-only"
+      >
+        {announcement}
+      </div>
       {detailView}
     </>
   );
