@@ -33,9 +33,16 @@ interface LogEntryRow {
   sort_order: number | null;
   tier_name: string | null;
   tier_color: string | null;
+  list_id: number | null;
   created_at: string;
   updated_at: string;
   movie: LogMovieRow;
+}
+
+interface LogListInfoRow {
+  id: number;
+  name: string;
+  slug: string | null;
 }
 
 interface LogTagRow {
@@ -55,6 +62,7 @@ interface LogPostBody {
   note?: string | null;
   watched_with?: string | null;
   tag_ids?: number[];
+  list_id?: number | null;
 }
 
 interface InsertedLogEntryRow {
@@ -72,7 +80,7 @@ export const GET = withAuth(async (request: NextRequest, { user, serviceClient }
   let query = serviceClient
     .from("goblin_log_entries")
     .select(`
-      id, watched_date, note, watched_with, sort_order, tier_name, tier_color, created_at, updated_at,
+      id, watched_date, note, watched_with, sort_order, tier_name, tier_color, list_id, created_at, updated_at,
       movie:goblin_movies!movie_id (
         id, tmdb_id, title, poster_path, backdrop_path, release_date, genres,
         runtime_minutes, director, year, rt_critics_score, rt_audience_score,
@@ -112,9 +120,27 @@ export const GET = withAuth(async (request: NextRequest, { user, serviceClient }
     }
   }
 
+  // Fetch lookup of lists referenced by these entries (sparse — many entries
+  // will have list_id = NULL and we don't want a join-per-row).
+  const listIds = Array.from(
+    new Set((entries || []).map((e) => e.list_id).filter((v): v is number => v !== null))
+  );
+  const listLookup: Record<number, LogListInfoRow> = {};
+  if (listIds.length > 0) {
+    const { data: listRows } = await serviceClient
+      .from("goblin_lists")
+      .select("id, name, slug")
+      .in("id", listIds)
+      .returns<LogListInfoRow[]>();
+    for (const row of listRows || []) {
+      listLookup[row.id] = row;
+    }
+  }
+
   const result = (entries || []).map((e) => ({
     ...e,
     tags: entryTags[e.id] || [],
+    list: e.list_id ? listLookup[e.list_id] ?? null : null,
   }));
 
   // If filtering by tag, filter client-side (simpler than a subquery)
@@ -132,7 +158,7 @@ export const POST = withAuth(async (request: NextRequest, { user, serviceClient 
   const raw: unknown = await request.json();
   const body: LogPostBody =
     typeof raw === "object" && raw !== null ? (raw as LogPostBody) : {};
-  const { tmdb_id, watched_date, note, watched_with, tag_ids } = body;
+  const { tmdb_id, watched_date, note, watched_with, tag_ids, list_id } = body;
 
   if (!tmdb_id || !watched_date) {
     return NextResponse.json(
@@ -147,6 +173,21 @@ export const POST = withAuth(async (request: NextRequest, { user, serviceClient 
     return NextResponse.json({ error: "Failed to find or create movie" }, { status: 500 });
   }
 
+  // Validate list_id belongs to the user — list_id is user input at a system
+  // boundary, and the column is a raw FK without RLS-backed ownership checks
+  // on this path (we use the service client), so verify here.
+  if (list_id != null) {
+    const { data: ownedList } = await serviceClient
+      .from("goblin_lists")
+      .select("id")
+      .eq("id", list_id)
+      .eq("user_id", user.id)
+      .maybeSingle();
+    if (!ownedList) {
+      return NextResponse.json({ error: "Invalid list_id" }, { status: 400 });
+    }
+  }
+
   // Create log entry
   const { data: entry, error } = await serviceClient
     .from("goblin_log_entries")
@@ -156,6 +197,7 @@ export const POST = withAuth(async (request: NextRequest, { user, serviceClient 
       watched_date,
       note: note?.trim() || null,
       watched_with: watched_with?.trim() || null,
+      list_id: list_id ?? null,
     } as never)
     .select("id, watched_date, note, watched_with, created_at")
     .single<InsertedLogEntryRow>();

@@ -30,6 +30,22 @@ export const PATCH = withAuthAndParams<{ id: string }>(
     if (body.sort_order !== undefined) updates.sort_order = body.sort_order;
     if (body.tier_name !== undefined) updates.tier_name = body.tier_name?.trim() || null;
     if (body.tier_color !== undefined) updates.tier_color = body.tier_color?.trim() || null;
+    if (body.list_id !== undefined) {
+      // list_id is user input at a system boundary. The FK alone doesn't
+      // prevent attaching to another user's list; verify ownership here.
+      if (body.list_id != null) {
+        const { data: ownedList } = await serviceClient
+          .from("goblin_lists")
+          .select("id")
+          .eq("id", body.list_id)
+          .eq("user_id", user.id)
+          .maybeSingle();
+        if (!ownedList) {
+          return NextResponse.json({ error: "Invalid list_id" }, { status: 400 });
+        }
+      }
+      updates.list_id = body.list_id ?? null;
+    }
 
     if (Object.keys(updates).length > 0) {
       updates.updated_at = new Date().toISOString();
