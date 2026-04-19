@@ -857,15 +857,29 @@ def _select_future_film_events_for_source(source_id: int) -> list[dict[str, Any]
 
 @retry_on_network_error(max_retries=4, base_delay=0.5)
 def _event_has_references(event_id: int) -> bool:
-    """Check if an event has RSVPs or saved items."""
+    """Check if an event has RSVPs (via plans/plan_invitees) or saved items."""
     client = get_client()
-    for table in ("event_rsvps", "saved_items"):
-        try:
-            result = client.table(table).select("id").eq("event_id", event_id).limit(1).execute()
-            if result.data:
-                return True
-        except Exception:
-            pass
+    # Check plans anchored to this event (replaces the dropped event_rsvps table)
+    try:
+        result = (
+            client.table("plans")
+            .select("id")
+            .eq("anchor_event_id", event_id)
+            .eq("anchor_type", "event")
+            .limit(1)
+            .execute()
+        )
+        if result.data:
+            return True
+    except Exception:
+        pass
+    # Check saved items
+    try:
+        result = client.table("saved_items").select("id").eq("event_id", event_id).limit(1).execute()
+        if result.data:
+            return True
+    except Exception:
+        pass
     return False
 
 
