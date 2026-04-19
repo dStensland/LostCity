@@ -4,6 +4,7 @@ import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import dynamic from "next/dynamic";
 import { setFeedVisible } from "@/lib/feed-visibility";
+import { LinkContextProvider } from "@/lib/link-context";
 import { markOverlayPhase, overlayRef } from "@/lib/detail/overlay-perf";
 import {
   peekEntityPreview,
@@ -47,6 +48,16 @@ const initialHadOverlayParam =
     window.location.search,
   );
 let initialOverlayConsumed = false;
+
+/**
+ * Per plan doc §Locked Decisions #4: after 5 consecutive overlay swaps, the
+ * next entity-link click should resolve as a canonical navigation (full page
+ * load) to keep the overlay depth bounded. Cards inside the overlay read
+ * context via `useLinkContext()`, so we force canonical by nesting an inner
+ * `LinkContextProvider value="canonical"` around the detail view when the
+ * counter hits this cap.
+ */
+const MAX_OVERLAY_DEPTH = 5;
 
 /**
  * Build a selector that can re-find a triggering element after React may
@@ -257,6 +268,41 @@ export default function DetailOverlayRouter({
     initialOverlayConsumed = true;
   }, []);
 
+  // Track swap depth: how many overlays have been opened in a row without
+  // closing. Initial value = 1 if we mounted with a target (cold-load or
+  // first click), else 0. Each target change while target stays truthy is a
+  // swap and increments depth. When detailTarget goes null (overlay closed),
+  // depth resets. When depth >= MAX_OVERLAY_DEPTH, card links inside the
+  // overlay render with canonical context.
+  const currentKey = detailTarget
+    ? `${detailTarget.kind}:${
+        "id" in detailTarget ? detailTarget.id : detailTarget.slug
+      }`
+    : null;
+  const prevKeyRef = useRef<string | null>(null);
+  const [swapDepth, setSwapDepth] = useState(currentKey ? 1 : 0);
+  useEffect(() => {
+    if (!currentKey) {
+      if (prevKeyRef.current !== null) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setSwapDepth(0);
+        prevKeyRef.current = null;
+      }
+      return;
+    }
+    if (prevKeyRef.current === null) {
+      // First open of this overlay chain — already counted by initial state.
+      prevKeyRef.current = currentKey;
+      return;
+    }
+    if (prevKeyRef.current !== currentKey) {
+      prevKeyRef.current = currentKey;
+      setSwapDepth((d) => d + 1);
+    }
+  }, [currentKey]);
+
+  const atDepthCap = swapDepth >= MAX_OVERLAY_DEPTH;
+
   useEffect(() => {
     if (!detailTarget) return;
     window.scrollTo({ top: 0, left: 0, behavior: "auto" });
@@ -421,6 +467,17 @@ export default function DetailOverlayRouter({
     setFeedVisible(!isDetailActive);
   }, [isDetailActive]);
 
+  // Wrap the detail view in an inner LinkContextProvider when at cap so that
+  // card components inside (which build URLs via useLinkContext) emit
+  // canonical links. Next click inside the overlay becomes a full-page nav to
+  // the canonical route instead of yet-another swap.
+  const wrappedDetailView =
+    atDepthCap && detailView ? (
+      <LinkContextProvider value="canonical">{detailView}</LinkContextProvider>
+    ) : (
+      detailView
+    );
+
   // Polite live-region announcement so screen readers hear "Event detail
   // opened" (etc.) when the overlay opens or swaps. Rendered outside the
   // animated wrapper so it's unaffected by mount/unmount flicker.
@@ -438,7 +495,7 @@ export default function DetailOverlayRouter({
       >
         {announcement}
       </div>
-      {detailView}
+      {wrappedDetailView}
     </>
   );
 }
