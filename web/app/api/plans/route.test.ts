@@ -295,7 +295,7 @@ describe("GET /api/plans", () => {
       }),
     };
 
-    const service = {
+    const supabase = {
       from: vi.fn((table: string) => {
         if (table === "plan_invitees") return inviteeChain;
         return planChain;
@@ -310,7 +310,8 @@ describe("GET /api/plans", () => {
 
     const response = await GET(request, {
       user: { id: USER_ID },
-      serviceClient: service,
+      serviceClient: makeServiceClient(),
+      supabase,
     } as never);
 
     expect(response.status).toBe(200);
@@ -328,8 +329,69 @@ describe("GET /api/plans", () => {
     const response = await GET(request, {
       user: { id: USER_ID },
       serviceClient: makeServiceClient(),
+      supabase: makeServiceClient(),
     } as never);
 
     expect(response.status).toBe(400);
+  });
+
+  it("reads plans through the RLS-scoped client, never the service client", async () => {
+    // Regression guard: if a future refactor reintroduces the service client
+    // here, scope=friends and anchor_*_id filters would bypass RLS and leak
+    // every plan DB-wide. Assert the list SELECT is issued via `supabase`,
+    // not `serviceClient`.
+    const serviceClient = makeServiceClient();
+    const supabase = makeServiceClient();
+
+    const { GET } = await import("@/app/api/plans/route");
+
+    const request = new NextRequest(
+      "http://localhost:3000/api/plans?scope=friends&status=upcoming"
+    );
+
+    await GET(request, {
+      user: { id: USER_ID },
+      serviceClient,
+      supabase,
+    } as never);
+
+    expect(supabase.from).toHaveBeenCalledWith("plans");
+    expect(serviceClient.from).not.toHaveBeenCalled();
+  });
+
+  it("omits share_token from the list response", async () => {
+    // share_token is the gate to /api/plans/shared/:token. Only the creator
+    // should see it (via the detail endpoint). Ensure the list SELECT doesn't
+    // include it so token harvesting via the list isn't possible.
+    const supabase = makeServiceClient();
+    let capturedSelect = "";
+    (supabase.from as ReturnType<typeof vi.fn>).mockImplementation(() => ({
+      select: vi.fn((fields: string) => {
+        capturedSelect = fields;
+        return {
+          order: vi.fn().mockReturnValue({
+            in: vi.fn().mockReturnValue({
+              gte: vi.fn().mockReturnValue({
+                eq: vi.fn().mockResolvedValue({ data: [], error: null }),
+              }),
+            }),
+          }),
+        };
+      }),
+    }));
+
+    const { GET } = await import("@/app/api/plans/route");
+
+    const request = new NextRequest(
+      "http://localhost:3000/api/plans?scope=friends&status=upcoming"
+    );
+
+    await GET(request, {
+      user: { id: USER_ID },
+      serviceClient: makeServiceClient(),
+      supabase,
+    } as never);
+
+    expect(capturedSelect).not.toContain("share_token");
   });
 });
