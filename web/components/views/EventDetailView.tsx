@@ -169,7 +169,14 @@ export default function EventDetailView({
   );
 
   if (status === "loading" || !entityData || !event) {
-    if (seedData) return <SeededDetailSkeleton seed={seedData} />;
+    if (seedData) {
+      return (
+        <SeededDetailSkeleton
+          seed={seedData}
+          variant={inOverlay ? "sidebar" : "full"}
+        />
+      );
+    }
     return <DetailLoadingSkeleton />;
   }
 

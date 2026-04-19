@@ -5702,12 +5702,32 @@ body:has([data-vertical="hospital"]) .rain-overlay {
   }
 }
 
+/* Depth-cap exit: after 5 consecutive swaps the overlay slides *further*
+   down-and-off so the user senses "leaving overlay context" before the
+   canonical page loads — distinct from the standard close anim. Matches
+   plan doc § Motion Specs — Depth-cap → canonical. */
+@keyframes detail-exit-depth-cap {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(var(--motion-shift-xl, 24px));
+  }
+}
+
 .animate-detail-enter {
   animation: detail-enter var(--motion-dramatic, 600ms) var(--ease-out) forwards;
 }
 
 .animate-detail-exit {
   animation: detail-exit var(--motion-fast, 200ms) ease-in forwards;
+  pointer-events: none;
+}
+
+.animate-detail-exit-depth-cap {
+  animation: detail-exit-depth-cap var(--motion-slow, 400ms) var(--ease-out) forwards;
   pointer-events: none;
 }
 

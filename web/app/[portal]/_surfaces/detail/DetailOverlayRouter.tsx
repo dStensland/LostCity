@@ -97,6 +97,8 @@ function AnimatedDetailWrapper({
   onNavigateClose,
   animateEnter,
   ariaLabel,
+  atDepthCap = false,
+  onDepthCapExit,
 }: {
   children: React.ReactNode;
   onNavigateClose: () => void;
@@ -108,8 +110,19 @@ function AnimatedDetailWrapper({
   animateEnter: boolean;
   /** aria-label for the dialog, e.g. "Event detail overlay". */
   ariaLabel: string;
+  /**
+   * When true, card-link clicks inside the overlay are intercepted: a
+   * distinct depth-cap exit animation plays (slides further, longer
+   * duration) before `onDepthCapExit(href)` fires — signals "leaving
+   * overlay context" per plan § Motion Specs.
+   */
+  atDepthCap?: boolean;
+  onDepthCapExit?: (href: string) => void;
 }) {
   const [closing, setClosing] = useState(false);
+  // Null when not a depth-cap close; holds the target href when a depth-cap
+  // link click has been intercepted and we're awaiting the exit animation.
+  const [depthCapHref, setDepthCapHref] = useState<string | null>(null);
   const navigatingRef = useRef(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
   // Capture identifying info for the triggering element — a raw node ref
@@ -125,25 +138,63 @@ function AnimatedDetailWrapper({
   const handleAnimationEnd = useCallback(() => {
     if (closing && !navigatingRef.current) {
       navigatingRef.current = true;
-      onNavigateClose();
+      if (depthCapHref && onDepthCapExit) {
+        onDepthCapExit(depthCapHref);
+      } else {
+        onNavigateClose();
+      }
     }
-  }, [closing, onNavigateClose]);
+  }, [closing, onNavigateClose, depthCapHref, onDepthCapExit]);
+
+  // Depth-cap interceptor — when at cap, capture internal link clicks on the
+  // overlay container, prevent the default Next.js navigation, play the
+  // distinct exit animation, then navigate via onDepthCapExit so the user
+  // senses "leaving overlay context" before the canonical page loads.
+  useEffect(() => {
+    if (!atDepthCap || !onDepthCapExit) return;
+    const container = containerRef.current;
+    if (!container) return;
+    function onClick(e: MouseEvent) {
+      const anchor = (e.target as Element | null)?.closest?.("a[href]");
+      if (!(anchor instanceof HTMLAnchorElement)) return;
+      // Skip cmd/ctrl/shift/alt + middle-click — let browser default happen.
+      if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+      let url: URL;
+      try {
+        url = new URL(anchor.href, window.location.origin);
+      } catch {
+        return;
+      }
+      // Same-origin only — external links shouldn't get the overlay-exit treatment.
+      if (url.origin !== window.location.origin) return;
+      e.preventDefault();
+      setDepthCapHref(url.pathname + url.search + url.hash);
+      setClosing(true);
+    }
+    container.addEventListener("click", onClick, true);
+    return () => container.removeEventListener("click", onClick, true);
+  }, [atDepthCap, onDepthCapExit]);
 
   // Defensive fallback: if the exit animation's `animationend` event doesn't
   // fire within the animation duration + a small buffer — e.g. the tab is
   // background-throttled, or the user has an animation-blocker — force the
-  // close anyway so the user isn't trapped in a non-closing overlay. Matches
-  // --motion-fast (200ms) + margin.
+  // navigation anyway so the user isn't trapped. Longer budget on depth-cap
+  // (animation is 400ms vs 200ms) matches --motion-slow + margin.
   useEffect(() => {
     if (!closing || navigatingRef.current) return;
+    const budget = depthCapHref ? 700 : 500;
     const id = setTimeout(() => {
       if (!navigatingRef.current) {
         navigatingRef.current = true;
-        onNavigateClose();
+        if (depthCapHref && onDepthCapExit) {
+          onDepthCapExit(depthCapHref);
+        } else {
+          onNavigateClose();
+        }
       }
-    }, 500);
+    }, budget);
     return () => clearTimeout(id);
-  }, [closing, onNavigateClose]);
+  }, [closing, onNavigateClose, depthCapHref, onDepthCapExit]);
 
   // Capture trigger + move focus to overlay on mount.
   useEffect(() => {
@@ -207,7 +258,9 @@ function AnimatedDetailWrapper({
   }, [handleAnimatedClose]);
 
   const animClass = closing
-    ? "animate-detail-exit"
+    ? depthCapHref
+      ? "animate-detail-exit-depth-cap"
+      : "animate-detail-exit"
     : animateEnter
       ? "animate-detail-enter"
       : "";
@@ -335,6 +388,17 @@ export default function DetailOverlayRouter({
     navigateClose();
   }, [navigateClose]);
 
+  // Depth-cap exit: the wrapper intercepts the card click, plays the longer
+  // depth-cap exit anim, then calls this — which does the actual canonical
+  // navigation. router.push (not router.replace) so browser history still
+  // carries the transition.
+  const handleDepthCapExit = useCallback(
+    (href: string) => {
+      router.push(href);
+    },
+    [router],
+  );
+
   let detailView: React.ReactNode = null;
 
   switch (detailTarget?.kind) {
@@ -348,6 +412,8 @@ export default function DetailOverlayRouter({
           onNavigateClose={navigateClose}
           animateEnter={!isColdLoadMount}
           ariaLabel={ARIA_LABELS[detailTarget.kind]}
+          atDepthCap={atDepthCap}
+          onDepthCapExit={handleDepthCapExit}
         >
           <EventDetailView
             eventId={detailTarget.id}
@@ -370,6 +436,8 @@ export default function DetailOverlayRouter({
           onNavigateClose={navigateClose}
           animateEnter={!isColdLoadMount}
           ariaLabel={ARIA_LABELS[detailTarget.kind]}
+          atDepthCap={atDepthCap}
+          onDepthCapExit={handleDepthCapExit}
         >
           <PlaceDetailView
             slug={detailTarget.slug}
@@ -391,6 +459,8 @@ export default function DetailOverlayRouter({
           onNavigateClose={navigateClose}
           animateEnter={!isColdLoadMount}
           ariaLabel={ARIA_LABELS[detailTarget.kind]}
+          atDepthCap={atDepthCap}
+          onDepthCapExit={handleDepthCapExit}
         >
           <SeriesDetailView
             slug={detailTarget.slug}
@@ -412,6 +482,8 @@ export default function DetailOverlayRouter({
           onNavigateClose={navigateClose}
           animateEnter={!isColdLoadMount}
           ariaLabel={ARIA_LABELS[detailTarget.kind]}
+          atDepthCap={atDepthCap}
+          onDepthCapExit={handleDepthCapExit}
         >
           <FestivalDetailView
             slug={detailTarget.slug}
@@ -433,6 +505,8 @@ export default function DetailOverlayRouter({
           onNavigateClose={navigateClose}
           animateEnter={!isColdLoadMount}
           ariaLabel={ARIA_LABELS[detailTarget.kind]}
+          atDepthCap={atDepthCap}
+          onDepthCapExit={handleDepthCapExit}
         >
           <OrgDetailView
             slug={detailTarget.slug}
@@ -457,6 +531,8 @@ export default function DetailOverlayRouter({
           onNavigateClose={navigateClose}
           animateEnter={!isColdLoadMount}
           ariaLabel={ARIA_LABELS[detailTarget.kind]}
+          atDepthCap={atDepthCap}
+          onDepthCapExit={handleDepthCapExit}
         >
           <NeighborhoodDetailView
             slug={detailTarget.slug}
