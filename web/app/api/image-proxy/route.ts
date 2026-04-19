@@ -26,6 +26,37 @@ export const runtime = "nodejs";
 const MAX_BYTES = 10 * 1024 * 1024; // 10MB
 const TIMEOUT_MS = 10_000;
 
+const EXT_TO_MIME: Record<string, string> = {
+  ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg",
+  ".png": "image/png",
+  ".gif": "image/gif",
+  ".webp": "image/webp",
+  ".avif": "image/avif",
+  ".svg": "image/svg+xml",
+  ".bmp": "image/bmp",
+  ".ico": "image/x-icon",
+  ".heic": "image/heic",
+};
+
+/**
+ * Resolve an effective image Content-Type. Trust the upstream header when it
+ * already declares an image type. If the upstream header is missing or
+ * non-image (some old Apache/WP stacks omit it), infer from the URL
+ * extension. Returns null when neither source yields a known image type.
+ */
+function resolveImageContentType(
+  upstreamHeader: string,
+  urlPath: string,
+): string | null {
+  if (upstreamHeader.startsWith("image/")) return upstreamHeader;
+
+  const lastDot = urlPath.lastIndexOf(".");
+  if (lastDot < 0) return null;
+  const ext = urlPath.slice(lastDot).toLowerCase();
+  return EXT_TO_MIME[ext] ?? null;
+}
+
 function isBlockedHostname(hostname: string): boolean {
   const lower = hostname.toLowerCase();
   if (
@@ -183,8 +214,16 @@ export async function GET(request: NextRequest) {
         signal: controller.signal,
         redirect: "manual",
         headers: {
-          "User-Agent": "LostCityImageProxy/1.0",
-          Accept: "image/*",
+          // Some image hosts (Wix, imgix on certain tenants, WP hotlink-protection
+          // plugins) reject non-browser UAs with 403. Use a standard browser UA
+          // to access public images the same way a browser would.
+          "User-Agent":
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+          // Set Referer to the image's own origin so hotlink-protection
+          // plugins that check same-origin permit the request.
+          Referer: `${currentTarget.origin}/`,
+          Accept: "image/avif,image/webp,image/apng,image/*,*/*;q=0.8",
+          "Accept-Encoding": "gzip, deflate, br",
         },
       });
 
@@ -241,8 +280,9 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Upstream error" }, { status: 502 });
   }
 
-  const contentType = upstream.headers.get("content-type") || "";
-  if (!contentType.startsWith("image/")) {
+  const rawContentType = upstream.headers.get("content-type") || "";
+  const contentType = resolveImageContentType(rawContentType, currentTarget.pathname);
+  if (!contentType) {
     return NextResponse.json({ error: "Unsupported content type" }, { status: 415 });
   }
 

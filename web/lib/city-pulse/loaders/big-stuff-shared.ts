@@ -45,6 +45,7 @@ export function groupItemsByMonth(
   items: BigStuffItem[],
   today: string,
   horizonMonths: number,
+  maxPerMonth: number = MAX_ITEMS_PER_MONTH,
 ): BigStuffMonthBucket[] {
   const [yStr, mStr] = today.split("-");
   const baseYear = parseInt(yStr, 10);
@@ -75,7 +76,7 @@ export function groupItemsByMonth(
     const monthKey = item.startDate.slice(0, 7);
     const bucket = buckets.get(monthKey);
     if (!bucket) continue; // beyond horizon
-    if (bucket.items.length < MAX_ITEMS_PER_MONTH) {
+    if (bucket.items.length < maxPerMonth) {
       bucket.items.push(item);
     } else {
       bucket.overflowCount += 1;
