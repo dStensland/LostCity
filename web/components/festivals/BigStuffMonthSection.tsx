@@ -37,7 +37,7 @@ export default function BigStuffMonthSection({
 
   return (
     <section id={`month-${monthKey}`} className="scroll-mt-[40px]">
-      <h2 className="font-mono text-xs font-bold tracking-[0.14em] uppercase text-[var(--cream)] border-t border-[var(--twilight)] pt-4 mb-4">
+      <h2 className="font-mono text-xs font-bold tracking-[0.14em] uppercase text-[var(--cream)] border-t border-[var(--twilight)] pt-6 mb-3">
         {label}
       </h2>
       <div className="space-y-3">

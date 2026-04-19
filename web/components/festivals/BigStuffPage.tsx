@@ -91,7 +91,7 @@ export default function BigStuffPage(props: BigStuffPageProps) {
       <BigStuffCollapsedStrip monthKeys={monthKeys} onJump={handleJump} />
       <main className="max-w-4xl mx-auto px-4 py-10">
         <Header portalName={portalName} counts={counts} active={active} onChange={setActive} ribbonMonths={ribbonMonths} onJump={handleJump} />
-        <div className="mt-8 space-y-10">
+        <div className="mt-6 space-y-6">
           {nonEmptyMonths.map((b) => (
             <BigStuffMonthSection
               key={b.monthKey}

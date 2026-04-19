@@ -183,8 +183,16 @@ export async function GET(request: NextRequest) {
         signal: controller.signal,
         redirect: "manual",
         headers: {
-          "User-Agent": "LostCityImageProxy/1.0",
-          Accept: "image/*",
+          // Some image hosts (Wix, imgix on certain tenants, WP hotlink-protection
+          // plugins) reject non-browser UAs with 403. Use a standard browser UA
+          // to access public images the same way a browser would.
+          "User-Agent":
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+          // Set Referer to the image's own origin so hotlink-protection
+          // plugins that check same-origin permit the request.
+          Referer: `${currentTarget.origin}/`,
+          Accept: "image/avif,image/webp,image/apng,image/*,*/*;q=0.8",
+          "Accept-Encoding": "gzip, deflate, br",
         },
       });
 
