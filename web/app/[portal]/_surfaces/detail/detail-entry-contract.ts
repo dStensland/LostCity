@@ -1,11 +1,20 @@
-const DETAIL_ENTRY_PARAM_KEYS = [
+/**
+ * The query-param keys that DetailOverlayRouter recognizes as
+ * overlay-target indicators. Exported so URL builders can clear sibling
+ * keys atomically when producing a new overlay URL (swap-not-stack —
+ * see docs/plans/explore-overlay-architecture-2026-04-18.md § Component 3).
+ */
+export const DETAIL_ENTRY_PARAM_KEYS = [
   "event",
   "spot",
   "series",
   "festival",
   "org",
   "artist",
+  "neighborhood",
 ] as const;
+
+export type DetailEntryParamKey = (typeof DETAIL_ENTRY_PARAM_KEYS)[number];
 
 type SearchParamReader = {
   get(name: string): string | null;
@@ -20,7 +29,8 @@ export type DetailOverlayTarget =
   | { kind: "series"; slug: string }
   | { kind: "festival"; slug: string }
   | { kind: "org"; slug: string }
-  | { kind: "artist"; slug: string };
+  | { kind: "artist"; slug: string }
+  | { kind: "neighborhood"; slug: string };
 
 export function resolveDetailOverlayTarget(
   searchParams: SearchParamReader,
@@ -56,6 +66,11 @@ export function resolveDetailOverlayTarget(
   const artistSlug = searchParams.get("artist");
   if (artistSlug) {
     return { kind: "artist", slug: artistSlug };
+  }
+
+  const neighborhoodSlug = searchParams.get("neighborhood");
+  if (neighborhoodSlug) {
+    return { kind: "neighborhood", slug: neighborhoodSlug };
   }
 
   return null;

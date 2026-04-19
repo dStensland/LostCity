@@ -65,7 +65,8 @@ function normalizeLane(
     rawLane === "game-day" ||
     rawLane === "regulars" ||
     rawLane === "places" ||
-    rawLane === "classes"
+    rawLane === "classes" ||
+    rawLane === "neighborhoods"
       ? rawLane
       : null;
 

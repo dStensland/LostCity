@@ -16,9 +16,6 @@ import { FamilyFeed } from "@/components/family";
 import DogMapView from "../../_components/dog/DogMapView";
 import DogSavedView from "../../_components/dog/DogSavedView";
 import { DOG_DETAIL_VIEW_CSS, DOG_PORTAL_VAR_OVERRIDES } from "@/lib/dog-art";
-import { DetailSurface } from "../detail/DetailSurface";
-import { hasDetailOverlayTarget } from "../detail/detail-entry-contract";
-import { resolveDetailType } from "../detail/DetailLoading";
 import { FeedLoading, DogMapLoading, DogSavedLoading } from "./FeedLoading";
 import { FeedLayoutChrome } from "./FeedLayoutChrome";
 import { AmbientSuppression } from "./AmbientSuppression";
@@ -33,15 +30,8 @@ type PortalSearchParams = {
   series?: string;
   festival?: string;
   org?: string;
+  neighborhood?: string;
 };
-
-function toSearchParams(searchParams: PortalSearchParams): URLSearchParams {
-  return new URLSearchParams(
-    Object.entries(searchParams)
-      .filter(([, value]) => value !== undefined)
-      .map(([key, value]) => [key, value as string]),
-  );
-}
 
 async function DefaultCityTemplate({
   portal,
@@ -60,6 +50,14 @@ async function DefaultCityTemplate({
   );
 }
 
+/**
+ * FeedSurface renders the feed template for a portal. The overlay wrap
+ * (events / spots / series / festivals / orgs as query-param overlays)
+ * is mounted inside PortalSurfaceChrome — see
+ * docs/plans/explore-overlay-architecture-2026-04-18.md § Component 2.
+ * Callers just pass `searchParams` and the chrome handles the rest,
+ * gated on `request.runtimePolicy.supportsOverlayEntry`.
+ */
 export async function FeedSurface({
   request,
   searchParams,
@@ -67,11 +65,6 @@ export async function FeedSurface({
   request: PortalResolvedRequest;
   searchParams: PortalSearchParams;
 }) {
-  const detailSearchParams = toSearchParams(searchParams);
-  const overlayEnabled =
-    request.runtimePolicy.supportsOverlayEntry &&
-    hasDetailOverlayTarget(detailSearchParams);
-  const detailType = overlayEnabled ? resolveDetailType(searchParams) : null;
   const portalPageSchema = {
     "@context": "https://schema.org",
     "@type": "CollectionPage",
@@ -87,49 +80,37 @@ export async function FeedSurface({
     },
   };
 
+  const feedFallback = <FeedLoading vertical={request.vertical} />;
+
   if (request.isHotel) {
-    const content = (
+    return (
       <div className="min-h-screen overflow-x-hidden">
-        <PortalSurfaceChrome surface="feed" request={request}>
+        <PortalSurfaceChrome
+          surface="feed"
+          request={request}
+          searchParams={searchParams}
+          detailFallback={feedFallback}
+        >
           <HotelTemplate portal={request.portal} />
         </PortalSurfaceChrome>
       </div>
-    );
-
-    return overlayEnabled ? (
-      <DetailSurface
-        portalSlug={request.portal.slug}
-        detailType={detailType!}
-        feedFallback={<FeedLoading vertical={request.vertical} />}
-      >
-        {content}
-      </DetailSurface>
-    ) : (
-      content
     );
   }
 
   if (request.isMarketplace) {
     const marketplacePersona = normalizeMarketplacePersona(searchParams.persona);
-    const content = (
+    return (
       <div className="min-h-screen overflow-x-hidden bg-[var(--mkt-ivory)] text-[var(--mkt-charcoal)]">
         <AmbientSuppression />
-        <PortalSurfaceChrome surface="feed" request={request}>
+        <PortalSurfaceChrome
+          surface="feed"
+          request={request}
+          searchParams={searchParams}
+          detailFallback={feedFallback}
+        >
           <MarketplaceTemplate portal={request.portal} persona={marketplacePersona} />
         </PortalSurfaceChrome>
       </div>
-    );
-
-    return overlayEnabled ? (
-      <DetailSurface
-        portalSlug={request.portal.slug}
-        detailType={detailType!}
-        feedFallback={<FeedLoading vertical={request.vertical} />}
-      >
-        {content}
-      </DetailSurface>
-    ) : (
-      content
     );
   }
 
@@ -143,56 +124,35 @@ export async function FeedSurface({
         <div className="dog-portal-root">
           {dogView === "find" ? (
             <Suspense fallback={<DogMapLoading />}>
-              {overlayEnabled ? (
-                <DetailSurface
-                  portalSlug={request.portal.slug}
-                  detailType={detailType!}
-                  feedFallback={<DogMapLoading />}
-                >
-                  <PortalSurfaceChrome surface="feed" request={request}>
-                    <DogMapView />
-                  </PortalSurfaceChrome>
-                </DetailSurface>
-              ) : (
-                <PortalSurfaceChrome surface="feed" request={request}>
-                  <DogMapView />
-                </PortalSurfaceChrome>
-              )}
+              <PortalSurfaceChrome
+                surface="feed"
+                request={request}
+                searchParams={searchParams}
+                detailFallback={<DogMapLoading />}
+              >
+                <DogMapView />
+              </PortalSurfaceChrome>
             </Suspense>
           ) : dogView === "community" ? (
             <Suspense fallback={<DogSavedLoading />}>
-              {overlayEnabled ? (
-                <DetailSurface
-                  portalSlug={request.portal.slug}
-                  detailType={detailType!}
-                  feedFallback={<DogSavedLoading />}
-                >
-                  <PortalSurfaceChrome surface="feed" request={request}>
-                    <DogSavedView portalSlug={request.portal.slug} />
-                  </PortalSurfaceChrome>
-                </DetailSurface>
-              ) : (
-                <PortalSurfaceChrome surface="feed" request={request}>
-                  <DogSavedView portalSlug={request.portal.slug} />
-                </PortalSurfaceChrome>
-              )}
+              <PortalSurfaceChrome
+                surface="feed"
+                request={request}
+                searchParams={searchParams}
+                detailFallback={<DogSavedLoading />}
+              >
+                <DogSavedView portalSlug={request.portal.slug} />
+              </PortalSurfaceChrome>
             </Suspense>
           ) : (
-            overlayEnabled ? (
-              <DetailSurface
-                portalSlug={request.portal.slug}
-                detailType={detailType!}
-                feedFallback={<FeedLoading vertical={request.vertical} />}
-              >
-                <PortalSurfaceChrome surface="feed" request={request}>
-                  <DogTemplate portal={request.portal} />
-                </PortalSurfaceChrome>
-              </DetailSurface>
-            ) : (
-              <PortalSurfaceChrome surface="feed" request={request}>
-                <DogTemplate portal={request.portal} />
-              </PortalSurfaceChrome>
-            )
+            <PortalSurfaceChrome
+              surface="feed"
+              request={request}
+              searchParams={searchParams}
+              detailFallback={feedFallback}
+            >
+              <DogTemplate portal={request.portal} />
+            </PortalSurfaceChrome>
           )}
           {dogView !== "find" && <div className="h-20 sm:hidden" />}
         </div>
@@ -201,10 +161,15 @@ export async function FeedSurface({
   }
 
   if (request.isFamily) {
-    const content = (
+    return (
       <div className="min-h-screen overflow-x-hidden">
         <AmbientSuppression />
-        <PortalSurfaceChrome surface="feed" request={request}>
+        <PortalSurfaceChrome
+          surface="feed"
+          request={request}
+          searchParams={searchParams}
+          detailFallback={feedFallback}
+        >
           <FamilyFeed
             portalId={request.portal.id}
             portalSlug={request.portal.slug}
@@ -213,40 +178,21 @@ export async function FeedSurface({
         </PortalSurfaceChrome>
       </div>
     );
-
-    return overlayEnabled ? (
-      <DetailSurface
-        portalSlug={request.portal.slug}
-        detailType={detailType!}
-        feedFallback={<FeedLoading vertical={request.vertical} />}
-      >
-        {content}
-      </DetailSurface>
-    ) : (
-      content
-    );
   }
 
   if (request.isAdventure) {
-    const content = (
+    return (
       <div className="min-h-screen overflow-x-hidden">
         <AmbientSuppression />
-        <PortalSurfaceChrome surface="feed" request={request}>
+        <PortalSurfaceChrome
+          surface="feed"
+          request={request}
+          searchParams={searchParams}
+          detailFallback={feedFallback}
+        >
           <DefaultTemplate portal={request.portal} />
         </PortalSurfaceChrome>
       </div>
-    );
-
-    return overlayEnabled ? (
-      <DetailSurface
-        portalSlug={request.portal.slug}
-        detailType={detailType!}
-        feedFallback={<FeedLoading vertical={request.vertical} />}
-      >
-        {content}
-      </DetailSurface>
-    ) : (
-      content
     );
   }
 
@@ -259,16 +205,21 @@ export async function FeedSurface({
     ? "mx-auto max-w-6xl px-4 pb-20 sm:px-6 lg:px-8"
     : "mx-auto max-w-[1600px] px-4 pb-20 sm:px-6 lg:px-8";
 
-  const content = (
+  return (
     <div className="min-h-screen">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: safeJsonLd(portalPageSchema) }}
       />
-      <PortalSurfaceChrome surface="feed" request={request}>
+      <PortalSurfaceChrome
+        surface="feed"
+        request={request}
+        searchParams={searchParams}
+        detailFallback={feedFallback}
+      >
         {request.disableAmbientEffects ? <AmbientSuppression /> : <AmbientBackground />}
         <main className={mainClassName}>
-          <Suspense fallback={<FeedLoading vertical={request.vertical} />}>
+          <Suspense fallback={feedFallback}>
             {request.isFilm ? (
               <FilmTemplate portal={request.portal} />
             ) : request.portal.page_template === "gallery" ? (
@@ -283,17 +234,5 @@ export async function FeedSurface({
         <FeedLayoutChrome request={request} />
       </PortalSurfaceChrome>
     </div>
-  );
-
-  return overlayEnabled ? (
-    <DetailSurface
-      portalSlug={request.portal.slug}
-      detailType={detailType!}
-      feedFallback={<FeedLoading vertical={request.vertical} />}
-    >
-      {content}
-    </DetailSurface>
-  ) : (
-    content
   );
 }

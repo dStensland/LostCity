@@ -161,6 +161,20 @@ export interface GameDayLaneInitialData {
   requestKey: string;
 }
 
+import type { NeighborhoodActivity } from "@/lib/neighborhood-colors";
+
+export interface NeighborhoodsLaneTierSection {
+  title: string;
+  neighborhoods: Array<{ id: string; name: string; count: number }>;
+}
+
+export interface NeighborhoodsLaneInitialData {
+  activityData: NeighborhoodActivity[];
+  tierSections: NeighborhoodsLaneTierSection[];
+  tonightNeighborhoodCount: number;
+  weekNeighborhoodCount: number;
+}
+
 export type ExploreLaneInitialDataMap = {
   events: EventsLaneInitialData;
   places: PlacesLaneInitialData;
@@ -168,5 +182,5 @@ export type ExploreLaneInitialDataMap = {
   shows: ShowsLaneInitialData;
   regulars: RegularsLaneInitialData;
   "game-day": GameDayLaneInitialData;
-  neighborhoods: null;
+  neighborhoods: NeighborhoodsLaneInitialData;
 };

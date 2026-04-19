@@ -9,6 +9,7 @@ import { getExploreClassesInitialData } from "./classes";
 import { getExploreShowsInitialData } from "./shows";
 import { getExploreRegularsInitialData } from "./regulars";
 import { getExploreGameDayInitialData } from "./game-day";
+import { getExploreNeighborhoodsInitialData } from "./neighborhoods";
 
 export function resolveExploreLaneFromParams(params: URLSearchParams): {
   lane: ExploreLaneId | null;
@@ -26,7 +27,8 @@ export function resolveExploreLaneFromParams(params: URLSearchParams): {
     rawLane === "game-day" ||
     rawLane === "regulars" ||
     rawLane === "places" ||
-    rawLane === "classes"
+    rawLane === "classes" ||
+    rawLane === "neighborhoods"
       ? rawLane
       : null;
 
@@ -53,6 +55,8 @@ export async function loadExploreLaneInitialData(
       return getExploreRegularsInitialData(args);
     case "game-day":
       return getExploreGameDayInitialData(args);
+    case "neighborhoods":
+      return getExploreNeighborhoodsInitialData(args);
     default:
       return null;
   }

@@ -5,6 +5,8 @@ import { parseISO, format } from "date-fns";
 import { BookmarkSimple, CalendarPlus, HandWaving, ShareNetwork, Ticket, UserPlus } from "@phosphor-icons/react";
 import { DetailLayout } from "@/components/detail/core/DetailLayout";
 import { DetailLoadingSkeleton } from "@/components/detail/core/DetailLoadingSkeleton";
+import { SeededDetailSkeleton } from "@/components/detail/core/SeededDetailSkeleton";
+import type { EventSeed } from "@/lib/detail/entity-preview-store";
 import { EventIdentity } from "@/components/detail/identity/EventIdentity";
 import { eventManifest } from "@/components/detail/manifests/event";
 import { useDetailData } from "@/lib/detail/use-detail-data";
@@ -38,6 +40,12 @@ interface EventDetailViewProps {
   onClose: () => void;
   /** Server-fetched data — skips client fetch when provided */
   initialData?: EventApiResponse;
+  /**
+   * Partial data published by the originating card (via entity-preview-store).
+   * Renders a layout-preserving skeleton with real title + image while the
+   * enrichment fetch runs. Replaced when `data` arrives.
+   */
+  seedData?: EventSeed;
 }
 
 // ── Component ────────────────────────────────────────────────────────────────
@@ -47,6 +55,7 @@ export default function EventDetailView({
   portalSlug,
   onClose,
   initialData,
+  seedData,
 }: EventDetailViewProps) {
   const { data, status } = useDetailData<EventApiResponse>({
     entityType: "event",
@@ -152,6 +161,7 @@ export default function EventDetailView({
   );
 
   if (status === "loading" || !entityData || !event) {
+    if (seedData) return <SeededDetailSkeleton seed={seedData} />;
     return <DetailLoadingSkeleton />;
   }
 

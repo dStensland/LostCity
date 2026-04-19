@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import SmartImage from "@/components/SmartImage";
 import { formatRuntime, TMDB_POSTER_W185, TMDB_POSTER_W342 } from "@/lib/goblin-log-utils";
 import { type WatchlistEntry } from "@/lib/goblin-watchlist-utils";
+import type { GoblinGroup } from "@/lib/goblin-group-utils";
 
 interface Props {
   entry: WatchlistEntry;
@@ -22,6 +23,9 @@ interface Props {
   onDrop?: () => void;
   isDragTarget?: boolean;
   isDragging?: boolean;
+  groups?: GoblinGroup[];
+  groupIdsContainingMovie?: Set<number>;
+  onAddToGroup?: (groupId: number) => Promise<boolean>;
 }
 
 // Neon color per rank tier — amber/gold accent
@@ -36,11 +40,46 @@ export default function GoblinWatchlistCard({
   onMoveUp, onMoveDown, onMoveToRank,
   isFirst, isLast,
   onDragStart, onDragOver, onDrop, isDragTarget, isDragging,
+  groups, groupIdsContainingMovie, onAddToGroup,
 }: Props) {
   const [showInfo, setShowInfo] = useState(false);
   const [editingRank, setEditingRank] = useState(false);
   const [rankInput, setRankInput] = useState("");
+  const [showGroupPicker, setShowGroupPicker] = useState(false);
+  const [pendingGroupId, setPendingGroupId] = useState<number | null>(null);
+  const pickerRef = useRef<HTMLDivElement>(null);
   const movie = entry.movie;
+
+  const assignableGroups = (groups ?? []).filter((g) => !g.is_recommendations);
+  const canAddToGroup = Boolean(
+    onAddToGroup && movie.tmdb_id != null && assignableGroups.length > 0
+  );
+
+  useEffect(() => {
+    if (!showGroupPicker) return;
+    const handleClick = (e: MouseEvent) => {
+      if (pickerRef.current && !pickerRef.current.contains(e.target as Node)) {
+        setShowGroupPicker(false);
+      }
+    };
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setShowGroupPicker(false);
+    };
+    document.addEventListener("mousedown", handleClick);
+    document.addEventListener("keydown", handleKey);
+    return () => {
+      document.removeEventListener("mousedown", handleClick);
+      document.removeEventListener("keydown", handleKey);
+    };
+  }, [showGroupPicker]);
+
+  const handleAssignToGroup = async (groupId: number) => {
+    if (!onAddToGroup || pendingGroupId !== null) return;
+    setPendingGroupId(groupId);
+    const ok = await onAddToGroup(groupId);
+    setPendingGroupId(null);
+    if (ok) setShowGroupPicker(false);
+  };
 
   const isHero = !hideRank && rank <= 3;
   const isMid = !hideRank && rank > 3 && rank <= 10;
@@ -60,7 +99,7 @@ export default function GoblinWatchlistCard({
       onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; onDragOver?.(e); }}
       onDrop={(e) => { e.preventDefault(); onDrop?.(); }}
       onDragEnd={(e) => e.preventDefault()}
-      className={`goblin-watchlist-card group relative flex items-stretch overflow-hidden
+      className={`goblin-watchlist-card group relative flex items-stretch
         transition-[border-color,opacity,transform] duration-200 ease-out
         bg-[rgba(5,5,8,0.92)] border border-zinc-800/40
         cursor-grab active:cursor-grabbing
@@ -241,9 +280,10 @@ export default function GoblinWatchlistCard({
         </div>
 
         {/* Action bar — always visible on mobile for touch access */}
-        <div className="flex items-center gap-4 sm:gap-3 px-3 sm:px-3.5 pb-2.5 pt-0
+        <div className={`flex items-center gap-4 sm:gap-3 px-3 sm:px-3.5 pb-2.5 pt-0
           text-xs sm:text-2xs font-mono text-zinc-600 sm:text-zinc-700
-          sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-200">
+          transition-opacity duration-200
+          ${showGroupPicker ? "sm:opacity-100" : "sm:opacity-0 sm:group-hover:opacity-100"}`}>
           <button onClick={() => onWatched(entry)}
             className="py-1 text-emerald-600 hover:text-emerald-400 font-bold transition-colors">
             [WATCHED]
@@ -253,6 +293,57 @@ export default function GoblinWatchlistCard({
             title="Mark as seen (removes without logging)">
             [SEEN]
           </button>
+          {canAddToGroup && (
+            <div className="relative" ref={pickerRef}>
+              <button
+                onClick={() => setShowGroupPicker((v) => !v)}
+                className={`py-1 font-bold transition-colors
+                  ${(groupIdsContainingMovie?.size ?? 0) > 0
+                    ? "text-amber-400 hover:text-amber-300"
+                    : "text-zinc-500 hover:text-amber-400"}`}
+                title="Add to group">
+                {(groupIdsContainingMovie?.size ?? 0) > 0
+                  ? `[+GROUP · ${groupIdsContainingMovie!.size}]`
+                  : "[+GROUP]"}
+              </button>
+              {showGroupPicker && (
+                <div
+                  className="absolute z-30 top-full left-0 mt-1 min-w-[180px] max-w-[260px]
+                    bg-[rgba(5,5,8,0.98)] border border-amber-900/40
+                    shadow-[0_8px_32px_rgba(0,0,0,0.8)]
+                    max-h-64 overflow-y-auto"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {assignableGroups.map((g) => {
+                    const isInGroup = groupIdsContainingMovie?.has(g.id) ?? false;
+                    const isPending = pendingGroupId === g.id;
+                    return (
+                      <button
+                        key={g.id}
+                        disabled={isInGroup || pendingGroupId !== null}
+                        onClick={() => handleAssignToGroup(g.id)}
+                        className={`w-full flex items-center justify-between gap-2
+                          px-2.5 py-1.5 text-left font-mono text-2xs font-bold
+                          uppercase tracking-[0.1em]
+                          border-b border-zinc-800/60 last:border-b-0
+                          transition-colors
+                          ${isInGroup
+                            ? "text-emerald-500/80 cursor-default"
+                            : pendingGroupId !== null
+                              ? "text-zinc-600 cursor-wait"
+                              : "text-zinc-300 hover:bg-amber-950/30 hover:text-amber-300"}`}
+                      >
+                        <span className="truncate">{g.name}</span>
+                        <span className="flex-shrink-0 text-zinc-600">
+                          {isInGroup ? "✓" : isPending ? "…" : `(${g.movies.length})`}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
           <button onClick={() => setShowInfo(!showInfo)}
             className={`py-1 transition-colors ${showInfo ? "text-amber-400" : "hover:text-amber-500"}`}>
             [{showInfo ? "−" : "i"}]

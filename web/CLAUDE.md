@@ -39,6 +39,7 @@ The portal app is split into four surfaces with independent ownership:
 9. **Every route family needs a runtime policy.** Surface ownership is not enough; each route family must have an explicit cache/runtime posture.
 10. **Shared layout runtime stays minimal.** Trackers, widgets, and surface-specific client runtime belong in the owning surface wrapper, not in `[portal]/layout.tsx`.
 11. **Legacy query-style community/explore entry is read-only compatibility.** Normalize or redirect it, but do not author new behavior on top of it.
+12. **Two providers, two key-spaces on overlay-capable surfaces.** `ExploreUrlStateProvider` owns `{lane, display, q, focus, laneParams}` — explore's filter/scope state. `DetailOverlayRouter` owns the overlay-target keys exported from `DETAIL_ENTRY_PARAM_KEYS` (`event, spot, series, festival, org, artist, neighborhood`). Mutators in either side must not touch the other side's keys. When building URLs, always use the `entity-urls.ts` builders — they use `DETAIL_ENTRY_PARAM_KEYS` to clear sibling overlay keys on `'overlay'` context (swap-not-stack). Dev-time assertion in `ExploreUrlStateProvider.replaceParams` fires if explore state mutators touch overlay keys; do not silence it.
 
 ## Commands
 

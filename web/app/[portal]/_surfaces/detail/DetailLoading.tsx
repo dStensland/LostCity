@@ -1,6 +1,13 @@
 import type { ReactNode } from "react";
 
-export type DetailType = "event" | "venue" | "series" | "festival" | "org" | null;
+export type DetailType =
+  | "event"
+  | "venue"
+  | "series"
+  | "festival"
+  | "org"
+  | "neighborhood"
+  | null;
 
 export function resolveDetailType(searchParams: {
   event?: string;
@@ -8,12 +15,14 @@ export function resolveDetailType(searchParams: {
   series?: string;
   festival?: string;
   org?: string;
+  neighborhood?: string;
 }): DetailType {
   if (searchParams.event) return "event";
   if (searchParams.spot) return "venue";
   if (searchParams.series) return "series";
   if (searchParams.festival) return "festival";
   if (searchParams.org) return "org";
+  if (searchParams.neighborhood) return "neighborhood";
   return null;
 }
 

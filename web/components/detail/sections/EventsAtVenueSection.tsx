@@ -1,10 +1,14 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import PlaceEventsSection from "@/components/detail/PlaceEventsSection";
 import { buildEventUrl } from "@/lib/entity-urls";
+import { useEntityLinkOptions } from "@/lib/link-context";
 import type { SectionProps } from "@/lib/detail/types";
 
 export function EventsAtVenueSection({ data, portalSlug }: SectionProps) {
+  const router = useRouter();
+  const { context, existingParams } = useEntityLinkOptions();
   let venueName = "";
   let events: unknown[] = [];
 
@@ -27,7 +31,7 @@ export function EventsAtVenueSection({ data, portalSlug }: SectionProps) {
   if (!events || events.length === 0) return null;
 
   const handleEventClick = (id: number) => {
-    window.location.href = buildEventUrl(id, portalSlug, "page");
+    router.push(buildEventUrl(id, portalSlug, context, existingParams));
   };
 
   return (

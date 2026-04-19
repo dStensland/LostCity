@@ -23,6 +23,7 @@ import type { CityPulseEventItem } from "@/lib/city-pulse/types";
 import type { SceneActivityType } from "@/lib/city-pulse/section-builders";
 import { formatTime } from "@/lib/formats";
 import RSVPButton from "@/components/RSVPButton";
+import { usePublishEventSeed } from "@/lib/detail/publish-seed-helpers";
 
 // ---------------------------------------------------------------------------
 // Icon resolver
@@ -57,6 +58,7 @@ export function SceneEventRow({
   isLast?: boolean;
 }) {
   const event = item.event;
+  usePublishEventSeed(event);
   const accentColor = activity?.color ?? "var(--soft)";
   const timeStr = formatTime(event.start_time, event.is_all_day);
   const dayStr = event.start_date

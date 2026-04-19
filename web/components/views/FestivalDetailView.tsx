@@ -5,6 +5,8 @@ import { differenceInCalendarDays, parseISO } from "date-fns";
 import { Ticket, ShareNetwork, BookmarkSimple } from "@phosphor-icons/react";
 import { DetailLayout } from "@/components/detail/core/DetailLayout";
 import { DetailLoadingSkeleton } from "@/components/detail/core/DetailLoadingSkeleton";
+import { SeededDetailSkeleton } from "@/components/detail/core/SeededDetailSkeleton";
+import type { FestivalSeed } from "@/lib/detail/entity-preview-store";
 import { FestivalIdentity } from "@/components/detail/identity/FestivalIdentity";
 import { festivalManifest } from "@/components/detail/manifests/festival";
 import { useDetailData } from "@/lib/detail/use-detail-data";
@@ -18,6 +20,8 @@ interface FestivalDetailViewProps {
   onClose?: () => void;
   showOpenPageLink?: boolean;
   initialData?: FestivalApiResponse;
+  /** Partial card-published seed for fast first paint. */
+  seedData?: FestivalSeed;
 }
 
 // ── Temporal helpers ─────────────────────────────────────────────────────────
@@ -74,6 +78,7 @@ export default function FestivalDetailView({
   portalSlug,
   onClose,
   initialData,
+  seedData,
 }: FestivalDetailViewProps) {
   const { data, status } = useDetailData<FestivalApiResponse>({
     entityType: "festival",
@@ -124,6 +129,7 @@ export default function FestivalDetailView({
   );
 
   if (status === "loading" || !entityData || !festival) {
+    if (seedData) return <SeededDetailSkeleton seed={seedData} />;
     return <DetailLoadingSkeleton />;
   }
 

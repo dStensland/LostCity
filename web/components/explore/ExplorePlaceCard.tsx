@@ -5,6 +5,7 @@ import Image from "@/components/SmartImage";
 import { EXPLORE_THEME, isUncertainArtefactImageSlug } from "@/lib/explore-tracks";
 import type { ExploreTrackVenue, ExploreVenueEvent } from "@/lib/explore-tracks";
 import { HIGHLIGHT_CONFIG, type HighlightType } from "@/lib/place-highlights";
+import { usePublishSpotSeed } from "@/lib/detail/publish-seed-helpers";
 
 interface ExplorePlaceCardProps {
   venue: ExploreTrackVenue;
@@ -21,6 +22,17 @@ export default function ExplorePlaceCard({
   variant = "compact",
   highlight = false,
 }: ExplorePlaceCardProps) {
+  usePublishSpotSeed(
+    venue.slug
+      ? {
+          slug: venue.slug,
+          name: venue.name,
+          image_url: venue.imageUrl,
+          neighborhood: venue.neighborhood,
+          spot_type: venue.venueType,
+        }
+      : null,
+  );
   const isFeatured = variant === "featured";
   const events = venue.upcomingEvents ?? [];
   const tonightEvents = events.filter((e) => e.isTonight);

@@ -1,6 +1,8 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { useDetailFetch } from "@/lib/hooks/useDetailFetch";
+import { markOverlayPhase } from "@/lib/detail/overlay-perf";
 import type { EntityType } from "./types";
 
 const API_ROUTES: Record<EntityType, string> = {
@@ -31,9 +33,19 @@ export function useDetailData<T>(config: UseDetailDataConfig<T>) {
     entityLabel: entityType,
   });
 
+  const resolvedStatus = initialData ? ("ready" as const) : status;
+  const stampedRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (resolvedStatus !== "ready") return;
+    const ref = `${entityType}:${identifier}`;
+    if (stampedRef.current === ref) return;
+    stampedRef.current = ref;
+    markOverlayPhase("content-ready", ref);
+  }, [resolvedStatus, entityType, identifier]);
+
   return {
     data: initialData ?? fetchedData,
-    status: initialData ? ("ready" as const) : status,
+    status: resolvedStatus,
     error,
     retry,
   };

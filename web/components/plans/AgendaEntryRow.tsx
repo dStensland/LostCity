@@ -1,6 +1,7 @@
 "use client";
 
 import { buildEventUrl } from "@/lib/entity-urls";
+import { useEntityLinkOptions } from "@/lib/link-context";
 import { formatTime } from "./utils";
 
 interface AgendaEntryRowProps {
@@ -18,9 +19,10 @@ interface AgendaEntryRowProps {
 }
 
 export function AgendaEntryRow({ event, friendAvatars, portalSlug }: AgendaEntryRowProps) {
+  const { context, existingParams } = useEntityLinkOptions();
   const isSeriesEntry = event.is_recurring || event.source === "subscription";
   const frequencyLabel = event.series_frequency ?? "weekly";
-  const url = buildEventUrl(event.id, portalSlug, "page");
+  const url = buildEventUrl(event.id, portalSlug, context, existingParams);
 
   return (
     <a

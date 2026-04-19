@@ -14,6 +14,7 @@ import Dot from "@/components/ui/Dot";
 import { PressQuote } from "@/components/feed/PressQuote";
 import type { EditorialMention } from "@/lib/city-pulse/types";
 import { useViewTransition } from "@/lib/hooks/useViewTransition";
+import { usePublishSpotSeed } from "@/lib/detail/publish-seed-helpers";
 
 function formatEventDate(dateStr: string): string {
   const today = new Date();
@@ -116,6 +117,13 @@ function DiscoveryCard({
   const locationLabel = LOCATION_DESIGNATOR_LABELS[locationDesignator];
   const distance = getDistanceMiles(venue, showDistance);
   const venueHref = `/${portalSlug}?spot=${venue.slug}`;
+  usePublishSpotSeed({
+    slug: venue.slug,
+    name: venue.name,
+    image_url: venue.image_url ?? null,
+    neighborhood: venue.neighborhood ?? null,
+    spot_type: venue.place_type ?? null,
+  });
 
   return (
     <Link
@@ -321,6 +329,13 @@ function CompactCard({
   const { navigate } = useViewTransition();
   const distance = getDistanceMiles(venue, showDistance);
   const compactVenueHref = `/${portalSlug}?spot=${venue.slug}`;
+  usePublishSpotSeed({
+    slug: venue.slug,
+    name: venue.name,
+    image_url: venue.image_url ?? null,
+    neighborhood: venue.neighborhood ?? null,
+    spot_type: venue.place_type ?? null,
+  });
 
   return (
     <Link

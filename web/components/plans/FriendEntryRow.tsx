@@ -1,6 +1,7 @@
 "use client";
 
 import { buildEventUrl } from "@/lib/entity-urls";
+import { useEntityLinkOptions } from "@/lib/link-context";
 import { formatTime } from "./utils";
 
 interface FriendEntryRowProps {
@@ -19,7 +20,8 @@ interface FriendEntryRowProps {
 }
 
 export function FriendEntryRow({ event, friend, portalSlug }: FriendEntryRowProps) {
-  const url = buildEventUrl(event.id, portalSlug, "page");
+  const { context, existingParams } = useEntityLinkOptions();
+  const url = buildEventUrl(event.id, portalSlug, context, existingParams);
 
   return (
     <a

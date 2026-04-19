@@ -30,6 +30,8 @@ interface UseGoblinLogActions {
       tag_ids: number[];
       sort_order: number;
       list_id: number | null;
+      tier_name: string | null;
+      tier_color: string | null;
     }>
   ) => Promise<boolean>;
   deleteEntry: (entryId: number) => Promise<boolean>;
@@ -40,6 +42,9 @@ interface UseGoblinLogActions {
   searchTMDB: (query: string) => Promise<TMDBSearchResult[]>;
   refreshEntries: () => Promise<void>;
   refreshTags: () => Promise<void>;
+  refreshLists: () => Promise<void>;
+  createList: (data: { name: string; description?: string; movie_tmdb_ids?: number[] }) => Promise<LogList | null>;
+  updateList: (listId: number, data: { name?: string; description?: string | null }) => Promise<boolean>;
 }
 
 export function useGoblinLog(
@@ -138,6 +143,8 @@ export function useGoblinLog(
         note: string;
         watched_with: string;
         tag_ids: number[];
+        sort_order: number;
+        list_id: number | null;
         tier_name: string | null;
         tier_color: string | null;
       }>,
@@ -263,6 +270,54 @@ export function useGoblinLog(
     [year, fetchEntries]
   );
 
+  const createList = useCallback(
+    async (data: {
+      name: string;
+      description?: string;
+      movie_tmdb_ids?: number[];
+    }): Promise<LogList | null> => {
+      try {
+        const res = await fetch("/api/goblinday/me/lists", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data),
+        });
+        if (!res.ok) return null;
+        const result = await res.json();
+        await fetchLists();
+        const g = result.group;
+        return g ? { id: g.id, name: g.name, slug: g.slug } : null;
+      } catch {
+        return null;
+      }
+    },
+    [fetchLists]
+  );
+
+  const updateList = useCallback(
+    async (
+      listId: number,
+      data: { name?: string; description?: string | null }
+    ): Promise<boolean> => {
+      try {
+        const res = await fetch(`/api/goblinday/me/lists/${listId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data),
+        });
+        if (!res.ok) return false;
+        // Refresh lists so the renamed group is reflected in section headers.
+        // Entries don't store the name — they reference list_id — so no need
+        // to refresh entries.
+        await fetchLists();
+        return true;
+      } catch {
+        return false;
+      }
+    },
+    [fetchLists]
+  );
+
   const searchTMDB = useCallback(async (query: string): Promise<TMDBSearchResult[]> => {
     if (query.length < 2) return [];
     try {
@@ -294,5 +349,8 @@ export function useGoblinLog(
     searchTMDB,
     refreshEntries: useCallback(() => fetchEntries(year), [fetchEntries, year]),
     refreshTags: fetchTags,
+    refreshLists: fetchLists,
+    createList,
+    updateList,
   };
 }
