@@ -27,7 +27,7 @@ export function EventsAtVenueSection({ data, portalSlug }: SectionProps) {
   if (!events || events.length === 0) return null;
 
   const handleEventClick = (id: number) => {
-    window.location.href = buildEventUrl(id, portalSlug, "page");
+    window.location.href = buildEventUrl(id, portalSlug, "canonical");
   };
 
   return (

@@ -39,7 +39,7 @@ export function MusicActionSheet({ show, portalSlug, onClose, onAddToPlans }: Mu
 
   const headliner = show.artists.find((a) => a.is_headliner) ?? show.artists[0];
   const supports = show.artists.filter((a) => !a.is_headliner).slice(0, 3);
-  const eventUrl = buildEventUrl(show.id, portalSlug, "feed");
+  const eventUrl = buildEventUrl(show.id, portalSlug, "overlay");
 
   const content = (
     <div

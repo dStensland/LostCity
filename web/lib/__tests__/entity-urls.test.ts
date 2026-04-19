@@ -11,20 +11,20 @@ import {
 
 describe("entity-urls", () => {
   describe("buildEventUrl", () => {
-    it("returns overlay URL in feed context", () => {
-      expect(buildEventUrl(123, "atlanta", "feed")).toBe("/atlanta?event=123");
+    it("returns overlay URL in overlay context", () => {
+      expect(buildEventUrl(123, "atlanta", "overlay")).toBe("/atlanta?event=123");
     });
-    it("returns canonical URL in page context", () => {
-      expect(buildEventUrl(123, "atlanta", "page")).toBe("/atlanta/events/123");
+    it("returns canonical URL in canonical context", () => {
+      expect(buildEventUrl(123, "atlanta", "canonical")).toBe("/atlanta/events/123");
     });
   });
 
   describe("buildSpotUrl", () => {
-    it("returns overlay URL in feed context", () => {
-      expect(buildSpotUrl("the-earl", "atlanta", "feed")).toBe("/atlanta?spot=the-earl");
+    it("returns overlay URL in overlay context", () => {
+      expect(buildSpotUrl("the-earl", "atlanta", "overlay")).toBe("/atlanta?spot=the-earl");
     });
-    it("returns canonical URL in page context", () => {
-      expect(buildSpotUrl("the-earl", "atlanta", "page")).toBe("/atlanta/spots/the-earl");
+    it("returns canonical URL in canonical context", () => {
+      expect(buildSpotUrl("the-earl", "atlanta", "canonical")).toBe("/atlanta/spots/the-earl");
     });
   });
 
