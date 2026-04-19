@@ -1,14 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import Image from "@/components/SmartImage";
 import Skeleton from "@/components/Skeleton";
-import { createClient } from "@/lib/supabase/client";
-import { useAuth } from "@/lib/auth-context";
-
-// Timeout constant for Supabase queries to prevent indefinite hanging
-const QUERY_TIMEOUT = 8000; // 8 seconds
+import { useQuery } from "@tanstack/react-query";
 
 type WhosGoingProps = {
   eventId: number;
@@ -17,162 +13,39 @@ type WhosGoingProps = {
 
 type AttendeeProfile = {
   id: string;
-  username: string;
+  username: string | null;
   display_name: string | null;
   avatar_url: string | null;
 };
 
-type Attendee = {
-  user: AttendeeProfile;
-  status: "going" | "interested";
-  isFriend: boolean;
+type WhosGoingResponse = {
+  profiles: AttendeeProfile[];
+  count: number;
 };
 
 export default function WhosGoing({ eventId, className = "" }: WhosGoingProps) {
-  const { user } = useAuth();
-  const supabase = createClient();
-
-  const [attendees, setAttendees] = useState<Attendee[]>([]);
-  const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState(false);
 
-  const goingCount = attendees.filter((a) => a.status === "going").length;
-  const interestedCount = attendees.filter((a) => a.status === "interested").length;
+  const { data, isLoading } = useQuery<WhosGoingResponse>({
+    queryKey: ["whos-going", eventId],
+    queryFn: async () => {
+      const res = await fetch(`/api/events/${eventId}/whos-going`);
+      if (!res.ok) throw new Error("Failed to fetch whos-going");
+      return res.json() as Promise<WhosGoingResponse>;
+    },
+    staleTime: 60_000, // 1 minute
+  });
 
-  useEffect(() => {
-    let isMounted = true;
-
-    async function loadAttendees() {
-      try {
-        // Strategy B rewrite: plan_invitees + plans WHERE anchor_type='event'.
-        // The compat view (event_rsvps) lacks the FK hint
-        // profiles!event_rsvps_user_id_fkey and has no 'visibility' column.
-        // Only rsvp_status='going' maps from the old schema; 'interested' does not.
-        //
-        // TODO(follow-up): This component queries the DB client-side, which
-        // violates the "No Direct Supabase Mutations from Components" rule in
-        // web/CLAUDE.md. It should be wrapped behind a
-        // GET /api/events/[id]/whos-going route. Tracked separately.
-        const rsvpQuery = supabase
-          .from("plan_invitees")
-          .select(`
-            rsvp_status,
-            plan:plans!inner(
-              anchor_event_id
-            ),
-            user:profiles(
-              id, username, display_name, avatar_url
-            )
-          `)
-          .eq("rsvp_status", "going")
-          .eq("plan.anchor_type", "event" as never)
-          .eq("plan.anchor_event_id", eventId as never);
-
-        const rsvpPromise = Promise.race([
-          rsvpQuery,
-          new Promise<never>((_, reject) =>
-            setTimeout(() => reject(new Error("Query timeout")), QUERY_TIMEOUT)
-          ),
-        ]);
-
-        // Get current user's friend IDs in parallel (only if logged in)
-        const friendIdsPromise = user
-          ? Promise.race([
-              (async () => {
-              const friendIds: Set<string> = new Set();
-
-              const { data: myFollows } = await supabase
-                .from("follows")
-                .select("followed_user_id")
-                .eq("follower_id", user.id)
-                .not("followed_user_id", "is", null);
-
-              const followsData = myFollows as { followed_user_id: string | null }[] | null;
-              if (followsData && followsData.length > 0) {
-                const followedIds = followsData.map((f) => f.followed_user_id).filter(Boolean) as string[];
-
-                // Batch query: get all who follow back (mutual = friends)
-                const { data: mutualFollows } = await supabase
-                  .from("follows")
-                  .select("follower_id")
-                  .in("follower_id", followedIds)
-                  .eq("followed_user_id", user.id);
-
-                const mutualData = mutualFollows as { follower_id: string }[] | null;
-                if (mutualData) {
-                  mutualData.forEach((f) => friendIds.add(f.follower_id));
-                }
-              }
-              return friendIds;
-            })(),
-              new Promise<never>((_, reject) =>
-                setTimeout(() => reject(new Error("Query timeout")), QUERY_TIMEOUT)
-              ),
-            ])
-          : Promise.resolve(new Set<string>());
-
-        // Wait for both queries in parallel
-        const [{ data: rsvpData }, friendIds] = await Promise.all([rsvpPromise, friendIdsPromise]);
-
-      if (!isMounted) return;
-
-      type RSVPQueryResult = {
-        rsvp_status: string;
-        plan: { anchor_event_id: number | null };
-        user: AttendeeProfile | null;
-      };
-
-      const rsvps = rsvpData as RSVPQueryResult[] | null;
-      if (!rsvps || rsvps.length === 0) {
-        setLoading(false);
-        return;
-      }
-
-      // Build attendee list. rsvp_status from plan_invitees:
-      // only 'going' is fetched; 'interested' no longer exists in new schema.
-      // The Attendee.status type still includes "interested" for compat but
-      // will never be set to that value from this query.
-      const attendeeList: Attendee[] = rsvps
-        .filter((rsvp) => rsvp.user !== null)
-        .map((rsvp) => ({
-          user: rsvp.user as AttendeeProfile,
-          status: rsvp.rsvp_status as "going" | "interested",
-          isFriend: friendIds.has(rsvp.user!.id),
-        }));
-
-      // Sort: friends first, then by status (going before interested)
-      attendeeList.sort((a, b) => {
-        if (a.isFriend !== b.isFriend) return a.isFriend ? -1 : 1;
-        if (a.status !== b.status) return a.status === "going" ? -1 : 1;
-        return 0;
-      });
-
-      setAttendees(attendeeList);
-      setLoading(false);
-      } catch (error) {
-        // Handle timeout or other errors gracefully - just stop loading
-        console.error("WhosGoing query error:", error);
-        if (isMounted) {
-          setLoading(false);
-        }
-      }
-    }
-
-    loadAttendees();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [user, eventId, supabase]);
+  const profiles = data?.profiles ?? [];
+  const goingCount = profiles.length;
 
   // Show skeleton immediately while fetching so there's no blank-space flash
-  if (loading) {
+  if (isLoading) {
     return (
       <div className={className}>
         <Skeleton variant="text" className="h-3 w-16 mb-4" />
         <div className="flex items-center gap-4 mb-4">
           <Skeleton variant="rect" className="h-5 w-20" />
-          <Skeleton variant="rect" className="h-5 w-24" />
         </div>
         <div className="flex gap-2">
           {[...Array(5)].map((_, i) => (
@@ -184,13 +57,13 @@ export default function WhosGoing({ eventId, className = "" }: WhosGoingProps) {
   }
 
   // No attendees — collapse to nothing (don't hold space)
-  if (attendees.length === 0) {
+  if (profiles.length === 0) {
     return null;
   }
 
-  const displayLimit = expanded ? attendees.length : 12;
-  const displayAttendees = attendees.slice(0, displayLimit);
-  const remainingCount = attendees.length - displayLimit;
+  const displayLimit = expanded ? profiles.length : 12;
+  const displayProfiles = profiles.slice(0, displayLimit);
+  const remainingCount = profiles.length - displayLimit;
 
   return (
     <div className={`${className}`}>
@@ -198,7 +71,7 @@ export default function WhosGoing({ eventId, className = "" }: WhosGoingProps) {
         WHO&apos;S IN
       </h2>
 
-      {/* Stats with accessible indicators */}
+      {/* Stats */}
       <div className="flex items-center gap-4 mb-4 flex-wrap">
         {goingCount > 0 && (
           <span className="flex items-center gap-1.5 text-sm">
@@ -212,40 +85,22 @@ export default function WhosGoing({ eventId, className = "" }: WhosGoingProps) {
             <span className="text-[var(--muted)]">going</span>
           </span>
         )}
-        {interestedCount > 0 && (
-          <span className="flex items-center gap-1.5 text-sm">
-            <span
-              className="w-4 h-4 rounded-full bg-[var(--gold)] flex items-center justify-center text-2xs font-bold text-[var(--void)]"
-              aria-label="Interested indicator"
-            >
-              I
-            </span>
-            <span className="text-[var(--cream)] font-medium">{interestedCount}</span>
-            <span className="text-[var(--muted)]">interested</span>
-          </span>
-        )}
       </div>
 
       {/* Avatar grid */}
       <div className="flex flex-wrap gap-2">
-        {displayAttendees.map((attendee) => (
+        {displayProfiles.map((profile) => (
           <Link
-            key={attendee.user.id}
-            href={`/profile/${attendee.user.username}`}
+            key={profile.id}
+            href={`/profile/${profile.username}`}
             className="group relative"
-            title={`${attendee.user.display_name || attendee.user.username} (${attendee.status})`}
+            title={`${profile.display_name || profile.username} (going)`}
           >
-            <div
-              className={`relative w-10 h-10 rounded-full overflow-hidden border-2 transition-all ${
-                attendee.isFriend
-                  ? "border-[var(--neon-magenta)] ring-2 ring-[var(--neon-magenta)]/20"
-                  : "border-[var(--twilight)] group-hover:border-[var(--soft)]"
-              }`}
-            >
-              {attendee.user.avatar_url ? (
+            <div className="relative w-10 h-10 rounded-full overflow-hidden border-2 border-[var(--twilight)] group-hover:border-[var(--soft)] transition-all">
+              {profile.avatar_url ? (
                 <Image
-                  src={attendee.user.avatar_url}
-                  alt={attendee.user.display_name || attendee.user.username}
+                  src={profile.avatar_url}
+                  alt={profile.display_name || profile.username || ""}
                   width={40}
                   height={40}
                   className="w-full h-full object-cover"
@@ -253,21 +108,17 @@ export default function WhosGoing({ eventId, className = "" }: WhosGoingProps) {
               ) : (
                 <div className="w-full h-full bg-[var(--dusk)] flex items-center justify-center">
                   <span className="font-mono text-sm font-bold text-white">
-                    {(attendee.user.display_name || attendee.user.username)[0].toUpperCase()}
+                    {((profile.display_name || profile.username || "?")[0]).toUpperCase()}
                   </span>
                 </div>
               )}
             </div>
-            {/* Status indicator with letter for accessibility */}
+            {/* Going indicator */}
             <span
-              className={`absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full border-2 border-[var(--dusk)] flex items-center justify-center text-2xs font-bold ${
-                attendee.status === "going"
-                  ? "bg-[var(--coral)] text-[var(--void)]"
-                  : "bg-[var(--gold)] text-[var(--void)]"
-              }`}
-              title={attendee.status === "going" ? "In" : "Maybe"}
+              className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full border-2 border-[var(--dusk)] flex items-center justify-center text-2xs font-bold bg-[var(--coral)] text-[var(--void)]"
+              title="Going"
             >
-              {attendee.status === "going" ? "✓" : "?"}
+              ✓
             </span>
           </Link>
         ))}
@@ -286,7 +137,7 @@ export default function WhosGoing({ eventId, className = "" }: WhosGoingProps) {
       </div>
 
       {/* Collapse button */}
-      {expanded && attendees.length > 12 && (
+      {expanded && profiles.length > 12 && (
         <button
           onClick={() => setExpanded(false)}
           className="mt-3 text-xs font-mono text-[var(--muted)] hover:text-[var(--soft)] transition-colors"
