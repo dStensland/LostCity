@@ -85,11 +85,19 @@ export default function DetailOverlayRouter({
     [searchParams],
   );
 
+  // Stamp target-resolved synchronously during render so seeded-paint (which
+  // runs in the child's useLayoutEffect, i.e. *before* parent effects) always
+  // has a baseline to measure against. markOverlayPhase is a perf-only
+  // side-effect; duplicate stamps across re-renders are harmless (the measure
+  // logic picks the most recent via getEntriesByName).
+  if (detailTarget) {
+    const ref = overlayRef(detailTarget);
+    if (ref) markOverlayPhase("target-resolved", ref);
+  }
+
   useEffect(() => {
     if (!detailTarget) return;
     window.scrollTo({ top: 0, left: 0, behavior: "auto" });
-    const ref = overlayRef(detailTarget);
-    if (ref) markOverlayPhase("target-resolved", ref);
   }, [detailTarget]);
 
   const closeFallbackUrl = useMemo(
