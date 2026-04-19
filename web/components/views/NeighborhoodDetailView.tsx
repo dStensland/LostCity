@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
+import { markOverlayPhase } from "@/lib/detail/overlay-perf";
 import Link from "next/link";
 import { X } from "@phosphor-icons/react";
 import SmartImage from "@/components/SmartImage";
@@ -84,6 +85,16 @@ export default function NeighborhoodDetailView({
     useDetailFetch<NeighborhoodDetailPayload>(fetchUrl, {
       entityLabel: "neighborhood",
     });
+
+  const resolvedStatus = initialData ? ("ready" as const) : status;
+  const stampedRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (resolvedStatus !== "ready") return;
+    const ref = `neighborhood:${slug}`;
+    if (stampedRef.current === ref) return;
+    stampedRef.current = ref;
+    markOverlayPhase("content-ready", ref);
+  }, [resolvedStatus, slug]);
 
   const data = (initialData ?? fetchedData) as NeighborhoodDetailPayload | null;
 

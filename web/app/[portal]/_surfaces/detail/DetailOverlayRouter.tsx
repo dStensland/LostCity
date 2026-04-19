@@ -4,6 +4,7 @@ import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import dynamic from "next/dynamic";
 import { setFeedVisible } from "@/lib/feed-visibility";
+import { markOverlayPhase, overlayRef } from "@/lib/detail/overlay-perf";
 import {
   buildDetailCloseFallbackUrl,
   resolveDetailOverlayTarget,
@@ -77,6 +78,8 @@ export default function DetailOverlayRouter({
   useEffect(() => {
     if (!detailTarget) return;
     window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+    const ref = overlayRef(detailTarget);
+    if (ref) markOverlayPhase("target-resolved", ref);
   }, [detailTarget]);
 
   const closeFallbackUrl = useMemo(

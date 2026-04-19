@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
+import { markOverlayPhase } from "@/lib/detail/overlay-perf";
 import {
   CalendarCheck,
   GlobeSimple,
@@ -117,6 +118,16 @@ export default function PlaceDetailView({
   const { data: fetchedData, status } = useDetailFetch<SpotDetailPayload>(fetchUrl, {
     entityLabel: "spot",
   });
+
+  const resolvedStatus = initialData ? ("ready" as const) : status;
+  const stampedRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (resolvedStatus !== "ready") return;
+    const ref = `spot:${slug}`;
+    if (stampedRef.current === ref) return;
+    stampedRef.current = ref;
+    markOverlayPhase("content-ready", ref);
+  }, [resolvedStatus, slug]);
 
   const data = (initialData ?? fetchedData) as SpotDetailPayload | null;
 
