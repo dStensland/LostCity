@@ -1,7 +1,7 @@
 import { Metadata } from "next";
 import { createServiceClient } from "@/lib/supabase/service";
 import GoblinLogPublicView from "./GoblinLogPublicView";
-import type { LogEntry, GoblinTag } from "@/lib/goblin-log-utils";
+import type { LogEntry, GoblinTag, LogList } from "@/lib/goblin-log-utils";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -19,7 +19,7 @@ interface ProfileRow {
   avatar_url: string | null;
 }
 
-type LogEntryRow = Omit<LogEntry, "tags">;
+type LogEntryRow = Omit<LogEntry, "tags" | "list">;
 
 interface TagJoinRow {
   entry_id: number;
@@ -77,7 +77,7 @@ export default async function PublicLogPage({ params, searchParams }: PageProps)
   const { data: entries } = await serviceClient
     .from("goblin_log_entries")
     .select(`
-      id, watched_date, note, watched_with, sort_order, tier_name, tier_color,
+      id, watched_date, note, watched_with, sort_order, tier_name, tier_color, list_id,
       movie:goblin_movies!movie_id (
         id, tmdb_id, title, poster_path, backdrop_path, release_date, genres,
         runtime_minutes, director, year, rt_critics_score, rt_audience_score,
@@ -108,12 +108,31 @@ export default async function PublicLogPage({ params, searchParams }: PageProps)
     }
   }
 
+  // Fetch lists referenced by the entries so the public view can render
+  // section headers + a list lookup. Sparse: only fetches lists actually
+  // in use this year.
+  const referencedListIds = Array.from(
+    new Set((entries || []).map((e) => e.list_id).filter((v): v is number => v !== null))
+  );
+  const listLookup: Record<number, LogList> = {};
+  if (referencedListIds.length > 0) {
+    const { data: listRows } = await serviceClient
+      .from("goblin_lists")
+      .select("id, name, slug")
+      .in("id", referencedListIds)
+      .returns<LogList[]>();
+    for (const row of listRows || []) {
+      listLookup[row.id] = row;
+    }
+  }
+
   const logEntries: LogEntry[] = (entries || []).map((e) => ({
     ...e,
     created_at: "",
     updated_at: "",
     movie_id: e.movie.id,
     tags: entryTags[e.id] || [],
+    list: e.list_id ? listLookup[e.list_id] ?? null : null,
   }));
 
   // Fetch user's tags for filter pills
