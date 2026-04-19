@@ -4,6 +4,8 @@ import { useMemo } from "react";
 import { ShareNetwork, UserPlus } from "@phosphor-icons/react";
 import { DetailLayout } from "@/components/detail/core/DetailLayout";
 import { DetailLoadingSkeleton } from "@/components/detail/core/DetailLoadingSkeleton";
+import { SeededDetailSkeleton } from "@/components/detail/core/SeededDetailSkeleton";
+import type { OrgSeed } from "@/lib/detail/entity-preview-store";
 import { OrgIdentity } from "@/components/detail/identity/OrgIdentity";
 import { orgManifest } from "@/components/detail/manifests/org";
 import { useDetailData } from "@/lib/detail/use-detail-data";
@@ -30,6 +32,8 @@ interface OrgDetailViewProps {
   portalSlug: string;
   onClose?: () => void;
   initialData?: OrgApiResponse;
+  /** Partial card-published seed for fast first paint. */
+  seedData?: OrgSeed;
 }
 
 // ── Component ────────────────────────────────────────────────────────────────
@@ -39,6 +43,7 @@ export default function OrgDetailView({
   portalSlug,
   onClose,
   initialData,
+  seedData,
 }: OrgDetailViewProps) {
   const { data, status } = useDetailData<OrgApiResponse>({
     entityType: "org",
@@ -89,6 +94,7 @@ export default function OrgDetailView({
   );
 
   if (status === "loading" || !entityData || !organization) {
+    if (seedData) return <SeededDetailSkeleton seed={seedData} />;
     return <DetailLoadingSkeleton />;
   }
 

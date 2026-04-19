@@ -17,6 +17,7 @@ import { Users, Lightning, Ticket } from "@phosphor-icons/react";
 import { formatTime, getEventStatus } from "@/lib/formats";
 import RSVPButton from "@/components/RSVPButton";
 import { getCivicEventHref } from "@/lib/civic-routing";
+import { usePublishEventSeed } from "@/lib/detail/publish-seed-helpers";
 
 interface CompactEventRowProps {
   event: FeedEventData;
@@ -29,6 +30,7 @@ interface CompactEventRowProps {
 }
 
 export default function CompactEventRow({ event, portalSlug, size = "default", vertical }: CompactEventRowProps) {
+  usePublishEventSeed(event);
   const isSm = size === "sm";
   const catColor = getCategoryColor(event.category);
   const catLabel = getCategoryLabel(event.category);

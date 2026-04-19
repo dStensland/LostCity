@@ -5671,7 +5671,7 @@ body:has([data-vertical="hospital"]) .rain-overlay {
 @keyframes detail-enter {
   from {
     opacity: 0;
-    transform: translateY(20px);
+    transform: translateY(16px);
   }
   to {
     opacity: 1;
@@ -5691,11 +5691,11 @@ body:has([data-vertical="hospital"]) .rain-overlay {
 }
 
 .animate-detail-enter {
-  animation: detail-enter 0.3s ease-out forwards;
+  animation: detail-enter var(--motion-dramatic, 600ms) var(--ease-out) forwards;
 }
 
 .animate-detail-exit {
-  animation: detail-exit 0.2s ease-in forwards;
+  animation: detail-exit var(--motion-fast, 200ms) ease-in forwards;
   pointer-events: none;
 }
 

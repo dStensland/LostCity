@@ -13,6 +13,7 @@ import SeriesCard from "@/components/SeriesCard";
 import FestivalCard from "@/components/FestivalCard";
 import { groupEventsForDisplay } from "@/lib/event-grouping";
 import type { EventWithLocation } from "@/lib/event-search";
+import { usePublishEventSeed } from "@/lib/detail/publish-seed-helpers";
 
 type FeaturedEvent = {
   id: number;
@@ -256,6 +257,7 @@ export function FeaturedCarousel({ events }: Props) {
 }
 
 function FeaturedCard({ event, portalSlug }: { event: FeaturedEvent; portalSlug: string }) {
+  usePublishEventSeed(event);
   const [imageLoaded, setImageLoaded] = useState(!event.image_url);
   const [imageError, setImageError] = useState(false);
   const showImage = event.image_url && !imageError;

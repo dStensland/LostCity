@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
+import { markOverlayPhase } from "@/lib/detail/overlay-perf";
 import Link from "next/link";
 import { X } from "@phosphor-icons/react";
 import SmartImage from "@/components/SmartImage";
@@ -13,6 +14,7 @@ import { getNeighborhoodColor } from "@/lib/neighborhood-colors";
 import { useDetailFetch } from "@/lib/hooks/useDetailFetch";
 import { decodeHtmlEntities } from "@/lib/formats";
 import { buildNeighborhoodUrl } from "@/lib/entity-urls";
+import type { NeighborhoodSeed } from "@/lib/detail/entity-preview-store";
 import type { Spot } from "@/lib/spots-constants";
 import type { Event } from "@/lib/supabase";
 
@@ -43,6 +45,82 @@ interface NeighborhoodDetailViewProps {
   onClose: () => void;
   /** Server-fetched data — skips client fetch when provided */
   initialData?: NeighborhoodDetailPayload;
+  /** Partial card-published seed for fast first paint. */
+  seedData?: NeighborhoodSeed;
+}
+
+/**
+ * Seeded skeleton that matches the neighborhood overlay's layout: max-w-3xl,
+ * 240-280px hero with dominant color, name + stats line. Replaces the generic
+ * "Loading…" flash when the card published a seed on render.
+ */
+function SeededNeighborhoodSkeleton({ seed }: { seed: NeighborhoodSeed }) {
+  useLayoutEffect(() => {
+    markOverlayPhase("seeded-paint", `neighborhood:${seed.slug}`);
+  }, [seed.slug]);
+  const color = seed.color || getNeighborhoodColor(seed.name);
+  const heroStyle = getNeighborhoodHeroStyle(color, seed.hero_image ?? undefined);
+  const statsParts: string[] = [];
+  if (seed.events_today_count && seed.events_today_count > 0) {
+    statsParts.push(
+      `${seed.events_today_count} ${
+        seed.events_today_count === 1 ? "event" : "events"
+      } tonight`,
+    );
+  }
+  if (seed.venue_count) {
+    statsParts.push(
+      `${seed.venue_count} ${seed.venue_count === 1 ? "spot" : "spots"}`,
+    );
+  }
+  return (
+    <div
+      className="max-w-3xl mx-auto px-4 py-4 sm:py-6 pb-24 space-y-6"
+      aria-busy="true"
+      aria-label="Loading"
+    >
+      <section
+        className="relative overflow-hidden rounded-card-xl border border-[var(--twilight)] h-[240px] sm:h-[280px]"
+        style={heroStyle.gradient}
+      >
+        {heroStyle.imageSrc && (
+          <SmartImage
+            src={heroStyle.imageSrc}
+            alt=""
+            fill
+            className="opacity-80 object-cover"
+          />
+        )}
+        <div
+          className="absolute inset-x-0 bottom-0 h-3/5 pointer-events-none"
+          style={{
+            background:
+              "linear-gradient(180deg, transparent 0%, rgba(9,9,11,0.75) 60%, rgba(9,9,11,0.95) 100%)",
+          }}
+          aria-hidden="true"
+        />
+        <div className="absolute inset-x-0 bottom-0 p-6 sm:p-8 space-y-2">
+          <h1 className="text-3xl sm:text-4xl font-bold text-[var(--cream)] tracking-[-0.01em] leading-tight">
+            {seed.name}
+          </h1>
+          {statsParts.length > 0 && (
+            <p className="font-mono text-xs text-[var(--cream)]/80 tracking-[0.14em] uppercase">
+              {statsParts.join(" · ")}
+            </p>
+          )}
+        </div>
+      </section>
+      {[0, 1].map((i) => (
+        <div key={i} className="space-y-3">
+          <div className="h-3 w-32 bg-[var(--twilight)]/40 rounded animate-pulse" />
+          <div className="space-y-2">
+            <div className="h-4 w-full bg-[var(--twilight)]/25 rounded animate-pulse" />
+            <div className="h-4 w-5/6 bg-[var(--twilight)]/25 rounded animate-pulse" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
 }
 
 function toScheduleRowEvent(ev: Event): ScheduleRowEvent {
@@ -74,6 +152,7 @@ export default function NeighborhoodDetailView({
   portalSlug,
   onClose,
   initialData,
+  seedData,
 }: NeighborhoodDetailViewProps) {
   const fetchUrl = useMemo(() => {
     if (initialData) return null;
@@ -84,6 +163,16 @@ export default function NeighborhoodDetailView({
     useDetailFetch<NeighborhoodDetailPayload>(fetchUrl, {
       entityLabel: "neighborhood",
     });
+
+  const resolvedStatus = initialData ? ("ready" as const) : status;
+  const stampedRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (resolvedStatus !== "ready") return;
+    const ref = `neighborhood:${slug}`;
+    if (stampedRef.current === ref) return;
+    stampedRef.current = ref;
+    markOverlayPhase("content-ready", ref);
+  }, [resolvedStatus, slug]);
 
   const data = (initialData ?? fetchedData) as NeighborhoodDetailPayload | null;
 
@@ -104,6 +193,7 @@ export default function NeighborhoodDetailView({
         </div>
       );
     }
+    if (seedData) return <SeededNeighborhoodSkeleton seed={seedData} />;
     return (
       <div className="max-w-3xl mx-auto px-4 py-12 text-center">
         <p className="font-mono text-xs text-[var(--muted)]">Loading…</p>

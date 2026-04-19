@@ -18,6 +18,7 @@ import type { CityPulseSection, CityPulseEventItem } from "@/lib/city-pulse/type
 import type { FeedEventData } from "@/components/EventCard";
 import CategoryIcon, { getCategoryColor } from "@/components/CategoryIcon";
 import { formatSmartDate, formatTime } from "@/lib/formats";
+import { usePublishEventSeed } from "@/lib/detail/publish-seed-helpers";
 import {
   Fire,
   ArrowRight,
@@ -84,6 +85,7 @@ function getMomentumSignal(ev: EnrichedEvent): { label: string; color: string; i
 
 /** Hero card for #1 popular event — full-bleed magazine style */
 function PopularHero({ ev, portalSlug }: { ev: EnrichedEvent; portalSlug: string }) {
+  usePublishEventSeed(ev);
   const timeLabel = getSmartTimeLabel(ev);
   const momentum = getMomentumSignal(ev);
   const categoryColor = getCategoryColor(ev.category);
@@ -165,6 +167,7 @@ function PopularCard({
   rank: number;
   portalSlug: string;
 }) {
+  usePublishEventSeed(ev);
   const timeLabel = getSmartTimeLabel(ev);
   const momentum = getMomentumSignal(ev);
   const categoryColor = getCategoryColor(ev.category);
