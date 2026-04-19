@@ -24,6 +24,7 @@ import type { SceneActivityType } from "@/lib/city-pulse/section-builders";
 import { formatTime } from "@/lib/formats";
 import RSVPButton from "@/components/RSVPButton";
 import { usePublishEventSeed } from "@/lib/detail/publish-seed-helpers";
+import { prefetchDetailView } from "@/lib/detail/prefetch-detail-view";
 
 // ---------------------------------------------------------------------------
 // Icon resolver
@@ -70,6 +71,8 @@ export function SceneEventRow({
     <Link
       href={`/${portalSlug}?event=${event.id}`}
       scroll={false}
+      onMouseEnter={() => prefetchDetailView("event")}
+      onFocus={() => prefetchDetailView("event")}
       className="flex items-center gap-2.5 px-3 py-2 rounded-lg border border-[var(--twilight)]/50 bg-[var(--night)] transition-all group hover:border-[var(--twilight)]/70 hover:bg-white/[0.02]"
     >
       {/* Activity icon box */}

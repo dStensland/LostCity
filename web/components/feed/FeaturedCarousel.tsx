@@ -14,6 +14,7 @@ import FestivalCard from "@/components/FestivalCard";
 import { groupEventsForDisplay } from "@/lib/event-grouping";
 import type { EventWithLocation } from "@/lib/event-search";
 import { usePublishEventSeed } from "@/lib/detail/publish-seed-helpers";
+import { prefetchDetailView } from "@/lib/detail/prefetch-detail-view";
 
 type FeaturedEvent = {
   id: number;
@@ -266,6 +267,8 @@ function FeaturedCard({ event, portalSlug }: { event: FeaturedEvent; portalSlug:
     <Link
       href={`/${portalSlug}?event=${event.id}`}
       scroll={false}
+      onMouseEnter={() => prefetchDetailView("event")}
+      onFocus={() => prefetchDetailView("event")}
       className="group flex-shrink-0 w-72 snap-start flex flex-col rounded-xl overflow-hidden border border-[var(--twilight)]/40 transition-all hover:border-[var(--twilight)]/70 bg-gradient-to-br from-[var(--night)] to-[var(--void)] relative"
     >
       {/* Image section */}

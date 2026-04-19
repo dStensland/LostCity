@@ -16,6 +16,7 @@ import { formatTime, getEventStatus } from "@/lib/formats";
 import type { FeedEventData } from "@/components/EventCard";
 import { getCivicEventHref } from "@/lib/civic-routing";
 import { usePublishEventSeed } from "@/lib/detail/publish-seed-helpers";
+import { prefetchDetailView } from "@/lib/detail/prefetch-detail-view";
 
 interface LineupHeroProps {
   event: FeedEventData;
@@ -55,6 +56,8 @@ export default function LineupHero({ event, portalSlug, vertical }: LineupHeroPr
     <Link
       href={eventHref}
       scroll={false}
+      onMouseEnter={() => prefetchDetailView("event")}
+      onFocus={() => prefetchDetailView("event")}
       className="block overflow-hidden transition-all group mb-0 relative"
     >
       <div className="relative h-56 sm:h-72 overflow-hidden">

@@ -4,6 +4,7 @@ import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import dynamic from "next/dynamic";
 import { setFeedVisible } from "@/lib/feed-visibility";
+import { LinkContextProvider } from "@/lib/link-context";
 import { markOverlayPhase, overlayRef } from "@/lib/detail/overlay-perf";
 import {
   peekEntityPreview,
@@ -49,6 +50,16 @@ const initialHadOverlayParam =
 let initialOverlayConsumed = false;
 
 /**
+ * Per plan doc §Locked Decisions #4: after 5 consecutive overlay swaps, the
+ * next entity-link click should resolve as a canonical navigation (full page
+ * load) to keep the overlay depth bounded. Cards inside the overlay read
+ * context via `useLinkContext()`, so we force canonical by nesting an inner
+ * `LinkContextProvider value="canonical"` around the detail view when the
+ * counter hits this cap.
+ */
+const MAX_OVERLAY_DEPTH = 5;
+
+/**
  * Build a selector that can re-find a triggering element after React may
  * have replaced its DOM node during reconciliation. Prefers `id` (stable),
  * then `href` (stable for Link elements), then a kind-tag fallback.
@@ -86,6 +97,8 @@ function AnimatedDetailWrapper({
   onNavigateClose,
   animateEnter,
   ariaLabel,
+  atDepthCap = false,
+  onDepthCapExit,
 }: {
   children: React.ReactNode;
   onNavigateClose: () => void;
@@ -97,8 +110,19 @@ function AnimatedDetailWrapper({
   animateEnter: boolean;
   /** aria-label for the dialog, e.g. "Event detail overlay". */
   ariaLabel: string;
+  /**
+   * When true, card-link clicks inside the overlay are intercepted: a
+   * distinct depth-cap exit animation plays (slides further, longer
+   * duration) before `onDepthCapExit(href)` fires — signals "leaving
+   * overlay context" per plan § Motion Specs.
+   */
+  atDepthCap?: boolean;
+  onDepthCapExit?: (href: string) => void;
 }) {
   const [closing, setClosing] = useState(false);
+  // Null when not a depth-cap close; holds the target href when a depth-cap
+  // link click has been intercepted and we're awaiting the exit animation.
+  const [depthCapHref, setDepthCapHref] = useState<string | null>(null);
   const navigatingRef = useRef(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
   // Capture identifying info for the triggering element — a raw node ref
@@ -114,25 +138,63 @@ function AnimatedDetailWrapper({
   const handleAnimationEnd = useCallback(() => {
     if (closing && !navigatingRef.current) {
       navigatingRef.current = true;
-      onNavigateClose();
+      if (depthCapHref && onDepthCapExit) {
+        onDepthCapExit(depthCapHref);
+      } else {
+        onNavigateClose();
+      }
     }
-  }, [closing, onNavigateClose]);
+  }, [closing, onNavigateClose, depthCapHref, onDepthCapExit]);
+
+  // Depth-cap interceptor — when at cap, capture internal link clicks on the
+  // overlay container, prevent the default Next.js navigation, play the
+  // distinct exit animation, then navigate via onDepthCapExit so the user
+  // senses "leaving overlay context" before the canonical page loads.
+  useEffect(() => {
+    if (!atDepthCap || !onDepthCapExit) return;
+    const container = containerRef.current;
+    if (!container) return;
+    function onClick(e: MouseEvent) {
+      const anchor = (e.target as Element | null)?.closest?.("a[href]");
+      if (!(anchor instanceof HTMLAnchorElement)) return;
+      // Skip cmd/ctrl/shift/alt + middle-click — let browser default happen.
+      if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+      let url: URL;
+      try {
+        url = new URL(anchor.href, window.location.origin);
+      } catch {
+        return;
+      }
+      // Same-origin only — external links shouldn't get the overlay-exit treatment.
+      if (url.origin !== window.location.origin) return;
+      e.preventDefault();
+      setDepthCapHref(url.pathname + url.search + url.hash);
+      setClosing(true);
+    }
+    container.addEventListener("click", onClick, true);
+    return () => container.removeEventListener("click", onClick, true);
+  }, [atDepthCap, onDepthCapExit]);
 
   // Defensive fallback: if the exit animation's `animationend` event doesn't
   // fire within the animation duration + a small buffer — e.g. the tab is
   // background-throttled, or the user has an animation-blocker — force the
-  // close anyway so the user isn't trapped in a non-closing overlay. Matches
-  // --motion-fast (200ms) + margin.
+  // navigation anyway so the user isn't trapped. Longer budget on depth-cap
+  // (animation is 400ms vs 200ms) matches --motion-slow + margin.
   useEffect(() => {
     if (!closing || navigatingRef.current) return;
+    const budget = depthCapHref ? 700 : 500;
     const id = setTimeout(() => {
       if (!navigatingRef.current) {
         navigatingRef.current = true;
-        onNavigateClose();
+        if (depthCapHref && onDepthCapExit) {
+          onDepthCapExit(depthCapHref);
+        } else {
+          onNavigateClose();
+        }
       }
-    }, 500);
+    }, budget);
     return () => clearTimeout(id);
-  }, [closing, onNavigateClose]);
+  }, [closing, onNavigateClose, depthCapHref, onDepthCapExit]);
 
   // Capture trigger + move focus to overlay on mount.
   useEffect(() => {
@@ -196,29 +258,44 @@ function AnimatedDetailWrapper({
   }, [handleAnimatedClose]);
 
   const animClass = closing
-    ? "animate-detail-exit"
+    ? depthCapHref
+      ? "animate-detail-exit-depth-cap"
+      : "animate-detail-exit"
     : animateEnter
       ? "animate-detail-enter"
       : "";
 
+  // Positional shell: the outer container fixes to viewport and centers the
+  // card; the card itself carries the visual affordance (dusk surface,
+  // shadow-card-xl, rounded-card-xl, internal scroll). Lane stays visible
+  // underneath on --void — shadow elevation creates the depth cue, not a
+  // backdrop dim. See plan doc § Locked Decisions #5.
+  // Top inset clears the sticky portal header (z-100, ~64px mobile / ~72px
+  // desktop). The overlay renders below the header so site navigation
+  // (portal switch, search, profile) stays accessible while the overlay is
+  // open — consistent with "overlay ≠ modal" per design-truth.
   return (
     <div
-      ref={containerRef}
-      className={animClass}
-      role="dialog"
-      aria-modal="true"
-      aria-label={ariaLabel}
-      tabIndex={-1}
+      className={`fixed inset-x-0 top-[calc(var(--header-h,72px)+0.5rem)] bottom-4 z-[60] flex items-start justify-center px-3 sm:px-6 pointer-events-none ${animClass}`}
       onAnimationEnd={handleAnimationEnd}
     >
-      {typeof children === "object" && children !== null && "props" in (children as React.ReactElement)
-        ? (() => {
-            const child = children as React.ReactElement<{ onClose: () => void }>;
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const Child = child.type as React.ComponentType<any>;
-            return <Child {...child.props} onClose={handleAnimatedClose} />;
-          })()
-        : children}
+      <div
+        ref={containerRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label={ariaLabel}
+        tabIndex={-1}
+        className="pointer-events-auto relative w-full max-w-3xl h-full bg-[var(--dusk)] rounded-card-xl shadow-card-xl overflow-y-auto overflow-x-hidden"
+      >
+        {typeof children === "object" && children !== null && "props" in (children as React.ReactElement)
+          ? (() => {
+              const child = children as React.ReactElement<{ onClose: () => void }>;
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              const Child = child.type as React.ComponentType<any>;
+              return <Child {...child.props} onClose={handleAnimatedClose} />;
+            })()
+          : children}
+      </div>
     </div>
   );
 }
@@ -257,6 +334,38 @@ export default function DetailOverlayRouter({
     initialOverlayConsumed = true;
   }, []);
 
+  // Track swap depth: how many overlays have been shown in a row without
+  // closing. Overlay #1 = depth 1. Each swap (transition between two truthy
+  // targets) increments by 1. Depth ≥ MAX_OVERLAY_DEPTH (5) forces canonical
+  // context for card links inside the overlay, so the next click exits to a
+  // full-page nav instead of stacking another swap.
+  //
+  // The router is conditionally mounted (only when an overlay is active) —
+  // closing the overlay unmounts the component, which resets state on the
+  // next mount via the useState initializer.
+  const currentKey = detailTarget
+    ? `${detailTarget.kind}:${
+        "id" in detailTarget ? detailTarget.id : detailTarget.slug
+      }`
+    : null;
+  const prevKeyRef = useRef<string | null>(null);
+  const [swapDepth, setSwapDepth] = useState(currentKey ? 1 : 0);
+  useEffect(() => {
+    if (!currentKey) return;
+    if (prevKeyRef.current === null) {
+      // First render with a target — count as depth 1.
+      prevKeyRef.current = currentKey;
+      return;
+    }
+    if (prevKeyRef.current !== currentKey) {
+      prevKeyRef.current = currentKey;
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setSwapDepth((d) => d + 1);
+    }
+  }, [currentKey]);
+
+  const atDepthCap = swapDepth >= MAX_OVERLAY_DEPTH;
+
   useEffect(() => {
     if (!detailTarget) return;
     window.scrollTo({ top: 0, left: 0, behavior: "auto" });
@@ -279,6 +388,17 @@ export default function DetailOverlayRouter({
     navigateClose();
   }, [navigateClose]);
 
+  // Depth-cap exit: the wrapper intercepts the card click, plays the longer
+  // depth-cap exit anim, then calls this — which does the actual canonical
+  // navigation. router.push (not router.replace) so browser history still
+  // carries the transition.
+  const handleDepthCapExit = useCallback(
+    (href: string) => {
+      router.push(href);
+    },
+    [router],
+  );
+
   let detailView: React.ReactNode = null;
 
   switch (detailTarget?.kind) {
@@ -292,12 +412,15 @@ export default function DetailOverlayRouter({
           onNavigateClose={navigateClose}
           animateEnter={!isColdLoadMount}
           ariaLabel={ARIA_LABELS[detailTarget.kind]}
+          atDepthCap={atDepthCap}
+          onDepthCapExit={handleDepthCapExit}
         >
           <EventDetailView
             eventId={detailTarget.id}
             portalSlug={portalSlug}
             onClose={handleClose}
             seedData={seed ?? undefined}
+            inOverlay
           />
         </AnimatedDetailWrapper>
       );
@@ -313,6 +436,8 @@ export default function DetailOverlayRouter({
           onNavigateClose={navigateClose}
           animateEnter={!isColdLoadMount}
           ariaLabel={ARIA_LABELS[detailTarget.kind]}
+          atDepthCap={atDepthCap}
+          onDepthCapExit={handleDepthCapExit}
         >
           <PlaceDetailView
             slug={detailTarget.slug}
@@ -334,6 +459,8 @@ export default function DetailOverlayRouter({
           onNavigateClose={navigateClose}
           animateEnter={!isColdLoadMount}
           ariaLabel={ARIA_LABELS[detailTarget.kind]}
+          atDepthCap={atDepthCap}
+          onDepthCapExit={handleDepthCapExit}
         >
           <SeriesDetailView
             slug={detailTarget.slug}
@@ -355,6 +482,8 @@ export default function DetailOverlayRouter({
           onNavigateClose={navigateClose}
           animateEnter={!isColdLoadMount}
           ariaLabel={ARIA_LABELS[detailTarget.kind]}
+          atDepthCap={atDepthCap}
+          onDepthCapExit={handleDepthCapExit}
         >
           <FestivalDetailView
             slug={detailTarget.slug}
@@ -376,6 +505,8 @@ export default function DetailOverlayRouter({
           onNavigateClose={navigateClose}
           animateEnter={!isColdLoadMount}
           ariaLabel={ARIA_LABELS[detailTarget.kind]}
+          atDepthCap={atDepthCap}
+          onDepthCapExit={handleDepthCapExit}
         >
           <OrgDetailView
             slug={detailTarget.slug}
@@ -400,6 +531,8 @@ export default function DetailOverlayRouter({
           onNavigateClose={navigateClose}
           animateEnter={!isColdLoadMount}
           ariaLabel={ARIA_LABELS[detailTarget.kind]}
+          atDepthCap={atDepthCap}
+          onDepthCapExit={handleDepthCapExit}
         >
           <NeighborhoodDetailView
             slug={detailTarget.slug}
@@ -421,6 +554,17 @@ export default function DetailOverlayRouter({
     setFeedVisible(!isDetailActive);
   }, [isDetailActive]);
 
+  // Wrap the detail view in an inner LinkContextProvider when at cap so that
+  // card components inside (which build URLs via useLinkContext) emit
+  // canonical links. Next click inside the overlay becomes a full-page nav to
+  // the canonical route instead of yet-another swap.
+  const wrappedDetailView =
+    atDepthCap && detailView ? (
+      <LinkContextProvider value="canonical">{detailView}</LinkContextProvider>
+    ) : (
+      detailView
+    );
+
   // Polite live-region announcement so screen readers hear "Event detail
   // opened" (etc.) when the overlay opens or swaps. Rendered outside the
   // animated wrapper so it's unaffected by mount/unmount flicker.
@@ -428,9 +572,20 @@ export default function DetailOverlayRouter({
     ? `${ARIA_LABELS[detailTarget.kind]?.replace(" overlay", "") ?? "Detail"} opened`
     : "";
 
+  // Lane stays in DOM behind the overlay — the card's shadow-elevation is
+  // what creates the depth cue. When an overlay is active, mark the lane
+  // inert + aria-hidden so assistive tech and keyboard focus don't leak
+  // into the background content. `setFeedVisible(false)` still runs above
+  // to pause scroll-driven feed listeners without affecting visual DOM.
   return (
     <>
-      <div className={isDetailActive ? "hidden" : "contents"}>{children}</div>
+      <div
+        className="contents"
+        aria-hidden={isDetailActive ? "true" : undefined}
+        inert={isDetailActive}
+      >
+        {children}
+      </div>
       <div
         role="status"
         aria-live="polite"
@@ -438,7 +593,7 @@ export default function DetailOverlayRouter({
       >
         {announcement}
       </div>
-      {detailView}
+      {wrappedDetailView}
     </>
   );
 }
