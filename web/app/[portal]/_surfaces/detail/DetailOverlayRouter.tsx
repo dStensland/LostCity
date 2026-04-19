@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import dynamic from "next/dynamic";
 import { setFeedVisible } from "@/lib/feed-visibility";
 import { LinkContextProvider } from "@/lib/link-context";
+import { OverlayContextProvider } from "@/lib/detail/overlay-context";
 import { markOverlayPhase, overlayRef } from "@/lib/detail/overlay-perf";
 import {
   peekEntityPreview,
@@ -18,6 +19,7 @@ import {
 } from "@/lib/detail/entity-preview-store";
 import {
   buildDetailCloseFallbackUrl,
+  DETAIL_ENTRY_PARAM_KEYS,
   resolveDetailOverlayTarget,
 } from "./detail-entry-contract";
 
@@ -31,23 +33,32 @@ const NeighborhoodDetailView = dynamic(
 );
 
 /**
- * Did the page initially load with an overlay param in the URL? If yes, the
- * first overlay-router mount is a cold-load-of-shared-link and the enter
- * animation should be skipped (otherwise the user sees the feed flash under
- * a sliding overlay).
+ * Module-scoped state for cold-load detection. Captured at script evaluation
+ * time (before any render) from the actual URL rather than from React state
+ * so it's stable across Strict-Mode double-invocation, HMR, and client-side
+ * navigations.
  *
- * Captured at module evaluation time (before any render) from the actual URL
- * rather than from React state so it's stable across Strict-Mode double-
- * invocation, HMR, and client-side navigations. After the first mount, we
- * set `initialOverlayConsumed` so subsequent click-navigations animate.
+ * - `hadOverlayParamAtLoad`: did the initial URL carry an overlay param?
+ *   If yes, the first overlay-router mount in this tab session is a
+ *   cold-load-of-a-shared-link and should skip the enter animation
+ *   (otherwise the user sees the feed flash under a sliding overlay).
+ * - `consumed`: flipped after the first mount so subsequent click-navigations
+ *   animate normally.
+ *
+ * Grouped as one object so future module-scoped load-state additions have a
+ * natural home instead of accumulating as loose globals.
  */
-const initialHadOverlayParam =
-  typeof window !== "undefined" &&
-  new URLSearchParams(window.location.search).toString().length > 0 &&
-  /[?&](event|spot|series|festival|org|artist|neighborhood)=/.test(
-    window.location.search,
-  );
-let initialOverlayConsumed = false;
+const OVERLAY_PARAM_REGEX = new RegExp(
+  `[?&](${DETAIL_ENTRY_PARAM_KEYS.join("|")})=`,
+);
+
+const initialOverlayLoadState = {
+  hadOverlayParamAtLoad:
+    typeof window !== "undefined" &&
+    window.location.search.length > 0 &&
+    OVERLAY_PARAM_REGEX.test(window.location.search),
+  consumed: false,
+};
 
 /**
  * Per plan doc §Locked Decisions #4: after 5 consecutive overlay swaps, the
@@ -324,14 +335,16 @@ export default function DetailOverlayRouter({
 
   // Skip enter animation on cold load of a shared `?event=123` link — without
   // this guard the user sees the feed flash under a sliding-up overlay. The
-  // first mount where `initialHadOverlayParam` is true (and not yet consumed)
+  // first mount where `hadOverlayParamAtLoad` is true (and not yet consumed)
   // is the cold-load case. Any later mount — whether the user closed and
   // reopened, or navigated in for the first time — should animate.
   const [isColdLoadMount] = useState(
-    () => initialHadOverlayParam && !initialOverlayConsumed,
+    () =>
+      initialOverlayLoadState.hadOverlayParamAtLoad &&
+      !initialOverlayLoadState.consumed,
   );
   useEffect(() => {
-    initialOverlayConsumed = true;
+    initialOverlayLoadState.consumed = true;
   }, []);
 
   // Track swap depth: how many overlays have been shown in a row without
@@ -420,7 +433,6 @@ export default function DetailOverlayRouter({
             portalSlug={portalSlug}
             onClose={handleClose}
             seedData={seed ?? undefined}
-            inOverlay
           />
         </AnimatedDetailWrapper>
       );
@@ -554,16 +566,19 @@ export default function DetailOverlayRouter({
     setFeedVisible(!isDetailActive);
   }, [isDetailActive]);
 
-  // Wrap the detail view in an inner LinkContextProvider when at cap so that
-  // card components inside (which build URLs via useLinkContext) emit
-  // canonical links. Next click inside the overlay becomes a full-page nav to
-  // the canonical route instead of yet-another swap.
-  const wrappedDetailView =
-    atDepthCap && detailView ? (
-      <LinkContextProvider value="canonical">{detailView}</LinkContextProvider>
-    ) : (
-      detailView
-    );
+  // Wrap the detail view in an OverlayContextProvider so views inside can read
+  // `inOverlay: true` via useOverlayContext() — replaces `inOverlay` prop
+  // drilling. When at depth cap, also nest a LinkContextProvider so cards
+  // inside emit canonical links and the next click exits via full-page nav.
+  const wrappedDetailView = detailView ? (
+    <OverlayContextProvider value={{ inOverlay: true }}>
+      {atDepthCap ? (
+        <LinkContextProvider value="canonical">{detailView}</LinkContextProvider>
+      ) : (
+        detailView
+      )}
+    </OverlayContextProvider>
+  ) : null;
 
   // Polite live-region announcement so screen readers hear "Event detail
   // opened" (etc.) when the overlay opens or swaps. Rendered outside the

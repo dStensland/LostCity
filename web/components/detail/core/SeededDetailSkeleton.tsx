@@ -250,12 +250,10 @@ function formatNeighborhoodBreadcrumb(seed: {
   events_today_count?: number | null;
   venue_count?: number | null;
 }): string | null {
-  const parts: string[] = [];
-  if (seed.events_today_count && seed.events_today_count > 0) {
-    parts.push(`${seed.events_today_count} TONIGHT`);
-  }
-  if (seed.venue_count) {
-    parts.push(`${seed.venue_count} ${seed.venue_count === 1 ? "PLACE" : "PLACES"}`);
-  }
-  return parts.length > 0 ? parts.join(" · ") : null;
+  // Seed breadcrumb is a content preview, not a data dashboard. Venue count
+  // reads as debug output in this context — the full detail view surfaces
+  // it properly below. Keep only the tonight signal, editorial-cased.
+  if (!seed.events_today_count || seed.events_today_count <= 0) return null;
+  const noun = seed.events_today_count === 1 ? "event" : "events";
+  return `${seed.events_today_count} ${noun} tonight`;
 }

@@ -7,6 +7,7 @@ import { DetailLayout } from "@/components/detail/core/DetailLayout";
 import { DetailLoadingSkeleton } from "@/components/detail/core/DetailLoadingSkeleton";
 import { SeededDetailSkeleton } from "@/components/detail/core/SeededDetailSkeleton";
 import type { EventSeed } from "@/lib/detail/entity-preview-store";
+import { useOverlayContext } from "@/lib/detail/overlay-context";
 import { EventIdentity } from "@/components/detail/identity/EventIdentity";
 import { eventManifest } from "@/components/detail/manifests/event";
 import { useDetailData } from "@/lib/detail/use-detail-data";
@@ -46,13 +47,6 @@ interface EventDetailViewProps {
    * enrichment fetch runs. Replaced when `data` arrives.
    */
   seedData?: EventSeed;
-  /**
-   * When true, forces the sidebar shell instead of the elevated full-width
-   * layout. The elevated shell was designed for 1600px page context; inside
-   * the 768px overlay card it compresses awkwardly. Router passes true
-   * when rendering inside the overlay.
-   */
-  inOverlay?: boolean;
 }
 
 // ── Component ────────────────────────────────────────────────────────────────
@@ -63,8 +57,12 @@ export default function EventDetailView({
   onClose,
   initialData,
   seedData,
-  inOverlay = false,
 }: EventDetailViewProps) {
+  // Inside the overlay, force the sidebar shell. The elevated shell was
+  // designed for 1600px page context; at 768px overlay card width it
+  // compresses awkwardly. `useOverlayContext().inOverlay` replaces the
+  // prop-drilled `inOverlay` flag the router used to pass.
+  const { inOverlay } = useOverlayContext();
   const { data, status } = useDetailData<EventApiResponse>({
     entityType: "event",
     identifier: eventId,
