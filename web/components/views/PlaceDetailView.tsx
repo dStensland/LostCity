@@ -17,6 +17,8 @@ import { PlaceIdentityV2 } from "@/components/detail/place/PlaceIdentityV2";
 import { PlaceStatusBar } from "@/components/detail/place/PlaceStatusBar";
 import { PlaceQuickActions, type QuickAction } from "@/components/detail/place/PlaceQuickActions";
 import { DetailLoadingSkeleton } from "@/components/detail/core/DetailLoadingSkeleton";
+import { SeededDetailSkeleton } from "@/components/detail/core/SeededDetailSkeleton";
+import type { SpotSeed } from "@/lib/detail/entity-preview-store";
 import { HeroOverlayNav } from "@/components/detail/core/HeroOverlayNav";
 import { SectionHeader } from "@/components/detail/core/SectionHeader";
 import { DetailStickyBar } from "@/components/detail/DetailStickyBar";
@@ -64,6 +66,8 @@ interface PlaceDetailViewProps {
   onClose: () => void;
   /** Server-fetched data — skips client fetch when provided */
   initialData?: SpotApiResponse;
+  /** Partial card-published seed for fast first paint. */
+  seedData?: SpotSeed;
 }
 
 // ── Thin State Empty Component ───────────────────────────────────────────────
@@ -105,6 +109,7 @@ export default function PlaceDetailView({
   portalSlug,
   onClose,
   initialData,
+  seedData,
 }: PlaceDetailViewProps) {
   const { portal } = usePortal();
 
@@ -274,6 +279,7 @@ export default function PlaceDetailView({
 
   // ── Loading / no data ───────────────────────────────────────────────────────
   if (status === "loading" || !entityData || !spot) {
+    if (seedData) return <SeededDetailSkeleton seed={seedData} />;
     return <DetailLoadingSkeleton />;
   }
 

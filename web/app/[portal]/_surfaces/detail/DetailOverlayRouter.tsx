@@ -6,6 +6,16 @@ import dynamic from "next/dynamic";
 import { setFeedVisible } from "@/lib/feed-visibility";
 import { markOverlayPhase, overlayRef } from "@/lib/detail/overlay-perf";
 import {
+  peekEntityPreview,
+  buildEntityRef,
+  type EventSeed,
+  type SpotSeed,
+  type SeriesSeed,
+  type FestivalSeed,
+  type OrgSeed,
+  type NeighborhoodSeed,
+} from "@/lib/detail/entity-preview-store";
+import {
   buildDetailCloseFallbackUrl,
   resolveDetailOverlayTarget,
 } from "./detail-entry-contract";
@@ -102,7 +112,10 @@ export default function DetailOverlayRouter({
   let detailView: React.ReactNode = null;
 
   switch (detailTarget?.kind) {
-    case "event":
+    case "event": {
+      const seed = peekEntityPreview(
+        buildEntityRef("event", detailTarget.id),
+      ) as EventSeed | null;
       detailView = (
         <AnimatedDetailWrapper
           key={`event-${detailTarget.id}`}
@@ -112,11 +125,16 @@ export default function DetailOverlayRouter({
             eventId={detailTarget.id}
             portalSlug={portalSlug}
             onClose={handleClose}
+            seedData={seed ?? undefined}
           />
         </AnimatedDetailWrapper>
       );
       break;
-    case "spot":
+    }
+    case "spot": {
+      const seed = peekEntityPreview(
+        buildEntityRef("spot", detailTarget.slug),
+      ) as SpotSeed | null;
       detailView = (
         <AnimatedDetailWrapper
           key={`spot-${detailTarget.slug}`}
@@ -126,11 +144,16 @@ export default function DetailOverlayRouter({
             slug={detailTarget.slug}
             portalSlug={portalSlug}
             onClose={handleClose}
+            seedData={seed ?? undefined}
           />
         </AnimatedDetailWrapper>
       );
       break;
-    case "series":
+    }
+    case "series": {
+      const seed = peekEntityPreview(
+        buildEntityRef("series", detailTarget.slug),
+      ) as SeriesSeed | null;
       detailView = (
         <AnimatedDetailWrapper
           key={`series-${detailTarget.slug}`}
@@ -140,11 +163,16 @@ export default function DetailOverlayRouter({
             slug={detailTarget.slug}
             portalSlug={portalSlug}
             onClose={handleClose}
+            seedData={seed ?? undefined}
           />
         </AnimatedDetailWrapper>
       );
       break;
-    case "festival":
+    }
+    case "festival": {
+      const seed = peekEntityPreview(
+        buildEntityRef("festival", detailTarget.slug),
+      ) as FestivalSeed | null;
       detailView = (
         <AnimatedDetailWrapper
           key={`festival-${detailTarget.slug}`}
@@ -154,11 +182,16 @@ export default function DetailOverlayRouter({
             slug={detailTarget.slug}
             portalSlug={portalSlug}
             onClose={handleClose}
+            seedData={seed ?? undefined}
           />
         </AnimatedDetailWrapper>
       );
       break;
-    case "org":
+    }
+    case "org": {
+      const seed = peekEntityPreview(
+        buildEntityRef("org", detailTarget.slug),
+      ) as OrgSeed | null;
       detailView = (
         <AnimatedDetailWrapper
           key={`org-${detailTarget.slug}`}
@@ -168,14 +201,19 @@ export default function DetailOverlayRouter({
             slug={detailTarget.slug}
             portalSlug={portalSlug}
             onClose={handleClose}
+            seedData={seed ?? undefined}
           />
         </AnimatedDetailWrapper>
       );
       break;
+    }
     case "artist":
       detailView = null;
       break;
-    case "neighborhood":
+    case "neighborhood": {
+      const seed = peekEntityPreview(
+        buildEntityRef("neighborhood", detailTarget.slug),
+      ) as NeighborhoodSeed | null;
       detailView = (
         <AnimatedDetailWrapper
           key={`neighborhood-${detailTarget.slug}`}
@@ -185,10 +223,12 @@ export default function DetailOverlayRouter({
             slug={detailTarget.slug}
             portalSlug={portalSlug}
             onClose={handleClose}
+            seedData={seed ?? undefined}
           />
         </AnimatedDetailWrapper>
       );
       break;
+    }
     default:
       detailView = null;
   }

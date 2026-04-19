@@ -5,6 +5,8 @@ import { ShareNetwork, BookmarkSimple, BellRinging } from "@phosphor-icons/react
 import { useSeriesSubscription } from "@/lib/hooks/useSeriesSubscription";
 import { DetailLayout } from "@/components/detail/core/DetailLayout";
 import { DetailLoadingSkeleton } from "@/components/detail/core/DetailLoadingSkeleton";
+import { SeededDetailSkeleton } from "@/components/detail/core/SeededDetailSkeleton";
+import type { SeriesSeed } from "@/lib/detail/entity-preview-store";
 import { SeriesIdentity } from "@/components/detail/identity/SeriesIdentity";
 import { getSeriesManifest } from "@/components/detail/manifests/series";
 import { useDetailData } from "@/lib/detail/use-detail-data";
@@ -18,6 +20,8 @@ interface SeriesDetailViewProps {
   portalSlug: string;
   onClose?: () => void;
   initialData?: SeriesApiResponse;
+  /** Partial card-published seed for fast first paint. */
+  seedData?: SeriesSeed;
 }
 
 // ── Component ────────────────────────────────────────────────────────────────
@@ -27,6 +31,7 @@ export default function SeriesDetailView({
   portalSlug,
   onClose,
   initialData,
+  seedData,
 }: SeriesDetailViewProps) {
   const { data, status } = useDetailData<SeriesApiResponse>({
     entityType: "series",
@@ -121,6 +126,7 @@ export default function SeriesDetailView({
   );
 
   if (status === "loading" || !entityData || !series) {
+    if (seedData) return <SeededDetailSkeleton seed={seedData} />;
     return <DetailLoadingSkeleton />;
   }
 
