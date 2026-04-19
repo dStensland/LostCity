@@ -395,7 +395,7 @@ function BucketSection({
             event={toScheduleRowEvent(ev)}
             accentColor={accentColor}
             portalSlug={portalSlug}
-            context="page"
+            context="canonical"
           />
         ))}
       </div>
