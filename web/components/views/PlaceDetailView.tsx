@@ -30,6 +30,7 @@ import { usePortal } from "@/lib/portal-context";
 import type { SpotDetailPayload, WalkableNeighbor, NearbyDestination } from "@/lib/spot-detail";
 import type { EntityData, SectionModule } from "@/lib/detail/types";
 import type { PlaceProfile, PlaceDiningDetails, PlaceGoogleDetails } from "@/lib/types/places";
+import { PlacePlansStripLive } from "@/components/plans/PlacePlansStripLive";
 
 // ── SpotApiResponse — re-export for callers ───────────────────────────────────
 
@@ -286,8 +287,23 @@ export default function PlaceDetailView({
   });
 
   // Thin state: zero sections → show fallback
-  const sectionsToRender =
+  const baseSections =
     sectionNodes.length > 0 ? sectionNodes : [<ThinStateEmpty key="empty" />];
+
+  // Presence signal: PlacePlansStripLive — shows "N friends here" when active plans exist.
+  // Renders nothing when no active plans, so it never creates empty space.
+  const placeId = typeof spot.id === "number" ? spot.id : null;
+  const sectionsToRender = placeId
+    ? [
+        <PlacePlansStripLive
+          key="presence"
+          placeId={placeId}
+          variant="full"
+          className="mx-0"
+        />,
+        ...baseSections,
+      ]
+    : baseSections;
 
   return (
     <>

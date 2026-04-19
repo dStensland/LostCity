@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { withAuthAndParams } from "@/lib/api-middleware";
+import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 
@@ -9,7 +10,9 @@ const ParamsSchema = z.object({ id: z.string().uuid() });
 type Params = { id: string };
 
 export const PATCH = withAuthAndParams<Params>(
-  async (_request, { user, serviceClient, params }) => {
+  async (request, { user, serviceClient, params }) => {
+    const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write, getClientIdentifier(request));
+    if (rateLimitResult) return rateLimitResult;
     const paramParsed = ParamsSchema.safeParse(params);
     if (!paramParsed.success) {
       return NextResponse.json({ error: "Invalid plan id" }, { status: 400 });
