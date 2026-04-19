@@ -357,6 +357,7 @@ export default function DetailOverlayRouter({
             portalSlug={portalSlug}
             onClose={handleClose}
             seedData={seed ?? undefined}
+            inOverlay
           />
         </AnimatedDetailWrapper>
       );
