@@ -212,24 +212,37 @@ function AnimatedDetailWrapper({
       ? "animate-detail-enter"
       : "";
 
+  // Positional shell: the outer container fixes to viewport and centers the
+  // card; the card itself carries the visual affordance (dusk surface,
+  // shadow-card-xl, rounded-card-xl, internal scroll). Lane stays visible
+  // underneath on --void — shadow elevation creates the depth cue, not a
+  // backdrop dim. See plan doc § Locked Decisions #5.
+  // Top inset clears the sticky portal header (z-100, ~64px mobile / ~72px
+  // desktop). The overlay renders below the header so site navigation
+  // (portal switch, search, profile) stays accessible while the overlay is
+  // open — consistent with "overlay ≠ modal" per design-truth.
   return (
     <div
-      ref={containerRef}
-      className={animClass}
-      role="dialog"
-      aria-modal="true"
-      aria-label={ariaLabel}
-      tabIndex={-1}
+      className={`fixed inset-x-0 top-[calc(var(--header-h,72px)+0.5rem)] bottom-4 z-[60] flex items-start justify-center px-3 sm:px-6 pointer-events-none ${animClass}`}
       onAnimationEnd={handleAnimationEnd}
     >
-      {typeof children === "object" && children !== null && "props" in (children as React.ReactElement)
-        ? (() => {
-            const child = children as React.ReactElement<{ onClose: () => void }>;
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const Child = child.type as React.ComponentType<any>;
-            return <Child {...child.props} onClose={handleAnimatedClose} />;
-          })()
-        : children}
+      <div
+        ref={containerRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label={ariaLabel}
+        tabIndex={-1}
+        className="pointer-events-auto relative w-full max-w-3xl h-full bg-[var(--dusk)] rounded-card-xl shadow-card-xl overflow-y-auto overflow-x-hidden"
+      >
+        {typeof children === "object" && children !== null && "props" in (children as React.ReactElement)
+          ? (() => {
+              const child = children as React.ReactElement<{ onClose: () => void }>;
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              const Child = child.type as React.ComponentType<any>;
+              return <Child {...child.props} onClose={handleAnimatedClose} />;
+            })()
+          : children}
+      </div>
     </div>
   );
 }
@@ -485,9 +498,20 @@ export default function DetailOverlayRouter({
     ? `${ARIA_LABELS[detailTarget.kind]?.replace(" overlay", "") ?? "Detail"} opened`
     : "";
 
+  // Lane stays in DOM behind the overlay — the card's shadow-elevation is
+  // what creates the depth cue. When an overlay is active, mark the lane
+  // inert + aria-hidden so assistive tech and keyboard focus don't leak
+  // into the background content. `setFeedVisible(false)` still runs above
+  // to pause scroll-driven feed listeners without affecting visual DOM.
   return (
     <>
-      <div className={isDetailActive ? "hidden" : "contents"}>{children}</div>
+      <div
+        className="contents"
+        aria-hidden={isDetailActive ? "true" : undefined}
+        inert={isDetailActive}
+      >
+        {children}
+      </div>
       <div
         role="status"
         aria-live="polite"
