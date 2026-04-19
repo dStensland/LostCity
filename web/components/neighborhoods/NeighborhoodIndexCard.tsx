@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEntityLinkOptions } from "@/lib/link-context";
 import { buildNeighborhoodUrl } from "@/lib/entity-urls";
+import { usePublishNeighborhoodSeed } from "@/lib/detail/publish-seed-helpers";
 
 /**
  * Minimalist neighborhood card for the /atlanta/neighborhoods index grid.
@@ -40,6 +41,13 @@ export default function NeighborhoodIndexCard({
   const isActive = eventsTodayCount > 0;
   const { context, existingParams } = useEntityLinkOptions();
   const href = buildNeighborhoodUrl(slug, portalSlug, context, existingParams);
+  usePublishNeighborhoodSeed({
+    slug,
+    name,
+    color,
+    events_today_count: eventsTodayCount,
+    venue_count: venueCount,
+  });
 
   return (
     <Link

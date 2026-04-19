@@ -16,6 +16,10 @@ import { Crown } from "@phosphor-icons/react";
 import FeedSectionReveal from "@/components/feed/FeedSectionReveal";
 import { getLocalDateString } from "@/lib/formats";
 import {
+  usePublishEventSeed,
+  usePublishFestivalSeed,
+} from "@/lib/detail/publish-seed-helpers";
+import {
   groupItemsByMonth,
   type BigStuffFeedData,
   type BigStuffMonthBucket,
@@ -163,6 +167,43 @@ function MonthColumn({
 }
 
 function ItemRow({ item }: { item: BigStuffItem }) {
+  // Publish a seed to the overlay preview store so the detail view can paint
+  // real content on open instead of gray shimmer. Festival kind → festival
+  // seed keyed by slug (parsed from href). Tentpole kind → event seed keyed
+  // by event id.
+  const festivalSlug =
+    item.kind === "festival"
+      ? new URL(item.href, "http://localhost").searchParams.get("festival")
+      : null;
+  const tentpoleEventId =
+    item.kind === "tentpole"
+      ? Number(
+          new URL(item.href, "http://localhost").searchParams.get("event") ?? "",
+        )
+      : null;
+
+  usePublishFestivalSeed(
+    festivalSlug
+      ? {
+          slug: festivalSlug,
+          name: item.title,
+          announced_start: item.startDate,
+          announced_end: item.endDate,
+          neighborhood: item.location,
+        }
+      : null,
+  );
+  usePublishEventSeed(
+    tentpoleEventId && !Number.isNaN(tentpoleEventId)
+      ? {
+          id: tentpoleEventId,
+          title: item.title,
+          start_date: item.startDate,
+          venue: item.location ? { name: item.location } : null,
+        }
+      : null,
+  );
+
   // Hover cascade: on a ribbon hover, siblings dim to 75%. The hovered item
   // needs `hover:!opacity-100` (!important) because `.group/ribbon:hover
   // .group-hover/ribbon:opacity-75` has higher specificity (3 tokens) than

@@ -15,6 +15,7 @@ import { Users, Lightning, Ticket } from "@phosphor-icons/react";
 import { formatTime, getEventStatus } from "@/lib/formats";
 import type { FeedEventData } from "@/components/EventCard";
 import { getCivicEventHref } from "@/lib/civic-routing";
+import { usePublishEventSeed } from "@/lib/detail/publish-seed-helpers";
 
 interface LineupHeroProps {
   event: FeedEventData;
@@ -43,6 +44,7 @@ function buildTimeDisplay(event: FeedEventData): {
 }
 
 export default function LineupHero({ event, portalSlug, vertical }: LineupHeroProps) {
+  usePublishEventSeed(event);
   const { label: timeLabel, isLive, isSoon } = buildTimeDisplay(event);
   const catColor = getCategoryColor(event.category);
   const catLabel = getCategoryLabel(event.category);
