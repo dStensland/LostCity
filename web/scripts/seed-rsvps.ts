@@ -7,7 +7,7 @@ import * as path from "path";
  * Seed RSVPs for existing persona users.
  *
  * Looks up persona profiles by username, finds upcoming events matching
- * their categories, and creates RSVPs with going/interested distribution.
+ * their categories, and creates plans + plan_invitees rows (going only).
  *
  * Run with: npx tsx scripts/seed-rsvps.ts
  */
@@ -80,7 +80,7 @@ const CATEGORY_MAP: Record<string, string> = {
 async function getEventsForCategories(
   categories: string[],
   limit: number
-): Promise<Array<{ id: number; category_id: string }>> {
+): Promise<Array<{ id: number; category_id: string; portal_id: string | null; start_date: string }>> {
   const mappedCategories = categories
     .map((c) => CATEGORY_MAP[c.toLowerCase()] || c)
     .filter((v, i, a) => a.indexOf(v) === i);
@@ -89,7 +89,7 @@ async function getEventsForCategories(
 
   const { data, error } = await supabase
     .from("events")
-    .select("id, category_id")
+    .select("id, category_id, portal_id, start_date")
     .in("category_id", mappedCategories)
     .gte("start_date", today)
     .order("start_date", { ascending: true })
@@ -106,7 +106,7 @@ async function getEventsForCategories(
 }
 
 async function main() {
-  console.log("Seeding RSVPs for existing persona users...\n");
+  console.log("Seeding RSVPs (plans + plan_invitees) for existing persona users...\n");
 
   // Collect all persona usernames (including founder)
   const allPersonas: Persona[] = [
@@ -138,24 +138,23 @@ async function main() {
 
   console.log(`Found ${usernameToId.size} / ${allPersonas.length} persona profiles in DB\n`);
 
-  // Clear existing RSVPs for seed users to avoid duplicates
+  // Clear existing seed data by deleting plans created by seed users
   const seedUserIds = Array.from(usernameToId.values());
   if (seedUserIds.length > 0) {
     const { error: deleteError } = await supabase
-      .from("event_rsvps")
+      .from("plans")
       .delete()
-      .in("user_id", seedUserIds);
+      .in("creator_id", seedUserIds)
+      .eq("anchor_type", "event");
 
     if (deleteError) {
-      console.error("Error clearing old RSVPs:", deleteError.message);
+      console.error("Error clearing old plans:", deleteError.message);
     } else {
-      console.log("Cleared existing RSVPs for seed users");
+      console.log("Cleared existing event-anchor plans for seed users");
     }
   }
 
-  let totalRsvps = 0;
-  let totalGoing = 0;
-  let totalInterested = 0;
+  let totalPlans = 0;
 
   for (const persona of allPersonas) {
     const userId = usernameToId.get(persona.username);
@@ -165,6 +164,7 @@ async function main() {
     }
 
     const rsvpCount = RSVP_COUNTS[persona.activity_level] || 5;
+    // Only seed "going" — interested/went have no migration path
     const events = await getEventsForCategories(persona.categories, rsvpCount);
 
     if (events.length === 0) {
@@ -172,37 +172,52 @@ async function main() {
       continue;
     }
 
-    const rsvps = events.map((event, i) => {
-      // Power users: all going. Others: 70% going, 30% interested
-      const status =
-        persona.activity_level === "power" || i < events.length * 0.7
-          ? "going"
-          : "interested";
-      return {
-        user_id: userId,
-        event_id: event.id,
-        status,
-        visibility: "public",
-      };
-    });
+    // Build plan rows — one plan per event
+    const planRows = events.map((event) => ({
+      creator_id: userId,
+      portal_id: event.portal_id ?? null,
+      anchor_type: "event" as const,
+      anchor_event_id: event.id,
+      starts_at: event.start_date,
+      visibility: "friends",
+    }));
 
-    const goingCount = rsvps.filter((r) => r.status === "going").length;
-    const interestedCount = rsvps.filter((r) => r.status === "interested").length;
+    const { data: insertedPlans, error: planError } = await supabase
+      .from("plans")
+      .insert(planRows as never)
+      .select("id");
 
-    const { error } = await supabase.from("event_rsvps").insert(rsvps);
-    if (error) {
-      console.error(`  Error creating RSVPs for ${persona.username}:`, error.message);
+    if (planError) {
+      console.error(`  Error creating plans for ${persona.username}:`, planError.message);
+      continue;
+    }
+
+    const planIds = (insertedPlans || []).map((p: { id: string }) => p.id);
+
+    // Build plan_invitees rows
+    const inviteeRows = planIds.map((planId: string) => ({
+      plan_id: planId,
+      user_id: userId,
+      rsvp_status: "going",
+      invited_by: userId,
+      responded_at: new Date().toISOString(),
+    }));
+
+    const { error: inviteeError } = await supabase
+      .from("plan_invitees")
+      .insert(inviteeRows as never);
+
+    if (inviteeError) {
+      console.error(`  Error creating plan_invitees for ${persona.username}:`, inviteeError.message);
     } else {
-      totalRsvps += rsvps.length;
-      totalGoing += goingCount;
-      totalInterested += interestedCount;
+      totalPlans += planIds.length;
       console.log(
-        `  ${persona.username}: ${goingCount} going, ${interestedCount} interested (${persona.categories.slice(0, 3).join(", ")})`
+        `  ${persona.username}: ${planIds.length} going plans (${persona.categories.slice(0, 3).join(", ")})`
       );
     }
   }
 
-  console.log(`\nDone! Created ${totalRsvps} RSVPs (${totalGoing} going, ${totalInterested} interested)`);
+  console.log(`\nDone! Created ${totalPlans} plans (all going)`);
 }
 
 main().catch(console.error);

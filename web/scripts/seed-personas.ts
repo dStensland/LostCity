@@ -221,8 +221,8 @@ async function clearCoachSeedData(coachId: string | null) {
     }
   }
 
-  // Clear coach's RSVPs (so we can recreate fresh)
-  await supabase.from("event_rsvps").delete().eq("user_id", coachId);
+  // Clear coach's event-anchor plans (plan_invitees cascades automatically)
+  await supabase.from("plans").delete().eq("creator_id", coachId).eq("anchor_type", "event");
 
   console.log("  Cleared @coach seed data");
 }
@@ -241,7 +241,8 @@ async function clearExistingSeedUsers() {
     await supabase.from("notifications").delete().eq("actor_id", user.id);
     await supabase.from("saved_items").delete().eq("user_id", user.id);
     await supabase.from("recommendations").delete().eq("user_id", user.id);
-    await supabase.from("event_rsvps").delete().eq("user_id", user.id);
+    // Delete event-anchor plans (plan_invitees cascades automatically)
+    await supabase.from("plans").delete().eq("creator_id", user.id).eq("anchor_type", "event");
     await supabase.from("follows").delete().eq("follower_id", user.id);
     await supabase.from("follows").delete().eq("followed_user_id", user.id);
     await supabase.from("friend_requests").delete().eq("inviter_id", user.id);
@@ -378,7 +379,7 @@ async function createMutualFollows(coachId: string | null) {
 async function getEventsForCategories(
   categories: string[],
   limit: number
-): Promise<Array<{ id: number; category_id: string }>> {
+): Promise<Array<{ id: number; category_id: string; portal_id: string | null; start_date: string }>> {
   const mappedCategories = categories
     .map((c) => CATEGORY_MAP[c.toLowerCase()] || c)
     .filter((v, i, a) => a.indexOf(v) === i);
@@ -388,7 +389,7 @@ async function getEventsForCategories(
 
   const { data, error } = await supabase
     .from("events")
-    .select("id, category_id")
+    .select("id, category_id, portal_id, start_date")
     .in("category_id", mappedCategories)
     .gte("start_date", today)
     .order("start_date", { ascending: true })
@@ -405,42 +406,61 @@ async function getEventsForCategories(
 }
 
 async function createRSVPs() {
-  console.log("Creating RSVPs based on persona interests...");
+  console.log("Creating plans (going) based on persona interests...");
 
-  let totalRsvps = 0;
+  let totalPlans = 0;
 
   for (const persona of personas) {
     const userId = createdUserIds.get(persona.id);
     if (!userId) continue;
 
     const rsvpCount = RSVP_COUNTS[persona.activity_level] || 5;
+    // Only seed "going" status — interested/went have no migration path
     const events = await getEventsForCategories(persona.categories, rsvpCount);
 
-    const rsvps = events.map((event, i) => ({
-      user_id: userId,
-      event_id: event.id,
-      // Mix of going and interested, weighted toward going for power users
-      status:
-        persona.activity_level === "power" || i < events.length * 0.7
-          ? "going"
-          : "interested",
-      visibility: "public",
+    if (events.length === 0) continue;
+
+    // Build one plan per event
+    const planRows = events.map((event) => ({
+      creator_id: userId,
+      portal_id: event.portal_id ?? null,
+      anchor_type: "event" as const,
+      anchor_event_id: event.id,
+      starts_at: event.start_date,
+      visibility: "friends",
     }));
 
-    if (rsvps.length > 0) {
-      const { error } = await supabase.from("event_rsvps").insert(rsvps);
-      if (error) {
-        console.error(
-          `  Error creating RSVPs for ${persona.username}:`,
-          error.message
-        );
-      } else {
-        totalRsvps += rsvps.length;
-      }
+    const { data: insertedPlans, error: planError } = await supabase
+      .from("plans")
+      .insert(planRows as never)
+      .select("id");
+
+    if (planError) {
+      console.error(`  Error creating plans for ${persona.username}:`, planError.message);
+      continue;
+    }
+
+    const planIds = (insertedPlans || []).map((p: { id: string }) => p.id);
+    const inviteeRows = planIds.map((planId: string) => ({
+      plan_id: planId,
+      user_id: userId,
+      rsvp_status: "going",
+      invited_by: userId,
+      responded_at: new Date().toISOString(),
+    }));
+
+    const { error: inviteeError } = await supabase
+      .from("plan_invitees")
+      .insert(inviteeRows as never);
+
+    if (inviteeError) {
+      console.error(`  Error creating plan_invitees for ${persona.username}:`, inviteeError.message);
+    } else {
+      totalPlans += planIds.length;
     }
   }
 
-  console.log(`  Created ${totalRsvps} RSVPs`);
+  console.log(`  Created ${totalPlans} plans (going)`);
 }
 
 async function getVenueIdBySlug(
@@ -680,30 +700,56 @@ async function createCoachRecommendations(coachId: string | null) {
 }
 
 async function createCoachRSVPs(coachId: string | null) {
-  console.log("Creating RSVPs for @coach...");
+  console.log("Creating plans (going) for @coach...");
 
   if (!coachId) {
     console.log("  Skipping - no coach user found");
     return;
   }
 
-  // Get events matching coach's interests
+  // Get events matching coach's interests — only going (no interested in new model)
   const events = await getEventsForCategories(founder.categories, 20);
+  // Take first 60% as going (same ratio as before, but drop interested rows)
+  const goingEvents = events.slice(0, Math.ceil(events.length * 0.6));
 
-  const rsvps = events.map((event, i) => ({
-    user_id: coachId,
-    event_id: event.id,
-    status: i < events.length * 0.6 ? "going" : "interested",
-    visibility: "public",
+  if (goingEvents.length === 0) return;
+
+  const planRows = goingEvents.map((event) => ({
+    creator_id: coachId,
+    portal_id: event.portal_id ?? null,
+    anchor_type: "event" as const,
+    anchor_event_id: event.id,
+    starts_at: event.start_date,
+    visibility: "friends",
   }));
 
-  if (rsvps.length > 0) {
-    const { error } = await supabase.from("event_rsvps").insert(rsvps);
-    if (error) {
-      console.error(`  Error creating coach RSVPs:`, error.message);
-    } else {
-      console.log(`  Created ${rsvps.length} RSVPs for @coach`);
-    }
+  const { data: insertedPlans, error: planError } = await supabase
+    .from("plans")
+    .insert(planRows as never)
+    .select("id");
+
+  if (planError) {
+    console.error(`  Error creating plans for @coach:`, planError.message);
+    return;
+  }
+
+  const planIds = (insertedPlans || []).map((p: { id: string }) => p.id);
+  const inviteeRows = planIds.map((planId: string) => ({
+    plan_id: planId,
+    user_id: coachId,
+    rsvp_status: "going",
+    invited_by: coachId,
+    responded_at: new Date().toISOString(),
+  }));
+
+  const { error: inviteeError } = await supabase
+    .from("plan_invitees")
+    .insert(inviteeRows as never);
+
+  if (inviteeError) {
+    console.error(`  Error creating plan_invitees for @coach:`, inviteeError.message);
+  } else {
+    console.log(`  Created ${planIds.length} going plans for @coach`);
   }
 }
 

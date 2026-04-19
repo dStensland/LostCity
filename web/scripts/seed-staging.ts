@@ -570,7 +570,8 @@ async function clearTestData() {
       await supabase.from("notifications").delete().eq("user_id", existingUser.id);
       await supabase.from("saved_items").delete().eq("user_id", existingUser.id);
       await supabase.from("recommendations").delete().eq("user_id", existingUser.id);
-      await supabase.from("event_rsvps").delete().eq("user_id", existingUser.id);
+      // Delete event-anchor plans (plan_invitees cascades automatically)
+      await supabase.from("plans").delete().eq("creator_id", existingUser.id).eq("anchor_type", "event");
       await supabase.from("follows").delete().eq("follower_id", existingUser.id);
       await supabase.from("follows").delete().eq("followed_user_id", existingUser.id);
       await supabase.from("user_preferences").delete().eq("user_id", existingUser.id);
@@ -694,7 +695,7 @@ async function seedProfiles(): Promise<string[]> {
 }
 
 async function seedSocialData(eventIds: number[], userIds: string[]) {
-  console.log("Seeding social data (RSVPs, recommendations, saved items)...");
+  console.log("Seeding social data (plans/going, recommendations, saved items)...");
 
   if (eventIds.length < 10 || userIds.length < 3) {
     console.log("Not enough events or users to seed social data");
@@ -703,24 +704,51 @@ async function seedSocialData(eventIds: number[], userIds: string[]) {
 
   const [user1, user2, user3] = userIds;
 
-  // RSVPs - some users going to some events
-  const rsvps = [
-    { user_id: user1, event_id: eventIds[0], status: "going", visibility: "public" },
-    { user_id: user1, event_id: eventIds[1], status: "going", visibility: "public" },
-    { user_id: user1, event_id: eventIds[3], status: "interested", visibility: "public" },
-    { user_id: user2, event_id: eventIds[0], status: "going", visibility: "public" },
-    { user_id: user2, event_id: eventIds[2], status: "going", visibility: "public" },
-    { user_id: user2, event_id: eventIds[4], status: "interested", visibility: "public" },
-    { user_id: user3, event_id: eventIds[0], status: "going", visibility: "public" },
-    { user_id: user3, event_id: eventIds[1], status: "going", visibility: "public" },
-    { user_id: user3, event_id: eventIds[5], status: "going", visibility: "public" },
+  // RSVPs — only "going" rows survive the plans model; drop "interested" entries
+  const goingPairs: Array<{ user_id: string; event_id: number }> = [
+    { user_id: user1, event_id: eventIds[0] },
+    { user_id: user1, event_id: eventIds[1] },
+    // user1 eventIds[3] was "interested" — dropped
+    { user_id: user2, event_id: eventIds[0] },
+    { user_id: user2, event_id: eventIds[2] },
+    // user2 eventIds[4] was "interested" — dropped
+    { user_id: user3, event_id: eventIds[0] },
+    { user_id: user3, event_id: eventIds[1] },
+    { user_id: user3, event_id: eventIds[5] },
   ];
 
-  const { error: rsvpError } = await supabase.from("event_rsvps").insert(rsvps);
-  if (rsvpError) {
-    console.error("Error seeding RSVPs:", rsvpError);
+  // Build plan rows (one per going pair)
+  const planRows = goingPairs.map((pair) => ({
+    creator_id: pair.user_id,
+    portal_id: null,
+    anchor_type: "event" as const,
+    anchor_event_id: pair.event_id,
+    starts_at: new Date().toISOString().split("T")[0],
+    visibility: "friends",
+  }));
+
+  const { data: insertedPlans, error: planError } = await supabase
+    .from("plans")
+    .insert(planRows as never)
+    .select("id, creator_id");
+
+  if (planError) {
+    console.error("Error seeding plans:", planError);
   } else {
-    console.log(`  Seeded ${rsvps.length} RSVPs`);
+    const inviteeRows = (insertedPlans || []).map((p: { id: string; creator_id: string }) => ({
+      plan_id: p.id,
+      user_id: p.creator_id,
+      rsvp_status: "going",
+      invited_by: p.creator_id,
+      responded_at: new Date().toISOString(),
+    }));
+
+    const { error: invErr } = await supabase.from("plan_invitees").insert(inviteeRows as never);
+    if (invErr) {
+      console.error("Error seeding plan_invitees:", invErr);
+    } else {
+      console.log(`  Seeded ${goingPairs.length} plans (going)`);
+    }
   }
 
   // Recommendations
