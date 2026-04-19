@@ -1,23 +1,39 @@
 /**
  * Centralized URL builders for all entity types.
  *
- * Two context modes:
- * - 'feed': overlay pattern (?event=id) — scroll preservation in feed/explore/calendar
- * - 'page': canonical pattern (/events/id) — standalone pages, sharing, SEO
+ * Two context modes (per `lib/link-context.tsx`):
+ * - `"overlay"`: overlay pattern (?event=id) — scroll preservation in
+ *   overlay-capable surfaces (feed, explore, calendar).
+ * - `"canonical"`: canonical pattern (/events/id) — standalone pages,
+ *   sharing, SEO.
  *
- * Civic events use getCivicEventHref() as a pre-check before this builder.
- * See web/lib/civic-routing.ts.
+ * Callers inside card components should use `useLinkContext()` or
+ * `useResolvedLinkContext()` from `lib/link-context.tsx` instead of
+ * passing context explicitly. Explicit context is still accepted as an
+ * override for the rare cases where a component must force canonical
+ * (e.g., share buttons) regardless of surface.
+ *
+ * Civic events use `getCivicEventHref()` as a pre-check before this
+ * builder. See `web/lib/civic-routing.ts`.
  */
 
-type LinkContext = "feed" | "page";
+import type { LinkContext } from "@/lib/link-context";
 
-export function buildEventUrl(id: number, portalSlug: string, context: LinkContext): string {
-  if (context === "feed") return `/${portalSlug}?event=${id}`;
+export function buildEventUrl(
+  id: number,
+  portalSlug: string,
+  context: LinkContext,
+): string {
+  if (context === "overlay") return `/${portalSlug}?event=${id}`;
   return `/${portalSlug}/events/${id}`;
 }
 
-export function buildSpotUrl(slug: string, portalSlug: string, context: LinkContext): string {
-  if (context === "feed") return `/${portalSlug}?spot=${slug}`;
+export function buildSpotUrl(
+  slug: string,
+  portalSlug: string,
+  context: LinkContext,
+): string {
+  if (context === "overlay") return `/${portalSlug}?spot=${slug}`;
   return `/${portalSlug}/spots/${slug}`;
 }
 

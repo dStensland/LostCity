@@ -11,7 +11,7 @@ export function ScheduleSection({ data, portalSlug }: SectionProps) {
   if (!programs || programs.length === 0) return null;
 
   const handleEventClick = (sessionId: number) => {
-    window.location.href = buildEventUrl(sessionId, portalSlug, "page");
+    window.location.href = buildEventUrl(sessionId, portalSlug, "canonical");
   };
 
   const handleProgramClick = (programSlug: string) => {

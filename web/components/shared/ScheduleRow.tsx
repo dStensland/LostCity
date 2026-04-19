@@ -2,6 +2,8 @@ import Link from "next/link";
 import SmartImage from "@/components/SmartImage";
 import { buildEventUrl } from "@/lib/entity-urls";
 import { decodeHtmlEntities } from "@/lib/formats";
+import type { LinkContext } from "@/lib/link-context";
+import { useResolvedLinkContext } from "@/lib/link-context";
 
 /**
  * ScheduleRow — prominent time-first row used on chronological surfaces
@@ -35,7 +37,14 @@ interface ScheduleRowProps {
   event: ScheduleRowEvent;
   accentColor: string;
   portalSlug: string;
-  context: "page" | "feed";
+  /**
+   * Optional link-context override. Defaults to the ambient context
+   * from `useLinkContext()` — the surface wrapper owns the default.
+   * Pass explicitly only when overriding (e.g., forcing canonical on a
+   * standalone detail page embedded without a surface wrapper).
+   * @deprecated explicit prop — prefer ambient context via surface wrapper
+   */
+  context?: LinkContext;
 }
 
 function formatTimeParts(
@@ -55,8 +64,9 @@ export default function ScheduleRow({
   event,
   accentColor,
   portalSlug,
-  context,
+  context: contextOverride,
 }: ScheduleRowProps) {
+  const context = useResolvedLinkContext(contextOverride);
   const timeParts = formatTimeParts(event.start_time, event.is_all_day);
   const href = buildEventUrl(Number(event.id), portalSlug, context);
 
