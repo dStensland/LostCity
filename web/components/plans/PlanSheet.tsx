@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useEffect, useState, useRef, useCallback } from "react";
+import { memo, useEffect, useState, useRef } from "react";
 import { createPortal } from "react-dom";
 import { X } from "@phosphor-icons/react";
 import { triggerHaptic } from "@/lib/haptics";
@@ -154,7 +154,7 @@ export const PlanSheet = memo(function PlanSheet({
     setPlannedFor("");
   };
 
-  const handleSubmit = useCallback(async () => {
+  const handleSubmit = async () => {
     if (!portal?.id) {
       setSubmitError("Portal not loaded. Please try again.");
       return;
@@ -201,7 +201,7 @@ export const PlanSheet = memo(function PlanSheet({
 
     onPlanCreated?.();
     onClose();
-  }, [place.id, event, selectedGroupId, visibility, note, durationHours, isPlanned, plannedFor, source, portalSlug, portal?.id, authFetch, onPlanCreated, onClose]);
+  };
 
   if (typeof document === "undefined" || !isVisible) return null;
 

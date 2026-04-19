@@ -124,7 +124,7 @@ describe("POST /api/rsvp", () => {
       status: "interested",
     });
     // validated.body is injected by withAuth mock (which passes args through)
-    const resp = await (POST as Function)(req, {
+    const resp = await (POST as (...args: unknown[]) => unknown)(req, {
       user: { id: USER_ID },
       serviceClient: makeFlexibleClient(),
       validated: { body: { event_id: EVENT_ID, status: "interested", visibility: "friends" } },
@@ -140,7 +140,7 @@ describe("POST /api/rsvp", () => {
       event_id: EVENT_ID,
       status: "went",
     });
-    const resp = await (POST as Function)(req, {
+    const resp = await (POST as (...args: unknown[]) => unknown)(req, {
       user: { id: USER_ID },
       serviceClient: makeFlexibleClient(),
       validated: { body: { event_id: EVENT_ID, status: "went", visibility: "friends" } },
@@ -203,7 +203,7 @@ describe("POST /api/rsvp", () => {
 
     const { POST } = await import("@/app/api/rsvp/route");
     const req = makeRequest("POST", "http://localhost/api/rsvp");
-    const resp = await (POST as Function)(req, {
+    const resp = await (POST as (...args: unknown[]) => unknown)(req, {
       user: { id: USER_ID },
       serviceClient: service,
       validated: { body: { event_id: EVENT_ID, status: "going", visibility: "friends" } },
@@ -257,7 +257,7 @@ describe("POST /api/rsvp", () => {
 
     const { POST } = await import("@/app/api/rsvp/route");
     const req = makeRequest("POST", "http://localhost/api/rsvp");
-    const resp = await (POST as Function)(req, {
+    const resp = await (POST as (...args: unknown[]) => unknown)(req, {
       user: { id: USER_ID },
       serviceClient: service,
       validated: { body: { event_id: EVENT_ID, status: "going", visibility: "friends" } },
@@ -283,7 +283,7 @@ describe("POST /api/rsvp", () => {
 
     const { POST } = await import("@/app/api/rsvp/route");
     const req = makeRequest("POST", "http://localhost/api/rsvp");
-    await (POST as Function)(req, {
+    await (POST as (...args: unknown[]) => unknown)(req, {
       user: { id: USER_ID },
       serviceClient: service,
       validated: { body: { event_id: EVENT_ID, status: "going", visibility: "friends" } },
@@ -323,7 +323,7 @@ describe("GET /api/rsvp", () => {
 
     const { GET } = await import("@/app/api/rsvp/route");
     const req = makeRequest("GET", `http://localhost/api/rsvp?event_id=${EVENT_ID}`);
-    const resp = await (GET as Function)(req, {
+    const resp = await (GET as (...args: unknown[]) => unknown)(req, {
       user: { id: USER_ID },
       serviceClient: service,
     });
@@ -344,7 +344,7 @@ describe("GET /api/rsvp", () => {
 
     const { GET } = await import("@/app/api/rsvp/route");
     const req = makeRequest("GET", "http://localhost/api/rsvp?check=ever_rsvped");
-    const resp = await (GET as Function)(req, {
+    const resp = await (GET as (...args: unknown[]) => unknown)(req, {
       user: { id: USER_ID },
       serviceClient: service,
     });
@@ -357,7 +357,7 @@ describe("GET /api/rsvp", () => {
   it("returns 400 for missing event_id", async () => {
     const { GET } = await import("@/app/api/rsvp/route");
     const req = makeRequest("GET", "http://localhost/api/rsvp");
-    const resp = await (GET as Function)(req, {
+    const resp = await (GET as (...args: unknown[]) => unknown)(req, {
       user: { id: USER_ID },
       serviceClient: makeFlexibleClient(),
     });
@@ -379,7 +379,7 @@ describe("GET /api/rsvp", () => {
 
     const { GET } = await import("@/app/api/rsvp/route");
     const req = makeRequest("GET", `http://localhost/api/rsvp?event_id=${EVENT_ID}`);
-    await (GET as Function)(req, {
+    await (GET as (...args: unknown[]) => unknown)(req, {
       user: { id: USER_ID },
       serviceClient: service,
     });
@@ -422,7 +422,7 @@ describe("DELETE /api/rsvp", () => {
 
     const { DELETE } = await import("@/app/api/rsvp/route");
     const req = makeRequest("DELETE", `http://localhost/api/rsvp?event_id=${EVENT_ID}`);
-    const resp = await (DELETE as Function)(req, {
+    const resp = await (DELETE as (...args: unknown[]) => unknown)(req, {
       user: { id: USER_ID },
       serviceClient: service,
     });
@@ -455,7 +455,7 @@ describe("DELETE /api/rsvp", () => {
 
     const { DELETE } = await import("@/app/api/rsvp/route");
     const req = makeRequest("DELETE", `http://localhost/api/rsvp?event_id=${EVENT_ID}`);
-    const resp = await (DELETE as Function)(req, {
+    const resp = await (DELETE as (...args: unknown[]) => unknown)(req, {
       user: { id: USER_ID },
       serviceClient: service,
     });
@@ -469,7 +469,7 @@ describe("DELETE /api/rsvp", () => {
   it("returns 400 for missing event_id", async () => {
     const { DELETE } = await import("@/app/api/rsvp/route");
     const req = makeRequest("DELETE", "http://localhost/api/rsvp");
-    const resp = await (DELETE as Function)(req, {
+    const resp = await (DELETE as (...args: unknown[]) => unknown)(req, {
       user: { id: USER_ID },
       serviceClient: makeFlexibleClient(),
     });
@@ -493,7 +493,7 @@ describe("DELETE /api/rsvp", () => {
 
     const { DELETE } = await import("@/app/api/rsvp/route");
     const req = makeRequest("DELETE", `http://localhost/api/rsvp?event_id=${EVENT_ID}`);
-    await (DELETE as Function)(req, {
+    await (DELETE as (...args: unknown[]) => unknown)(req, {
       user: { id: USER_ID },
       serviceClient: service,
     });
