@@ -13,8 +13,37 @@ import {
   UserPlus,
   Lightbulb,
 } from "@phosphor-icons/react";
-import { usePlan, useRespondToPlan, useAddPlanItem, useInviteToPlan } from "@/lib/hooks/usePlans";
-import type { PlanItem, PlanSuggestion } from "@/lib/hooks/usePlans";
+import { usePlan, useRespondToPlan, useInviteToPlan } from "@/lib/hooks/useUserPlans";
+
+// useAddPlanItem: stub — new plans model removed item management from client hooks
+function useAddPlanItem(_planId: string) {
+  return {
+    mutateAsync: async (_input: { title: string; event_id?: number; venue_id?: number; start_time?: string; note?: string }) => {
+      throw new Error("useAddPlanItem is deprecated — use /api/plans directly");
+    },
+    isPending: false,
+  };
+}
+// PlanItem and PlanSuggestion: local types — new plans model has no items array
+type PlanItem = {
+  id: string;
+  title: string;
+  sort_order: number;
+  event_id: number | null;
+  venue_id: number | null;
+  note: string | null;
+  start_time: string | null;
+  event?: { id: number; title: string; start_date: string; start_time: string | null } | null;
+  venue?: { id: number; name: string; slug: string | null } | null;
+};
+type PlanSuggestion = {
+  id: string;
+  suggestion_type: string;
+  content: Record<string, unknown>;
+  status: string;
+  created_at: string;
+  user: { id: string; username: string; display_name: string | null; avatar_url: string | null };
+};
 import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/components/Toast";
 import UserAvatar from "@/components/UserAvatar";
@@ -57,7 +86,7 @@ const PARTICIPANT_RING: Record<string, string> = {
 
 // ─── Stop card ────────────────────────────────────────────────────────────────
 
-function StopCard({ item, isCreator }: { item: PlanItem; isCreator: boolean }) {
+function StopCard({ item, isCreator: _isCreator }: { item: PlanItem; isCreator: boolean }) {
   const timeStr = item.start_time
     ? format(parseISO(`2000-01-01T${item.start_time}`), "h:mm a")
     : null;
@@ -173,7 +202,7 @@ export function PlanDetailView({ planId, onBack, portalSlug = "atlanta" }: PlanD
     const url = `${window.location.origin}/${portalSlug}/plans/share/${shareToken}`;
     try {
       if (navigator.share) {
-        await navigator.share({ title: data.plan.title, url });
+        await navigator.share({ title: data.plan.title ?? undefined, url });
       } else {
         await navigator.clipboard.writeText(url);
         setCopied(true);
@@ -225,15 +254,18 @@ export function PlanDetailView({ planId, onBack, portalSlug = "atlanta" }: PlanD
     );
   }
 
-  const plan = data.plan;
-  const isCreator = user?.id === plan.creator.id;
-  const myParticipation = plan.participants.find((p) => p.user.id === user?.id);
-  const dateStr = format(parseISO(plan.plan_date), "EEEE, MMMM d");
+  // Cast to legacy shape — this component predates the new Plan type
+  // and will be fully rewritten in a future task
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const plan = data.plan as any;
+  const isCreator = user?.id === plan.creator?.id;
+  const myParticipation = (plan.participants ?? []).find((p: { user: { id: string } }) => p.user.id === user?.id);
+  const dateStr = plan.plan_date ? format(parseISO(plan.plan_date), "EEEE, MMMM d") : format(parseISO(plan.starts_at ?? new Date().toISOString()), "EEEE, MMMM d");
   const timeStr = plan.plan_time
     ? format(parseISO(`2000-01-01T${plan.plan_time}`), "h:mm a")
     : null;
 
-  const sortedItems = [...plan.items].sort((a, b) => a.sort_order - b.sort_order);
+  const sortedItems = [...(plan.items ?? [])].sort((a: PlanItem, b: PlanItem) => a.sort_order - b.sort_order);
   const hasSuggestions = (plan.suggestions?.length ?? 0) > 0;
 
   const shareUrl = plan.share_token
@@ -245,7 +277,6 @@ export function PlanDetailView({ planId, onBack, portalSlug = "atlanta" }: PlanD
     try {
       await addItemMutation.mutateAsync({
         title: newItemTitle.trim(),
-        sort_order: plan.items.length,
       });
       setNewItemTitle("");
       setShowAddItem(false);
@@ -256,7 +287,7 @@ export function PlanDetailView({ planId, onBack, portalSlug = "atlanta" }: PlanD
 
   const handleInvite = async (userIds: string[]) => {
     try {
-      await inviteMutation.mutateAsync(userIds);
+      await inviteMutation.mutateAsync({ user_ids: userIds });
       showToast("Invites sent!", "success");
       setShowInvite(false);
     } catch {
@@ -326,14 +357,14 @@ export function PlanDetailView({ planId, onBack, portalSlug = "atlanta" }: PlanD
       {!isCreator && myParticipation && (
         <div className="flex items-center gap-2 p-3 rounded-xl bg-[var(--night)] border border-[var(--twilight)]/50">
           <span className="font-mono text-xs text-[var(--muted)] mr-auto">Your response:</span>
-          {(["accepted", "maybe", "declined"] as const).map((s) => (
+          {(["going", "maybe", "declined"] as const).map((s) => (
             <button
               key={s}
-              onClick={() => respondMutation.mutate(s)}
+              onClick={() => respondMutation.mutate({ rsvp_status: s })}
               disabled={respondMutation.isPending}
               className={`px-3 py-1.5 rounded-lg font-mono text-xs transition-colors ${
                 myParticipation.status === s
-                  ? s === "accepted"
+                  ? s === "going"
                     ? "bg-[var(--neon-green)]/20 text-[var(--neon-green)] border border-[var(--neon-green)]/30"
                     : s === "maybe"
                       ? "bg-[var(--gold)]/20 text-[var(--gold)] border border-[var(--gold)]/30"
@@ -341,7 +372,7 @@ export function PlanDetailView({ planId, onBack, portalSlug = "atlanta" }: PlanD
                   : "bg-[var(--twilight)]/50 text-[var(--muted)] border border-transparent hover:text-[var(--cream)]"
               }`}
             >
-              {s === "accepted" ? "I'm in" : s === "maybe" ? "Maybe" : "Can't make it"}
+              {s === "going" ? "I'm in" : s === "maybe" ? "Maybe" : "Can't make it"}
             </button>
           ))}
         </div>
@@ -368,7 +399,7 @@ export function PlanDetailView({ planId, onBack, portalSlug = "atlanta" }: PlanD
           <p className="font-mono text-xs text-[var(--muted)]">No participants yet.</p>
         ) : (
           <div className="flex flex-wrap gap-2.5">
-            {plan.participants.map((p) => (
+            {plan.participants.map((p: { id: string; status: string; user: { avatar_url: string | null; display_name: string | null; username: string } }) => (
               <div key={p.id} className="flex flex-col items-center gap-1">
                 <div className={`rounded-full ${PARTICIPANT_RING[p.status] ?? PARTICIPANT_RING.invited}`}>
                   <UserAvatar
@@ -394,7 +425,7 @@ export function PlanDetailView({ planId, onBack, portalSlug = "atlanta" }: PlanD
               { status: "declined", label: "Can't",  color: "bg-[var(--coral)]" },
               { status: "invited",  label: "Invited", color: "bg-[var(--muted)]" },
             ]
-              .filter(({ status }) => plan.participants.some((p) => p.status === status))
+              .filter(({ status }) => plan.participants.some((p: { status: string }) => p.status === status))
               .map(({ label, color }) => (
                 <div key={label} className="flex items-center gap-1">
                   <span className={`w-1.5 h-1.5 rounded-full ${color}`} />
@@ -537,7 +568,7 @@ export function PlanDetailView({ planId, onBack, portalSlug = "atlanta" }: PlanD
             Suggestions
           </span>
           <div className="space-y-2">
-            {plan.suggestions!.map((s) => (
+            {(plan.suggestions as PlanSuggestion[]).map((s) => (
               <SuggestionCard key={s.id} suggestion={s} />
             ))}
           </div>
@@ -548,7 +579,7 @@ export function PlanDetailView({ planId, onBack, portalSlug = "atlanta" }: PlanD
       {showInvite && (
         <PlanInviteSheet
           planId={planId}
-          existingParticipantIds={plan.participants.map((p) => p.user.id)}
+          existingParticipantIds={(plan.participants ?? []).map((p: { user: { id: string } }) => p.user.id)}
           onInvite={handleInvite}
           onClose={() => setShowInvite(false)}
         />

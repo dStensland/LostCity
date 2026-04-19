@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { useCalendar } from "@/lib/calendar/CalendarProvider";
-import { usePlans } from "@/lib/hooks/usePlans";
+import { useMyPlans } from "@/lib/hooks/useUserPlans";
 import type { CalendarEvent } from "@/lib/types/calendar";
 
 interface AddToPlanSheetProps {
@@ -11,7 +11,7 @@ interface AddToPlanSheetProps {
 
 export function AddToPlanSheet({ event }: AddToPlanSheetProps) {
   const { openSheet, closeSheet } = useCalendar();
-  const { data, isLoading } = usePlans();
+  const { data, isLoading } = useMyPlans();
   const plans = data?.plans ?? [];
 
   const [addingToPlanId, setAddingToPlanId] = useState<string | null>(null);
@@ -103,7 +103,8 @@ export function AddToPlanSheet({ event }: AddToPlanSheetProps) {
             {plans.map((plan) => {
               const isAdding = addingToPlanId === plan.id;
               const isAdded = addedToPlanId === plan.id;
-              const planDate = new Date(`${plan.plan_date}T00:00:00`);
+              // new Plan uses starts_at (ISO) instead of plan_date
+              const planDate = new Date(plan.starts_at);
               const dateStr = planDate.toLocaleDateString("en-US", {
                 month: "short",
                 day: "numeric",
@@ -122,14 +123,6 @@ export function AddToPlanSheet({ event }: AddToPlanSheetProps) {
                     </p>
                     <p className="font-mono text-xs text-[var(--muted)] mt-0.5">
                       {dateStr}
-                      {plan.participants.length > 0 && (
-                        <span>
-                          {" · "}
-                          {plan.participants.length === 1
-                            ? "1 person"
-                            : `${plan.participants.length} people`}
-                        </span>
-                      )}
                     </p>
                   </div>
 

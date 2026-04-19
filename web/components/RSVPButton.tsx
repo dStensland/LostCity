@@ -8,7 +8,7 @@ import { useToast } from "@/components/Toast";
 import { VISIBILITY_OPTIONS, DEFAULT_VISIBILITY, type Visibility } from "@/lib/visibility";
 import { PostRsvpNeedsPrompt } from "./PostRsvpNeedsPrompt";
 import { PostRsvpSharePrompt } from "./PostRsvpSharePrompt";
-import { PostRsvpHangPrompt } from "./hangs/PostRsvpHangPrompt";
+import { PostRsvpInviteNudge } from "./plans/PostRsvpInviteNudge";
 import { CompanionPicker } from "./CompanionPicker";
 
 export type RSVPStatus = "going" | "interested" | "went" | null;
@@ -736,12 +736,12 @@ export default function RSVPButton({
         />
       )}
 
-      {/* Post-RSVP hang prompt */}
+      {/* Post-RSVP plan invite nudge */}
       {showHangPrompt && canShowHangPrompt && eventTitle && venueId && venueName && (
-        <PostRsvpHangPrompt
+        <PostRsvpInviteNudge
           eventId={eventId}
           eventTitle={eventTitle}
-          venue={{
+          place={{
             id: venueId,
             name: venueName,
             slug: venueSlug,

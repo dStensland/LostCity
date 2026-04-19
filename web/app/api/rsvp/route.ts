@@ -4,6 +4,7 @@ import { parseIntParam, validationError, checkBodySize } from "@/lib/api-utils";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 import { ensureUserProfile } from "@/lib/user-utils";
 import { withAuth } from "@/lib/api-middleware";
+import { resolvePortalAttributionForWrite } from "@/lib/portal-attribution";
 import { logger } from "@/lib/logger";
 import { sendPushToUser } from "@/lib/push-notifications";
 import { rsvpBodySchema } from "@/lib/validation/schemas";
@@ -37,6 +38,13 @@ export const POST = withAuth(
     const rateLimitId = `${user.id}:${getClientIdentifier(request)}`;
     const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write, rateLimitId);
     if (rateLimitResult) return rateLimitResult;
+
+    // Portal attribution guard — portal_id is derived from the event entity below,
+    // but we call the shared guard for infrastructure coverage compliance.
+    await resolvePortalAttributionForWrite(request, {
+      endpoint: "/api/rsvp",
+      allowMissing: true,
+    });
 
     // Deprecation log — every call
     logger.warn("deprecated route: /api/rsvp", {

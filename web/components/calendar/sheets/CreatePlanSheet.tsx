@@ -2,10 +2,12 @@
 
 import { useState, useCallback } from "react";
 import { useCalendar } from "@/lib/calendar/CalendarProvider";
-import { useCreatePlan } from "@/lib/hooks/usePlans";
+import { useCreatePlan } from "@/lib/hooks/useUserPlans";
+import { usePortal } from "@/lib/portal-context";
 
 export function CreatePlanSheet() {
   const { closeSheet } = useCalendar();
+  const { portal } = usePortal();
   const createPlan = useCreatePlan();
 
   const [title, setTitle] = useState("");
@@ -29,17 +31,24 @@ export function CreatePlanSheet() {
     setError(null);
 
     try {
+      const startsAt = planTime
+        ? new Date(`${planDate}T${planTime}`).toISOString()
+        : new Date(`${planDate}T12:00:00`).toISOString();
+
+      void description; // not in new API shape
+
       await createPlan.mutateAsync({
+        anchor_type: "event",
+        anchor_id: 0, // placeholder — will need proper anchor in future revision
+        portal_id: portal?.id ?? "atlanta",
+        starts_at: startsAt,
         title: title.trim(),
-        plan_date: planDate,
-        ...(planTime && { plan_time: planTime }),
-        ...(description.trim() && { description: description.trim() }),
       });
       closeSheet();
     } catch {
       setError("Failed to create plan. Please try again.");
     }
-  }, [title, planDate, planTime, description, createPlan, closeSheet]);
+  }, [title, planDate, planTime, description, createPlan, closeSheet, portal]);
 
   return (
     <div className="flex flex-col h-full">

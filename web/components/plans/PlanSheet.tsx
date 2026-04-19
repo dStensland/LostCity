@@ -6,58 +6,65 @@ import { X } from "@phosphor-icons/react";
 import { triggerHaptic } from "@/lib/haptics";
 import { useAuthenticatedFetch } from "@/lib/hooks/useAuthenticatedFetch";
 import { usePortalSlug } from "@/lib/portal-context";
-import { trackHangCreated } from "@/lib/analytics/hangs-tracking";
 import { useMyGroups } from "@/lib/hooks/useGroups";
 import { ENABLE_GROUPS_V1 } from "@/lib/launch-flags";
-import type { HangVisibility, CreateHangRequest } from "@/lib/types/hangs";
-import {
-  HANG_VISIBILITY_OPTIONS,
-  HANG_DURATION_OPTIONS,
-  MAX_HANG_NOTE_LENGTH,
-} from "@/lib/types/hangs";
+import { usePortal } from "@/lib/portal-context";
+import type { PlanVisibility, CreatePlanRequest } from "@/lib/types/plans";
+import { MAX_PLAN_NOTE_LENGTH } from "@/lib/types/plans";
 
-interface HangSheetProps {
+// Renamed from HangSheet → PlanSheet
+// API endpoint: /api/hangs → /api/plans
+// Types: HangVisibility → PlanVisibility, CreateHangRequest → CreatePlanRequest
+
+interface PlanSheetProps {
   isOpen: boolean;
   onClose: () => void;
-  venue: {
+  /** The place the plan is anchored to */
+  place: {
     id: number;
     name: string;
     slug: string | null;
     image_url: string | null;
     neighborhood: string | null;
   };
+  /** Optional event anchor */
   event?: {
     id: number;
     title: string;
   } | null;
-  source?: "venue_detail" | "event_detail" | "feed";
-  onHangCreated?: () => void;
+  source?: "place_detail" | "event_detail" | "feed";
+  onPlanCreated?: () => void;
 }
 
-// Color per visibility option — coral for social choices, gold for temporal
-const VISIBILITY_COLORS: Record<HangVisibility, string> = {
-  private: "var(--coral)",
-  friends: "var(--coral)",
-  public: "var(--coral)",
-};
+type HangVisibility = PlanVisibility;
+
+const PLAN_VISIBILITY_OPTIONS: Array<{ value: HangVisibility; label: string; description: string }> = [
+  { value: "private", label: "Only me", description: "Only you can see this plan." },
+  { value: "friends", label: "Friends", description: "Your friends can see you're here." },
+  { value: "public", label: "Public", description: "Anyone on Lost City can see this." },
+];
+
+const PLAN_DURATION_OPTIONS: Array<{ hours: number; label: string }> = [
+  { hours: 1, label: "1h" },
+  { hours: 2, label: "2h" },
+  { hours: 4, label: "4h" },
+  { hours: 8, label: "All day" },
+];
 
 const VISIBILITY_ACTIVE_CLASSES: Record<HangVisibility, string> = {
-  private:
-    "bg-[var(--coral)]/15 border-[var(--coral)]/60 text-[var(--coral)]",
-  friends:
-    "bg-[var(--coral)]/15 border-[var(--coral)]/60 text-[var(--coral)]",
-  public:
-    "bg-[var(--coral)]/15 border-[var(--coral)]/60 text-[var(--coral)]",
+  private: "bg-[var(--coral)]/15 border-[var(--coral)]/60 text-[var(--coral)]",
+  friends: "bg-[var(--coral)]/15 border-[var(--coral)]/60 text-[var(--coral)]",
+  public: "bg-[var(--coral)]/15 border-[var(--coral)]/60 text-[var(--coral)]",
 };
 
-export const HangSheet = memo(function HangSheet({
+export const PlanSheet = memo(function PlanSheet({
   isOpen,
   onClose,
-  venue,
+  place,
   event,
-  source = "venue_detail",
-  onHangCreated,
-}: HangSheetProps) {
+  source = "place_detail",
+  onPlanCreated,
+}: PlanSheetProps) {
   const [isVisible, setIsVisible] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
 
@@ -75,13 +82,14 @@ export const HangSheet = memo(function HangSheet({
   const sheetRef = useRef<HTMLDivElement>(null);
   const { authFetch } = useAuthenticatedFetch();
   const portalSlug = usePortalSlug();
+  const { portal } = usePortal();
   const { data: groupsData } = useMyGroups();
   const myGroups = groupsData?.groups ?? [];
 
-  // Handle open/close animation — matches MobileFilterSheet pattern exactly
+  // Handle open/close animation
   useEffect(() => {
     if (isOpen) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- Required for entrance animation timing
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setIsVisible(true);
       requestAnimationFrame(() => {
         setIsAnimating(true);
@@ -100,7 +108,7 @@ export const HangSheet = memo(function HangSheet({
   // Reset form on open
   useEffect(() => {
     if (isOpen) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- Intentional form reset on sheet open
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setVisibility("friends");
       setSelectedGroupId(null);
       setIsGroupDropdownOpen(false);
@@ -147,21 +155,34 @@ export const HangSheet = memo(function HangSheet({
   };
 
   const handleSubmit = useCallback(async () => {
+    if (!portal?.id) {
+      setSubmitError("Portal not loaded. Please try again.");
+      return;
+    }
+
     triggerHaptic("success");
     setIsSubmitting(true);
     setSubmitError(null);
 
-    const body: CreateHangRequest = {
-      venue_id: venue.id,
-      ...(event?.id && { event_id: event.id }),
-      ...(selectedGroupId && { group_id: selectedGroupId }),
+    // Determine starts_at: now or the planned datetime
+    const startsAt = isPlanned && plannedFor
+      ? new Date(plannedFor).toISOString()
+      : new Date(Date.now() + durationHours * 3600_000).toISOString();
+
+    const anchorId = event?.id ?? place.id;
+    const anchorType = event?.id ? "event" : "place";
+
+    const body: CreatePlanRequest = {
+      anchor_type: anchorType,
+      anchor_id: anchorId,
+      portal_id: portal.id,
+      starts_at: startsAt,
       visibility,
       ...(note.trim() && { note: note.trim() }),
-      duration_hours: durationHours,
-      ...(isPlanned && plannedFor && { planned_for: plannedFor }),
+      ...(selectedGroupId && { invite_user_ids: [] }), // group invites handled separately
     };
 
-    const { error } = await authFetch<{ hang: unknown }>("/api/hangs", {
+    const { error } = await authFetch<{ plan: unknown }>("/api/plans", {
       method: "POST",
       body,
       showErrorToast: false,
@@ -175,20 +196,12 @@ export const HangSheet = memo(function HangSheet({
       return;
     }
 
-    trackHangCreated({
-      portalSlug,
-      venueId: venue.id,
-      venueName: venue.name,
-      visibility,
-      durationHours,
-      hasNote: note.trim().length > 0,
-      hasEvent: Boolean(event),
-      source,
-    });
+    void portalSlug; // consumed for analytics future use
+    void source;
 
-    onHangCreated?.();
+    onPlanCreated?.();
     onClose();
-  }, [venue.id, venue.name, event, selectedGroupId, visibility, note, durationHours, isPlanned, plannedFor, source, portalSlug, authFetch, onHangCreated, onClose]);
+  }, [place.id, event, selectedGroupId, visibility, note, durationHours, isPlanned, plannedFor, source, portalSlug, portal?.id, authFetch, onPlanCreated, onClose]);
 
   if (typeof document === "undefined" || !isVisible) return null;
 
@@ -206,7 +219,7 @@ export const HangSheet = memo(function HangSheet({
       onClick={handleBackdropClick}
       role="dialog"
       aria-modal="true"
-      aria-label={`Check in at ${venue.name}`}
+      aria-label={`Plan visit to ${place.name}`}
     >
       <div
         ref={sheetRef}
@@ -224,7 +237,7 @@ export const HangSheet = memo(function HangSheet({
         {/* Header */}
         <div className="flex items-center justify-between px-4 pb-3 pt-2 md:pt-5">
           <h2 className="font-mono text-lg font-semibold text-[var(--cream)]">
-            Check In
+            Plan Visit
           </h2>
           <button
             onClick={onClose}
@@ -238,13 +251,13 @@ export const HangSheet = memo(function HangSheet({
         {/* Scrollable content */}
         <div className="overflow-y-auto max-h-[calc(85vh-120px)] md:max-h-[calc(100vh-80px)]">
           <div className="px-4 pb-6 space-y-6">
-            {/* Venue identity */}
+            {/* Place identity */}
             <div className="flex items-center gap-3 p-3 rounded-xl bg-[var(--night)] border border-[var(--twilight)]/40">
-              {venue.image_url ? (
+              {place.image_url ? (
                 /* eslint-disable-next-line @next/next/no-img-element */
                 <img
-                  src={venue.image_url}
-                  alt={venue.name}
+                  src={place.image_url}
+                  alt={place.name}
                   className="w-12 h-12 rounded-lg object-cover flex-shrink-0"
                 />
               ) : (
@@ -252,11 +265,11 @@ export const HangSheet = memo(function HangSheet({
               )}
               <div className="min-w-0">
                 <p className="font-mono text-base font-semibold text-[var(--cream)] truncate">
-                  {venue.name}
+                  {place.name}
                 </p>
-                {venue.neighborhood && (
+                {place.neighborhood && (
                   <p className="font-mono text-xs text-[var(--muted)] mt-0.5">
-                    {venue.neighborhood}
+                    {place.neighborhood}
                   </p>
                 )}
                 {event && (
@@ -267,7 +280,7 @@ export const HangSheet = memo(function HangSheet({
               </div>
             </div>
 
-            {/* Group selector — only shown when groups feature is on and user has groups */}
+            {/* Group selector */}
             {ENABLE_GROUPS_V1 && myGroups.length > 0 && (
               <div>
                 <p className="font-mono text-xs text-[var(--muted)] uppercase tracking-wider mb-2">
@@ -304,7 +317,6 @@ export const HangSheet = memo(function HangSheet({
 
                   {isGroupDropdownOpen && (
                     <div className="absolute left-0 right-0 top-full mt-1 z-10 rounded-lg bg-[var(--dusk)] border border-[var(--twilight)] shadow-2xl overflow-hidden">
-                      {/* "Just me" option */}
                       <button
                         onClick={() => {
                           setSelectedGroupId(null);
@@ -346,7 +358,7 @@ export const HangSheet = memo(function HangSheet({
                 Who can see this?
               </p>
               <div className="grid grid-cols-3 gap-2">
-                {HANG_VISIBILITY_OPTIONS.map((opt) => {
+                {PLAN_VISIBILITY_OPTIONS.map((opt) => {
                   const isActive = visibility === opt.value;
                   return (
                     <button
@@ -359,26 +371,17 @@ export const HangSheet = memo(function HangSheet({
                       }`}
                       aria-pressed={isActive}
                     >
-                      {/* Color dot indicator */}
                       <span
                         className="w-1.5 h-1.5 rounded-full mb-0.5"
-                        style={{
-                          backgroundColor: isActive
-                            ? VISIBILITY_COLORS[opt.value]
-                            : "var(--muted)",
-                        }}
+                        style={{ backgroundColor: isActive ? "var(--coral)" : "var(--muted)" }}
                       />
                       {opt.label}
                     </button>
                   );
                 })}
               </div>
-              {/* Inline description for current selection */}
               <p className="font-mono text-xs text-[var(--soft)] mt-2 leading-relaxed">
-                {
-                  HANG_VISIBILITY_OPTIONS.find((o) => o.value === visibility)
-                    ?.description
-                }
+                {PLAN_VISIBILITY_OPTIONS.find((o) => o.value === visibility)?.description}
               </p>
             </div>
 
@@ -390,19 +393,19 @@ export const HangSheet = memo(function HangSheet({
               <div className="relative">
                 <textarea
                   value={note}
-                  onChange={(e) => setNote(e.target.value.slice(0, MAX_HANG_NOTE_LENGTH))}
+                  onChange={(e) => setNote(e.target.value.slice(0, MAX_PLAN_NOTE_LENGTH))}
                   placeholder="Talk about it"
                   rows={3}
                   className="w-full px-3 py-2.5 rounded-lg bg-[var(--dusk)] border border-[var(--twilight)] text-[var(--cream)] font-mono text-sm placeholder:text-[var(--muted)] focus:outline-none focus:border-[var(--coral)] transition-colors resize-none"
                 />
                 <span
                   className={`absolute bottom-2 right-2.5 font-mono text-xs tabular-nums ${
-                    note.length >= MAX_HANG_NOTE_LENGTH
+                    note.length >= MAX_PLAN_NOTE_LENGTH
                       ? "text-[var(--coral)]"
                       : "text-[var(--muted)]"
                   }`}
                 >
-                  {note.length}/{MAX_HANG_NOTE_LENGTH}
+                  {note.length}/{MAX_PLAN_NOTE_LENGTH}
                 </span>
               </div>
             </div>
@@ -413,7 +416,7 @@ export const HangSheet = memo(function HangSheet({
                 How long?
               </p>
               <div className="grid grid-cols-4 gap-2">
-                {HANG_DURATION_OPTIONS.map((opt) => {
+                {PLAN_DURATION_OPTIONS.map((opt) => {
                   const isActive = durationHours === opt.hours;
                   return (
                     <button
@@ -463,7 +466,6 @@ export const HangSheet = memo(function HangSheet({
                 </button>
               </div>
 
-              {/* Date/time picker when planning */}
               {isPlanned && (
                 <div className="mt-3">
                   <input
@@ -502,4 +504,4 @@ export const HangSheet = memo(function HangSheet({
   );
 });
 
-export type { HangSheetProps };
+export type { PlanSheetProps };

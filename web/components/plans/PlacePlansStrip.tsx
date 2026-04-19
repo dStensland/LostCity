@@ -3,26 +3,21 @@
 import { memo } from "react";
 import SmartImage from "@/components/SmartImage";
 import { Users, User } from "@phosphor-icons/react";
+import type { PlacePlansAggregate } from "@/lib/types/plans";
 
-interface FriendHang {
-  profile: {
-    id: string;
-    display_name: string | null;
-    username: string | null;
-    avatar_url: string | null;
-  };
+// Renamed from PlaceHangStrip → PlacePlansStrip
+// Types updated: HangInfo → PlacePlansAggregate, FriendHang → friends_here entries
+
+interface FriendEntry {
+  user_id: string;
+  display_name: string | null;
+  avatar_url: string | null;
 }
 
-interface HangInfo {
-  total_count: number;
-  friend_hangs: FriendHang[];
-  public_count: number;
-}
-
-interface PlaceHangStripProps {
-  venueId: number;
+interface PlacePlansStripProps {
+  placeId: number;
   /** Pre-loaded data to avoid fetch */
-  hangInfo?: HangInfo;
+  plansInfo?: PlacePlansAggregate;
   /** Compact for card use, full for detail pages */
   variant?: "compact" | "full";
   className?: string;
@@ -40,7 +35,6 @@ function MiniAvatar({
   name: string;
   index: number;
 }) {
-  // Overlap: each avatar after the first pulls left
   const marginClass = index > 0 ? "-ml-1.5" : "";
 
   return (
@@ -73,16 +67,15 @@ function MiniAvatar({
 }
 
 /** Full-variant: single friend row */
-function FriendRow({ hang }: { hang: FriendHang }) {
-  const { profile } = hang;
-  const name = profile.display_name || profile.username || "Someone";
+function FriendRow({ friend }: { friend: FriendEntry }) {
+  const name = friend.display_name ?? "Someone";
 
   return (
     <div className="flex items-center gap-2 py-1">
       <span className="flex-shrink-0 w-7 h-7 rounded-full overflow-hidden border border-[var(--twilight)]/60 bg-[var(--twilight)]">
-        {profile.avatar_url ? (
+        {friend.avatar_url ? (
           <SmartImage
-            src={profile.avatar_url}
+            src={friend.avatar_url}
             alt={name}
             width={28}
             height={28}
@@ -102,27 +95,27 @@ function FriendRow({ hang }: { hang: FriendHang }) {
 
 // ─── Compact variant ──────────────────────────────────────────────────────────
 
-function CompactStrip({ hangInfo }: { hangInfo: HangInfo }) {
-  const { friend_hangs, public_count, total_count } = hangInfo;
-  const hasFriends = friend_hangs.length > 0;
+function CompactStrip({ plansInfo }: { plansInfo: PlacePlansAggregate }) {
+  const { friends_here, active_count } = plansInfo;
+  const hasFriends = friends_here.length > 0;
 
-  if (total_count === 0) return null;
+  if (active_count === 0) return null;
 
   if (hasFriends) {
-    const visibleFriends = friend_hangs.slice(0, 3);
-    const firstFriend = friend_hangs[0].profile;
-    const firstName = firstFriend.display_name || firstFriend.username || "A friend";
-    const othersCount = total_count - 1;
+    const visibleFriends = friends_here.slice(0, 3);
+    const firstFriend = friends_here[0];
+    const firstName = firstFriend.display_name ?? "A friend";
+    const othersCount = active_count - 1;
 
     return (
       <div className="flex items-center gap-1.5">
         {/* Avatar stack */}
         <div className="flex items-center">
-          {visibleFriends.map((fh, idx) => (
+          {visibleFriends.map((f, idx) => (
             <MiniAvatar
-              key={fh.profile.id}
-              src={fh.profile.avatar_url}
-              name={fh.profile.display_name || fh.profile.username || "?"}
+              key={f.user_id}
+              src={f.avatar_url}
+              name={f.display_name ?? "?"}
               index={idx}
             />
           ))}
@@ -148,17 +141,18 @@ function CompactStrip({ hangInfo }: { hangInfo: HangInfo }) {
   return (
     <div className="flex items-center gap-1 text-xs text-[var(--neon-green)]">
       <Users size={12} weight="bold" />
-      <span>{public_count} {public_count === 1 ? "person" : "people"} here</span>
+      <span>{active_count} {active_count === 1 ? "person" : "people"} here</span>
     </div>
   );
 }
 
 // ─── Full variant ─────────────────────────────────────────────────────────────
 
-function FullStrip({ hangInfo }: { hangInfo: HangInfo }) {
-  const { friend_hangs, public_count, total_count } = hangInfo;
-  const hasFriends = friend_hangs.length > 0;
-  const hasPublic = public_count > 0;
+function FullStrip({ plansInfo }: { plansInfo: PlacePlansAggregate }) {
+  const { friends_here, active_count } = plansInfo;
+  const hasFriends = friends_here.length > 0;
+  const publicCount = active_count - friends_here.length;
+  const hasPublic = publicCount > 0;
 
   return (
     <div className="bg-[var(--night)] border border-[var(--twilight)]/40 rounded-xl p-3">
@@ -168,14 +162,14 @@ function FullStrip({ hangInfo }: { hangInfo: HangInfo }) {
         <span className="font-mono text-xs font-bold tracking-[0.12em] uppercase text-[var(--neon-green)]">
           People Here
         </span>
-        {total_count > 0 && (
+        {active_count > 0 && (
           <span className="ml-auto font-mono text-2xs font-bold text-[var(--neon-green)] bg-[var(--neon-green)]/10 border border-[var(--neon-green)]/20 rounded-full px-1.5 py-0.5">
-            {total_count}
+            {active_count}
           </span>
         )}
       </div>
 
-      {total_count === 0 ? (
+      {active_count === 0 ? (
         /* Empty state */
         <p className="text-xs text-[var(--muted)] font-mono">
           Be the first to check in!
@@ -184,21 +178,21 @@ function FullStrip({ hangInfo }: { hangInfo: HangInfo }) {
         <div className="space-y-0.5">
           {hasFriends && (
             <div>
-              {friend_hangs.map((fh) => (
-                <FriendRow key={fh.profile.id} hang={fh} />
+              {friends_here.map((f) => (
+                <FriendRow key={f.user_id} friend={f} />
               ))}
             </div>
           )}
 
           {hasPublic && hasFriends && (
             <p className="text-xs text-[var(--soft)] font-mono pt-1">
-              +{public_count} {public_count === 1 ? "other" : "others"} here
+              +{publicCount} {publicCount === 1 ? "other" : "others"} here
             </p>
           )}
 
           {hasPublic && !hasFriends && (
             <p className="text-xs text-[var(--soft)] font-mono">
-              {public_count} {public_count === 1 ? "person" : "people"} hanging here right now
+              {publicCount} {publicCount === 1 ? "person" : "people"} here right now
             </p>
           )}
         </div>
@@ -209,28 +203,27 @@ function FullStrip({ hangInfo }: { hangInfo: HangInfo }) {
 
 // ─── Main export ──────────────────────────────────────────────────────────────
 
-export const PlaceHangStrip = memo(function PlaceHangStrip({
-  hangInfo,
+export const PlacePlansStrip = memo(function PlacePlansStrip({
+  plansInfo,
   variant = "compact",
   className,
-}: PlaceHangStripProps) {
-  // If no data provided, render nothing (hook integration is deferred)
-  if (!hangInfo) return null;
+}: PlacePlansStripProps) {
+  if (!plansInfo) return null;
 
-  const { total_count } = hangInfo;
+  const { active_count } = plansInfo;
 
   // Compact: suppress when empty (inline cards shouldn't show empty state)
-  if (variant === "compact" && total_count === 0) return null;
+  if (variant === "compact" && active_count === 0) return null;
 
   return (
     <div className={className}>
       {variant === "compact" ? (
-        <CompactStrip hangInfo={hangInfo} />
+        <CompactStrip plansInfo={plansInfo} />
       ) : (
-        <FullStrip hangInfo={hangInfo} />
+        <FullStrip plansInfo={plansInfo} />
       )}
     </div>
   );
 });
 
-export type { PlaceHangStripProps, HangInfo, FriendHang };
+export type { PlacePlansStripProps };

@@ -2,7 +2,8 @@
 
 import { useState, useCallback } from "react";
 import { ShareNetwork, Link as LinkIcon, Check, X } from "@phosphor-icons/react";
-import { useCreatePlan } from "@/lib/hooks/usePlans";
+import { useCreatePlan } from "@/lib/hooks/useUserPlans";
+import { usePortal } from "@/lib/portal-context";
 import { useToast } from "@/components/Toast";
 
 interface PlanCreatorProps {
@@ -13,12 +14,14 @@ interface PlanCreatorProps {
 
 export function PlanCreator({ onClose, onCreated, portalSlug = "atlanta" }: PlanCreatorProps) {
   const { showToast } = useToast();
+  const { portal } = usePortal();
   const createPlan = useCreatePlan();
 
   const [title, setTitle] = useState("");
   const [date, setDate] = useState("");
   const [time, setTime] = useState("");
   const [description, setDescription] = useState("");
+  void description; // not in new API — kept for UI UX
 
   // Share step state
   const [shareStep, setShareStep] = useState<{
@@ -33,11 +36,16 @@ export function PlanCreator({ onClose, onCreated, portalSlug = "atlanta" }: Plan
     if (!title.trim() || !date) return;
 
     try {
+      const startsAt = time
+        ? new Date(`${date}T${time}`).toISOString()
+        : new Date(`${date}T12:00:00`).toISOString();
+
       const result = await createPlan.mutateAsync({
+        anchor_type: "event",
+        anchor_id: 0, // placeholder — PlanCreator is a legacy component; no anchor
+        portal_id: portal?.id ?? portalSlug,
+        starts_at: startsAt,
         title: title.trim(),
-        plan_date: date,
-        plan_time: time || undefined,
-        description: description.trim() || undefined,
       });
 
       // If we got a share_token, show the share step

@@ -1,12 +1,19 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { HangSheet } from "./HangSheet";
+import { PlanSheet } from "./PlanSheet";
 
-interface PostRsvpHangPromptProps {
+// Renamed from PostRsvpHangPrompt → PostRsvpInviteNudge
+// Behavioral rewrite:
+//   - Opens PlanSheet instead of HangSheet
+//   - New localStorage key: rsvp_plan_invite_nudge_dismissed_${eventId}
+//     (old keys rsvp_hang_prompt_dismissed_* are NOT migrated —
+//      dismissed users will see the nudge once more, which is acceptable)
+
+interface PostRsvpInviteNudgeProps {
   eventId: number;
   eventTitle: string;
-  venue: {
+  place: {
     id: number;
     name: string;
     slug: string | null;
@@ -16,16 +23,16 @@ interface PostRsvpHangPromptProps {
   onDismiss: () => void;
 }
 
-export function PostRsvpHangPrompt({
+export function PostRsvpInviteNudge({
   eventId,
   eventTitle,
-  venue,
+  place,
   onDismiss,
-}: PostRsvpHangPromptProps) {
-  const [showHangSheet, setShowHangSheet] = useState(false);
+}: PostRsvpInviteNudgeProps) {
+  const [showPlanSheet, setShowPlanSheet] = useState(false);
 
-  // Check localStorage immediately — skip if already dismissed for this event
-  const storageKey = `rsvp_hang_prompt_dismissed_${eventId}`;
+  // New localStorage key (old rsvp_hang_prompt_dismissed_* keys are NOT migrated)
+  const storageKey = `rsvp_plan_invite_nudge_dismissed_${eventId}`;
   const alreadyDismissed =
     typeof window !== "undefined" && !!localStorage.getItem(storageKey);
 
@@ -53,13 +60,13 @@ export function PostRsvpHangPrompt({
     onDismiss();
   };
 
-  const handleCheckInNow = () => {
+  const handlePlanNow = () => {
     try {
       localStorage.setItem(storageKey, "1");
     } catch {
       // ignore
     }
-    setShowHangSheet(true);
+    setShowPlanSheet(true);
   };
 
   if (alreadyDismissed) return null;
@@ -71,11 +78,11 @@ export function PostRsvpHangPrompt({
           {/* Header */}
           <div className="flex items-start justify-between mb-3">
             <div className="flex items-center gap-2">
-              {/* Neon-green dot accent for hangs */}
+              {/* Neon-green dot accent */}
               <span className="w-2 h-2 rounded-full bg-[var(--neon-green)] flex-shrink-0 mt-0.5" />
               <div>
                 <h3 className="font-mono text-sm font-semibold text-[var(--cream)]">
-                  Check in when you arrive?
+                  Plan your visit?
                 </h3>
                 <p className="font-mono text-xs text-[var(--muted)] mt-0.5 line-clamp-1">
                   Going to {eventTitle}
@@ -96,10 +103,10 @@ export function PostRsvpHangPrompt({
           {/* Actions */}
           <div className="flex gap-2">
             <button
-              onClick={handleCheckInNow}
+              onClick={handlePlanNow}
               className="flex-1 min-h-[36px] px-3 py-2 rounded-lg bg-[var(--neon-green)]/15 border border-[var(--neon-green)]/40 text-[var(--neon-green)] font-mono text-xs font-medium hover:bg-[var(--neon-green)]/25 transition-colors"
             >
-              Check in now
+              Plan now
             </button>
             <button
               onClick={handleDismiss}
@@ -111,16 +118,16 @@ export function PostRsvpHangPrompt({
         </div>
       </div>
 
-      <HangSheet
-        isOpen={showHangSheet}
+      <PlanSheet
+        isOpen={showPlanSheet}
         onClose={() => {
-          setShowHangSheet(false);
+          setShowPlanSheet(false);
           onDismiss();
         }}
-        venue={venue}
+        place={place}
         event={{ id: eventId, title: eventTitle }}
-        onHangCreated={() => {
-          setShowHangSheet(false);
+        onPlanCreated={() => {
+          setShowPlanSheet(false);
           onDismiss();
         }}
       />
