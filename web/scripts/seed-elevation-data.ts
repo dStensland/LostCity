@@ -233,11 +233,12 @@ async function clean() {
   else console.log("  Deleted regular spots");
 
   const { error: rsvpError } = await supabase
-    .from("event_rsvps")
+    .from("plans")
     .delete()
-    .in("user_id", SEED_IDS);
-  if (rsvpError) console.error("  Error cleaning RSVPs:", rsvpError.message);
-  else console.log("  Deleted RSVPs");
+    .in("creator_id", SEED_IDS)
+    .eq("anchor_type", "event");
+  if (rsvpError) console.error("  Error cleaning event-anchor plans:", rsvpError.message);
+  else console.log("  Deleted event-anchor plans (plan_invitees cascaded)");
 
   const { error: followsError } = await supabase
     .from("follows")
@@ -424,23 +425,24 @@ async function seed() {
     console.error("  Error fetching events:", eventsError.message);
   }
 
-  let rsvpsCreated = 0;
+  let plansCreated = 0;
   const events = upcomingEvents || [];
 
   if (events.length > 0) {
-    // Check which RSVPs already exist for seed users
-    const { data: existingRsvps } = await supabase
-      .from("event_rsvps")
-      .select("user_id, event_id")
-      .in("user_id", SEED_IDS);
-    const existingRsvpKeys = new Set(
-      (existingRsvps || []).map((r) => `${r.user_id}:${r.event_id}`)
+    // Check which plans already exist for seed users (dedup by creator_id + anchor_event_id)
+    const { data: existingPlans } = await supabase
+      .from("plans")
+      .select("creator_id, anchor_event_id")
+      .in("creator_id", SEED_IDS)
+      .eq("anchor_type", "event");
+    const existingPlanKeys = new Set(
+      (existingPlans || []).map((p: { creator_id: string; anchor_event_id: number }) => `${p.creator_id}:${p.anchor_event_id}`)
     );
 
     // Partition events into tiers:
-    // Big (first 8 with images): 6-10 RSVPs from across groups
-    // Medium (next 25): 2-4 RSVPs, clustered within groups
-    // Remaining: 1-2 random RSVPs
+    // Big (first 8 with images): 6-10 "going" plans from across groups
+    // Medium (next 25): 2-4 going plans, clustered within groups
+    // Remaining: 1-2 random going plans
     const eventsWithImages = events.filter((e) => e.image_url);
     const bigEvents = eventsWithImages.slice(0, Math.min(8, eventsWithImages.length));
     const remainingEvents = events.filter(
@@ -449,87 +451,109 @@ async function seed() {
     const mediumEvents = remainingEvents.slice(0, 25);
     const tailEvents = remainingEvents.slice(25, 65);
 
-    // Friend groups for RSVP clustering
-    const nightOwls = SEED_USERS.slice(0, 4); // sarah, mike, lisa, james
-    const cultureCrew = SEED_USERS.slice(4, 7); // ana, david, emma
-    const explorers = SEED_USERS.slice(7, 11); // chris, maya, tyler, zoe
+    // Friend groups for plan clustering
+    const nightOwls = SEED_USERS.slice(0, 4);
+    const cultureCrew = SEED_USERS.slice(4, 7);
+    const explorers = SEED_USERS.slice(7, 11);
     const allGroups = [nightOwls, cultureCrew, explorers, SEED_USERS.slice(11)];
 
-    const rsvpsToInsert: Array<{
-      user_id: string;
+    const plansToInsert: Array<{
+      creator_id: string;
       event_id: number;
-      status: string;
-      visibility: string;
+      portal_id: string | null;
+      start_date: string;
     }> = [];
 
-    function addRsvp(userId: string, eventId: number, status: "going" | "interested") {
-      const key = `${userId}:${eventId}`;
-      if (!existingRsvpKeys.has(key)) {
-        rsvpsToInsert.push({
-          user_id: userId,
-          event_id: eventId,
-          status,
-          visibility: "public",
+    function addPlan(userId: string, event: { id: number; portal_id?: string | null; start_date: string }) {
+      const key = `${userId}:${event.id}`;
+      if (!existingPlanKeys.has(key)) {
+        // Only "going" — drop the "interested" tier (no migration path)
+        plansToInsert.push({
+          creator_id: userId,
+          event_id: event.id,
+          portal_id: event.portal_id ?? null,
+          start_date: event.start_date,
         });
-        existingRsvpKeys.add(key); // prevent duplicate within this run
+        existingPlanKeys.add(key);
       }
     }
 
-    // Big events: spread RSVPs across all groups (6-10 per event)
+    // Big events: spread going plans across all groups (take top 70% = going fraction)
     for (const event of bigEvents) {
-      const rsvpCount = 6 + Math.floor(Math.random() * 5); // 6-10
+      const count = 6 + Math.floor(Math.random() * 5); // 6-10
       const shuffledUsers = [...SEED_USERS].sort(() => Math.random() - 0.5);
-      const selectedUsers = shuffledUsers.slice(0, Math.min(rsvpCount, SEED_USERS.length));
-      for (let i = 0; i < selectedUsers.length; i++) {
-        const status = i < Math.ceil(selectedUsers.length * 0.7) ? "going" : "interested";
-        addRsvp(selectedUsers[i].id, event.id, status);
+      const goingUsers = shuffledUsers.slice(0, Math.ceil(Math.min(count, SEED_USERS.length) * 0.7));
+      for (const user of goingUsers) {
+        addPlan(user.id, event);
       }
     }
 
-    // Medium events: cluster within friend groups (2-4 per event)
+    // Medium events: cluster within friend groups
     let groupIndex = 0;
     for (const event of mediumEvents) {
       const group = allGroups[groupIndex % allGroups.length];
-      const rsvpCount = 2 + Math.floor(Math.random() * 3); // 2-4
-      const selectedUsers = group
+      const count = 2 + Math.floor(Math.random() * 3); // 2-4
+      const goingUsers = [...group]
         .sort(() => Math.random() - 0.5)
-        .slice(0, Math.min(rsvpCount, group.length));
-      for (let i = 0; i < selectedUsers.length; i++) {
-        const status = i < Math.ceil(selectedUsers.length * 0.7) ? "going" : "interested";
-        addRsvp(selectedUsers[i].id, event.id, status);
+        .slice(0, Math.ceil(Math.min(count, group.length) * 0.7));
+      for (const user of goingUsers) {
+        addPlan(user.id, event);
       }
       groupIndex++;
     }
 
-    // Tail events: 1-2 random RSVPs each
+    // Tail events: 1 random going plan each
     for (const event of tailEvents) {
-      const rsvpCount = 1 + Math.floor(Math.random() * 2); // 1-2
       const shuffledUsers = [...SEED_USERS].sort(() => Math.random() - 0.5);
-      const selectedUsers = shuffledUsers.slice(0, rsvpCount);
-      for (const user of selectedUsers) {
-        const status = Math.random() < 0.7 ? "going" : "interested";
-        addRsvp(user.id, event.id, status);
-      }
+      addPlan(shuffledUsers[0].id, event);
     }
 
-    // Insert in batches of 50 to avoid payload limits
+    // Insert plans in batches of 50 then build plan_invitees
     const batchSize = 50;
-    for (let i = 0; i < rsvpsToInsert.length; i += batchSize) {
-      const batch = rsvpsToInsert.slice(i, i + batchSize);
-      const { error } = await supabase
-        .from("event_rsvps")
-        .insert(batch as never);
+    for (let i = 0; i < plansToInsert.length; i += batchSize) {
+      const batch = plansToInsert.slice(i, i + batchSize);
+      const insertRows = batch.map((r) => ({
+        creator_id: r.creator_id,
+        portal_id: r.portal_id,
+        anchor_type: "event",
+        anchor_event_id: r.event_id,
+        starts_at: r.start_date,
+        visibility: "friends",
+      }));
+
+      const { data: inserted, error } = await supabase
+        .from("plans")
+        .insert(insertRows as never)
+        .select("id, creator_id");
+
       if (error) {
-        console.error(`  Error inserting RSVPs batch ${i / batchSize + 1}:`, error.message);
+        console.error(`  Error inserting plans batch ${Math.floor(i / batchSize) + 1}:`, error.message);
+        continue;
+      }
+
+      const inviteeRows = (inserted || []).map((p: { id: string; creator_id: string }) => ({
+        plan_id: p.id,
+        user_id: p.creator_id,
+        rsvp_status: "going",
+        invited_by: p.creator_id,
+        responded_at: new Date().toISOString(),
+      }));
+
+      const { error: invErr } = await supabase
+        .from("plan_invitees")
+        .insert(inviteeRows as never);
+
+      if (invErr) {
+        console.error(`  Error inserting plan_invitees batch ${Math.floor(i / batchSize) + 1}:`, invErr.message);
       } else {
-        rsvpsCreated += batch.length;
+        plansCreated += batch.length;
       }
     }
   } else {
-    console.warn("  No upcoming events found — RSVPs skipped.");
+    console.warn("  No upcoming events found — plans skipped.");
   }
 
-  console.log(`RSVPs created: ${rsvpsCreated}`);
+  console.log(`Plans (going) created: ${plansCreated}`);
 
   // ── Step 6: Regular spots ─────────────────────────────────────────────────
   const { data: venueRows, error: venuesError } = await supabase
@@ -647,7 +671,7 @@ SEED COMPLETE:
   Profiles created: ${profilesCreated}
   User preferences set: ${prefsCreated}
   Friend connections: ${followsCreated}
-  RSVPs created: ${rsvpsCreated}
+  Plans (going) created: ${plansCreated}
   Regular spots created: ${regularSpotsCreated}
 `);
 }

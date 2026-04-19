@@ -62,16 +62,19 @@ async function main() {
   console.log("Events matching time filter:", count);
   console.log("");
 
-  // Get RSVP counts
+  // Get going counts via plan_invitees → plans
   const eventIds = (data || []).map(e => e.id);
-  const { data: rsvps } = await supabase
-    .from("event_rsvps")
-    .select("event_id, status")
-    .in("event_id", eventIds);
+  const { data: invitees } = await supabase
+    .from("plan_invitees")
+    .select("plan:plans!inner(anchor_event_id)")
+    .eq("rsvp_status", "going")
+    .eq("plan.anchor_type", "event" as never)
+    .in("plan.anchor_event_id", eventIds as never);
 
   const rsvpCounts: Record<number, number> = {};
-  for (const r of rsvps || []) {
-    rsvpCounts[r.event_id] = (rsvpCounts[r.event_id] || 0) + 1;
+  for (const r of (invitees || []) as Array<{ plan: { anchor_event_id: number } | null }>) {
+    const eid = r.plan?.anchor_event_id;
+    if (eid) rsvpCounts[eid] = (rsvpCounts[eid] || 0) + 1;
   }
 
   // Get venue recommendation counts

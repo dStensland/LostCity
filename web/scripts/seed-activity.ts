@@ -291,8 +291,9 @@ async function clearActivityData(userIds: string[]) {
   console.log("Clearing existing activity data for seed users...");
 
   // Clear in parallel for speed
+  // Delete event-anchor plans first (plan_invitees cascades automatically)
   await Promise.all([
-    supabase.from("event_rsvps").delete().in("user_id", userIds),
+    supabase.from("plans").delete().in("creator_id", userIds).eq("anchor_type", "event"),
     supabase.from("recommendations").delete().in("user_id", userIds),
     supabase.from("saved_items").delete().in("user_id", userIds),
     supabase.from("activities").delete().in("user_id", userIds),
@@ -319,7 +320,7 @@ async function clearActivityData(userIds: string[]) {
 async function getEventsForCategories(
   categories: string[],
   limit: number
-): Promise<Array<{ id: number; category_id: string; start_date: string; title: string; venue_id: number | null }>> {
+): Promise<Array<{ id: number; category_id: string; start_date: string; title: string; venue_id: number | null; portal_id: string | null }>> {
   const mapped = mapCategories(categories);
   const today = new Date().toISOString().split("T")[0];
   const monthFromNow = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
@@ -328,7 +329,7 @@ async function getEventsForCategories(
 
   const { data, error } = await supabase
     .from("events")
-    .select("id, category_id, start_date, title, place_id")
+    .select("id, category_id, start_date, title, place_id, portal_id")
     .in("category_id", mapped)
     .gte("start_date", today)
     .lte("start_date", monthFromNow)
@@ -346,11 +347,12 @@ async function getEventsForCategories(
 async function seedRSVPs(
   allPersonas: Array<Persona & { userId: string }>
 ): Promise<number> {
-  console.log("\nSeeding RSVPs...");
+  console.log("\nSeeding plans (going)...");
   let total = 0;
 
   for (const persona of allPersonas) {
     const count = RSVP_COUNTS[persona.activity_level] || 5;
+    // Only seed "going" — interested/went have no migration path in new model
     const events = await getEventsForCategories(persona.categories, count);
 
     if (events.length === 0) {
@@ -358,43 +360,62 @@ async function seedRSVPs(
       continue;
     }
 
-    const rsvps = events.map((event, i) => {
-      const isGoing =
-        persona.activity_level === "power" || i < events.length * 0.7;
-      return {
-        user_id: persona.userId,
-        event_id: event.id,
-        status: isGoing ? "going" : "interested",
-        visibility: "public",
-        created_at: randomPastTimestamp(5),
-      };
-    });
+    const createdAt = randomPastTimestamp(5);
 
-    const { error } = await supabase.from("event_rsvps").insert(rsvps);
-    if (error) {
-      console.error(`  ${persona.username} RSVPs error:`, error.message);
+    // Build one plan per event
+    const planRows = events.map((event) => ({
+      creator_id: persona.userId,
+      portal_id: event.portal_id ?? null,
+      anchor_type: "event" as const,
+      anchor_event_id: event.id,
+      starts_at: event.start_date,
+      visibility: "friends",
+      created_at: createdAt,
+    }));
+
+    const { data: insertedPlans, error: planError } = await supabase
+      .from("plans")
+      .insert(planRows as never)
+      .select("id");
+
+    if (planError) {
+      console.error(`  ${persona.username} plans error:`, planError.message);
+      continue;
+    }
+
+    const planIds = (insertedPlans || []).map((p: { id: string }) => p.id);
+    const inviteeRows = planIds.map((planId: string) => ({
+      plan_id: planId,
+      user_id: persona.userId,
+      rsvp_status: "going",
+      invited_by: persona.userId,
+      responded_at: createdAt,
+    }));
+
+    const { error: inviteeError } = await supabase
+      .from("plan_invitees")
+      .insert(inviteeRows as never);
+
+    if (inviteeError) {
+      console.error(`  ${persona.username} plan_invitees error:`, inviteeError.message);
     } else {
-      const going = rsvps.filter((r) => r.status === "going").length;
-      const interested = rsvps.length - going;
-      console.log(
-        `  ${persona.username}: ${going} going, ${interested} interested`
-      );
-      total += rsvps.length;
+      console.log(`  ${persona.username}: ${planIds.length} going plans`);
+      total += planIds.length;
 
-      // Create activity entries for RSVPs
-      const activities = rsvps.map((r) => ({
+      // Create activity entries
+      const activities = events.map((event) => ({
         user_id: persona.userId,
         activity_type: "rsvp",
-        event_id: r.event_id,
+        event_id: event.id,
         visibility: "public",
-        metadata: { status: r.status },
-        created_at: r.created_at,
+        metadata: { status: "going" },
+        created_at: createdAt,
       }));
       await supabase.from("activities").insert(activities);
     }
   }
 
-  console.log(`  Total RSVPs: ${total}`);
+  console.log(`  Total plans (going): ${total}`);
   return total;
 }
 

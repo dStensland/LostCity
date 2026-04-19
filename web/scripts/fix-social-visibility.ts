@@ -1,16 +1,15 @@
 /**
  * fix-social-visibility.ts
  *
- * Fixes the social proof visibility problem: 82% of seeded RSVPs have
- * visibility='friends', but get_social_proof_counts only counts visibility='public'.
- * Anonymous users see zero social proof everywhere.
+ * Fixes social proof visibility: ensures seeded plans have visibility='public'
+ * so that get_social_proof_counts can see them for anonymous users.
  *
- * What this script does:
- * 1. Fetches all event_rsvps with visibility='friends'
- * 2. For events with 3+ total RSVPs, randomly flips ~40% of their friends-visibility
- *    RSVPs to 'public' (ensuring at least 1 public RSVP per such event)
- * 3. Flips all active hangs to visibility='public' so hot venue counts are visible
- * 4. Verifies the result: events with 3+ public RSVPs (target: 30+, was: 2)
+ * In the plans model, visibility is stored on `plans.visibility` (not on
+ * plan_invitees). This script flips plans with visibility='friends' to
+ * 'public' for events that have 3+ attendees — so social proof is visible
+ * to anonymous users.
+ *
+ * Also flips active hangs to visibility='public'.
  *
  * Run from the web/ directory: npx tsx scripts/fix-social-visibility.ts
  */
@@ -58,87 +57,81 @@ function sleep(ms: number) {
 // ---------------------------------------------------------------------------
 
 async function main() {
-  console.log("fix-social-visibility: patching RSVP and hang visibility");
+  console.log("fix-social-visibility: patching plan and hang visibility");
   console.log(`Target: ${supabaseUrl}\n`);
 
   // ------------------------------------------------------------------
-  // Step 1: Fetch all friends-visibility RSVPs
+  // Step 1: Find event-anchor plans with visibility='friends'
+  // Group by anchor_event_id to find events with 3+ attendees
   // ------------------------------------------------------------------
-  process.stdout.write("Fetching friends-visibility RSVPs...");
+  process.stdout.write("Fetching friends-visibility event plans...");
 
-  const { data: friendsRsvps, error: fetchErr } = await supabase
-    .from("event_rsvps")
-    .select("id, event_id, user_id, visibility")
+  const { data: friendsPlans, error: fetchErr } = await supabase
+    .from("plans")
+    .select("id, anchor_event_id, visibility")
+    .eq("anchor_type", "event")
     .eq("visibility", "friends");
 
   if (fetchErr) {
-    console.error("\nFailed to fetch RSVPs:", fetchErr.message);
+    console.error("\nFailed to fetch plans:", fetchErr.message);
     process.exit(1);
   }
 
-  console.log(` done (${friendsRsvps?.length ?? 0} friends-visibility RSVPs found)`);
-  const allFriendsRsvps = friendsRsvps ?? [];
+  console.log(` done (${friendsPlans?.length ?? 0} friends-visibility plans found)`);
+  const allFriendsPlans = friendsPlans ?? [];
 
   // ------------------------------------------------------------------
-  // Step 2: Fetch public RSVPs to know which events already have some
+  // Step 2: Count total plans per event (public + friends)
   // ------------------------------------------------------------------
-  process.stdout.write("Fetching public-visibility RSVPs...");
+  process.stdout.write("Fetching public-visibility plans...");
 
-  const { data: publicRsvps, error: pubErr } = await supabase
-    .from("event_rsvps")
-    .select("id, event_id")
+  const { data: publicPlans, error: pubErr } = await supabase
+    .from("plans")
+    .select("id, anchor_event_id")
+    .eq("anchor_type", "event")
     .eq("visibility", "public");
 
   if (pubErr) {
-    console.error("\nFailed to fetch public RSVPs:", pubErr.message);
+    console.error("\nFailed to fetch public plans:", pubErr.message);
     process.exit(1);
   }
 
-  console.log(` done (${publicRsvps?.length ?? 0} public RSVPs found)`);
+  console.log(` done (${publicPlans?.length ?? 0} public plans found)`);
 
-  // Build a map: event_id -> count of public RSVPs already present
+  // Build map: event_id -> public count
   const publicCountByEvent = new Map<number, number>();
-  for (const r of publicRsvps ?? []) {
-    publicCountByEvent.set(r.event_id, (publicCountByEvent.get(r.event_id) ?? 0) + 1);
+  for (const p of publicPlans ?? []) {
+    const eid = p.anchor_event_id as number;
+    publicCountByEvent.set(eid, (publicCountByEvent.get(eid) ?? 0) + 1);
   }
 
-  // ------------------------------------------------------------------
-  // Step 3: Build a map of event_id -> [friends-rsvp-ids]
-  // ------------------------------------------------------------------
+  // Build map: event_id -> friends plan IDs
   const friendsIdsByEvent = new Map<number, string[]>();
-  for (const r of allFriendsRsvps) {
-    const existing = friendsIdsByEvent.get(r.event_id) ?? [];
-    existing.push(r.id);
-    friendsIdsByEvent.set(r.event_id, existing);
+  for (const p of allFriendsPlans) {
+    const eid = p.anchor_event_id as number;
+    const existing = friendsIdsByEvent.get(eid) ?? [];
+    existing.push(p.id as string);
+    friendsIdsByEvent.set(eid, existing);
   }
 
   // ------------------------------------------------------------------
-  // Step 4: Determine total RSVPs per event (friends + public)
-  // and select which IDs to flip.
-  //
-  // Strategy: flip enough friends RSVPs so that every event ends up with
-  // at least 3 public RSVPs (if it has enough total RSVPs to support that).
-  // Events with fewer than 3 total RSVPs get at least 1 public RSVP.
+  // Step 3: Determine which plan IDs to flip to public
+  // Strategy: events with 3+ total plans get at least 3 public;
+  //           events with 1-2 total get at least 1 public.
   // ------------------------------------------------------------------
   const idsToFlip: string[] = [];
 
   for (const [eventId, friendsIds] of friendsIdsByEvent) {
     const publicCount = publicCountByEvent.get(eventId) ?? 0;
     const totalCount = publicCount + friendsIds.length;
-
-    // Skip events with no RSVPs at all
     if (totalCount === 0) continue;
 
-    // Target: 3 public RSVPs on events with 3+ total, 1 on events with 1-2
     const publicTarget = totalCount >= 3 ? 3 : 1;
     const needed = Math.max(0, publicTarget - publicCount);
-
     if (needed === 0) continue;
 
-    // Take exactly what we need from the friends pool (in random order)
     const shuffled = [...friendsIds].sort(() => Math.random() - 0.5);
-    const toFlip = shuffled.slice(0, Math.min(needed, friendsIds.length));
-    idsToFlip.push(...toFlip);
+    idsToFlip.push(...shuffled.slice(0, Math.min(needed, friendsIds.length)));
   }
 
   const eventsTargeted = [...friendsIdsByEvent.keys()].filter((id) => {
@@ -147,17 +140,14 @@ async function main() {
     return tot >= 3;
   }).length;
 
-  console.log(`\nRSVP flip plan:`);
-  console.log(`  Events with 3+ total RSVPs: ${eventsTargeted}`);
-  console.log(`  friends-visibility RSVPs to flip to public: ${idsToFlip.length}`);
+  console.log(`\nPlan flip plan:`);
+  console.log(`  Events with 3+ total plans: ${eventsTargeted}`);
+  console.log(`  friends-visibility plans to flip to public: ${idsToFlip.length}`);
 
   if (idsToFlip.length === 0) {
     console.log("  Nothing to flip — visibility may already be correct.");
   } else {
-    // ------------------------------------------------------------------
-    // Step 5: Update in batches of 100
-    // ------------------------------------------------------------------
-    process.stdout.write(`\nUpdating ${idsToFlip.length} RSVPs to public...`);
+    process.stdout.write(`\nUpdating ${idsToFlip.length} plans to public...`);
 
     const BATCH_SIZE = 100;
     let flipped = 0;
@@ -166,7 +156,7 @@ async function main() {
     for (let i = 0; i < idsToFlip.length; i += BATCH_SIZE) {
       const batch = idsToFlip.slice(i, i + BATCH_SIZE);
       const { error: updateErr } = await supabase
-        .from("event_rsvps")
+        .from("plans")
         .update({ visibility: "public" } as never)
         .in("id", batch);
 
@@ -183,7 +173,7 @@ async function main() {
   }
 
   // ------------------------------------------------------------------
-  // Step 6: Flip active hangs to public
+  // Step 4: Flip active hangs to public
   // ------------------------------------------------------------------
   process.stdout.write("\nFetching active hangs...");
 
@@ -217,13 +207,14 @@ async function main() {
   }
 
   // ------------------------------------------------------------------
-  // Step 7: Verify — how many events now have 3+ public RSVPs?
+  // Step 5: Verify
   // ------------------------------------------------------------------
   console.log("\n--- Verification ---");
 
   const { data: verifyData, error: verifyErr } = await supabase
-    .from("event_rsvps")
-    .select("event_id, visibility, status");
+    .from("plans")
+    .select("anchor_event_id, visibility")
+    .eq("anchor_type", "event");
 
   if (verifyErr) {
     console.error("Verification query failed:", verifyErr.message);
@@ -232,44 +223,37 @@ async function main() {
 
   const publicByEvent = new Map<number, number>();
   const friendsByEvent = new Map<number, number>();
-  const privateByEvent = new Map<number, number>();
   let totalPublic = 0;
   let totalFriends = 0;
-  let totalPrivate = 0;
 
-  for (const r of verifyData ?? []) {
-    if (r.visibility === "public") {
-      publicByEvent.set(r.event_id, (publicByEvent.get(r.event_id) ?? 0) + 1);
+  for (const p of verifyData ?? []) {
+    const eid = p.anchor_event_id as number;
+    if (p.visibility === "public") {
+      publicByEvent.set(eid, (publicByEvent.get(eid) ?? 0) + 1);
       totalPublic++;
-    } else if (r.visibility === "friends") {
-      friendsByEvent.set(r.event_id, (friendsByEvent.get(r.event_id) ?? 0) + 1);
+    } else if (p.visibility === "friends") {
+      friendsByEvent.set(eid, (friendsByEvent.get(eid) ?? 0) + 1);
       totalFriends++;
-    } else {
-      privateByEvent.set(r.event_id, (privateByEvent.get(r.event_id) ?? 0) + 1);
-      totalPrivate++;
     }
   }
 
-  const totalRsvps = totalPublic + totalFriends + totalPrivate;
-  const eventsWithAnyPublic = [...publicByEvent.keys()].length;
+  const totalPlans = totalPublic + totalFriends;
   const eventsWith3PlusPublic = [...publicByEvent.entries()].filter(([, count]) => count >= 3).length;
   const eventsWith1PlusPublic = [...publicByEvent.entries()].filter(([, count]) => count >= 1).length;
 
-  const publicPct = totalRsvps > 0 ? ((totalPublic / totalRsvps) * 100).toFixed(1) : "0";
-  const friendsPct = totalRsvps > 0 ? ((totalFriends / totalRsvps) * 100).toFixed(1) : "0";
+  const publicPct = totalPlans > 0 ? ((totalPublic / totalPlans) * 100).toFixed(1) : "0";
+  const friendsPct = totalPlans > 0 ? ((totalFriends / totalPlans) * 100).toFixed(1) : "0";
 
-  console.log(`Total RSVPs:             ${totalRsvps}`);
-  console.log(`  public:                ${totalPublic} (${publicPct}%)`);
-  console.log(`  friends:               ${totalFriends} (${friendsPct}%)`);
-  console.log(`  private:               ${totalPrivate}`);
-  console.log(`Events with any public RSVPs:    ${eventsWithAnyPublic}`);
-  console.log(`Events with 1+ public RSVPs:     ${eventsWith1PlusPublic}`);
-  console.log(`Events with 3+ public RSVPs:     ${eventsWith3PlusPublic}  (target: 30+)`);
+  console.log(`Total plans (event-anchor): ${totalPlans}`);
+  console.log(`  public:              ${totalPublic} (${publicPct}%)`);
+  console.log(`  friends:             ${totalFriends} (${friendsPct}%)`);
+  console.log(`Events with 1+ public plans: ${eventsWith1PlusPublic}`);
+  console.log(`Events with 3+ public plans: ${eventsWith3PlusPublic}  (target: 30+)`);
 
   if (eventsWith3PlusPublic >= 30) {
     console.log("\nPASS: 30+ events have visible social proof for anonymous users.");
   } else {
-    console.warn(`\nWARN: Only ${eventsWith3PlusPublic} events have 3+ public RSVPs. Target is 30.`);
+    console.warn(`\nWARN: Only ${eventsWith3PlusPublic} events have 3+ public plans. Target is 30.`);
     console.warn("      Consider running seed-social-proof.ts with --clean first, then re-running this script.");
   }
 
@@ -281,7 +265,7 @@ async function main() {
 
   const publicActiveHangs = (activeHangCheck ?? []).filter((h) => h.visibility === "public").length;
   const totalActiveHangs = (activeHangCheck ?? []).length;
-  console.log(`\nActive hangs:            ${totalActiveHangs} total, ${publicActiveHangs} public`);
+  console.log(`\nActive hangs: ${totalActiveHangs} total, ${publicActiveHangs} public`);
 
   if (publicActiveHangs === totalActiveHangs && totalActiveHangs > 0) {
     console.log("PASS: All active hangs are visible to anonymous users.");

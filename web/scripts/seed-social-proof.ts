@@ -313,11 +313,14 @@ async function main() {
   // ------------------------------------------------------------------
   if (CLEAN) {
     process.stdout.write("Cleaning social data...");
-    // Delete placeholder RSVPs and all hangs/saved_items
-    const { error: e1 } = await supabase.from("event_rsvps").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+    // Delete all event-anchor plans (plan_invitees cascades) and all hangs
+    const { error: e1 } = await supabase
+      .from("plans")
+      .delete()
+      .eq("anchor_type", "event");
     const { error: e2 } = await supabase.from("hangs").delete().neq("id", "00000000-0000-0000-0000-000000000000");
     // Don't wipe saved_items — preserve the 96 existing ones
-    if (e1) console.warn(" rsvps:", e1.message);
+    if (e1) console.warn(" plans:", e1.message);
     if (e2) console.warn(" hangs:", e2.message);
     console.log(" done");
   }
@@ -458,7 +461,7 @@ async function main() {
 
   const { data: upcomingEvents, error: eventsErr } = await supabase
     .from("events")
-    .select("id, title, start_date, place_id")
+    .select("id, title, start_date, place_id, portal_id")
     .eq("is_active", true)
     .gte("start_date", today.toISOString())
     .lte("start_date", in30Days.toISOString())
@@ -478,27 +481,28 @@ async function main() {
   const popularEvents = pickN(events, Math.min(35, events.length));
   const popularEventIds = new Set(popularEvents.map((e) => e.id));
 
-  // Build RSVP rows
+  // Build plan rows (going only — interested has no migration path)
   // Track (user_id, event_id) to avoid dupes within this seeding run
-  const rsvpSet = new Set<string>();
-  const rsvpRows: Array<{
-    user_id: string;
+  const planSet = new Set<string>();
+  const planRows: Array<{
+    creator_id: string;
     event_id: number;
-    status: "going" | "interested";
-    visibility: "friends" | "public" | "private";
+    portal_id: string | null;
+    start_date: string;
   }> = [];
 
   function addRsvp(userId: string, eventId: number) {
     const key = `${userId}:${eventId}`;
-    if (rsvpSet.has(key)) return;
-    rsvpSet.add(key);
-    const statusRoll = Math.random();
-    const visRoll = Math.random();
-    rsvpRows.push({
-      user_id: userId,
+    if (planSet.has(key)) return;
+    planSet.add(key);
+    // Only "going" — skip if random roll would have been "interested" in old model
+    // (65% going threshold preserved: always add as going)
+    const event = events.find((e) => e.id === eventId);
+    planRows.push({
+      creator_id: userId,
       event_id: eventId,
-      status: statusRoll < 0.65 ? "going" : "interested",
-      visibility: visRoll < 0.80 ? "friends" : visRoll < 0.95 ? "public" : "private",
+      portal_id: (event as { portal_id?: string | null } | undefined)?.portal_id ?? null,
+      start_date: (event as { start_date?: string } | undefined)?.start_date ?? new Date().toISOString().split("T")[0],
     });
   }
 
@@ -512,16 +516,16 @@ async function main() {
     }
   }
 
-  // Per-user RSVP targets
+  // Per-user RSVP targets (going only — apply 65% of original target)
   for (const username of activeUsernames) {
     const persona = PERSONAS[username];
     if (!persona) continue;
     const userId = userMap[username];
     if (!userId) continue;
 
-    const target = persona.rsvp_target;
+    const target = Math.ceil(persona.rsvp_target * 0.65); // going fraction of original target
     // Count how many this user already got from clustering
-    const alreadyHas = rsvpRows.filter((r) => r.user_id === userId).length;
+    const alreadyHas = planRows.filter((r) => r.creator_id === userId).length;
     const needed = Math.max(0, target - alreadyHas);
 
     if (needed === 0) continue;
@@ -540,9 +544,53 @@ async function main() {
     }
   }
 
-  process.stdout.write(`Inserting ${rsvpRows.length} RSVPs...`);
-  const rsvpInserted = await batchInsert("event_rsvps", rsvpRows, "user_id,event_id");
-  console.log(` done (${rsvpInserted} inserted)`);
+  process.stdout.write(`Inserting ${planRows.length} plans (going)...`);
+
+  // Bulk insert plans, then build plan_invitees
+  let planInserted = 0;
+  const BATCH_SIZE = 80;
+  for (let i = 0; i < planRows.length; i += BATCH_SIZE) {
+    const batch = planRows.slice(i, i + BATCH_SIZE);
+    const insertRows = batch.map((r) => ({
+      creator_id: r.creator_id,
+      portal_id: r.portal_id,
+      anchor_type: "event",
+      anchor_event_id: r.event_id,
+      starts_at: r.start_date,
+      visibility: "friends",
+    }));
+
+    const { data: inserted, error: planErr } = await supabase
+      .from("plans")
+      .insert(insertRows as never)
+      .select("id, creator_id");
+
+    if (planErr) {
+      console.warn(`  [warn] plans batch ${i}-${i + batch.length}: ${planErr.message}`);
+      continue;
+    }
+
+    const inviteeRows = (inserted || []).map((p: { id: string; creator_id: string }) => ({
+      plan_id: p.id,
+      user_id: p.creator_id,
+      rsvp_status: "going",
+      invited_by: p.creator_id,
+      responded_at: new Date().toISOString(),
+    }));
+
+    const { error: invErr } = await supabase
+      .from("plan_invitees")
+      .insert(inviteeRows as never);
+
+    if (invErr) {
+      console.warn(`  [warn] plan_invitees batch ${i}-${i + batch.length}: ${invErr.message}`);
+    } else {
+      planInserted += batch.length;
+    }
+    await sleep(50);
+  }
+
+  console.log(` done (${planInserted} plans inserted)`);
 
   // ------------------------------------------------------------------
   // Step 4: Hangs seeding
@@ -864,15 +912,15 @@ async function main() {
   // ------------------------------------------------------------------
   console.log("\nSeeding complete. Verifying counts...");
 
-  const [rsvpCount, hangCount, spotCount, savedCount, followCount] = await Promise.all([
-    supabase.from("event_rsvps").select("id", { count: "exact", head: true }),
+  const [planCount, hangCount, spotCount, savedCount, followCount] = await Promise.all([
+    supabase.from("plan_invitees").select("plan_id", { count: "exact", head: true }).eq("rsvp_status", "going"),
     supabase.from("hangs").select("id", { count: "exact", head: true }),
     supabase.from("user_regular_spots").select("user_id", { count: "exact", head: true }),
     supabase.from("saved_items").select("id", { count: "exact", head: true }),
     supabase.from("follows").select("id", { count: "exact", head: true }).not("followed_user_id", "is", null),
   ]);
 
-  console.log(`  event_rsvps:        ${rsvpCount.count ?? "?"}`);
+  console.log(`  plans (going):      ${planCount.count ?? "?"}`);
   console.log(`  hangs:              ${hangCount.count ?? "?"}`);
   console.log(`  user_regular_spots: ${spotCount.count ?? "?"}`);
   console.log(`  saved_items:        ${savedCount.count ?? "?"}`);
