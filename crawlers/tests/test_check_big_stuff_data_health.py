@@ -98,11 +98,15 @@ def test_cluster_tentpoles_ignores_singleton_matches() -> None:
     assert _cluster_tentpoles(tentpoles) == []
 
 
-def test_near_duplicates_groups_festival_and_tentpole_with_same_normalized_title() -> (
+def test_near_duplicates_groups_festival_and_tentpole_on_same_normalized_title_and_date() -> (
     None
 ):
     festivals = [
-        {"id": "caribbean-carnival", "name": "Atlanta Caribbean Carnival"},
+        {
+            "id": "caribbean-carnival",
+            "name": "Atlanta Caribbean Carnival",
+            "announced_start": "2026-05-24",
+        },
     ]
     tentpoles = [
         {
@@ -122,12 +126,27 @@ def test_near_duplicates_groups_festival_and_tentpole_with_same_normalized_title
     assert len(dupes) == 1
     group = dupes[0]
     assert group["normalized_title"] == "atlantacaribbeancarnival"
+    assert group["start_date"] == "2026-05-24"
     kinds = sorted(r["kind"] for r in group["rows"])
     assert kinds == ["festival", "tentpole"]
 
 
+def test_near_duplicates_ignores_same_title_on_different_dates() -> None:
+    # Legitimately recurring tentpole (e.g., Atlanta Streets Alive on 4 separate
+    # dates across the year) must NOT register as a duplicate cluster.
+    tentpoles = [
+        {"id": 5001, "title": "Atlanta Streets Alive", "start_date": "2026-03-22"},
+        {"id": 5002, "title": "Atlanta Streets Alive", "start_date": "2026-04-19"},
+        {"id": 5003, "title": "Atlanta Streets Alive", "start_date": "2026-05-17"},
+    ]
+
+    assert _near_duplicates([], tentpoles) == []
+
+
 def test_near_duplicates_ignores_unique_titles() -> None:
-    festivals = [{"id": "one", "name": "Unique Festival"}]
+    festivals = [
+        {"id": "one", "name": "Unique Festival", "announced_start": "2026-06-01"}
+    ]
     tentpoles = [{"id": 1, "title": "Another Thing", "start_date": "2026-06-01"}]
 
     assert _near_duplicates(festivals, tentpoles) == []

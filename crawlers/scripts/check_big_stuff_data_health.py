@@ -212,31 +212,42 @@ def _cluster_tentpoles(tentpoles: list[dict[str, Any]]) -> list[ClusterBucket]:
 def _near_duplicates(
     festivals: list[dict[str, Any]], tentpoles: list[dict[str, Any]]
 ) -> list[dict[str, Any]]:
-    by_norm: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    # Key on (normalized_title, start_date) so that legitimately recurring
+    # tentpoles with the same name but different dates (e.g., Atlanta Streets
+    # Alive running Mar 22 / Apr 19 / May 17) don't register as duplicates.
+    # Festivals use announced_start as their start_date for the key.
+    by_key: dict[tuple[str, str], list[dict[str, Any]]] = defaultdict(list)
     for f in festivals:
         norm = _normalize_title(str(f.get("name") or ""))
         if not norm:
             continue
-        by_norm[norm].append(
-            {"kind": "festival", "id": str(f.get("id")), "title": str(f.get("name"))}
+        start = str(f.get("announced_start") or "")[:10]
+        by_key[(norm, start)].append(
+            {
+                "kind": "festival",
+                "id": str(f.get("id")),
+                "title": str(f.get("name")),
+                "start_date": start,
+            }
         )
     for e in tentpoles:
         norm = _normalize_title(str(e.get("title") or ""))
         if not norm:
             continue
-        by_norm[norm].append(
+        start = str(e.get("start_date") or "")[:10]
+        by_key[(norm, start)].append(
             {
                 "kind": "tentpole",
                 "id": int(e.get("id")) if e.get("id") is not None else None,
                 "title": str(e.get("title")),
-                "start_date": str(e.get("start_date") or "")[:10],
+                "start_date": start,
             }
         )
 
     pairs = []
-    for norm, rows in by_norm.items():
+    for (norm, start), rows in by_key.items():
         if len(rows) >= 2:
-            pairs.append({"normalized_title": norm, "rows": rows})
+            pairs.append({"normalized_title": norm, "start_date": start, "rows": rows})
     return pairs
 
 
