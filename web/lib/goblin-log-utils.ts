@@ -48,6 +48,12 @@ export const TMDB_POSTER_W342 = `${TMDB_IMAGE_BASE}/w342`;
 export const TMDB_POSTER_W185 = `${TMDB_IMAGE_BASE}/w185`;
 
 /** Types */
+export interface LogList {
+  id: number;
+  name: string;
+  slug: string | null;
+}
+
 export interface LogEntry {
   id: number;
   movie_id: number;
@@ -57,6 +63,8 @@ export interface LogEntry {
   sort_order: number | null;
   tier_name: string | null;
   tier_color: string | null;
+  list_id: number | null;
+  list?: LogList | null;
   created_at: string;
   updated_at: string;
   movie: {
