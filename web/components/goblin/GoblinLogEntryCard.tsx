@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import SmartImage from "@/components/SmartImage";
-import { formatWatchedDate, formatRuntime, TMDB_POSTER_W185, TMDB_POSTER_W342, type LogEntry } from "@/lib/goblin-log-utils";
+import { formatWatchedDate, formatRuntime, TMDB_POSTER_W185, TMDB_POSTER_W342, type LogEntry, type LogList } from "@/lib/goblin-log-utils";
 
 interface Props {
   entry: LogEntry;
@@ -20,6 +20,9 @@ interface Props {
   onDrop?: () => void;
   isDragTarget?: boolean;
   isDragging?: boolean;
+  groups?: LogList[];
+  currentListId?: number | null;
+  onMoveToGroup?: (listId: number | null) => Promise<boolean>;
 }
 
 // Neon color per rank tier
@@ -33,11 +36,46 @@ export default function GoblinLogEntryCard({
   entry, rank, onEdit, onMoveUp, onMoveDown, onMoveToRank,
   tierColor: tierColorProp, isFirst, isLast, readOnly,
   onDragStart, onDragOver, onDrop, isDragTarget, isDragging,
+  groups, currentListId, onMoveToGroup,
 }: Props) {
   const [showInfo, setShowInfo] = useState(false);
   const [editingRank, setEditingRank] = useState(false);
   const [rankInput, setRankInput] = useState("");
+  const [showGroupPicker, setShowGroupPicker] = useState(false);
+  // Sentinel "unsorted" represents a pending move to null list_id.
+  const [pendingTarget, setPendingTarget] = useState<number | "unsorted" | null>(null);
+  const pickerRef = useRef<HTMLDivElement>(null);
   const movie = entry.movie;
+
+  const canMoveBetweenGroups = Boolean(
+    !readOnly && onMoveToGroup && groups && groups.length > 0
+  );
+
+  useEffect(() => {
+    if (!showGroupPicker) return;
+    const handleClick = (e: MouseEvent) => {
+      if (pickerRef.current && !pickerRef.current.contains(e.target as Node)) {
+        setShowGroupPicker(false);
+      }
+    };
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setShowGroupPicker(false);
+    };
+    document.addEventListener("mousedown", handleClick);
+    document.addEventListener("keydown", handleKey);
+    return () => {
+      document.removeEventListener("mousedown", handleClick);
+      document.removeEventListener("keydown", handleKey);
+    };
+  }, [showGroupPicker]);
+
+  const handleMoveToGroup = async (targetListId: number | null) => {
+    if (!onMoveToGroup || pendingTarget !== null) return;
+    setPendingTarget(targetListId ?? "unsorted");
+    const ok = await onMoveToGroup(targetListId);
+    setPendingTarget(null);
+    if (ok) setShowGroupPicker(false);
+  };
 
   const isHero = rank <= 3;
   const isMid = rank > 3 && rank <= 10;
@@ -61,7 +99,7 @@ export default function GoblinLogEntryCard({
       onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; onDragOver?.(e); }}
       onDrop={(e) => { e.preventDefault(); onDrop?.(); }}
       onDragEnd={(e) => e.preventDefault()}
-      className={`goblin-log-card group relative flex items-stretch overflow-hidden
+      className={`goblin-log-card group relative flex items-stretch
         transition-[border-color,opacity,transform] duration-200 ease-out
         bg-[rgba(5,5,8,0.92)] border border-zinc-800/40
         ${isDragging ? "opacity-30 scale-[0.98]" : ""}
@@ -247,13 +285,86 @@ export default function GoblinLogEntryCard({
         </div>
 
         {/* Action bar — always visible on mobile for touch access */}
-        <div className="flex items-center gap-4 sm:gap-3 px-3 sm:px-3.5 pb-2.5 pt-0
+        <div className={`flex items-center gap-4 sm:gap-3 px-3 sm:px-3.5 pb-2.5 pt-0
           text-xs sm:text-2xs font-mono text-zinc-600 sm:text-zinc-700
-          sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-200">
+          transition-opacity duration-200
+          ${showGroupPicker ? "sm:opacity-100" : "sm:opacity-0 sm:group-hover:opacity-100"}`}>
           <button onClick={() => setShowInfo(!showInfo)}
             className={`py-1 transition-colors ${showInfo ? "text-cyan-400" : "hover:text-cyan-500"}`}>
             [{showInfo ? "−" : "i"}]
           </button>
+          {canMoveBetweenGroups && (
+            <div className="relative" ref={pickerRef}>
+              <button
+                onClick={() => setShowGroupPicker((v) => !v)}
+                className="py-1 text-zinc-500 hover:text-cyan-400 font-bold transition-colors"
+                title="Move to group">
+                [→GROUP]
+              </button>
+              {showGroupPicker && (
+                <div
+                  className="absolute z-30 bottom-full left-0 mb-1 min-w-[180px] max-w-[260px]
+                    bg-[rgba(5,5,8,0.98)] border border-cyan-900/40
+                    shadow-[0_8px_32px_rgba(0,0,0,0.8)]
+                    max-h-64 overflow-y-auto"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {(groups ?? []).map((g) => {
+                    const isCurrent = currentListId === g.id;
+                    const isPending = pendingTarget === g.id;
+                    return (
+                      <button
+                        key={g.id}
+                        disabled={isCurrent || pendingTarget !== null}
+                        onClick={() => handleMoveToGroup(g.id)}
+                        className={`w-full flex items-center justify-between gap-2
+                          px-2.5 py-1.5 text-left font-mono text-2xs font-bold
+                          uppercase tracking-[0.1em]
+                          border-b border-zinc-800/60 last:border-b-0
+                          transition-colors
+                          ${isCurrent
+                            ? "text-cyan-500/80 cursor-default"
+                            : pendingTarget !== null
+                              ? "text-zinc-600 cursor-wait"
+                              : "text-zinc-300 hover:bg-cyan-950/30 hover:text-cyan-300"}`}
+                      >
+                        <span className="truncate">{g.name}</span>
+                        <span className="flex-shrink-0 text-zinc-600">
+                          {isCurrent ? "✓" : isPending ? "…" : ""}
+                        </span>
+                      </button>
+                    );
+                  })}
+                  {/* "Unsorted" — clears list_id */}
+                  {(() => {
+                    const isCurrent = currentListId == null;
+                    const isPending = pendingTarget === "unsorted";
+                    return (
+                      <button
+                        disabled={isCurrent || pendingTarget !== null}
+                        onClick={() => handleMoveToGroup(null)}
+                        className={`w-full flex items-center justify-between gap-2
+                          px-2.5 py-1.5 text-left font-mono text-2xs font-bold
+                          uppercase tracking-[0.1em]
+                          border-t border-zinc-800/60
+                          transition-colors
+                          ${isCurrent
+                            ? "text-cyan-500/80 cursor-default"
+                            : pendingTarget !== null
+                              ? "text-zinc-600 cursor-wait"
+                              : "text-zinc-500 italic hover:bg-cyan-950/30 hover:text-cyan-300"}`}
+                      >
+                        <span className="truncate">Unsorted</span>
+                        <span className="flex-shrink-0 text-zinc-600">
+                          {isCurrent ? "✓" : isPending ? "…" : ""}
+                        </span>
+                      </button>
+                    );
+                  })()}
+                </div>
+              )}
+            </div>
+          )}
           <a href={trailerUrl} target="_blank" rel="noopener noreferrer"
             onClick={(e) => e.stopPropagation()}
             className="py-1 hover:text-fuchsia-400 transition-colors">[▶]</a>

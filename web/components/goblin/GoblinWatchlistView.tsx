@@ -144,6 +144,29 @@ export default function GoblinWatchlistView({ isAuthenticated }: Props) {
     return entries.filter((e) => e.tags.some((t) => t.name === activeTag));
   }, [entries, activeTag]);
 
+  // movie.id → Set of group_ids that already contain that movie.
+  // Used to show "already in group" state on queue cards.
+  const groupMembershipByMovieId = useMemo(() => {
+    const map = new Map<number, Set<number>>();
+    for (const g of groupsHook.groups) {
+      if (g.is_recommendations) continue;
+      for (const m of g.movies) {
+        const set = map.get(m.movie_id) ?? new Set<number>();
+        set.add(g.id);
+        map.set(m.movie_id, set);
+      }
+    }
+    return map;
+  }, [groupsHook.groups]);
+
+  const handleAddQueueEntryToGroup = useCallback(
+    async (entry: WatchlistEntry, groupId: number): Promise<boolean> => {
+      if (entry.movie.tmdb_id == null) return false;
+      return groupsHook.addMovie(groupId, entry.movie.tmdb_id, entry.note ?? undefined);
+    },
+    [groupsHook]
+  );
+
   const focusedGroup = useMemo(() => {
     if (!focusGroupSlug) return null;
     return groupsHook.groups.find((g) => g.slug === focusGroupSlug) ?? null;
@@ -255,6 +278,57 @@ export default function GoblinWatchlistView({ isAuthenticated }: Props) {
 
   return (
     <div className="max-w-3xl mx-auto relative">
+      {/* Group chip row — sibling-group selector. Hidden in focus mode.
+          Rendered above the queue so groups read first. */}
+      {!focusedGroup && groupsHook.groups.length > 0 && (
+        <div
+          className="mb-4 flex items-center gap-1.5 overflow-x-auto scrollbar-hide relative z-10
+            [mask-image:linear-gradient(to_right,black_calc(100%-2rem),transparent)] sm:[mask-image:none]"
+        >
+          {groupsHook.groups.map((g) => (
+            <button
+              key={g.id}
+              onClick={() => g.slug && updateFocusSlug(g.slug)}
+              disabled={!g.slug}
+              className="flex-shrink-0 px-2.5 py-1 rounded-full font-mono text-2xs font-medium
+                border border-zinc-700 text-zinc-400
+                hover:text-amber-300 hover:border-amber-700
+                disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+              title={g.slug ? undefined : "Recommendations list — not shareable"}
+            >
+              {g.name}
+              <span className="ml-1.5 text-zinc-600">{g.movies.length}</span>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* All groups (list of sections) — rendered above the queue in normal mode. */}
+      {!focusedGroup && groupsHook.groups.length > 0 && (
+        <div className="mb-10 space-y-6 relative z-10">
+          {groupsHook.groups.map((group) => (
+            <GoblinGroupSection
+              key={group.id}
+              group={group}
+              username={username}
+              onFocus={updateFocusSlug}
+              isFocused={false}
+              onAddMovie={() => setAddToGroupId(group.id)}
+              onRemoveMovie={groupsHook.removeMovie}
+              onMarkWatched={groupsHook.markWatched}
+              onDeleteGroup={groupsHook.deleteGroup}
+              onReorderMovies={handleGroupReorderMovies}
+              logTags={logHook.tags}
+              onCreateLogTag={logHook.createTag}
+            />
+          ))}
+          <div
+            className="h-px"
+            style={{ background: "linear-gradient(to right, transparent, rgba(255,217,61,0.15), transparent)" }}
+          />
+        </div>
+      )}
+
       {/* Queue + Recommendations + list body — all hidden in group focus mode */}
       {!focusedGroup && (
       <>
@@ -495,6 +569,9 @@ export default function GoblinWatchlistView({ isAuthenticated }: Props) {
               onDrop={() => handleDrop(i)}
               isDragging={dragFrom === i}
               isDragTarget={dragOver === i && dragFrom !== i}
+              groups={groupsHook.groups}
+              groupIdsContainingMovie={groupMembershipByMovieId.get(entry.movie.id)}
+              onAddToGroup={(groupId) => handleAddQueueEntryToGroup(entry, groupId)}
             />
           ))}
         </div>
@@ -502,72 +579,23 @@ export default function GoblinWatchlistView({ isAuthenticated }: Props) {
       </>
       )}
 
-      {/* Group chip row — sibling-group selector. Hidden in focus mode. */}
-      {!focusedGroup && groupsHook.groups.length > 0 && (
-        <div
-          className="mt-6 mb-2 flex items-center gap-1.5 overflow-x-auto scrollbar-hide relative z-10
-            [mask-image:linear-gradient(to_right,black_calc(100%-2rem),transparent)] sm:[mask-image:none]"
-        >
-          {groupsHook.groups.map((g) => (
-            <button
-              key={g.id}
-              onClick={() => g.slug && updateFocusSlug(g.slug)}
-              disabled={!g.slug}
-              className="flex-shrink-0 px-2.5 py-1 rounded-full font-mono text-2xs font-medium
-                border border-zinc-700 text-zinc-400
-                hover:text-amber-300 hover:border-amber-700
-                disabled:opacity-40 disabled:cursor-not-allowed transition-all"
-              title={g.slug ? undefined : "Recommendations list — not shareable"}
-            >
-              {g.name}
-              <span className="ml-1.5 text-zinc-600">{g.movies.length}</span>
-            </button>
-          ))}
-        </div>
-      )}
-
-      {/* Focus-mode back link */}
+      {/* Focus-mode back link + focused group section */}
       {focusedGroup && (
-        <button
-          onClick={() => updateFocusSlug(null)}
-          className="mt-4 mb-4 text-2xs font-mono tracking-[0.2em] uppercase text-amber-500/70 hover:text-amber-300 transition-colors relative z-10"
-        >
-          ← All groups
-        </button>
-      )}
-
-      {/* Group sections */}
-      {focusedGroup ? (
-        <div className="mt-2 relative z-10">
-          <GoblinGroupSection
-            key={focusedGroup.id}
-            group={focusedGroup}
-            username={username}
-            onFocus={updateFocusSlug}
-            isFocused
-            onAddMovie={() => setAddToGroupId(focusedGroup.id)}
-            onRemoveMovie={groupsHook.removeMovie}
-            onMarkWatched={groupsHook.markWatched}
-            onDeleteGroup={groupsHook.deleteGroup}
-            onReorderMovies={handleGroupReorderMovies}
-            logTags={logHook.tags}
-            onCreateLogTag={logHook.createTag}
-          />
-        </div>
-      ) : groupsHook.groups.length > 0 && (
-        <div className="mt-10 space-y-6 relative z-10">
-          <div
-            className="h-px"
-            style={{ background: "linear-gradient(to right, transparent, rgba(255,217,61,0.15), transparent)" }}
-          />
-          {groupsHook.groups.map((group) => (
+        <>
+          <button
+            onClick={() => updateFocusSlug(null)}
+            className="mt-4 mb-4 text-2xs font-mono tracking-[0.2em] uppercase text-amber-500/70 hover:text-amber-300 transition-colors relative z-10"
+          >
+            ← All groups
+          </button>
+          <div className="mt-2 relative z-10">
             <GoblinGroupSection
-              key={group.id}
-              group={group}
+              key={focusedGroup.id}
+              group={focusedGroup}
               username={username}
               onFocus={updateFocusSlug}
-              isFocused={false}
-              onAddMovie={() => setAddToGroupId(group.id)}
+              isFocused
+              onAddMovie={() => setAddToGroupId(focusedGroup.id)}
               onRemoveMovie={groupsHook.removeMovie}
               onMarkWatched={groupsHook.markWatched}
               onDeleteGroup={groupsHook.deleteGroup}
@@ -575,8 +603,8 @@ export default function GoblinWatchlistView({ isAuthenticated }: Props) {
               logTags={logHook.tags}
               onCreateLogTag={logHook.createTag}
             />
-          ))}
-        </div>
+          </div>
+        </>
       )}
 
       {/* Add to Watchlist Modal */}
