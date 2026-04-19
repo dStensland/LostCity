@@ -777,15 +777,23 @@ export async function GET(request: Request) {
           ...new Set((mergedEventsData as { id: number }[]).map((e) => e.id)),
         ];
         const { data: friendRsvpsData } = await supabase
-          .from("event_rsvps")
-          .select("event_id, user_id")
-          .in("event_id", candidateEventIds)
+          .from("plan_invitees")
+          .select(`
+            user_id,
+            rsvp_status,
+            plan:plans!inner (
+              id, anchor_event_id, anchor_type
+            )
+          `)
           .in("user_id", friendIds)
-          .in("status", ["going", "interested"]);
+          .in("rsvp_status", ["going", "interested"])
+          .eq("plan.anchor_type", "event")
+          .in("plan.anchor_event_id", candidateEventIds);
 
         const friendRsvps = (friendRsvpsData || []) as {
-          event_id: number;
           user_id: string;
+          rsvp_status: string;
+          plan: { id: string; anchor_event_id: number | null; anchor_type: string } | null;
         }[];
         const rsvpUserIds = [
           ...new Set(friendRsvps.map((rsvp) => rsvp.user_id)),
@@ -822,12 +830,14 @@ export async function GET(request: Request) {
         }
 
         for (const rsvp of friendRsvps) {
+          const eventId = rsvp.plan?.anchor_event_id;
+          if (!eventId) continue;
           const profile = profilesMap[rsvp.user_id];
           if (!profile) continue;
-          if (!friendsGoingMap[rsvp.event_id]) {
-            friendsGoingMap[rsvp.event_id] = [];
+          if (!friendsGoingMap[eventId]) {
+            friendsGoingMap[eventId] = [];
           }
-          friendsGoingMap[rsvp.event_id].push({
+          friendsGoingMap[eventId].push({
             user_id: rsvp.user_id,
             username: profile.username,
             display_name: profile.display_name,
@@ -1157,36 +1167,54 @@ export async function GET(request: Request) {
       if (routableTrendingEventsData.length > 0) {
         const trendingEventIds = routableTrendingEventsData.map((e) => e.id);
 
-        // Get recent RSVPs and total going counts in parallel
+        // Get recent RSVPs and total going counts in parallel.
+        // Both queries go through plan_invitees+plans (event_rsvps compat view only exposes 'going').
         const [recentRsvpsResult, goingCountsResult] = await Promise.all([
+          // Recent activity: all rsvp_status values, created within 48h
           supabase
-            .from("event_rsvps")
-            .select("event_id")
-            .in("event_id", trendingEventIds)
-            .gte("created_at", hours48Ago),
+            .from("plan_invitees")
+            .select(`
+              rsvp_status,
+              updated_at,
+              plan:plans!inner (
+                anchor_event_id, anchor_type
+              )
+            `)
+            .eq("plan.anchor_type", "event")
+            .in("plan.anchor_event_id", trendingEventIds)
+            .gte("updated_at", hours48Ago),
+          // Total going count
           supabase
-            .from("event_rsvps")
-            .select("event_id")
-            .in("event_id", trendingEventIds)
-            .eq("status", "going"),
+            .from("plan_invitees")
+            .select(`
+              rsvp_status,
+              plan:plans!inner (
+                anchor_event_id, anchor_type
+              )
+            `)
+            .eq("rsvp_status", "going")
+            .eq("plan.anchor_type", "event")
+            .in("plan.anchor_event_id", trendingEventIds),
         ]);
 
-        // Count recent RSVPs per event
+        // Count recent RSVPs per event (plan_invitees shape)
+        type PlanInviteeRow = {
+          rsvp_status: string;
+          plan: { anchor_event_id: number | null; anchor_type: string } | null;
+        };
         const recentRsvpCounts: Record<number, number> = {};
-        for (const rsvp of (recentRsvpsResult.data || []) as {
-          event_id: number;
-        }[]) {
-          recentRsvpCounts[rsvp.event_id] =
-            (recentRsvpCounts[rsvp.event_id] || 0) + 1;
+        for (const row of (recentRsvpsResult.data || []) as PlanInviteeRow[]) {
+          const eventId = row.plan?.anchor_event_id;
+          if (!eventId) continue;
+          recentRsvpCounts[eventId] = (recentRsvpCounts[eventId] || 0) + 1;
         }
 
-        // Count total going per event
+        // Count total going per event (plan_invitees shape)
         const totalGoingCounts: Record<number, number> = {};
-        for (const rsvp of (goingCountsResult.data || []) as {
-          event_id: number;
-        }[]) {
-          totalGoingCounts[rsvp.event_id] =
-            (totalGoingCounts[rsvp.event_id] || 0) + 1;
+        for (const row of (goingCountsResult.data || []) as PlanInviteeRow[]) {
+          const eventId = row.plan?.anchor_event_id;
+          if (!eventId) continue;
+          totalGoingCounts[eventId] = (totalGoingCounts[eventId] || 0) + 1;
         }
 
         // Score events based on recent activity + total interest

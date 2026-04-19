@@ -111,13 +111,28 @@ export async function buildFriendsGoingMap(
   if (friendIds.length === 0 || eventIds.length === 0) return map;
 
   const { data: friendRsvps } = await supabase
-    .from("event_rsvps")
-    .select("event_id, user_id")
-    .in("event_id", eventIds)
+    .from("plan_invitees")
+    .select(`
+      user_id,
+      rsvp_status,
+      plan:plans!inner (
+        id, anchor_event_id, anchor_type
+      )
+    `)
     .in("user_id", friendIds)
-    .in("status", ["going", "interested"]);
+    .in("rsvp_status", ["going", "interested"])
+    .eq("plan.anchor_type", "event")
+    .in("plan.anchor_event_id", eventIds);
 
-  const rsvps = (friendRsvps || []) as { event_id: number; user_id: string }[];
+  type FriendRsvpRow = {
+    user_id: string;
+    rsvp_status: string;
+    plan: { id: string; anchor_event_id: number | null; anchor_type: string } | null;
+  };
+  const rawRsvps = (friendRsvps || []) as unknown as FriendRsvpRow[];
+  const rsvps = rawRsvps
+    .filter((r) => r.plan?.anchor_event_id != null)
+    .map((r) => ({ event_id: r.plan!.anchor_event_id as number, user_id: r.user_id }));
   if (rsvps.length === 0) return map;
 
   const rsvpUserIds = [...new Set(rsvps.map((r) => r.user_id))];
