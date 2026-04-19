@@ -127,30 +127,54 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
       return NextResponse.json({ error: "Failed to subscribe" }, { status: 500 });
     }
 
-    // Materialize RSVPs for all future active events in the series
+    // Materialize plans for all future active events in the series.
+    // event_rsvps is now a read-only VIEW — writes go to plans + plan_invitees.
     const today = new Date().toISOString().split("T")[0];
     const { data: futureEvents } = await serviceClient
       .from("events")
-      .select("id")
+      .select("id, start_date, portal_id")
       .eq("series_id", seriesId)
       .gte("start_date", today)
       .eq("is_active", true);
 
     if (futureEvents && futureEvents.length > 0) {
-      const rsvpRows = futureEvents.map((e: { id: number }) => ({
-        user_id: user.id,
-        event_id: e.id,
-        status: "going",
-        source: "subscription",
-        portal_id: s.portal_id,
-      }));
+      for (const evt of futureEvents as { id: number; start_date: string | null; portal_id: string }[]) {
+        // Idempotent: skip if the user already has an active plan for this event
+        const { data: existing } = await serviceClient
+          .from("plans")
+          .select("id")
+          .eq("creator_id", user.id)
+          .eq("anchor_event_id", evt.id)
+          .in("status", ["planning", "active"])
+          .maybeSingle();
 
-      await serviceClient
-        .from("event_rsvps")
-        .upsert(rsvpRows as never, {
-          onConflict: "user_id,event_id",
-          ignoreDuplicates: true,
-        });
+        if (existing) continue;
+
+        // Insert plan row
+        const { data: planRow } = await serviceClient
+          .from("plans")
+          .insert({
+            creator_id: user.id,
+            portal_id: evt.portal_id ?? s.portal_id,
+            anchor_event_id: evt.id,
+            starts_at: evt.start_date ?? new Date().toISOString(),
+            visibility: "friends",
+            updated_by: user.id,
+          } as never)
+          .select("id")
+          .single();
+
+        // Insert creator invitee row
+        if (planRow) {
+          await serviceClient.from("plan_invitees").insert({
+            plan_id: (planRow as { id: string }).id,
+            user_id: user.id,
+            rsvp_status: "going",
+            invited_by: user.id,
+            responded_at: new Date().toISOString(),
+          } as never);
+        }
+      }
     }
 
     // Create activity entry for the subscription
@@ -200,7 +224,8 @@ export async function DELETE(request: NextRequest, { params }: RouteContext) {
   try {
     const serviceClient = createServiceClient();
 
-    // Fetch future event IDs for this series so we can clean up their RSVPs
+    // Fetch future event IDs for this series so we can cancel their plans.
+    // event_rsvps is now a read-only VIEW — cancel plans instead of deleting rows.
     const today = new Date().toISOString().split("T")[0];
     const { data: futureEvents } = await serviceClient
       .from("events")
@@ -213,25 +238,23 @@ export async function DELETE(request: NextRequest, { params }: RouteContext) {
     let removedRsvps = 0;
 
     if (futureEventIds.length > 0) {
-      // Count RSVPs that will be removed for the response
+      // Count active plans that will be cancelled for the response
       const { count } = await serviceClient
-        .from("event_rsvps")
+        .from("plans")
         .select("id", { count: "exact", head: true })
-        .eq("user_id", user.id)
-        .eq("source", "subscription")
-        .eq("status", "going")
-        .in("event_id", futureEventIds);
+        .eq("creator_id", user.id)
+        .in("status", ["planning", "active"])
+        .in("anchor_event_id", futureEventIds);
 
       removedRsvps = count ?? 0;
 
-      // Delete the subscription-sourced RSVPs
+      // Soft-cancel subscription-sourced plans (don't delete — preserves audit trail)
       await serviceClient
-        .from("event_rsvps")
-        .delete()
-        .eq("user_id", user.id)
-        .eq("source", "subscription")
-        .eq("status", "going")
-        .in("event_id", futureEventIds);
+        .from("plans")
+        .update({ status: "cancelled", cancelled_at: new Date().toISOString() } as never)
+        .eq("creator_id", user.id)
+        .in("status", ["planning", "active"])
+        .in("anchor_event_id", futureEventIds);
     }
 
     // Delete the subscription record

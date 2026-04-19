@@ -22,10 +22,6 @@ type InferredPreference = {
   interaction_count: number;
 };
 
-type RsvpStat = {
-  status: string;
-};
-
 export async function GET(request: Request) {
   try {
     const user = await getUser();
@@ -70,15 +66,17 @@ export async function GET(request: Request) {
       .eq("follower_id", user.id)
       .not("followed_organization_id", "is", null);
 
-    // Get RSVP stats
+    // Get RSVP stats from plan_invitees (event_rsvps is now a read-only VIEW
+    // that only exposes the 'going' status; query plan_invitees directly so
+    // 'interested' and 'went' counts are accurate).
     const { data: rsvpStats } = (await supabase
-      .from("event_rsvps")
-      .select("status")
-      .eq("user_id", user.id)) as { data: RsvpStat[] | null };
+      .from("plan_invitees")
+      .select("rsvp_status")
+      .eq("user_id", user.id)) as { data: { rsvp_status: string }[] | null };
 
     const rsvpCounts = (rsvpStats || []).reduce(
       (acc, r) => {
-        const status = r.status as string;
+        const status = r.rsvp_status as string;
         acc[status] = (acc[status] || 0) + 1;
         return acc;
       },

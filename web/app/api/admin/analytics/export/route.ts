@@ -7,6 +7,10 @@ import { computeAttributedDailyMetrics, type DailyMetric } from "@/lib/analytics
 
 export const dynamic = "force-dynamic";
 
+// This route reads from analytics_daily_portal (a pre-aggregated table with a
+// stored event_rsvps column) — it does NOT query the event_rsvps table/view
+// directly. No rewrite needed for the plans migration.
+
 type Portal = {
   id: string;
   name: string;
