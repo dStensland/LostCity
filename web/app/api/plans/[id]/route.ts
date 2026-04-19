@@ -17,8 +17,13 @@ const ParamsSchema = z.object({ id: z.string().uuid() });
 
 type Params = { id: string };
 
+// Plan + invitee reads go through the RLS-scoped `supabase` client so the
+// plans_select / plan_invitees_select policies enforce who can see the plan
+// and its roster. Anchor and profile lookups stay on `serviceClient` — those
+// rows are already user-visible elsewhere in the app and carry no secrets
+// beyond what the public entity pages expose.
 export const GET = withAuthAndParams<Params>(
-  async (request, { serviceClient, params }) => {
+  async (request, { serviceClient, supabase, params }) => {
     const rl = await applyRateLimit(request, RATE_LIMITS.read, getClientIdentifier(request));
     if (rl) return rl;
 
@@ -27,7 +32,7 @@ export const GET = withAuthAndParams<Params>(
       return NextResponse.json({ error: "Invalid plan id" }, { status: 400 });
     }
 
-    const { data: plan, error: pErr } = await serviceClient
+    const { data: plan, error: pErr } = await supabase
       .from("plans").select("*").eq("id", paramParsed.data.id as never).maybeSingle();
     if (pErr) return NextResponse.json({ error: pErr.message }, { status: 500 });
     if (!plan) return NextResponse.json({ error: "Not found" }, { status: 404 });
@@ -58,7 +63,7 @@ export const GET = withAuthAndParams<Params>(
       anchor.series = data;
     }
 
-    const { data: invRaw } = await serviceClient
+    const { data: invRaw } = await supabase
       .from("plan_invitees")
       .select("plan_id, user_id, rsvp_status, invited_by, invited_at, responded_at, seen_at")
       .eq("plan_id", paramParsed.data.id as never);
