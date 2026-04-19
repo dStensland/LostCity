@@ -39,7 +39,14 @@ interface LogEntryRow {
   sort_order: number | null;
   tier_name: string | null;
   tier_color: string | null;
+  list_id: number | null;
   movie: LogMovieRow;
+}
+
+interface LogListInfoRow {
+  id: number;
+  name: string;
+  slug: string | null;
 }
 
 interface LogTagRow {
@@ -77,7 +84,7 @@ export async function GET(
   const { data: entries, error } = await serviceClient
     .from("goblin_log_entries")
     .select(`
-      id, watched_date, note, watched_with, sort_order, tier_name, tier_color,
+      id, watched_date, note, watched_with, sort_order, tier_name, tier_color, list_id,
       movie:goblin_movies!movie_id (
         id, tmdb_id, title, poster_path, backdrop_path, release_date, genres,
         runtime_minutes, director, year, rt_critics_score, rt_audience_score,
@@ -112,9 +119,25 @@ export async function GET(
     }
   }
 
+  const listIds = Array.from(
+    new Set((entries || []).map((e) => e.list_id).filter((v): v is number => v !== null))
+  );
+  const listLookup: Record<number, LogListInfoRow> = {};
+  if (listIds.length > 0) {
+    const { data: listRows } = await serviceClient
+      .from("goblin_lists")
+      .select("id, name, slug")
+      .in("id", listIds)
+      .returns<LogListInfoRow[]>();
+    for (const row of listRows || []) {
+      listLookup[row.id] = row;
+    }
+  }
+
   const result = (entries || []).map((e) => ({
     ...e,
     tags: entryTags[e.id] || [],
+    list: e.list_id ? listLookup[e.list_id] ?? null : null,
   }));
 
   return NextResponse.json({

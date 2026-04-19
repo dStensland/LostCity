@@ -2,7 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { getLocalDateString } from "@/lib/formats";
 
-export const dynamic = "force-dynamic";
+// Cached per (neighborhood, limit) tuple for 120s. The drill-down fetches
+// this on every map-polygon click; without caching, each click hits Supabase.
+// Event data for the current day shifts within the 2-min window at worst.
+// Per Hard Rule 9 (web/CLAUDE.md § Portal Surface Architecture).
+export const revalidate = 120;
 
 type VenueRow = { id: number; name: string; slug: string; neighborhood: string | null };
 type EventRow = {
