@@ -95,10 +95,11 @@ Each consumer is categorized by disposition:
 ## Summary
 
 **File count by disposition:**
-- REWRITE: 37 files
+- REWRITE: 36 files
 - VERIFY: 4 files
 - DELETE: 0 files (no dead code found)
 - Auto-generated (not counted): 2 files
+- **Total tracked**: 40 files (of 42 unique files found)
 
 **Semantic mismatch risk:**
 
@@ -109,6 +110,6 @@ The old enum `{going, interested, not_going}` survives in compat view reads only
 
 Files marked VERIFY have status filters that match the compat mapping but are NOT safe: the compat view is read-only and semantic migration is lossy. Phase 1 deployment will break these.
 
-All 37 REWRITE entries must resolve before Phase 1 merges.
+All 36 REWRITE entries must resolve before Phase 1 merges.
 
-Note: Files `web/lib/types.ts` and `web/lib/supabase/database.types.ts` are auto-generated and not counted above; they will be regenerated post-migration.
+Note: Files `web/lib/types.ts` and `web/lib/supabase/database.types.ts` are auto-generated and not counted above; they will be regenerated post-migration via `supabase gen types`.
