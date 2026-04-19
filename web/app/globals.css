@@ -1225,6 +1225,8 @@ button:not(:disabled),
   --motion-dramatic: 600ms;
   --motion-shift-sm: 4px;
   --motion-shift-md: 8px;
+  --motion-shift-lg: 16px;
+  --motion-shift-xl: 24px;
 }
 
 /* ============================================
@@ -5671,7 +5673,7 @@ body:has([data-vertical="hospital"]) .rain-overlay {
 @keyframes detail-enter {
   from {
     opacity: 0;
-    transform: translateY(16px);
+    transform: translateY(var(--motion-shift-lg, 16px));
   }
   to {
     opacity: 1;
