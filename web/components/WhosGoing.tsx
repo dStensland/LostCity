@@ -44,18 +44,29 @@ export default function WhosGoing({ eventId, className = "" }: WhosGoingProps) {
 
     async function loadAttendees() {
       try {
-        // Run RSVP query and friend queries in parallel with timeout protection
+        // Strategy B rewrite: plan_invitees + plans WHERE anchor_type='event'.
+        // The compat view (event_rsvps) lacks the FK hint
+        // profiles!event_rsvps_user_id_fkey and has no 'visibility' column.
+        // Only rsvp_status='going' maps from the old schema; 'interested' does not.
+        //
+        // TODO(follow-up): This component queries the DB client-side, which
+        // violates the "No Direct Supabase Mutations from Components" rule in
+        // web/CLAUDE.md. It should be wrapped behind a
+        // GET /api/events/[id]/whos-going route. Tracked separately.
         const rsvpQuery = supabase
-          .from("event_rsvps")
+          .from("plan_invitees")
           .select(`
-            status,
-            user:profiles!event_rsvps_user_id_fkey(
+            rsvp_status,
+            plan:plans!inner(
+              anchor_event_id
+            ),
+            user:profiles(
               id, username, display_name, avatar_url
             )
           `)
-          .eq("event_id", eventId)
-          .eq("visibility", "public")
-          .in("status", ["going", "interested"]);
+          .eq("rsvp_status", "going")
+          .eq("plan.anchor_type", "event" as never)
+          .eq("plan.anchor_event_id", eventId as never);
 
         const rsvpPromise = Promise.race([
           rsvpQuery,
@@ -106,7 +117,8 @@ export default function WhosGoing({ eventId, className = "" }: WhosGoingProps) {
       if (!isMounted) return;
 
       type RSVPQueryResult = {
-        status: string;
+        rsvp_status: string;
+        plan: { anchor_event_id: number | null };
         user: AttendeeProfile | null;
       };
 
@@ -116,12 +128,15 @@ export default function WhosGoing({ eventId, className = "" }: WhosGoingProps) {
         return;
       }
 
-      // Build attendee list
+      // Build attendee list. rsvp_status from plan_invitees:
+      // only 'going' is fetched; 'interested' no longer exists in new schema.
+      // The Attendee.status type still includes "interested" for compat but
+      // will never be set to that value from this query.
       const attendeeList: Attendee[] = rsvps
         .filter((rsvp) => rsvp.user !== null)
         .map((rsvp) => ({
           user: rsvp.user as AttendeeProfile,
-          status: rsvp.status as "going" | "interested",
+          status: rsvp.rsvp_status as "going" | "interested",
           isFriend: friendIds.has(rsvp.user!.id),
         }));
 

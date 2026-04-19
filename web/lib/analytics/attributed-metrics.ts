@@ -162,23 +162,30 @@ export async function computeAttributedDailyMetrics(
     }
   }
 
+  // Strategy B rewrite: query plan_invitees + plans directly.
+  // The compat view (event_rsvps) does not expose the FK hint
+  // events!event_rsvps_event_id_fkey — FK hints are table-specific and
+  // do not resolve on a VIEW. We join plan_invitees → plans → events
+  // to replicate "RSVP created_at + event portal_id" for metric attribution.
+  // All rsvp_status values are counted (analytics cares about any engagement).
   const rsvps = await fetchAllPages<{
-    created_at: string | null;
-    event: { portal_id: string | null } | { portal_id: string | null }[] | null;
+    invited_at: string | null;
+    plan: { event: { portal_id: string | null } | { portal_id: string | null }[] | null } | null;
   }>(async (offset, limit) => {
     const query = supabase
-      .from("event_rsvps")
-      .select("created_at, event:events!event_rsvps_event_id_fkey(portal_id)")
-      .gte("created_at", startTimestamp)
-      .lte("created_at", endTimestamp)
-      .order("created_at", { ascending: true })
+      .from("plan_invitees")
+      .select("invited_at, plan:plans!inner(event:events!plans_anchor_event_id_fkey(portal_id))")
+      .eq("plan.anchor_type", "event" as never)
+      .gte("invited_at", startTimestamp)
+      .lte("invited_at", endTimestamp)
+      .order("invited_at", { ascending: true })
       .range(offset, offset + limit - 1);
     return query;
   });
 
   for (const row of rsvps) {
-    const date = parseDate(row.created_at);
-    const eventRelation = row.event;
+    const date = parseDate(row.invited_at);
+    const eventRelation = row.plan?.event;
     const relatedEvent = Array.isArray(eventRelation) ? eventRelation[0] : eventRelation;
     const portalId = relatedEvent?.portal_id || null;
     if (!date || !portalId || !portalIdSet.has(portalId)) continue;

@@ -1229,6 +1229,9 @@ export async function loadPortalFeed(
 
   if (needsPopularitySort && autoEventPool.size > 0) {
     await timing.measure("popularity_counts", async () => {
+      // Strategy A: compat view kept as-is.
+      // Filters only status='going' (the only value that maps from the new
+      // plan_invitees.rsvp_status schema). No FK hints. Read-only.
       const { data: rsvpData } = await supabase
         .from("event_rsvps")
         .select("event_id")

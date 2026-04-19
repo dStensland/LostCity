@@ -88,78 +88,94 @@ export async function GET(request: Request) {
     // Use service client to bypass RLS - auth already verified above
     const supabase = createServiceClient();
 
-    // Type for RSVP query result
+    // Strategy B rewrite: plan_invitees + plans WHERE anchor_type='event'.
+    // The compat view (event_rsvps) does not expose FK hints or the
+    // 'interested'/'went' statuses — only 'going' maps to rsvp_status='going'.
+    // We query plan_invitees directly to get the event plans for this user.
     type RsvpRow = {
-      status: string;
-      created_at: string;
-      event: {
-        id: number;
-        title: string;
-        start_date: string;
-        start_time: string | null;
-        end_date: string | null;
-        end_time: string | null;
-        is_all_day: boolean;
-        is_free: boolean;
-        price_min: number | null;
-        price_max: number | null;
-        category: string | null;
-        genres: string[] | null;
-        image_url: string | null;
-        description: string | null;
-        ticket_url: string | null;
-        source_url: string | null;
-        venue: {
+      rsvp_status: string;
+      invited_at: string;
+      plan: {
+        anchor_event_id: number | null;
+        event: {
           id: number;
-          name: string;
-          slug: string | null;
-          neighborhood: string | null;
-          address: string | null;
-          city: string | null;
-          state: string | null;
+          title: string;
+          start_date: string;
+          start_time: string | null;
+          end_date: string | null;
+          end_time: string | null;
+          is_all_day: boolean;
+          is_free: boolean;
+          price_min: number | null;
+          price_max: number | null;
+          category: string | null;
+          genres: string[] | null;
+          image_url: string | null;
+          description: string | null;
+          ticket_url: string | null;
+          source_url: string | null;
+          venue: {
+            id: number;
+            name: string;
+            slug: string | null;
+            neighborhood: string | null;
+            address: string | null;
+            city: string | null;
+            state: string | null;
+          } | null;
         } | null;
       };
     };
 
-    // Query RSVPs with joined event and venue data
-    const { data: rsvps, error } = await supabase
-      .from("event_rsvps")
-      .select(`
-        status,
-        created_at,
-        event:events!inner(
-          id,
-          title,
-          start_date,
-          start_time,
-          end_date,
-          end_time,
-          is_all_day,
-          is_free,
-          price_min,
-          price_max,
-          category:category_id,
-          genres,
-          image_url,
-          description,
-          ticket_url,
-          source_url,
-          venue:places!left(
-            id,
-            name,
-            slug,
-            neighborhood,
-            address,
-            city,
-            state
-          )
-        )
-      `)
-      .eq("user_id", user.id)
-      .in("status", statuses)
-      .gte("event.start_date", startDate)
-      .lte("event.start_date", endDate)
-      .order("event(start_date)", { ascending: true }) as { data: RsvpRow[] | null; error: Error | null };
+    // Map legacy status filter values to new rsvp_status values.
+    // 'interested' and 'went' do not exist in plan_invitees.rsvp_status
+    // (valid values: invited, going, maybe, declined). Only 'going' maps.
+    const mappedStatuses = statuses.includes("going") ? ["going"] : [];
+
+    // Query plan_invitees → plans (anchor_type='event') → events → places
+    const { data: rsvps, error } = mappedStatuses.length === 0
+      ? { data: [] as RsvpRow[], error: null }
+      : await supabase
+          .from("plan_invitees")
+          .select(`
+            rsvp_status,
+            invited_at,
+            plan:plans!inner(
+              anchor_event_id,
+              event:events!plans_anchor_event_id_fkey(
+                id,
+                title,
+                start_date,
+                start_time,
+                end_date,
+                end_time,
+                is_all_day,
+                is_free,
+                price_min,
+                price_max,
+                category:category_id,
+                genres,
+                image_url,
+                description,
+                ticket_url,
+                source_url,
+                venue:places(
+                  id,
+                  name,
+                  slug,
+                  neighborhood,
+                  address,
+                  city,
+                  state
+                )
+              )
+            )
+          `)
+          .eq("user_id", user.id)
+          .in("rsvp_status", mappedStatuses)
+          .eq("plan.anchor_type", "event" as never)
+          .gte("plan.event.start_date", startDate as never)
+          .lte("plan.event.start_date", endDate as never) as { data: RsvpRow[] | null; error: Error | null };
 
     if (error) {
       logger.error("Error fetching user calendar events:", error);
@@ -169,12 +185,18 @@ export async function GET(request: Request) {
       );
     }
 
-    // Transform to flat event structure with RSVP info
-    const events: UserCalendarEvent[] = (rsvps || []).map((rsvp) => ({
-      ...rsvp.event,
-      rsvp_status: rsvp.status as "going" | "interested" | "went",
-      rsvp_created_at: rsvp.created_at,
-    }));
+    // Transform to flat event structure with RSVP info.
+    // rsvp_status from plan_invitees — only 'going' is yielded here.
+    // The public type still exposes "going" | "interested" | "went" for
+    // backward compat; downstream consumers that read 'interested' or 'went'
+    // will simply never see those values until the type is narrowed.
+    const events: UserCalendarEvent[] = (rsvps || [])
+      .filter((rsvp) => rsvp.plan?.event !== null && rsvp.plan?.event !== undefined)
+      .map((rsvp) => ({
+        ...(rsvp.plan.event as NonNullable<typeof rsvp.plan.event>),
+        rsvp_status: rsvp.rsvp_status as "going" | "interested" | "went",
+        rsvp_created_at: rsvp.invited_at,
+      }));
 
     // Sort by date and time
     events.sort((a, b) => {
