@@ -19,8 +19,10 @@ interface GroupRow {
 }
 
 interface GroupMovieRow {
-  id: number;
+  movie_id: number;
   sort_order: number | null;
+  section: string | null;
+  section_sort: number | null;
   note: string | null;
   added_at: string;
   movie: GroupMovieDetailRow | null;
@@ -102,7 +104,7 @@ export async function GET(
   const { data: movieRows, error: moviesError } = await serviceClient
     .from("goblin_list_movies")
     .select(`
-      id, sort_order, note, added_at,
+      movie_id, sort_order, section, section_sort, note, added_at,
       movie:goblin_movies!movie_id (
         id, tmdb_id, title, poster_path, backdrop_path, release_date, genres,
         runtime_minutes, director, year, rt_critics_score, rt_audience_score,
@@ -139,8 +141,10 @@ export async function GET(
   const movies = (movieRows || [])
     .filter((r) => r.movie !== null)
     .map((r) => ({
-      movie_id: (r.movie as GroupMovieDetailRow).id,
+      movie_id: r.movie_id,
       sort_order: r.sort_order,
+      section: r.section,
+      section_sort: r.section_sort,
       note: r.note,
       added_at: r.added_at,
       movie: r.movie as GroupMovieDetailRow,
