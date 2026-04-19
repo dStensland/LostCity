@@ -45,7 +45,7 @@ export default function BigStuffPage(props: BigStuffPageProps) {
 
   // Group filtered items by month.
   const monthBuckets = useMemo(
-    () => groupItemsByMonth(filtered, today, HORIZON_MONTHS),
+    () => groupItemsByMonth(filtered, today, HORIZON_MONTHS, Number.POSITIVE_INFINITY),
     [filtered, today],
   );
   const nonEmptyMonths = monthBuckets.filter((b) => b.items.length > 0);
