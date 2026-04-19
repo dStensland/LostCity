@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEntityLinkOptions } from "@/lib/link-context";
 import { buildNeighborhoodUrl } from "@/lib/entity-urls";
 import { usePublishNeighborhoodSeed } from "@/lib/detail/publish-seed-helpers";
+import { prefetchDetailView } from "@/lib/detail/prefetch-detail-view";
 
 /**
  * Minimalist neighborhood card for the /atlanta/neighborhoods index grid.
@@ -52,6 +53,8 @@ export default function NeighborhoodIndexCard({
   return (
     <Link
       href={href}
+      onMouseEnter={() => prefetchDetailView("neighborhood")}
+      onFocus={() => prefetchDetailView("neighborhood")}
       className="block p-4 rounded-card border border-[var(--twilight)] bg-[var(--night)] transition-colors hover:border-[var(--muted)]"
     >
       <div className="flex items-center gap-2">

@@ -15,6 +15,7 @@ import { PressQuote } from "@/components/feed/PressQuote";
 import type { EditorialMention } from "@/lib/city-pulse/types";
 import { useViewTransition } from "@/lib/hooks/useViewTransition";
 import { usePublishSpotSeed } from "@/lib/detail/publish-seed-helpers";
+import { prefetchDetailView } from "@/lib/detail/prefetch-detail-view";
 
 function formatEventDate(dateStr: string): string {
   const today = new Date();
@@ -130,6 +131,8 @@ function DiscoveryCard({
       href={venueHref}
       scroll={false}
       data-category={categoryKey}
+      onMouseEnter={() => prefetchDetailView("spot")}
+      onFocus={() => prefetchDetailView("spot")}
       onClick={(e) => { if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return; e.preventDefault(); navigate(venueHref); }}
       className="find-row-card find-row-card-bg block rounded-xl border border-[var(--twilight)]/75 border-l-[2px] border-l-[var(--accent-color)] overflow-hidden group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-color)]/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--void)]"
       style={
@@ -343,6 +346,8 @@ function CompactCard({
       scroll={false}
       data-category={venueType}
       data-accent="category"
+      onMouseEnter={() => prefetchDetailView("spot")}
+      onFocus={() => prefetchDetailView("spot")}
       onClick={(e) => { if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return; e.preventDefault(); navigate(compactVenueHref); }}
       className={`event-item animate-fade-in ${staggerClass} group card-atmospheric glow-accent reflection-accent card-hover-lift surface-raised rounded-xl border border-subtle shadow-card-sm hover:shadow-card-md`}
     >

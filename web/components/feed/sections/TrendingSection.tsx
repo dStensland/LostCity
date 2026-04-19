@@ -19,6 +19,7 @@ import type { FeedEventData } from "@/components/EventCard";
 import CategoryIcon, { getCategoryColor } from "@/components/CategoryIcon";
 import { formatSmartDate, formatTime } from "@/lib/formats";
 import { usePublishEventSeed } from "@/lib/detail/publish-seed-helpers";
+import { prefetchDetailView } from "@/lib/detail/prefetch-detail-view";
 import {
   Fire,
   ArrowRight,
@@ -94,6 +95,8 @@ function PopularHero({ ev, portalSlug }: { ev: EnrichedEvent; portalSlug: string
     <Link
       href={`/${portalSlug}?event=${ev.id}`}
       scroll={false}
+      onMouseEnter={() => prefetchDetailView("event")}
+      onFocus={() => prefetchDetailView("event")}
       className="block relative rounded-xl overflow-hidden border border-[var(--twilight)]/40 group transition-all hover:border-[var(--coral)]/30 hover:shadow-[0_0_24px_-4px] hover:shadow-[var(--coral)]/15"
     >
       {/* Image background */}
@@ -176,6 +179,8 @@ function PopularCard({
     <Link
       href={`/${portalSlug}?event=${ev.id}`}
       scroll={false}
+      onMouseEnter={() => prefetchDetailView("event")}
+      onFocus={() => prefetchDetailView("event")}
       className="block rounded-lg overflow-hidden border border-[var(--twilight)]/30 bg-[var(--night)] group transition-all hover:border-[var(--twilight)]/50 hover:shadow-[0_0_12px_-4px] hover:shadow-[var(--coral)]/10"
     >
       {/* Image */}
@@ -320,6 +325,8 @@ function FriendEventRow({
     <Link
       href={`/${portalSlug}?event=${ev.id}`}
       scroll={false}
+      onMouseEnter={() => prefetchDetailView("event")}
+      onFocus={() => prefetchDetailView("event")}
       className={`flex items-center gap-3 px-3 py-2.5 transition-colors hover:bg-white/[0.02] group ${
         !isLast ? "border-b border-[var(--twilight)]/30" : ""
       }`}
@@ -467,6 +474,8 @@ function UpcomingEventRow({
     <Link
       href={`/${portalSlug}?event=${ev.id}`}
       scroll={false}
+      onMouseEnter={() => prefetchDetailView("event")}
+      onFocus={() => prefetchDetailView("event")}
       className={`flex items-center gap-3 px-3 py-2.5 transition-colors hover:bg-white/[0.02] group ${
         !isLast ? "border-b border-[var(--twilight)]/30" : ""
       }`}

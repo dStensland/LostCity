@@ -6,6 +6,7 @@ import { EXPLORE_THEME, isUncertainArtefactImageSlug } from "@/lib/explore-track
 import type { ExploreTrackVenue, ExploreVenueEvent } from "@/lib/explore-tracks";
 import { HIGHLIGHT_CONFIG, type HighlightType } from "@/lib/place-highlights";
 import { usePublishSpotSeed } from "@/lib/detail/publish-seed-helpers";
+import { prefetchDetailView } from "@/lib/detail/prefetch-detail-view";
 
 interface ExplorePlaceCardProps {
   venue: ExploreTrackVenue;
@@ -91,6 +92,8 @@ export default function ExplorePlaceCard({
       {/* Image — 160px fixed height, venue name overlaid */}
       <Link
         href={`/${portalSlug}?spot=${venue.slug}`}
+        onMouseEnter={() => prefetchDetailView("spot")}
+        onFocus={() => prefetchDetailView("spot")}
         className="block relative overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] focus-visible:ring-inset"
         style={{ height: 160, isolation: "isolate" }}
       >
@@ -212,6 +215,8 @@ export default function ExplorePlaceCard({
           {events.length > 3 && (
             <Link
               href={`/${portalSlug}?spot=${venue.slug}`}
+              onMouseEnter={() => prefetchDetailView("spot")}
+              onFocus={() => prefetchDetailView("spot")}
               className="block px-3.5 py-2.5 text-center text-[10px] font-mono transition-colors hover:bg-[rgba(255,255,255,0.04)]"
               style={{
                 color: accent,
@@ -309,6 +314,8 @@ function CompactVenueCard({
   return (
     <Link
       href={`/${portalSlug}?spot=${venue.slug}`}
+      onMouseEnter={() => prefetchDetailView("spot")}
+      onFocus={() => prefetchDetailView("spot")}
       className="rounded-xl overflow-hidden group block venue-card-lift transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--void)]"
       style={{
         background:
