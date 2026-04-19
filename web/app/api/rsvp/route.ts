@@ -4,73 +4,151 @@ import { parseIntParam, validationError, checkBodySize } from "@/lib/api-utils";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 import { ensureUserProfile } from "@/lib/user-utils";
 import { withAuth } from "@/lib/api-middleware";
-import { resolvePortalAttributionForWrite } from "@/lib/portal-attribution";
 import { logger } from "@/lib/logger";
-import { resolveSessionEngagementContext } from "@/lib/session-engagement";
 import { sendPushToUser } from "@/lib/push-notifications";
 import { rsvpBodySchema } from "@/lib/validation/schemas";
 
+// ---------------------------------------------------------------------------
+// DEPRECATED ROUTE — /api/rsvp
+// All handlers emit a warn so Phase 7 can gate on 7-day silence in these logs.
+// Internal writes are proxied to the plans + plan_invitees model.
+// External request/response shapes are preserved for consumer compat.
+// ---------------------------------------------------------------------------
+
 /**
  * POST /api/rsvp
- * Create or update an RSVP
+ *
+ * Proxied to plans model:
+ *   - status='going'       → creates a plan + creator plan_invitees row
+ *   - status='interested'  → 400 deprecated
+ *   - status='went'        → 400 deprecated
+ *
+ * Idempotent: if user already has an active/planning plan for this event,
+ * returns 200 success without creating a duplicate.
  */
 export const POST = withAuth(
   { body: rsvpBodySchema },
   async (request, { user, serviceClient, validated }) => {
-    // Check body size (10KB limit)
+    // Body size guard
     const sizeCheck = checkBodySize(request);
     if (sizeCheck) return sizeCheck;
 
-    // Apply rate limiting
-    // Use a per-user identifier so local/dev traffic (often missing forwarded IP headers) doesn't collapse into
-    // a single shared "unknown" bucket and trip 429s immediately.
+    // Rate limit
     const rateLimitId = `${user.id}:${getClientIdentifier(request)}`;
     const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write, rateLimitId);
     if (rateLimitResult) return rateLimitResult;
 
-    try {
-      const { event_id, status, visibility, notify_friends } = validated.body;
+    // Deprecation log — every call
+    logger.warn("deprecated route: /api/rsvp", {
+      route: "/api/rsvp",
+      method: request.method,
+      caller: request.headers.get("referer") ?? null,
+      ua: request.headers.get("user-agent") ?? null,
+    });
 
-      // Ensure user has a profile (create if missing)
+    try {
+      const { event_id, status, notify_friends } = validated.body;
+
+      // Only 'going' is migrated; other statuses are deprecated without migration path.
+      if (status !== "going") {
+        return NextResponse.json(
+          {
+            error: `Deprecated: RSVP status '${status}' removed in consolidation. Use /api/saved for bookmarks (feature not yet re-implemented).`,
+          },
+          { status: 400 }
+        );
+      }
+
+      // Ensure user profile exists before FK operations
       await ensureUserProfile(user, serviceClient);
 
-      const attribution = await resolvePortalAttributionForWrite(request, {
-        endpoint: "/api/rsvp",
-        body: validated.body,
-        requireWhenHinted: true,
-      });
-      if (attribution.response) return attribution.response;
-      const portalId = attribution.portalId;
-      const engagementContext = await resolveSessionEngagementContext(serviceClient, event_id);
+      // Look up event to get portal_id + start_date
+      const { data: event, error: eventErr } = await serviceClient
+        .from("events")
+        .select("portal_id, start_date")
+        .eq("id", event_id as never)
+        .maybeSingle();
 
-      // Upsert the RSVP
-      const { data, error } = await serviceClient
-        .from("event_rsvps")
-        .upsert(
-          {
-            user_id: user.id,
-            event_id,
-            status,
-            visibility,
-            engagement_target: engagementContext.engagement_target,
-            festival_id: engagementContext.festival_id,
-            program_id: engagementContext.program_id,
-            updated_at: new Date().toISOString(),
-            ...(portalId ? { portal_id: portalId } : {}),
-          } as never,
-          { onConflict: "user_id,event_id" }
-        )
-        .select()
+      if (eventErr || !event) {
+        logger.error("RSVP: event lookup failed", eventErr, { userId: user.id, eventId: event_id, component: "rsvp" });
+        return NextResponse.json({ error: "Event not found" }, { status: 404 });
+      }
+
+      const eventData = event as { portal_id: string; start_date: string | null };
+      const portalId = eventData.portal_id;
+      const startsAt = eventData.start_date ?? new Date().toISOString();
+
+      // Idempotency check: does user already have an active/planning plan for this event?
+      const { data: existingPlan } = await serviceClient
+        .from("plans")
+        .select("id")
+        .eq("creator_id", user.id as never)
+        .eq("anchor_event_id", event_id as never)
+        .in("status", ["planning", "active"] as never)
+        .maybeSingle();
+
+      if (existingPlan) {
+        // Already planned — return success without creating a duplicate
+        const existing = existingPlan as { id: string };
+        return NextResponse.json({ success: true, rsvp: { plan_id: existing.id, user_id: user.id, event_id, status: "going" } });
+      }
+
+      // Also check if they're an invitee on someone else's plan for this event
+      const { data: existingInvite } = await serviceClient
+        .from("plan_invitees")
+        .select("plan_id, plans!inner(id, anchor_event_id, status)")
+        .eq("user_id", user.id as never)
+        .eq("rsvp_status", "going" as never)
+        .eq("plans.anchor_event_id", event_id as never)
+        .in("plans.status", ["planning", "active"] as never)
+        .maybeSingle();
+
+      if (existingInvite) {
+        const invite = existingInvite as { plan_id: string };
+        return NextResponse.json({ success: true, rsvp: { plan_id: invite.plan_id, user_id: user.id, event_id, status: "going" } });
+      }
+
+      // Create a new plan
+      const { data: planInsert, error: planErr } = await serviceClient
+        .from("plans")
+        .insert({
+          creator_id: user.id,
+          portal_id: portalId,
+          anchor_event_id: event_id,
+          starts_at: startsAt,
+          visibility: "friends",
+          updated_by: user.id,
+        } as never)
+        .select("id")
         .single();
 
-      if (error) {
-        logger.error("RSVP upsert error", error, { userId: user.id, eventId: event_id, component: "rsvp" });
+      if (planErr || !planInsert) {
+        logger.error("RSVP: plan insert failed", planErr, { userId: user.id, eventId: event_id, component: "rsvp" });
         return NextResponse.json({ error: "Failed to save RSVP" }, { status: 500 });
       }
 
-      // Schedule async notification fan-out AFTER the response is sent.
-      // next/server after() ensures the work completes even on Vercel serverless.
-      if (notify_friends && status === "going") {
+      const plan = planInsert as { id: string };
+
+      // Creator invitee row
+      const { error: inviteeErr } = await serviceClient
+        .from("plan_invitees")
+        .insert({
+          plan_id: plan.id,
+          user_id: user.id,
+          rsvp_status: "going",
+          invited_by: user.id,
+          responded_at: new Date().toISOString(),
+        } as never);
+
+      if (inviteeErr) {
+        // Cleanup orphaned plan
+        await serviceClient.from("plans").delete().eq("id", plan.id as never);
+        logger.error("RSVP: invitee insert failed", inviteeErr, { userId: user.id, eventId: event_id, component: "rsvp" });
+        return NextResponse.json({ error: "Failed to save RSVP" }, { status: 500 });
+      }
+
+      // Async friend notifications (fire-and-forget, post-response)
+      if (notify_friends) {
         after(() =>
           notifyFriendsOfJoining(user.id, event_id, serviceClient).catch((err) => {
             logger.error("Friend notification failed", err, { userId: user.id, eventId: event_id, component: "rsvp" });
@@ -78,7 +156,10 @@ export const POST = withAuth(
         );
       }
 
-      return NextResponse.json({ success: true, rsvp: data });
+      return NextResponse.json({
+        success: true,
+        rsvp: { plan_id: plan.id, user_id: user.id, event_id, status: "going" },
+      });
     } catch (error) {
       logger.error("RSVP API error", error, { userId: user.id, component: "rsvp" });
       return NextResponse.json({ error: "Failed to save RSVP" }, { status: 500 });
@@ -88,13 +169,22 @@ export const POST = withAuth(
 
 /**
  * DELETE /api/rsvp
- * Remove an RSVP
+ *
+ * Soft-cancels the user's plan for the given event.
+ * Idempotent: if no matching active plan found, returns success.
  */
 export const DELETE = withAuth(async (request, { user, serviceClient }) => {
-  // Apply rate limiting
   const rateLimitId = `${user.id}:${getClientIdentifier(request)}`;
   const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write, rateLimitId);
   if (rateLimitResult) return rateLimitResult;
+
+  // Deprecation log
+  logger.warn("deprecated route: /api/rsvp", {
+    route: "/api/rsvp",
+    method: request.method,
+    caller: request.headers.get("referer") ?? null,
+    ua: request.headers.get("user-agent") ?? null,
+  });
 
   try {
     const { searchParams } = new URL(request.url);
@@ -104,49 +194,72 @@ export const DELETE = withAuth(async (request, { user, serviceClient }) => {
       return validationError("Missing or invalid event_id");
     }
 
+    // Find active/planning plan created by this user for this event
+    const { data: plan } = await serviceClient
+      .from("plans")
+      .select("id")
+      .eq("creator_id", user.id as never)
+      .eq("anchor_event_id", eventId as never)
+      .in("status", ["planning", "active"] as never)
+      .maybeSingle();
+
+    if (!plan) {
+      // Nothing to cancel — idempotent success
+      return NextResponse.json({ success: true });
+    }
+
+    const planRow = plan as { id: string };
+
     const { error } = await serviceClient
-      .from("event_rsvps")
-      .delete()
-      .eq("user_id", user.id)
-      .eq("event_id", eventId);
+      .from("plans")
+      .update({
+        status: "cancelled",
+        cancelled_at: new Date().toISOString(),
+      } as never)
+      .eq("id", planRow.id as never);
 
     if (error) {
       logger.error("RSVP delete error", error, { userId: user.id, eventId, component: "rsvp" });
-      return NextResponse.json(
-        { error: "Failed to delete RSVP" },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: "Failed to delete RSVP" }, { status: 500 });
     }
 
     return NextResponse.json({ success: true });
   } catch (error) {
     logger.error("RSVP delete API error", error, { userId: user.id, component: "rsvp" });
-    return NextResponse.json(
-      { error: "Failed to remove RSVP" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to remove RSVP" }, { status: 500 });
   }
 });
 
 /**
  * GET /api/rsvp
- * Get user's RSVP for an event
+ *
+ * Reads from the event_rsvps compat VIEW (SELECT over plans + plan_invitees).
+ * Supports:
+ *   - ?check=ever_rsvped  — has the user ever created a plan?
+ *   - ?event_id=N         — get user's RSVP row for a specific event
  */
 export const GET = withAuth(async (request, { user, serviceClient }) => {
   const rateLimitId = `${user.id}:${getClientIdentifier(request)}`;
   const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.read, rateLimitId);
   if (rateLimitResult) return rateLimitResult;
 
+  // Deprecation log
+  logger.warn("deprecated route: /api/rsvp", {
+    route: "/api/rsvp",
+    method: request.method,
+    caller: request.headers.get("referer") ?? null,
+    ua: request.headers.get("user-agent") ?? null,
+  });
+
   try {
     const { searchParams } = new URL(request.url);
 
-    // Check if user has ever RSVPed (for empty state detection)
+    // Check if user has ever RSVPed (empty state detection)
     if (searchParams.get("check") === "ever_rsvped") {
       const { count } = await serviceClient
         .from("event_rsvps")
-        .select("id", { count: "exact", head: true })
-        .eq("user_id", user.id)
-        .limit(1);
+        .select("user_id", { count: "exact", head: true })
+        .eq("user_id", user.id);
       return NextResponse.json({ hasRsvped: (count ?? 0) > 0 });
     }
 
@@ -165,21 +278,19 @@ export const GET = withAuth(async (request, { user, serviceClient }) => {
 
     if (error) {
       logger.error("RSVP fetch error", error, { userId: user.id, eventId, component: "rsvp" });
-      return NextResponse.json(
-        { error: "Failed to fetch RSVP" },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: "Failed to fetch RSVP" }, { status: 500 });
     }
 
     return NextResponse.json({ rsvp: data });
   } catch (error) {
     logger.error("RSVP get API error", error, { userId: user.id, component: "rsvp" });
-    return NextResponse.json(
-      { error: "Failed to fetch RSVP" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch RSVP" }, { status: 500 });
   }
 });
+
+// ---------------------------------------------------------------------------
+// Internal helpers
+// ---------------------------------------------------------------------------
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function notifyFriendsOfJoining(userId: string, eventId: number, serviceClient: any) {
@@ -210,7 +321,7 @@ async function notifyFriendsOfJoining(userId: string, eventId: number, serviceCl
   const friendIds = (friendIdsData || []).map((r: { friend_id: string }) => r.friend_id);
   if (friendIds.length === 0) return;
 
-  // Find friends who RSVPed to this event
+  // Find friends who have a going plan for this event (read from compat view)
   const { data: attendingFriends } = await serviceClient
     .from("event_rsvps")
     .select("user_id")
@@ -234,7 +345,7 @@ async function notifyFriendsOfJoining(userId: string, eventId: number, serviceCl
       .gte("created_at", oneDayAgo)
       .limit(1);
 
-    if (existing && existing.length > 0) continue; // Already notified
+    if (existing && existing.length > 0) continue;
 
     // Insert notification
     await serviceClient.from("notifications").insert({

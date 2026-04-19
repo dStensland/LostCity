@@ -26,6 +26,7 @@ export default defineConfig({
     alias: {
       "@": path.resolve(__dirname, "./"),
       "server-only": path.resolve(__dirname, "./lib/test-support/server-only.ts"),
+      "web-push": path.resolve(__dirname, "./lib/test-support/web-push-stub.ts"),
     },
   },
 });
