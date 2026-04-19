@@ -3,15 +3,31 @@
 import { useState, useCallback } from "react";
 import NeighborhoodMapWrapper from "./NeighborhoodMapWrapper";
 import NeighborhoodDrillDown from "./NeighborhoodDrillDown";
+import NeighborhoodsEditorialOverlay from "./NeighborhoodsEditorialOverlay";
+import NeighborhoodsMapMode, {
+  type NeighborhoodsMapModeValue,
+} from "./NeighborhoodsMapMode";
 import type { NeighborhoodActivity } from "./NeighborhoodMap";
 
 interface Props {
   activityData: NeighborhoodActivity[];
   portalSlug: string;
+  tonightNeighborhoodCount: number;
+  weekNeighborhoodCount: number;
+  cityName?: string;
 }
 
-export default function NeighborhoodsPageClient({ activityData, portalSlug }: Props) {
+export default function NeighborhoodsPageClient({
+  activityData,
+  portalSlug,
+  tonightNeighborhoodCount,
+  weekNeighborhoodCount,
+  cityName,
+}: Props) {
   const [selectedSlug, setSelectedSlug] = useState<string | null>(null);
+  const [mapMode, setMapMode] = useState<NeighborhoodsMapModeValue>(
+    tonightNeighborhoodCount > 0 ? "tonight" : "week",
+  );
 
   const selectedActivity = activityData.find((n) => n.slug === selectedSlug) ?? null;
 
@@ -25,20 +41,32 @@ export default function NeighborhoodsPageClient({ activityData, portalSlug }: Pr
 
   return (
     <div className="relative">
-      {/* Map + drill-down side by side on desktop */}
       <div className="flex gap-0 h-[50vh] sm:h-[60vh]">
-        {/* Map container — shrinks when drill-down is open */}
-        <div className={`transition-all duration-300 min-w-0 h-full ${selectedSlug ? "flex-1" : "w-full"}`}>
-          <div className="h-full rounded-xl overflow-hidden border border-[var(--twilight)]">
+        <div
+          className={`relative transition-all duration-300 min-w-0 h-full ${selectedSlug ? "flex-1" : "w-full"}`}
+        >
+          <div className="h-full rounded-card-xl overflow-hidden border border-[var(--twilight)] relative">
             <NeighborhoodMapWrapper
               activityData={activityData}
               selectedSlug={selectedSlug}
               onSelect={handleSelect}
+              modeFilter={mapMode}
             />
+
+            {/* Editorial overlay — top-left, above the map */}
+            <div className="pointer-events-none absolute top-5 left-5 right-5 flex items-start justify-between gap-4">
+              <NeighborhoodsEditorialOverlay
+                tonightNeighborhoodCount={tonightNeighborhoodCount}
+                weekNeighborhoodCount={weekNeighborhoodCount}
+                cityName={cityName}
+              />
+              <div className="pointer-events-auto">
+                <NeighborhoodsMapMode value={mapMode} onChange={setMapMode} />
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Desktop drill-down panel — inline in flex so map shrinks */}
         {selectedSlug && selectedActivity && (
           <NeighborhoodDrillDown
             slug={selectedSlug}

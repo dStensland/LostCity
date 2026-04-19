@@ -312,39 +312,93 @@ export default function GoblinLogPublicView({ user, entries, tags, year }: Props
           )}
         </div>
 
-        {/* List with tier groups */}
+        {/* Grouped by list, with tier stripes within each group */}
         {filteredEntries.length > 0 ? (
           <div>
             {(() => {
-              const groups: { tierName: string | null; tierColor: string | null; entries: { entry: LogEntry; idx: number }[] }[] = [];
-              let cur: typeof groups[0] | null = null;
+              // Partition by list (preserve first-appearance order; null last)
+              type IndexedEntry = { entry: LogEntry; idx: number };
+              const listOrder: (number | null)[] = [];
+              const listBuckets = new Map<number | null, IndexedEntry[]>();
+              const listNames = new Map<number | null, string>();
               filteredEntries.forEach((entry, i) => {
-                if (entry.tier_name || !cur) {
-                  cur = { tierName: entry.tier_name || null, tierColor: entry.tier_color || null, entries: [] };
-                  groups.push(cur);
+                const key = entry.list_id ?? null;
+                if (!listBuckets.has(key)) {
+                  listBuckets.set(key, []);
+                  listOrder.push(key);
+                  listNames.set(key, entry.list?.name ?? "Unsorted");
                 }
-                cur.entries.push({ entry, idx: i });
+                listBuckets.get(key)!.push({ entry, idx: i });
               });
-              return groups.map((g, gi) => (
-                <div key={gi} className="flex mb-3">
-                  {g.tierName ? (
-                    <div className="flex-shrink-0 w-6 sm:w-8 flex items-center justify-center"
-                      style={{ borderLeft: `2px solid ${g.tierColor || "#00f0ff"}` }}>
-                      <span className="font-mono text-2xs font-black uppercase tracking-[0.3em] whitespace-nowrap
-                        [writing-mode:vertical-lr] rotate-180"
-                        style={{ color: g.tierColor || "#00f0ff", textShadow: `0 0 8px ${g.tierColor || "#00f0ff"}40` }}>
-                        {g.tierName}
-                      </span>
-                    </div>
-                  ) : <div className="w-0" />}
-                  <div className="flex-1 min-w-0 space-y-1.5">
-                    {g.entries.map(({ entry, idx }) => (
-                      <GoblinLogEntryCard key={entry.id} entry={entry} rank={idx + 1}
-                        tierColor={g.tierColor} onEdit={() => {}} readOnly />
+              const nullIdx = listOrder.indexOf(null);
+              if (nullIdx !== -1 && nullIdx !== listOrder.length - 1) {
+                listOrder.splice(nullIdx, 1);
+                listOrder.push(null);
+              }
+
+              return listOrder.map((listKey) => {
+                const bucket = listBuckets.get(listKey)!;
+                const listName = listNames.get(listKey) ?? "Unsorted";
+                const showHeader = listOrder.length > 1;
+
+                // Tier groups within this list bucket
+                type TierGroup = {
+                  tierName: string | null;
+                  tierColor: string | null;
+                  entries: IndexedEntry[];
+                };
+                const tierGroups: TierGroup[] = [];
+                let cur: TierGroup | null = null;
+                for (const ie of bucket) {
+                  if (ie.entry.tier_name || !cur) {
+                    cur = {
+                      tierName: ie.entry.tier_name || null,
+                      tierColor: ie.entry.tier_color || null,
+                      entries: [],
+                    };
+                    tierGroups.push(cur);
+                  }
+                  cur.entries.push(ie);
+                }
+
+                return (
+                  <section key={listKey ?? "__unsorted__"} className="mb-8 last:mb-0">
+                    {showHeader && (
+                      <div className="mb-3 flex items-baseline justify-between gap-4">
+                        <h3
+                          className="font-mono text-xs font-bold tracking-[0.25em] uppercase text-cyan-400/70"
+                          style={{ textShadow: "0 0 8px rgba(0,240,255,0.15)" }}
+                        >
+                          {listName}
+                        </h3>
+                        <span className="font-mono text-2xs text-zinc-600 tracking-[0.2em] uppercase tabular-nums">
+                          {bucket.length}
+                        </span>
+                      </div>
+                    )}
+                    {tierGroups.map((g, gi) => (
+                      <div key={gi} className="flex mb-3">
+                        {g.tierName ? (
+                          <div className="flex-shrink-0 w-6 sm:w-8 flex items-center justify-center"
+                            style={{ borderLeft: `2px solid ${g.tierColor || "#00f0ff"}` }}>
+                            <span className="font-mono text-2xs font-black uppercase tracking-[0.3em] whitespace-nowrap
+                              [writing-mode:vertical-lr] rotate-180"
+                              style={{ color: g.tierColor || "#00f0ff", textShadow: `0 0 8px ${g.tierColor || "#00f0ff"}40` }}>
+                              {g.tierName}
+                            </span>
+                          </div>
+                        ) : <div className="w-0" />}
+                        <div className="flex-1 min-w-0 space-y-1.5">
+                          {g.entries.map(({ entry, idx }) => (
+                            <GoblinLogEntryCard key={entry.id} entry={entry} rank={idx + 1}
+                              tierColor={g.tierColor} onEdit={() => {}} readOnly />
+                          ))}
+                        </div>
+                      </div>
                     ))}
-                  </div>
-                </div>
-              ));
+                  </section>
+                );
+              });
             })()}
           </div>
         ) : (

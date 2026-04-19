@@ -28,7 +28,6 @@ import {
 } from "@/lib/map-config";
 import {
   type NeighborhoodActivity,
-  NEIGHBORHOOD_COLORS,
   getNeighborhoodColor,
 } from "@/lib/neighborhood-colors";
 
@@ -39,6 +38,12 @@ interface Props {
   activityData: NeighborhoodActivity[];
   selectedSlug: string | null;
   onSelect: (slug: string | null) => void;
+  /**
+   * Time scope filter. "tonight" quiets polygons with no events today;
+   * "week" quiets polygons with no events this week; "all" applies no
+   * extra quieting (default opacity curve). Defaults to "all".
+   */
+  modeFilter?: "tonight" | "week" | "all";
 }
 
 // Build a lookup map keyed by lowercase name for fast, case-insensitive matching
@@ -126,6 +131,7 @@ export default function NeighborhoodMap({
   activityData,
   selectedSlug,
   onSelect,
+  modeFilter = "all",
 }: Props) {
   const mapRef = useRef<MapRef>(null);
   const [mounted, setMounted] = useState(false);
@@ -173,7 +179,9 @@ export default function NeighborhoodMap({
     [activityData],
   );
 
-  // Enrich GeoJSON features with activityScore, isSelected, isConfigured for fill/line layers
+  // Enrich GeoJSON features with activityScore, isSelected, isConfigured for fill/line layers.
+  // Also enrich with isActiveTonight / isActiveThisWeek so the mode filter pill can drive
+  // the fill-opacity paint expression (quiet polygons outside the active scope).
   const enrichedGeoJson = useMemo<GeoJSON.FeatureCollection | null>(() => {
     if (!boundaries) return null;
 
@@ -189,6 +197,8 @@ export default function NeighborhoodMap({
           activityScore: match?.activityScore ?? 0,
           isSelected: match ? match.slug === selectedSlug : false,
           isConfigured: match !== undefined,
+          isActiveTonight: match ? match.eventsTodayCount > 0 : false,
+          isActiveThisWeek: match ? match.eventsWeekCount > 0 : false,
           color: getNeighborhoodColor(rawName),
         },
       };
@@ -260,33 +270,56 @@ export default function NeighborhoodMap({
     },
   };
 
-  // ─── Layer 2: Fill — each neighborhood its own color, opacity = activity
+  // ─── Layer 2: Fill — each neighborhood its own color, opacity = activity.
+  // modeFilter ("tonight"/"week") quiets polygons outside the active scope:
+  // they drop to 0.04 opacity (same as "not configured") so the map
+  // emphasizes what's currently alive rather than showing all 150-odd hoods.
+  const activeFlagKey =
+    modeFilter === "tonight"
+      ? "isActiveTonight"
+      : modeFilter === "week"
+        ? "isActiveThisWeek"
+        : null;
+
+  const activityOpacityExpr = [
+    "interpolate",
+    ["linear"],
+    ["get", "activityScore"],
+    0,   0.06,
+    15,  0.12,
+    30,  0.18,
+    50,  0.24,
+    75,  0.32,
+    100, 0.40,
+  ];
+
+  const fillOpacityExpr = activeFlagKey
+    ? [
+        "case",
+        ["==", ["get", "isConfigured"], false],
+        0.04,
+        ["==", ["get", "isSelected"], true],
+        0.45,
+        ["==", ["get", activeFlagKey], true],
+        activityOpacityExpr,
+        // Not active in the selected scope — quiet
+        0.04,
+      ]
+    : [
+        "case",
+        ["==", ["get", "isConfigured"], false],
+        0.04,
+        ["==", ["get", "isSelected"], true],
+        0.45,
+        activityOpacityExpr,
+      ];
+
   const fillLayer = {
     id: FILL_LAYER_ID,
     type: "fill" as const,
     paint: {
       "fill-color": ["get", "color"],
-      "fill-opacity": [
-        "case",
-        ["==", ["get", "isConfigured"], false],
-        0.04,
-        [
-          "case",
-          ["==", ["get", "isSelected"], true],
-          0.45,
-          [
-            "interpolate",
-            ["linear"],
-            ["get", "activityScore"],
-            0,   0.06,
-            15,  0.12,
-            30,  0.18,
-            50,  0.24,
-            75,  0.32,
-            100, 0.40,
-          ],
-        ],
-      ],
+      "fill-opacity": fillOpacityExpr,
     },
   };
 
@@ -482,22 +515,10 @@ export default function NeighborhoodMap({
         )}
       </Map>
 
-      {/* Activity legend */}
-      <div className="absolute bottom-4 left-4 bg-[var(--night)]/90 border border-[var(--twilight)] rounded-lg px-3 py-2 backdrop-blur-sm">
-        <div className="flex items-center gap-2">
-          <div className="flex gap-0.5">
-            {NEIGHBORHOOD_COLORS.slice(0, 6).map((c) => (
-              <div key={c} className="w-2 h-2 rounded-full" style={{ backgroundColor: c, opacity: 0.7 }} />
-            ))}
-          </div>
-          <span className="text-2xs font-mono text-[var(--muted)]">
-            {(() => {
-              const active = activityData.filter(a => a.activityScore >= 15).length;
-              return `${active} active · ${activityData.length} total`;
-            })()}
-          </span>
-        </div>
-      </div>
+      {/* Legend removed per neighborhoods-elevate-2026-04-18 plan — raw
+          "N active · M total" counts are infrastructure data, not consumer UI.
+          Editorial overlay in NeighborhoodsPageClient carries the equivalent
+          editorial signal ("ALIVE TONIGHT" / "THIS WEEK"). */}
     </div>
   );
 }
