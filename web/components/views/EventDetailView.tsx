@@ -46,6 +46,13 @@ interface EventDetailViewProps {
    * enrichment fetch runs. Replaced when `data` arrives.
    */
   seedData?: EventSeed;
+  /**
+   * When true, forces the sidebar shell instead of the elevated full-width
+   * layout. The elevated shell was designed for 1600px page context; inside
+   * the 768px overlay card it compresses awkwardly. Router passes true
+   * when rendering inside the overlay.
+   */
+  inOverlay?: boolean;
 }
 
 // ── Component ────────────────────────────────────────────────────────────────
@@ -56,6 +63,7 @@ export default function EventDetailView({
   onClose,
   initialData,
   seedData,
+  inOverlay = false,
 }: EventDetailViewProps) {
   const { data, status } = useDetailData<EventApiResponse>({
     entityType: "event",
@@ -161,7 +169,14 @@ export default function EventDetailView({
   );
 
   if (status === "loading" || !entityData || !event) {
-    if (seedData) return <SeededDetailSkeleton seed={seedData} />;
+    if (seedData) {
+      return (
+        <SeededDetailSkeleton
+          seed={seedData}
+          variant={inOverlay ? "sidebar" : "full"}
+        />
+      );
+    }
     return <DetailLoadingSkeleton />;
   }
 
@@ -180,7 +195,7 @@ export default function EventDetailView({
       accentColor={accentColor}
       entityType="event"
       onClose={onClose}
-      shellVariant={ENABLE_ELEVATED_DETAIL ? "elevated" : "sidebar"}
+      shellVariant={inOverlay ? "sidebar" : ENABLE_ELEVATED_DETAIL ? "elevated" : "sidebar"}
       quickFacts={quickFacts}
     />
   );

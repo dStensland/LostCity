@@ -129,7 +129,7 @@ export default function FestivalDetailView({
   );
 
   if (status === "loading" || !entityData || !festival) {
-    if (seedData) return <SeededDetailSkeleton seed={seedData} />;
+    if (seedData) return <SeededDetailSkeleton seed={seedData} variant="sidebar" />;
     return <DetailLoadingSkeleton />;
   }
 

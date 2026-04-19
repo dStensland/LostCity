@@ -94,7 +94,7 @@ export default function OrgDetailView({
   );
 
   if (status === "loading" || !entityData || !organization) {
-    if (seedData) return <SeededDetailSkeleton seed={seedData} />;
+    if (seedData) return <SeededDetailSkeleton seed={seedData} variant="sidebar" />;
     return <DetailLoadingSkeleton />;
   }
 

@@ -19,6 +19,7 @@ import type { FeedEventData } from "@/components/EventCard";
 import CategoryIcon, { getCategoryColor } from "@/components/CategoryIcon";
 import { formatSmartDate, formatTime } from "@/lib/formats";
 import { usePublishEventSeed } from "@/lib/detail/publish-seed-helpers";
+import { prefetchDetailView } from "@/lib/detail/prefetch-detail-view";
 import {
   Fire,
   ArrowRight,
@@ -94,6 +95,8 @@ function PopularHero({ ev, portalSlug }: { ev: EnrichedEvent; portalSlug: string
     <Link
       href={`/${portalSlug}?event=${ev.id}`}
       scroll={false}
+      onMouseEnter={() => prefetchDetailView("event")}
+      onFocus={() => prefetchDetailView("event")}
       className="block relative rounded-xl overflow-hidden border border-[var(--twilight)]/40 group transition-all hover:border-[var(--coral)]/30 hover:shadow-[0_0_24px_-4px] hover:shadow-[var(--coral)]/15"
     >
       {/* Image background */}
@@ -176,6 +179,8 @@ function PopularCard({
     <Link
       href={`/${portalSlug}?event=${ev.id}`}
       scroll={false}
+      onMouseEnter={() => prefetchDetailView("event")}
+      onFocus={() => prefetchDetailView("event")}
       className="block rounded-lg overflow-hidden border border-[var(--twilight)]/30 bg-[var(--night)] group transition-all hover:border-[var(--twilight)]/50 hover:shadow-[0_0_12px_-4px] hover:shadow-[var(--coral)]/10"
     >
       {/* Image */}
@@ -288,63 +293,81 @@ function FriendsZone({
         </Link>
       ) : (
         <div className="rounded-xl overflow-hidden border border-[var(--twilight)]/40 bg-[var(--night)]">
-          {friendEvents.map((item, idx) => {
-            const ev = item.event;
-            const friends = ev.friends_going || [];
-            const timeLabel = getSmartTimeLabel(ev);
-            const isLast = idx === friendEvents.length - 1;
-
-            return (
-              <Link
-                key={`friend-${ev.id}`}
-                href={`/${portalSlug}?event=${ev.id}`}
-                scroll={false}
-                className={`flex items-center gap-3 px-3 py-2.5 transition-colors hover:bg-white/[0.02] group ${
-                  !isLast ? "border-b border-[var(--twilight)]/30" : ""
-                }`}
-              >
-                {/* Friend avatars (simple colored circles with initials) */}
-                <div className="flex -space-x-1.5 shrink-0">
-                  {friends.slice(0, 3).map((f, i) => (
-                    <div
-                      key={f.user_id}
-                      className="w-6 h-6 rounded-full border-2 border-[var(--night)] flex items-center justify-center text-[8px] font-bold"
-                      style={{
-                        backgroundColor: `color-mix(in srgb, var(--neon-cyan,#00d4e8) ${40 - i * 10}%, var(--twilight))`,
-                        color: "var(--cream)",
-                        zIndex: 3 - i,
-                      }}
-                    >
-                      {(f.display_name || f.username || "?")[0].toUpperCase()}
-                    </div>
-                  ))}
-                  {friends.length > 3 && (
-                    <div
-                      className="w-6 h-6 rounded-full border-2 border-[var(--night)] flex items-center justify-center text-[8px] font-mono font-bold bg-[var(--twilight)] text-[var(--muted)]"
-                    >
-                      +{friends.length - 3}
-                    </div>
-                  )}
-                </div>
-
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-[var(--soft)] truncate group-hover:text-[var(--neon-cyan,#00d4e8)] transition-colors">
-                    {ev.title}
-                  </p>
-                  <p className="text-2xs text-[var(--soft)] truncate">
-                    {friends.slice(0, 2).map((f) => f.display_name || f.username).join(", ")}
-                    {friends.length > 2 && ` +${friends.length - 2}`}
-                    {" going"}
-                  </p>
-                </div>
-
-                <span className="font-mono text-2xs text-[var(--soft)] shrink-0">{timeLabel}</span>
-              </Link>
-            );
-          })}
+          {friendEvents.map((item, idx) => (
+            <FriendEventRow
+              key={`friend-${item.event.id}`}
+              item={item}
+              portalSlug={portalSlug}
+              isLast={idx === friendEvents.length - 1}
+            />
+          ))}
         </div>
       )}
     </div>
+  );
+}
+
+function FriendEventRow({
+  item,
+  portalSlug,
+  isLast,
+}: {
+  item: CityPulseEventItem;
+  portalSlug: string;
+  isLast: boolean;
+}) {
+  const ev = item.event;
+  usePublishEventSeed(ev);
+  const friends = ev.friends_going || [];
+  const timeLabel = getSmartTimeLabel(ev);
+
+  return (
+    <Link
+      href={`/${portalSlug}?event=${ev.id}`}
+      scroll={false}
+      onMouseEnter={() => prefetchDetailView("event")}
+      onFocus={() => prefetchDetailView("event")}
+      className={`flex items-center gap-3 px-3 py-2.5 transition-colors hover:bg-white/[0.02] group ${
+        !isLast ? "border-b border-[var(--twilight)]/30" : ""
+      }`}
+    >
+      {/* Friend avatars (simple colored circles with initials) */}
+      <div className="flex -space-x-1.5 shrink-0">
+        {friends.slice(0, 3).map((f, i) => (
+          <div
+            key={f.user_id}
+            className="w-6 h-6 rounded-full border-2 border-[var(--night)] flex items-center justify-center text-[8px] font-bold"
+            style={{
+              backgroundColor: `color-mix(in srgb, var(--neon-cyan,#00d4e8) ${40 - i * 10}%, var(--twilight))`,
+              color: "var(--cream)",
+              zIndex: 3 - i,
+            }}
+          >
+            {(f.display_name || f.username || "?")[0].toUpperCase()}
+          </div>
+        ))}
+        {friends.length > 3 && (
+          <div
+            className="w-6 h-6 rounded-full border-2 border-[var(--night)] flex items-center justify-center text-[8px] font-mono font-bold bg-[var(--twilight)] text-[var(--muted)]"
+          >
+            +{friends.length - 3}
+          </div>
+        )}
+      </div>
+
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium text-[var(--soft)] truncate group-hover:text-[var(--neon-cyan,#00d4e8)] transition-colors">
+          {ev.title}
+        </p>
+        <p className="text-2xs text-[var(--soft)] truncate">
+          {friends.slice(0, 2).map((f) => f.display_name || f.username).join(", ")}
+          {friends.length > 2 && ` +${friends.length - 2}`}
+          {" going"}
+        </p>
+      </div>
+
+      <span className="font-mono text-2xs text-[var(--soft)] shrink-0">{timeLabel}</span>
+    </Link>
   );
 }
 
@@ -409,43 +432,69 @@ function UpcomingZone({
         </div>
       ) : (
         <div className="rounded-xl overflow-hidden border border-[var(--twilight)]/40 bg-[var(--night)]">
-          {events.map((ev, idx) => {
-            const timeLabel = getSmartTimeLabel({
-              start_date: ev.start_date,
-              start_time: ev.start_time,
-              is_all_day: ev.is_all_day,
-            });
-            const isLast = idx === events.length - 1;
-
-            return (
-              <Link
-                key={`upcoming-${ev.id}`}
-                href={`/${portalSlug}?event=${ev.id}`}
-                scroll={false}
-                className={`flex items-center gap-3 px-3 py-2.5 transition-colors hover:bg-white/[0.02] group ${
-                  !isLast ? "border-b border-[var(--twilight)]/30" : ""
-                }`}
-              >
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-[var(--soft)] truncate group-hover:text-[var(--gold)] transition-colors">
-                    {ev.title}
-                  </p>
-                  <p className="text-2xs text-[var(--soft)] truncate">
-                    {ev.venue_name}
-                  </p>
-                </div>
-                <div className="shrink-0 text-right space-y-0.5">
-                  <p className="font-mono text-2xs text-[var(--soft)]">{timeLabel}</p>
-                  <p className="font-mono text-2xs font-medium uppercase tracking-wider text-[var(--gold)]">
-                    {ev.status === "going" ? "Going" : ev.status === "interested" ? "Maybe" : "Going"}
-                  </p>
-                </div>
-              </Link>
-            );
-          })}
+          {events.map((ev, idx) => (
+            <UpcomingEventRow
+              key={`upcoming-${ev.id}`}
+              ev={ev}
+              portalSlug={portalSlug}
+              isLast={idx === events.length - 1}
+            />
+          ))}
         </div>
       )}
     </div>
+  );
+}
+
+function UpcomingEventRow({
+  ev,
+  portalSlug,
+  isLast,
+}: {
+  ev: UpcomingEvent;
+  portalSlug: string;
+  isLast: boolean;
+}) {
+  usePublishEventSeed({
+    id: ev.id,
+    title: ev.title,
+    start_date: ev.start_date,
+    start_time: ev.start_time ?? null,
+    is_all_day: ev.is_all_day ?? null,
+    category: ev.category ?? null,
+    venue: ev.venue_name ? { name: ev.venue_name } : null,
+  });
+  const timeLabel = getSmartTimeLabel({
+    start_date: ev.start_date,
+    start_time: ev.start_time,
+    is_all_day: ev.is_all_day,
+  });
+
+  return (
+    <Link
+      href={`/${portalSlug}?event=${ev.id}`}
+      scroll={false}
+      onMouseEnter={() => prefetchDetailView("event")}
+      onFocus={() => prefetchDetailView("event")}
+      className={`flex items-center gap-3 px-3 py-2.5 transition-colors hover:bg-white/[0.02] group ${
+        !isLast ? "border-b border-[var(--twilight)]/30" : ""
+      }`}
+    >
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium text-[var(--soft)] truncate group-hover:text-[var(--gold)] transition-colors">
+          {ev.title}
+        </p>
+        <p className="text-2xs text-[var(--soft)] truncate">
+          {ev.venue_name}
+        </p>
+      </div>
+      <div className="shrink-0 text-right space-y-0.5">
+        <p className="font-mono text-2xs text-[var(--soft)]">{timeLabel}</p>
+        <p className="font-mono text-2xs font-medium uppercase tracking-wider text-[var(--gold)]">
+          {ev.status === "going" ? "Going" : ev.status === "interested" ? "Maybe" : "Going"}
+        </p>
+      </div>
+    </Link>
   );
 }
 

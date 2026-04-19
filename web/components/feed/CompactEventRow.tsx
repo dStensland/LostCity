@@ -18,6 +18,7 @@ import { formatTime, getEventStatus } from "@/lib/formats";
 import RSVPButton from "@/components/RSVPButton";
 import { getCivicEventHref } from "@/lib/civic-routing";
 import { usePublishEventSeed } from "@/lib/detail/publish-seed-helpers";
+import { prefetchDetailView } from "@/lib/detail/prefetch-detail-view";
 
 interface CompactEventRowProps {
   event: FeedEventData;
@@ -63,6 +64,8 @@ export default function CompactEventRow({ event, portalSlug, size = "default", v
     <Link
       href={eventHref}
       scroll={false}
+      onMouseEnter={() => prefetchDetailView("event")}
+      onFocus={() => prefetchDetailView("event")}
       className="block overflow-hidden transition-all group relative rounded-lg border border-[var(--twilight)]/30 hover:border-[var(--card-accent)]/40 hover:shadow-[0_0_12px_var(--card-accent-glow)]"
       style={cardStyle}
     >

@@ -19,6 +19,7 @@ import {
   usePublishEventSeed,
   usePublishFestivalSeed,
 } from "@/lib/detail/publish-seed-helpers";
+import { prefetchDetailView } from "@/lib/detail/prefetch-detail-view";
 import {
   groupItemsByMonth,
   type BigStuffFeedData,
@@ -211,6 +212,8 @@ function ItemRow({ item }: { item: BigStuffItem }) {
   return (
     <Link
       href={item.href}
+      onMouseEnter={() => prefetchDetailView(item.kind === "festival" ? "festival" : "event")}
+      onFocus={() => prefetchDetailView(item.kind === "festival" ? "festival" : "event")}
       className="group/item block min-w-0 transition-opacity duration-200 group-hover/ribbon:opacity-75 hover:!opacity-100"
     >
       <p className="text-sm font-semibold text-[var(--cream)] leading-snug truncate group-hover/item:underline decoration-[var(--gold)] underline-offset-[3px]">

@@ -126,7 +126,7 @@ export default function SeriesDetailView({
   );
 
   if (status === "loading" || !entityData || !series) {
-    if (seedData) return <SeededDetailSkeleton seed={seedData} />;
+    if (seedData) return <SeededDetailSkeleton seed={seedData} variant="sidebar" />;
     return <DetailLoadingSkeleton />;
   }
 
