@@ -1,6 +1,7 @@
 "use client";
 
-import { createContext, useContext, type ReactNode } from "react";
+import { createContext, useContext, useMemo, type ReactNode } from "react";
+import { useSearchParams } from "next/navigation";
 
 /**
  * Surface-scoped link mode.
@@ -51,7 +52,7 @@ export function useLinkContext(): LinkContext {
  * Resolve a context value with an optional explicit override.
  *
  * Use in card components that accept an optional `context` prop:
- *   `const context = resolveLinkContext(props.context);`
+ *   `const context = useResolvedLinkContext(props.context);`
  *
  * Passing `undefined` (prop omitted) falls back to `useLinkContext()`.
  * Passing an explicit value wins. Never short-circuits on falsy.
@@ -61,4 +62,33 @@ export function useResolvedLinkContext(
 ): LinkContext {
   const ambient = useLinkContext();
   return override ?? ambient;
+}
+
+/**
+ * Combined hook returning everything a card needs to build entity URLs:
+ *
+ *   const { context, existingParams } = useEntityLinkOptions();
+ *   const url = buildEventUrl(event.id, portal, context, existingParams);
+ *
+ * - `context` — ambient overlay/canonical mode (or override via arg)
+ * - `existingParams` — current URLSearchParams clone, ready to pass to
+ *   builders. Required for swap-not-stack inside an open overlay:
+ *   builders use it to clear sibling overlay keys atomically.
+ *
+ * Returns `existingParams: undefined` when there are no current params
+ * (server-rendered first paint with empty searchParams). The URL builder
+ * handles undefined gracefully (treats as empty).
+ */
+export function useEntityLinkOptions(override?: LinkContext): {
+  context: LinkContext;
+  existingParams: URLSearchParams | undefined;
+} {
+  const context = useResolvedLinkContext(override);
+  const search = useSearchParams();
+  const existingParams = useMemo(() => {
+    if (!search) return undefined;
+    const str = search.toString();
+    return str ? new URLSearchParams(str) : undefined;
+  }, [search]);
+  return { context, existingParams };
 }

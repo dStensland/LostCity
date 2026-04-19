@@ -5,6 +5,7 @@ import { format, parseISO } from "date-fns";
 import { CaretRight, CaretDown } from "@phosphor-icons/react";
 import type { SectionProps } from "@/lib/detail/types";
 import { buildEventUrl } from "@/lib/entity-urls";
+import { useEntityLinkOptions } from "@/lib/link-context";
 
 const DATES_COLLAPSED = 5;
 
@@ -24,6 +25,7 @@ function formatDate(dateStr: string): string {
 
 export function UpcomingDatesSection({ data, portalSlug }: SectionProps) {
   const [expanded, setExpanded] = useState(false);
+  const { context, existingParams } = useEntityLinkOptions();
 
   if (data.entityType !== "series") return null;
   if (data.payload.series.series_type === "film") return null;
@@ -58,7 +60,7 @@ export function UpcomingDatesSection({ data, portalSlug }: SectionProps) {
   return (
     <div className="space-y-1">
       {visible.map((event, index) => {
-        const href = buildEventUrl(event.id, portalSlug, "canonical");
+        const href = buildEventUrl(event.id, portalSlug, context, existingParams);
         return (
           <a
             key={event.id}
