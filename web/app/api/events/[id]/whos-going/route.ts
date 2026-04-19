@@ -13,12 +13,19 @@ type Params = z.infer<typeof ParamsSchema>;
  * GET /api/events/[id]/whos-going
  *
  * Returns the list of profiles who have a "going" plan_invitee row for this
- * event (via plans with anchor_type='event' and visibility in public/friends).
+ * event. Enforces the plan-visibility contract:
+ *   - `visibility='public'`  → any authenticated viewer sees the attendee
+ *   - `visibility='friends'` → only friends-of-the-plan-creator (or the
+ *                              creator themselves) see the attendee
+ *   - `visibility='private'` → excluded entirely
  *
- * Requires auth so we can scope to plans visible to the requesting user.
+ * The aggregate uses `serviceClient` (RLS-bypass) because the `plan_invitees`
+ * RLS policy only allows self / plan creator / fellow invitee — too narrow
+ * for the "who's going to this event" aggregate. The visibility check is
+ * therefore enforced manually here with an explicit friendship lookup.
  */
 export const GET = withAuthAndParams<Params>(
-  async (request: NextRequest, { serviceClient, params }) => {
+  async (request: NextRequest, { user, serviceClient, params }) => {
     const rl = await applyRateLimit(request, RATE_LIMITS.read, getClientIdentifier(request));
     if (rl) return rl;
 
@@ -28,7 +35,17 @@ export const GET = withAuthAndParams<Params>(
     }
     const eventId = parseInt(parsed.data.id, 10);
 
-    // Find going invitees for public/friends-visible event plans
+    // Fetch the viewer's friend set once — one RPC, in-memory filter after.
+    // `get_friend_ids` returns the canonical bidirectional friend list.
+    const { data: friendRows } = await serviceClient.rpc(
+      "get_friend_ids" as never,
+      { user_id: user.id } as never,
+    ) as { data: { friend_id: string }[] | null };
+    const friendSet = new Set((friendRows ?? []).map((r) => r.friend_id));
+
+    // Find going invitees for public/friends-visible event plans.
+    // `creator_id` is pulled so the friendship filter below can gate
+    // `visibility='friends'` rows.
     const { data, error } = await serviceClient
       .from("plan_invitees")
       .select(`
@@ -38,7 +55,7 @@ export const GET = withAuthAndParams<Params>(
           id, username, display_name, avatar_url
         ),
         plan:plans!inner (
-          id, anchor_event_id, anchor_type, visibility
+          id, creator_id, anchor_event_id, anchor_type, visibility
         )
       `)
       .eq("rsvp_status", "going")
@@ -48,16 +65,27 @@ export const GET = withAuthAndParams<Params>(
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-    // Flatten to simple profile list
     type Row = {
       user_id: string;
       profile: { id: string; username: string | null; display_name: string | null; avatar_url: string | null } | null;
+      plan: { creator_id: string; visibility: string } | null;
     };
     const rows = (data as unknown as Row[] | null) ?? [];
-    const profiles = rows
+
+    // Friendship gate: drop `visibility='friends'` rows unless the viewer is
+    // the plan's creator or in the creator's friend set. `visibility='public'`
+    // rows pass through unconditionally.
+    const visible = rows.filter((r) => {
+      if (!r.plan) return false;
+      if (r.plan.visibility === "public") return true;
+      if (r.plan.visibility !== "friends") return false;
+      return r.plan.creator_id === user.id || friendSet.has(r.plan.creator_id);
+    });
+
+    const profiles = visible
       .map((r) => r.profile)
       .filter((p): p is NonNullable<typeof p> => p !== null);
 
     return NextResponse.json({ profiles, count: profiles.length });
-  }
+  },
 );
