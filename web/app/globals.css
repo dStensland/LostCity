@@ -1227,6 +1227,16 @@ button:not(:disabled),
   --motion-shift-md: 8px;
   --motion-shift-lg: 16px;
   --motion-shift-xl: 24px;
+
+  /* Sticky portal-header height — consumed by overlay positioning and any
+     other below-header chrome. Responsive: 64px mobile, 72px desktop. */
+  --header-h: 64px;
+}
+
+@media (min-width: 640px) {
+  :root {
+    --header-h: 72px;
+  }
 }
 
 /* ============================================

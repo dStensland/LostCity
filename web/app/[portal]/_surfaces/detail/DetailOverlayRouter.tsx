@@ -281,12 +281,15 @@ export default function DetailOverlayRouter({
     initialOverlayConsumed = true;
   }, []);
 
-  // Track swap depth: how many overlays have been opened in a row without
-  // closing. Initial value = 1 if we mounted with a target (cold-load or
-  // first click), else 0. Each target change while target stays truthy is a
-  // swap and increments depth. When detailTarget goes null (overlay closed),
-  // depth resets. When depth >= MAX_OVERLAY_DEPTH, card links inside the
-  // overlay render with canonical context.
+  // Track swap depth: how many overlays have been shown in a row without
+  // closing. Overlay #1 = depth 1. Each swap (transition between two truthy
+  // targets) increments by 1. Depth ≥ MAX_OVERLAY_DEPTH (5) forces canonical
+  // context for card links inside the overlay, so the next click exits to a
+  // full-page nav instead of stacking another swap.
+  //
+  // The router is conditionally mounted (only when an overlay is active) —
+  // closing the overlay unmounts the component, which resets state on the
+  // next mount via the useState initializer.
   const currentKey = detailTarget
     ? `${detailTarget.kind}:${
         "id" in detailTarget ? detailTarget.id : detailTarget.slug
@@ -295,21 +298,15 @@ export default function DetailOverlayRouter({
   const prevKeyRef = useRef<string | null>(null);
   const [swapDepth, setSwapDepth] = useState(currentKey ? 1 : 0);
   useEffect(() => {
-    if (!currentKey) {
-      if (prevKeyRef.current !== null) {
-        // eslint-disable-next-line react-hooks/set-state-in-effect
-        setSwapDepth(0);
-        prevKeyRef.current = null;
-      }
-      return;
-    }
+    if (!currentKey) return;
     if (prevKeyRef.current === null) {
-      // First open of this overlay chain — already counted by initial state.
+      // First render with a target — count as depth 1.
       prevKeyRef.current = currentKey;
       return;
     }
     if (prevKeyRef.current !== currentKey) {
       prevKeyRef.current = currentKey;
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSwapDepth((d) => d + 1);
     }
   }, [currentKey]);

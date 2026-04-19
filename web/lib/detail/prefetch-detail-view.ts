@@ -39,15 +39,3 @@ export function prefetchDetailView(kind: string): void {
     prefetched.delete(kind);
   });
 }
-
-/**
- * Returns hover/focus handlers that prefetch the given kind on first trigger.
- * Wire onto card Link props so hover-intent primes the chunk cache.
- */
-export function useOverlayPrefetch(kind: string): {
-  onMouseEnter: () => void;
-  onFocus: () => void;
-} {
-  const handler = () => prefetchDetailView(kind);
-  return { onMouseEnter: handler, onFocus: handler };
-}
