@@ -1,8 +1,10 @@
 "use client";
 
+import { useLayoutEffect } from "react";
 import { parseISO, format } from "date-fns";
 import SmartImage from "@/components/SmartImage";
 import type { SeedPayload } from "@/lib/detail/entity-preview-store";
+import { markOverlayPhase } from "@/lib/detail/overlay-perf";
 
 /**
  * Seeded detail-view skeleton — renders hero image + title + one breadcrumb
@@ -15,6 +17,15 @@ import type { SeedPayload } from "@/lib/detail/entity-preview-store";
  */
 export function SeededDetailSkeleton({ seed }: { seed: SeedPayload }) {
   const { title, breadcrumb, imageUrl } = deriveDisplay(seed);
+
+  // Stamp first-paint time — the whole point of seeding is getting real
+  // pixels on screen before the fetch lands. useLayoutEffect fires after
+  // DOM mutations but before the browser paints, which is as close to
+  // actual first-paint as we can cheaply observe.
+  useLayoutEffect(() => {
+    const key = seedRefKey(seed);
+    if (key) markOverlayPhase("seeded-paint", key);
+  }, [seed]);
 
   return (
     <div className="relative min-h-[100dvh] bg-[var(--void)]" aria-busy="true" aria-label="Loading">
@@ -61,6 +72,19 @@ export function SeededDetailSkeleton({ seed }: { seed: SeedPayload }) {
       </div>
     </div>
   );
+}
+
+function seedRefKey(seed: SeedPayload): string | null {
+  switch (seed.kind) {
+    case "event":
+      return `event:${seed.id}`;
+    case "spot":
+    case "series":
+    case "festival":
+    case "org":
+    case "neighborhood":
+      return `${seed.kind}:${seed.slug}`;
+  }
 }
 
 function deriveDisplay(seed: SeedPayload): {

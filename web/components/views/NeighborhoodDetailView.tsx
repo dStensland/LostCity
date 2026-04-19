@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import { markOverlayPhase } from "@/lib/detail/overlay-perf";
 import Link from "next/link";
 import { X } from "@phosphor-icons/react";
@@ -55,6 +55,9 @@ interface NeighborhoodDetailViewProps {
  * "Loading…" flash when the card published a seed on render.
  */
 function SeededNeighborhoodSkeleton({ seed }: { seed: NeighborhoodSeed }) {
+  useLayoutEffect(() => {
+    markOverlayPhase("seeded-paint", `neighborhood:${seed.slug}`);
+  }, [seed.slug]);
   const color = seed.color || getNeighborhoodColor(seed.name);
   const heroStyle = getNeighborhoodHeroStyle(color, seed.hero_image ?? undefined);
   const statsParts: string[] = [];

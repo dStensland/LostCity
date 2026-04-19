@@ -15,7 +15,7 @@
  * console. After Phase 7 ships, same flag, same log, shows the seeded delta.
  */
 
-type Phase = "target-resolved" | "content-ready";
+type Phase = "target-resolved" | "seeded-paint" | "content-ready";
 
 function isEnabled(): boolean {
   if (typeof window === "undefined") return false;
@@ -40,21 +40,20 @@ export function markOverlayPhase(phase: Phase, ref: string): void {
   if (!isEnabled()) return;
   try {
     performance.mark(markName(phase, ref));
-    if (phase === "content-ready") {
+    if (phase === "seeded-paint" || phase === "content-ready") {
       const start = markName("target-resolved", ref);
-      // Guard: only measure if the target-resolved mark exists (cold load of a
-      // shared `?event=123` URL may skip the target-resolved phase on first paint).
       const entries = performance.getEntriesByName(start);
       if (entries.length === 0) {
-        console.info(`[overlay-perf] ${ref} content-ready (no baseline mark)`);
+        console.info(`[overlay-perf] ${ref} ${phase} (no baseline mark)`);
         return;
       }
-      const measureId = `overlay:open:${ref}:${Date.now()}`;
+      const measureId = `overlay:${phase}:${ref}:${Date.now()}`;
       performance.measure(measureId, start, markName(phase, ref));
       const measure = performance.getEntriesByName(measureId).at(-1);
       if (measure) {
+        const label = phase === "seeded-paint" ? "seed" : "ready";
         console.info(
-          `[overlay-perf] ${ref} open in ${measure.duration.toFixed(0)}ms`,
+          `[overlay-perf] ${ref} ${label} in ${measure.duration.toFixed(0)}ms`,
         );
       }
     }
