@@ -35,21 +35,26 @@ export const GET = withAuth(async (request, { user, serviceClient }) => {
   const todayStr = now.toISOString().split("T")[0];
   const endStr = twoWeeks.toISOString().split("T")[0];
 
-  // RSVPs from friends (going + interested)
+  // RSVPs from friends (going + maybe) via plan_invitees -> plans -> events
   const { data: rsvpData } = await serviceClient
-    .from("event_rsvps")
+    .from("plan_invitees")
     .select(`
-      user_id, status,
-      event:events!event_rsvps_event_id_fkey(
-        id, title, start_date, image_url,
-        venue:places(name)
-      ),
-      user:profiles!event_rsvps_user_id_fkey(id, avatar_url, display_name, username)
+      user_id,
+      rsvp_status,
+      user:profiles!plan_invitees_user_id_fkey(id, avatar_url, display_name, username),
+      plan:plans!inner(
+        anchor_type,
+        event:events!plans_anchor_event_id_fkey(
+          id, title, start_date, image_url,
+          venue:places(name)
+        )
+      )
     `)
     .in("user_id", friendIds)
-    .in("status", ["going", "interested"])
-    .gte("event.start_date", todayStr)
-    .lte("event.start_date", endStr)
+    .in("rsvp_status", ["going", "maybe"])
+    .eq("plan.anchor_type" as never, "event")
+    .gte("plan.event.start_date" as never, todayStr)
+    .lte("plan.event.start_date" as never, endStr)
     .limit(100);
 
   // Saves from friends
@@ -74,20 +79,21 @@ export const GET = withAuth(async (request, { user, serviceClient }) => {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   for (const rsvp of (rsvpData || []) as any[]) {
-    if (!rsvp.event) continue;
-    const eid = rsvp.event.id;
+    const event = rsvp.plan?.event;
+    if (!event) continue;
+    const eid = event.id;
     const existing: FriendSignalEvent = eventMap.get(eid) || {
       event_id: eid,
-      title: rsvp.event.title,
-      start_date: rsvp.event.start_date,
-      image_url: rsvp.event.image_url,
-      venue_name: rsvp.event.venue?.name || null,
+      title: event.title,
+      start_date: event.start_date,
+      image_url: event.image_url,
+      venue_name: event.venue?.name || null,
       going_count: 0,
       interested_count: 0,
       friend_avatars: [],
     };
 
-    if (rsvp.status === "going") existing.going_count++;
+    if (rsvp.rsvp_status === "going") existing.going_count++;
     else existing.interested_count++;
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

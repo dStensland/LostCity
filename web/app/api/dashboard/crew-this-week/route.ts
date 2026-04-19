@@ -48,34 +48,41 @@ export async function GET(request: NextRequest) {
   const endStr = endOfWeek.toISOString().split("T")[0];
 
   const { data: rsvpData } = await supabase
-    .from("event_rsvps")
+    .from("plan_invitees")
     .select(`
       user_id,
-      status,
-      created_at,
-      event:events!event_rsvps_event_id_fkey(
-        id, title, start_date, venue:places(name)
-      ),
-      user:profiles!event_rsvps_user_id_fkey(
+      rsvp_status,
+      invited_at,
+      user:profiles!plan_invitees_user_id_fkey(
         id, username, display_name, avatar_url
+      ),
+      plan:plans!inner(
+        anchor_type,
+        event:events!plans_anchor_event_id_fkey(
+          id, title, start_date, venue:places(name)
+        )
       )
     `)
     .in("user_id", friendIds)
-    .in("status", ["going", "interested"])
-    .gte("event.start_date", todayStr)
-    .lte("event.start_date", endStr)
-    .order("created_at", { ascending: false })
+    .in("rsvp_status", ["going", "maybe"])
+    .eq("plan.anchor_type" as never, "event")
+    .gte("plan.event.start_date" as never, todayStr)
+    .lte("plan.event.start_date" as never, endStr)
+    .order("invited_at", { ascending: false })
     .limit(50);
 
   type CrewRsvpRow = {
     user_id: string;
-    status: string;
-    created_at: string;
-    event: {
-      id: number;
-      title: string;
-      start_date: string;
-      venue: { name: string } | null;
+    rsvp_status: string;
+    invited_at: string;
+    plan: {
+      anchor_type: string;
+      event: {
+        id: number;
+        title: string;
+        start_date: string;
+        venue: { name: string } | null;
+      } | null;
     } | null;
     user: {
       id: string;
@@ -96,18 +103,19 @@ export async function GET(request: NextRequest) {
   let latestActivityAt: string | null = null;
 
   for (const rsvp of rsvps) {
-    if (!rsvp.user || !rsvp.event) continue;
+    const event = rsvp.plan?.event;
+    if (!rsvp.user || !event) continue;
 
-    if (!latestActivityAt || rsvp.created_at > latestActivityAt) {
-      latestActivityAt = rsvp.created_at;
+    if (!latestActivityAt || rsvp.invited_at > latestActivityAt) {
+      latestActivityAt = rsvp.invited_at;
     }
 
     const existing = userMap.get(rsvp.user.id);
     const eventInfo = {
-      id: rsvp.event.id,
-      title: rsvp.event.title,
-      start_date: rsvp.event.start_date,
-      venue_name: rsvp.event.venue?.name || null,
+      id: event.id,
+      title: event.title,
+      start_date: event.start_date,
+      venue_name: event.venue?.name || null,
     };
 
     if (existing) {

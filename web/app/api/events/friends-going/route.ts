@@ -8,7 +8,7 @@ type GetFriendIdsResult = { friend_id: string }[];
 type FriendRsvp = {
   event_id: number;
   user_id: string;
-  status: "going" | "interested";
+  status: "going" | "maybe";
   user: {
     id: string;
     username: string;
@@ -63,38 +63,53 @@ export async function GET(request: Request) {
     return NextResponse.json({ friends: {} });
   }
 
-  // Step 3: Get RSVPs from friends for the specified events
-  const { data: rsvps, error } = await supabase
-    .from("event_rsvps")
+  // Step 3: Get RSVPs from friends for the specified events via plan_invitees -> plans
+  const { data: inviteesData, error } = await supabase
+    .from("plan_invitees")
     .select(`
-      event_id,
       user_id,
-      status,
-      user:profiles!event_rsvps_user_id_fkey(
+      rsvp_status,
+      user:profiles!plan_invitees_user_id_fkey(
         id,
         username,
         display_name,
         avatar_url
+      ),
+      plan:plans!inner(
+        anchor_event_id,
+        anchor_type,
+        visibility
       )
     `)
-    .in("event_id", eventIds)
     .in("user_id", friendIds)
-    .in("status", ["going", "interested"])
-    .in("visibility", ["public", "friends"]);
+    .in("rsvp_status", ["going", "maybe"])
+    .eq("plan.anchor_type" as never, "event")
+    .in("plan.anchor_event_id" as never, eventIds)
+    .in("plan.visibility" as never, ["public", "friends"]);
 
   if (error) {
     logger.error("Error fetching friend RSVPs:", error);
     return NextResponse.json({ error: "Failed to fetch friend activity" }, { status: 500 });
   }
 
-  // Group by event_id
+  // Group by event_id — map plan_invitees shape back to FriendRsvp contract
   const friendsByEvent: Record<number, FriendRsvp[]> = {};
 
-  for (const rsvp of (rsvps || []) as FriendRsvp[]) {
-    if (!friendsByEvent[rsvp.event_id]) {
-      friendsByEvent[rsvp.event_id] = [];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  for (const row of (inviteesData || []) as any[]) {
+    const plan = row.plan;
+    if (!plan?.anchor_event_id || !row.user) continue;
+    const eventId: number = plan.anchor_event_id;
+    const rsvp: FriendRsvp = {
+      event_id: eventId,
+      user_id: row.user_id,
+      status: row.rsvp_status as "going" | "maybe",
+      user: row.user,
+    };
+    if (!friendsByEvent[eventId]) {
+      friendsByEvent[eventId] = [];
     }
-    friendsByEvent[rsvp.event_id].push(rsvp);
+    friendsByEvent[eventId].push(rsvp);
   }
 
   return NextResponse.json({
