@@ -10,7 +10,6 @@ import { PostRsvpNeedsPrompt } from "./PostRsvpNeedsPrompt";
 import { PostRsvpSharePrompt } from "./PostRsvpSharePrompt";
 import { PostRsvpHangPrompt } from "./hangs/PostRsvpHangPrompt";
 import { CompanionPicker } from "./CompanionPicker";
-import { ENABLE_HANGS_V1 } from "@/lib/launch-flags";
 
 export type RSVPStatus = "going" | "interested" | "went" | null;
 
@@ -83,7 +82,6 @@ export default function RSVPButton({
 
   // Whether the hang prompt should be offered after the share prompt
   const canShowHangPrompt =
-    ENABLE_HANGS_V1 &&
     isEventToday &&
     !!venueId &&
     !!venueName;

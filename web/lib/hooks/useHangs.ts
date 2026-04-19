@@ -3,7 +3,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth-context";
 import { useAuthenticatedFetch } from "./useAuthenticatedFetch";
-import { ENABLE_HANGS_V1 } from "@/lib/launch-flags";
+
 import type {
   HangWithVenue,
   FriendHang,
@@ -42,7 +42,7 @@ export function useMyHangs() {
       if (!res.ok) return { active: null, planned: [] };
       return res.json();
     },
-    enabled: !!user && ENABLE_HANGS_V1,
+    enabled: !!user && true,
     staleTime: 30_000,
     refetchInterval: 90_000,
     gcTime: 5 * 60 * 1000,
@@ -258,7 +258,7 @@ export function useFriendHangs() {
       if (!res.ok) return { friends: [], count: 0 };
       return res.json();
     },
-    enabled: !!user && ENABLE_HANGS_V1,
+    enabled: !!user && true,
     staleTime: 30_000,
     refetchInterval: 90_000,
     gcTime: 5 * 60 * 1000,
@@ -280,7 +280,7 @@ export function useVenueHangs(venueId: number) {
       if (!res.ok) return { venue_id: venueId, total_count: 0, friend_hangs: [], public_count: 0 };
       return res.json();
     },
-    enabled: ENABLE_HANGS_V1,
+    enabled: true,
     staleTime: 30_000,
     gcTime: 5 * 60 * 1000,
     retry: false,
@@ -309,7 +309,7 @@ export function useHotVenues(portalSlug?: string, limit?: number) {
       if (!res.ok) return { venues: [] };
       return res.json();
     },
-    enabled: ENABLE_HANGS_V1,
+    enabled: true,
     staleTime: 60_000,
     gcTime: 5 * 60 * 1000,
     retry: false,

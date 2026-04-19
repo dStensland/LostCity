@@ -21,7 +21,6 @@ import { LiveTonightSection } from "@/components/feed/sections/LiveTonightSectio
 import CityBriefingIsland from "@/components/feed/islands/CityBriefingIsland";
 import LineupIsland from "@/components/feed/islands/LineupIsland";
 import LazySection from "@/components/feed/LazySection";
-import { ENABLE_HANGS_V1 } from "@/lib/launch-flags";
 
 import {
   loadBigStuffForFeed,
@@ -65,11 +64,6 @@ const NowShowingSection = dynamic(
 const GameDaySection = dynamic<{ portalSlug: string }>(() =>
   import("@/components/feed/sections/GameDaySection").then((m) => ({
     default: m.default as ComponentType<{ portalSlug: string }>,
-  })),
-);
-const HangFeedSection = dynamic(() =>
-  import("@/components/feed/sections/HangFeedSection").then((m) => ({
-    default: m.HangFeedSection,
   })),
 );
 
@@ -185,13 +179,6 @@ function ActiveContestIsland({ ctx, initialData }: FeedSectionComponentProps) {
   );
 }
 
-function HangFeedIsland({ ctx }: FeedSectionComponentProps) {
-  return (
-    <LazySection minHeight={200}>
-      <HangFeedSection portalSlug={ctx.portalSlug} />
-    </LazySection>
-  );
-}
 
 function GameDayIsland({ ctx }: FeedSectionComponentProps) {
   return (
@@ -309,19 +296,6 @@ export const ATLANTA_FEED_MANIFEST: FeedSection[] = [
     render: "server",
     component: ActiveContestIsland,
     loader: loadActiveContestForFeed,
-  },
-  {
-    id: "hangs",
-    render: "client-island",
-    component: HangFeedIsland,
-    wrapper: {
-      id: "city-pulse-hangs",
-      className: "mt-6 scroll-mt-28",
-      dataAnchor: true,
-      indexLabel: "Hangs",
-      blockId: "hangs",
-    },
-    shouldRender: () => ENABLE_HANGS_V1,
   },
   {
     id: "sports",

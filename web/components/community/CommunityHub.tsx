@@ -15,7 +15,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useMyHangs, useFriendHangs, useHotVenues, useEndHang, useUpdateHang } from "@/lib/hooks/useHangs";
 import { useFriendPlans } from "@/lib/hooks/useFriendPlans";
 import { useFriendRequests } from "@/lib/hooks/useFriendRequests";
-import { ENABLE_HANGS_V1 } from "@/lib/launch-flags";
+
 import { MyGroupsSection } from "@/components/groups/MyGroupsSection";
 import { ActiveHangBanner } from "@/components/hangs/ActiveHangBanner";
 import { FriendsActivity } from "@/components/community/FriendsActivity";
@@ -544,15 +544,6 @@ export default function CommunityHub({
       {/* 3. Plans — hero section, the differentiator */}
       <PlansSection portalSlug={portalSlug} />
 
-      {/* 3. Friends Out Now — secondary, requires social graph */}
-      {ENABLE_HANGS_V1 && (
-        <FriendsOutNowSection />
-      )}
-
-      {/* 4. Hot Spots — venues with active hangs */}
-      {ENABLE_HANGS_V1 && (
-        <HotSpotsSection portalSlug={portalSlug} />
-      )}
 
       {/* 5. Recent Activity — deferred until scrolled near */}
       <ActivitySection />
