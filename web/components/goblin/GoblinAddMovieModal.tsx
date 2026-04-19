@@ -9,6 +9,7 @@ import {
   TMDB_POSTER_W185,
   type TMDBSearchResult,
   type GoblinTag,
+  type LogList,
 } from "@/lib/goblin-log-utils";
 
 interface Props {
@@ -20,9 +21,11 @@ interface Props {
     note?: string;
     watched_with?: string;
     tag_ids?: number[];
+    list_id?: number | null;
   }) => Promise<boolean>;
   searchTMDB: (query: string) => Promise<TMDBSearchResult[]>;
   tags: GoblinTag[];
+  lists: LogList[];
   onCreateTag: (name: string) => Promise<GoblinTag | null>;
 }
 
@@ -32,6 +35,7 @@ export default function GoblinAddMovieModal({
   onSubmit,
   searchTMDB,
   tags,
+  lists,
   onCreateTag,
 }: Props) {
   const [query, setQuery] = useState("");
@@ -42,6 +46,7 @@ export default function GoblinAddMovieModal({
   const [note, setNote] = useState("");
   const [watchedWith, setWatchedWith] = useState("");
   const [selectedTagIds, setSelectedTagIds] = useState<number[]>([]);
+  const [selectedListId, setSelectedListId] = useState<number | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   const debounceRef = useRef<NodeJS.Timeout | null>(null);
@@ -60,6 +65,7 @@ export default function GoblinAddMovieModal({
       setNote("");
       setWatchedWith("");
       setSelectedTagIds([]);
+      setSelectedListId(null);
       setWatchedDate(toISODate(new Date()));
     }
   }, [open]);
@@ -107,6 +113,7 @@ export default function GoblinAddMovieModal({
       note: note.trim() || undefined,
       watched_with: watchedWith.trim() || undefined,
       tag_ids: selectedTagIds.length > 0 ? selectedTagIds : undefined,
+      list_id: selectedListId,
     });
     setSubmitting(false);
     if (success) onClose();
@@ -287,6 +294,42 @@ export default function GoblinAddMovieModal({
                   focus:outline-none focus:border-[var(--coral)] transition-colors"
               />
             </div>
+
+            {/* List (project) */}
+            {lists.length > 0 && (
+              <div className="mb-4">
+                <label className="font-mono text-xs text-[var(--muted)] uppercase tracking-wider mb-1.5 block">
+                  List
+                </label>
+                <div className="flex flex-wrap gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedListId(null)}
+                    className={`px-2.5 py-1 rounded-full font-mono text-2xs font-medium border transition-colors ${
+                      selectedListId === null
+                        ? "border-[var(--coral)] text-[var(--coral)] bg-[var(--coral)]/10"
+                        : "border-[var(--twilight)] text-[var(--muted)] hover:border-[var(--soft)]"
+                    }`}
+                  >
+                    none
+                  </button>
+                  {lists.map((list) => (
+                    <button
+                      key={list.id}
+                      type="button"
+                      onClick={() => setSelectedListId(list.id)}
+                      className={`px-2.5 py-1 rounded-full font-mono text-2xs font-medium border transition-colors ${
+                        selectedListId === list.id
+                          ? "border-[var(--coral)] text-[var(--coral)] bg-[var(--coral)]/10"
+                          : "border-[var(--twilight)] text-[var(--muted)] hover:border-[var(--soft)]"
+                      }`}
+                    >
+                      {list.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Tags */}
             <div className="mb-6">
