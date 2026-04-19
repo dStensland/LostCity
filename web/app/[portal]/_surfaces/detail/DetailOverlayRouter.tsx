@@ -14,6 +14,9 @@ const PlaceDetailView = dynamic(() => import("@/components/views/PlaceDetailView
 const SeriesDetailView = dynamic(() => import("@/components/views/SeriesDetailView"));
 const OrgDetailView = dynamic(() => import("@/components/views/OrgDetailView"));
 const FestivalDetailView = dynamic(() => import("@/components/views/FestivalDetailView"));
+const NeighborhoodDetailView = dynamic(
+  () => import("@/components/views/NeighborhoodDetailView"),
+);
 
 interface DetailOverlayRouterProps {
   portalSlug: string;
@@ -168,6 +171,20 @@ export default function DetailOverlayRouter({
       break;
     case "artist":
       detailView = null;
+      break;
+    case "neighborhood":
+      detailView = (
+        <AnimatedDetailWrapper
+          key={`neighborhood-${detailTarget.slug}`}
+          onNavigateClose={navigateClose}
+        >
+          <NeighborhoodDetailView
+            slug={detailTarget.slug}
+            portalSlug={portalSlug}
+            onClose={handleClose}
+          />
+        </AnimatedDetailWrapper>
+      );
       break;
     default:
       detailView = null;

@@ -30,6 +30,7 @@ type PortalSearchParams = {
   series?: string;
   festival?: string;
   org?: string;
+  neighborhood?: string;
 };
 
 async function DefaultCityTemplate({
