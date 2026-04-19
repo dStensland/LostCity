@@ -1,10 +1,12 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useGoblinLog } from "@/lib/hooks/useGoblinLog";
+import { useGoblinGroups } from "@/lib/hooks/useGoblinGroups";
 import GoblinLogEntryCard from "./GoblinLogEntryCard";
 import GoblinAddMovieModal from "./GoblinAddMovieModal";
 import GoblinEditEntryModal from "./GoblinEditEntryModal";
+import GoblinCreateGroupModal from "./GoblinCreateGroupModal";
 import type { LogEntry } from "@/lib/goblin-log-utils";
 
 interface Props {
@@ -31,16 +33,31 @@ export default function GoblinLogView({ isAuthenticated }: Props) {
     deleteTag,
     searchTMDB,
     reorderEntries,
+    refreshEntries,
+    createList,
+    updateList,
   } = useGoblinLog(isAuthenticated);
 
+  // Groups hook is used to seed new groups from the log via CreateGroupModal
+  // (it owns TMDB person search + filmography helpers). We don't use its
+  // `groups` state — lists from useGoblinLog drives the log's section headers.
+  const groupsHook = useGoblinGroups(isAuthenticated);
+
   const [addModalOpen, setAddModalOpen] = useState(false);
+  const [createGroupOpen, setCreateGroupOpen] = useState(false);
   const [editEntry, setEditEntry] = useState<LogEntry | null>(null);
   const [activeTag, setActiveTag] = useState<string | null>(null);
   const [activeDirector, setActiveDirector] = useState<string | null>(null);
-  const [dragFrom, setDragFrom] = useState<number | null>(null);
-  const [dragOver, setDragOver] = useState<number | null>(null);
+  // Drag state keyed by (listKey, bucketIdx) so reorder stays within a bucket.
+  // listKey is the group's list_id or null for "Unsorted".
+  const [dragFrom, setDragFrom] = useState<{ listKey: number | null; bucketIdx: number } | null>(null);
+  const [dragOver, setDragOver] = useState<{ listKey: number | null; bucketIdx: number } | null>(null);
   const [copied, setCopied] = useState(false);
   const [username, setUsername] = useState<string | null>(null);
+  // Inline-rename state: the list_id currently being renamed + draft name.
+  const [renamingListId, setRenamingListId] = useState<number | null>(null);
+  const [renameDraft, setRenameDraft] = useState("");
+  const renameInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -74,44 +91,129 @@ export default function GoblinLogView({ isAuthenticated }: Props) {
     return result;
   }, [entries, activeTag, activeDirector]);
 
-  const swapEntries = useCallback(
-    async (indexA: number, indexB: number) => {
-      if (indexB < 0 || indexB >= filteredEntries.length) return;
-      const reordered = [...filteredEntries];
-      [reordered[indexA], reordered[indexB]] = [reordered[indexB], reordered[indexA]];
-      await reorderEntries(reordered);
+  // Partition entries by list_id, preserving first-appearance order for the
+  // list sequence. "Unsorted" (null) always renders last.
+  // Rank is per-bucket so dragging Mission Impossible entries doesn't affect
+  // Sword & Sorcery rankings.
+  const partition = useMemo(() => {
+    const listOrder: (number | null)[] = [];
+    const buckets = new Map<number | null, LogEntry[]>();
+    for (const entry of filteredEntries) {
+      const key = entry.list_id ?? null;
+      if (!buckets.has(key)) {
+        buckets.set(key, []);
+        listOrder.push(key);
+      }
+      buckets.get(key)!.push(entry);
+    }
+    const nullIdx = listOrder.indexOf(null);
+    if (nullIdx !== -1 && nullIdx !== listOrder.length - 1) {
+      listOrder.splice(nullIdx, 1);
+      listOrder.push(null);
+    }
+    return { listOrder, buckets };
+  }, [filteredEntries]);
+
+  // Flatten partition + single-bucket edit back to a flat ordered list,
+  // preserving cross-bucket sequence.
+  const flattenWithBucketEdit = useCallback(
+    (listKey: number | null, newBucket: LogEntry[]): LogEntry[] => {
+      const flat: LogEntry[] = [];
+      for (const key of partition.listOrder) {
+        const source = key === listKey ? newBucket : partition.buckets.get(key)!;
+        flat.push(...source);
+      }
+      return flat;
     },
-    [filteredEntries, reorderEntries]
+    [partition]
   );
 
-  const handleDrop = useCallback(
-    async (toIndex: number) => {
-      if (dragFrom === null || dragFrom === toIndex) {
+  const swapWithinBucket = useCallback(
+    async (listKey: number | null, bucketIdxA: number, bucketIdxB: number) => {
+      const bucket = partition.buckets.get(listKey);
+      if (!bucket) return;
+      if (bucketIdxB < 0 || bucketIdxB >= bucket.length) return;
+      const newBucket = [...bucket];
+      [newBucket[bucketIdxA], newBucket[bucketIdxB]] = [newBucket[bucketIdxB], newBucket[bucketIdxA]];
+      await reorderEntries(flattenWithBucketEdit(listKey, newBucket));
+    },
+    [partition, flattenWithBucketEdit, reorderEntries]
+  );
+
+  const moveToRankInBucket = useCallback(
+    async (listKey: number | null, currentBucketIdx: number, newRank: number) => {
+      const bucket = partition.buckets.get(listKey);
+      if (!bucket) return;
+      const targetIdx = Math.max(0, Math.min(newRank - 1, bucket.length - 1));
+      if (targetIdx === currentBucketIdx) return;
+      const newBucket = [...bucket];
+      const [moved] = newBucket.splice(currentBucketIdx, 1);
+      newBucket.splice(targetIdx, 0, moved);
+      await reorderEntries(flattenWithBucketEdit(listKey, newBucket));
+    },
+    [partition, flattenWithBucketEdit, reorderEntries]
+  );
+
+  const handleDropInBucket = useCallback(
+    async (listKey: number | null, toBucketIdx: number) => {
+      // Only accept drops from the same bucket; cross-bucket moves are ignored.
+      if (!dragFrom || dragFrom.listKey !== listKey) {
         setDragFrom(null);
         setDragOver(null);
         return;
       }
-      const reordered = [...filteredEntries];
-      const [moved] = reordered.splice(dragFrom, 1);
-      reordered.splice(toIndex, 0, moved);
+      const fromBucketIdx = dragFrom.bucketIdx;
       setDragFrom(null);
       setDragOver(null);
-      await reorderEntries(reordered);
+      if (fromBucketIdx === toBucketIdx) return;
+      const bucket = partition.buckets.get(listKey);
+      if (!bucket) return;
+      const newBucket = [...bucket];
+      const [moved] = newBucket.splice(fromBucketIdx, 1);
+      newBucket.splice(toBucketIdx, 0, moved);
+      await reorderEntries(flattenWithBucketEdit(listKey, newBucket));
     },
-    [dragFrom, filteredEntries, reorderEntries]
+    [dragFrom, partition, flattenWithBucketEdit, reorderEntries]
   );
 
-  const moveToRank = useCallback(
-    async (currentIndex: number, newRank: number) => {
-      const targetIndex = Math.max(0, Math.min(newRank - 1, filteredEntries.length - 1));
-      if (targetIndex === currentIndex) return;
-      const reordered = [...filteredEntries];
-      const [moved] = reordered.splice(currentIndex, 1);
-      reordered.splice(targetIndex, 0, moved);
-      await reorderEntries(reordered);
+  const handleMoveEntryToGroup = useCallback(
+    async (entryId: number, targetListId: number | null): Promise<boolean> => {
+      const ok = await updateEntry(entryId, { list_id: targetListId });
+      return ok;
     },
-    [filteredEntries, reorderEntries]
+    [updateEntry]
   );
+
+  const startRename = useCallback((listId: number, currentName: string) => {
+    setRenamingListId(listId);
+    setRenameDraft(currentName);
+  }, []);
+
+  const cancelRename = useCallback(() => {
+    setRenamingListId(null);
+    setRenameDraft("");
+  }, []);
+
+  const commitRename = useCallback(async () => {
+    if (renamingListId == null) return;
+    const trimmed = renameDraft.trim();
+    const current = lists.find((l) => l.id === renamingListId);
+    // No-op guards: empty name or unchanged name — just cancel.
+    if (!trimmed || trimmed === current?.name) {
+      cancelRename();
+      return;
+    }
+    const ok = await updateList(renamingListId, { name: trimmed });
+    cancelRename();
+    if (ok) await refreshEntries();
+  }, [renamingListId, renameDraft, lists, updateList, cancelRename, refreshEntries]);
+
+  useEffect(() => {
+    if (renamingListId != null && renameInputRef.current) {
+      renameInputRef.current.focus();
+      renameInputRef.current.select();
+    }
+  }, [renamingListId]);
 
   const handleCopyShareLink = () => {
     if (!username) return;
@@ -161,6 +263,16 @@ export default function GoblinLogView({ isAuthenticated }: Props) {
                 {copied ? "COPIED!" : "SHARE"}
               </button>
             )}
+            <button
+              onClick={() => setCreateGroupOpen(true)}
+              className="px-3 py-1.5 text-zinc-400
+                font-mono text-2xs font-bold tracking-[0.2em] uppercase
+                border border-zinc-700
+                hover:text-cyan-300 hover:border-cyan-700 hover:shadow-[0_0_12px_rgba(0,240,255,0.15)]
+                active:scale-95 transition-all"
+            >
+              + GROUP
+            </button>
             <button
               onClick={() => setAddModalOpen(true)}
               className="px-4 py-1.5 text-white
@@ -293,132 +405,148 @@ export default function GoblinLogView({ isAuthenticated }: Props) {
           )}
         </div>
       ) : (
-        /* Grouped by list, with tier stripes within each group */
+        /* Grouped by list, with per-group rankings + tier stripes within each group */
         <div
           className="relative z-10"
           onDragLeave={() => setDragOver(null)}
         >
-          {(() => {
-            // 1. Partition by list. Preserve first-appearance order; null list
-            //    ("Unsorted") always renders last. Each entry keeps its global
-            //    index in filteredEntries so drag/reorder still operates on
-            //    the flat sort_order array unchanged.
-            type IndexedEntry = { entry: LogEntry; globalIdx: number };
-            const listOrder: (number | null)[] = [];
-            const listBuckets = new Map<number | null, IndexedEntry[]>();
-            filteredEntries.forEach((entry, i) => {
-              const key = entry.list_id ?? null;
-              if (!listBuckets.has(key)) {
-                listBuckets.set(key, []);
-                listOrder.push(key);
+          {partition.listOrder.map((listKey) => {
+            const bucket = partition.buckets.get(listKey)!;
+            const list = listKey !== null ? lists.find((l) => l.id === listKey) : null;
+            const listName = list?.name ?? "Unsorted";
+
+            // Compute tier groups within this bucket — tier state resets per
+            // list so a tier from one list doesn't bleed into the next.
+            type BucketEntry = { entry: LogEntry; bucketIdx: number };
+            type TierGroup = {
+              tierName: string | null;
+              tierColor: string | null;
+              entries: BucketEntry[];
+            };
+            const tierGroups: TierGroup[] = [];
+            let currentTier: TierGroup | null = null;
+            bucket.forEach((entry, bucketIdx) => {
+              if (entry.tier_name || !currentTier) {
+                currentTier = {
+                  tierName: entry.tier_name || null,
+                  tierColor: entry.tier_color || null,
+                  entries: [],
+                };
+                tierGroups.push(currentTier);
               }
-              listBuckets.get(key)!.push({ entry, globalIdx: i });
+              currentTier.entries.push({ entry, bucketIdx });
             });
-            const nullIdx = listOrder.indexOf(null);
-            if (nullIdx !== -1 && nullIdx !== listOrder.length - 1) {
-              listOrder.splice(nullIdx, 1);
-              listOrder.push(null);
-            }
 
-            return listOrder.map((listKey) => {
-              const bucket = listBuckets.get(listKey)!;
-              const list =
-                listKey !== null ? lists.find((l) => l.id === listKey) : null;
-              const listName = list?.name ?? "Unsorted";
+            // Always render a section header once there's at least one named
+            // list (so "Unsorted" is visually distinct from grouped entries).
+            const showHeader = partition.listOrder.length > 1;
 
-              // 2. Within this list bucket, compute tier groups (same pattern
-              //    as before — but reset state per list so a tier from one
-              //    list doesn't bleed into the next).
-              type TierGroup = {
-                tierName: string | null;
-                tierColor: string | null;
-                entries: IndexedEntry[];
-              };
-              const tierGroups: TierGroup[] = [];
-              let currentTier: TierGroup | null = null;
-              for (const ie of bucket) {
-                if (ie.entry.tier_name || !currentTier) {
-                  currentTier = {
-                    tierName: ie.entry.tier_name || null,
-                    tierColor: ie.entry.tier_color || null,
-                    entries: [],
-                  };
-                  tierGroups.push(currentTier);
-                }
-                currentTier.entries.push(ie);
-              }
-
-              // Only render a section header when there's more than one list
-              // bucket (otherwise it's redundant visual chrome).
-              const showHeader = listOrder.length > 1;
-
-              return (
-                <section
-                  key={listKey ?? "__unsorted__"}
-                  className="mb-8 last:mb-0"
-                >
-                  {showHeader && (
-                    <div className="mb-3 flex items-baseline justify-between gap-4">
-                      <h3
-                        className="font-mono text-xs font-bold tracking-[0.25em] uppercase text-cyan-400/70"
+            return (
+              <section
+                key={listKey ?? "__unsorted__"}
+                className="mb-8 last:mb-0"
+              >
+                {showHeader && (
+                  <div className="mb-3 flex items-baseline justify-between gap-4">
+                    {listKey != null && renamingListId === listKey ? (
+                      <input
+                        ref={renameInputRef}
+                        type="text"
+                        value={renameDraft}
+                        onChange={(e) => setRenameDraft(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") commitRename();
+                          else if (e.key === "Escape") cancelRename();
+                        }}
+                        onBlur={commitRename}
+                        maxLength={60}
+                        className="flex-1 min-w-0 bg-transparent border-b border-cyan-600/50
+                          font-mono text-xs font-bold tracking-[0.25em] uppercase text-cyan-300
+                          focus:outline-none focus:border-cyan-400 py-0.5"
+                      />
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          listKey != null ? startRename(listKey, listName) : undefined
+                        }
+                        disabled={listKey == null}
+                        className={`font-mono text-xs font-bold tracking-[0.25em] uppercase
+                          text-cyan-400/70 text-left truncate
+                          ${listKey != null
+                            ? "hover:text-cyan-300 transition-colors cursor-text"
+                            : "cursor-default"}`}
                         style={{ textShadow: "0 0 8px rgba(0,240,255,0.15)" }}
+                        title={listKey != null ? "Click to rename" : undefined}
                       >
                         {listName}
-                      </h3>
-                      <span className="font-mono text-2xs text-zinc-600 tracking-[0.2em] uppercase tabular-nums">
-                        {bucket.length}
-                      </span>
-                    </div>
-                  )}
-                  {tierGroups.map((group, gi) => (
-                    <div key={gi} className="flex mb-3">
-                      {group.tierName ? (
-                        <div
-                          className="flex-shrink-0 w-6 sm:w-8 flex items-center justify-center relative"
-                          style={{ borderLeft: `2px solid ${group.tierColor || "#00f0ff"}` }}
+                      </button>
+                    )}
+                    <span className="font-mono text-2xs text-zinc-600 tracking-[0.2em] uppercase tabular-nums">
+                      {bucket.length}
+                    </span>
+                  </div>
+                )}
+                {tierGroups.map((group, gi) => (
+                  <div key={gi} className="flex mb-3">
+                    {group.tierName ? (
+                      <div
+                        className="flex-shrink-0 w-6 sm:w-8 flex items-center justify-center relative"
+                        style={{ borderLeft: `2px solid ${group.tierColor || "#00f0ff"}` }}
+                      >
+                        <span
+                          className="font-mono text-2xs font-black uppercase tracking-[0.3em] whitespace-nowrap
+                            [writing-mode:vertical-lr] rotate-180"
+                          style={{
+                            color: group.tierColor || "#00f0ff",
+                            textShadow: `0 0 8px ${group.tierColor || "#00f0ff"}40`,
+                          }}
                         >
-                          <span
-                            className="font-mono text-2xs font-black uppercase tracking-[0.3em] whitespace-nowrap
-                              [writing-mode:vertical-lr] rotate-180"
-                            style={{
-                              color: group.tierColor || "#00f0ff",
-                              textShadow: `0 0 8px ${group.tierColor || "#00f0ff"}40`,
-                            }}
-                          >
-                            {group.tierName}
-                          </span>
-                        </div>
-                      ) : (
-                        <div className="w-0" />
-                      )}
-
-                      <div className="flex-1 min-w-0 space-y-1.5">
-                        {group.entries.map(({ entry, globalIdx: i }) => (
-                          <GoblinLogEntryCard
-                            key={entry.id}
-                            entry={entry}
-                            rank={i + 1}
-                            tierColor={group.tierColor}
-                            onEdit={setEditEntry}
-                            onMoveUp={() => swapEntries(i, i - 1)}
-                            onMoveDown={() => swapEntries(i, i + 1)}
-                            onMoveToRank={(rank) => moveToRank(i, rank)}
-                            isFirst={i === 0}
-                            isLast={i === filteredEntries.length - 1}
-                            onDragStart={() => setDragFrom(i)}
-                            onDragOver={() => setDragOver(i)}
-                            onDrop={() => handleDrop(i)}
-                            isDragging={dragFrom === i}
-                            isDragTarget={dragOver === i && dragFrom !== i}
-                          />
-                        ))}
+                          {group.tierName}
+                        </span>
                       </div>
+                    ) : (
+                      <div className="w-0" />
+                    )}
+
+                    <div className="flex-1 min-w-0 space-y-1.5">
+                      {group.entries.map(({ entry, bucketIdx }) => (
+                        <GoblinLogEntryCard
+                          key={entry.id}
+                          entry={entry}
+                          rank={bucketIdx + 1}
+                          tierColor={group.tierColor}
+                          onEdit={setEditEntry}
+                          onMoveUp={() => swapWithinBucket(listKey, bucketIdx, bucketIdx - 1)}
+                          onMoveDown={() => swapWithinBucket(listKey, bucketIdx, bucketIdx + 1)}
+                          onMoveToRank={(rank) => moveToRankInBucket(listKey, bucketIdx, rank)}
+                          isFirst={bucketIdx === 0}
+                          isLast={bucketIdx === bucket.length - 1}
+                          onDragStart={() => setDragFrom({ listKey, bucketIdx })}
+                          onDragOver={() => setDragOver({ listKey, bucketIdx })}
+                          onDrop={() => handleDropInBucket(listKey, bucketIdx)}
+                          isDragging={
+                            dragFrom?.listKey === listKey && dragFrom?.bucketIdx === bucketIdx
+                          }
+                          isDragTarget={
+                            dragOver?.listKey === listKey &&
+                            dragOver?.bucketIdx === bucketIdx &&
+                            dragFrom?.listKey === listKey &&
+                            dragFrom?.bucketIdx !== bucketIdx
+                          }
+                          groups={lists}
+                          currentListId={entry.list_id}
+                          onMoveToGroup={(targetListId) =>
+                            handleMoveEntryToGroup(entry.id, targetListId)
+                          }
+                        />
+                      ))}
                     </div>
-                  ))}
-                </section>
-              );
-            });
-          })()}
+                  </div>
+                ))}
+              </section>
+            );
+          })}
         </div>
       )}
 
@@ -442,6 +570,16 @@ export default function GoblinLogView({ isAuthenticated }: Props) {
         tags={tags}
         lists={lists}
         onCreateTag={createTag}
+      />
+
+      <GoblinCreateGroupModal
+        open={createGroupOpen}
+        onClose={() => setCreateGroupOpen(false)}
+        onSubmit={async (data) => {
+          await createList(data);
+        }}
+        searchPerson={groupsHook.searchPerson}
+        getFilmography={groupsHook.getFilmography}
       />
     </div>
   );
