@@ -196,7 +196,8 @@ CREATE POLICY plans_insert ON plans FOR INSERT
   WITH CHECK (creator_id = auth.uid());
 
 CREATE POLICY plans_update ON plans FOR UPDATE
-  USING (creator_id = auth.uid());
+  USING (creator_id = auth.uid())
+  WITH CHECK (creator_id = auth.uid());
 
 CREATE POLICY plans_delete ON plans FOR DELETE
   USING (creator_id = auth.uid());
@@ -215,11 +216,9 @@ CREATE POLICY plan_invitees_insert ON plan_invitees FOR INSERT WITH CHECK (
           WHERE id = plan_invitees.plan_id AND creator_id = auth.uid())
 );
 
-CREATE POLICY plan_invitees_update ON plan_invitees FOR UPDATE USING (
-  user_id = auth.uid()
-  OR EXISTS (SELECT 1 FROM plans
-             WHERE id = plan_invitees.plan_id AND creator_id = auth.uid())
-);
+CREATE POLICY plan_invitees_update ON plan_invitees FOR UPDATE
+  USING (user_id = auth.uid())
+  WITH CHECK (user_id = auth.uid());
 
 CREATE POLICY plan_invitees_delete ON plan_invitees FOR DELETE USING (
   user_id = auth.uid()
@@ -270,6 +269,8 @@ BEGIN
   GET DIAGNOSTICS v_count = ROW_COUNT;
   RETURN QUERY SELECT v_count;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+
+GRANT EXECUTE ON FUNCTION expire_stale_plans() TO service_role;
 
 COMMIT;
