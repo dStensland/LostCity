@@ -76,7 +76,7 @@ def create_event_update_notifications(event_id: int, message: str) -> int:
         .select("user_id,rsvp_status,plans!inner(anchor_event_id,anchor_type)")
         .eq("plans.anchor_event_id", event_id)
         .eq("plans.anchor_type", "event")
-        .in_("rsvp_status", ["going", "interested"])
+        .in_("rsvp_status", ["going", "maybe"])
         .execute()
     )
     rsvp_users = {
