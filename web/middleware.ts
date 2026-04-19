@@ -147,6 +147,22 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL(canonicalPath, request.url), 307);
   }
 
+  // `/[portal]/neighborhoods` (index only) → Explore shell's neighborhoods lane.
+  // Detail routes `/[portal]/neighborhoods/[slug]` stay as standalone pages.
+  // 308 so browsers cache the redirect and preserve the method. HTTP-level
+  // redirect avoids the meta-refresh flash the page-level `permanentRedirect`
+  // produces in dev with Turbopack.
+  if (
+    portalSlug &&
+    childSegment === "neighborhoods" &&
+    pathSegments.length === 2
+  ) {
+    const url = request.nextUrl.clone();
+    url.pathname = `/${portalSlug}/explore`;
+    url.searchParams.set("lane", "neighborhoods");
+    return NextResponse.redirect(url, 308);
+  }
+
   if (subdomain && KNOWN_VERTICALS.has(subdomain)) {
     requestHeaders.set("x-lc-vertical", subdomain);
   } else if (subdomain) {

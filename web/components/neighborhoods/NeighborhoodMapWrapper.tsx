@@ -26,6 +26,7 @@ interface Props {
   activityData: NeighborhoodActivity[];
   selectedSlug: string | null;
   onSelect: (slug: string | null) => void;
+  modeFilter?: "tonight" | "week" | "all";
 }
 
 export default function NeighborhoodMapWrapper(props: Props) {
