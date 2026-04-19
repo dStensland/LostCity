@@ -21,19 +21,19 @@ vi.mock("@/lib/api-middleware", () => ({
     // If called with (schemas, handler), return same but pass validated from body/query
     if (typeof schemasOrHandler === "function") {
       const handler = schemasOrHandler as (req: unknown, ctx: unknown) => unknown;
-      return async (request: unknown, ctx: { params: Promise<unknown>; user?: unknown; serviceClient?: unknown }) => {
+      return async (request: unknown, ctx: { params: Promise<unknown>; user?: unknown; serviceClient?: unknown; supabase?: unknown }) => {
         const params = await ctx.params;
-        return handler(request, { user: ctx.user, serviceClient: ctx.serviceClient, params } as never);
+        return handler(request, { user: ctx.user, serviceClient: ctx.serviceClient, supabase: ctx.supabase, params } as never);
       };
     }
     const handler = maybeHandler as (req: unknown, ctx: unknown) => unknown;
-    return async (request: unknown, ctx: { params: Promise<unknown>; user?: unknown; serviceClient?: unknown }) => {
+    return async (request: unknown, ctx: { params: Promise<unknown>; user?: unknown; serviceClient?: unknown; supabase?: unknown }) => {
       const params = await ctx.params;
       // Parse body for validated
       const req = request as Request;
       let body: unknown = {};
       try { body = await req.clone().json(); } catch { /* empty */ }
-      return handler(request, { user: ctx.user, serviceClient: ctx.serviceClient, params, validated: { body } } as never);
+      return handler(request, { user: ctx.user, serviceClient: ctx.serviceClient, supabase: ctx.supabase, params, validated: { body } } as never);
     };
   },
 }));
@@ -65,13 +65,17 @@ describe("GET /api/plans/[id]", () => {
     const response = await GET(request, {
       ...makeCtx(USER_ID, "not-a-uuid"),
       serviceClient: {},
+      supabase: {},
     } as never);
 
     expect(response.status).toBe(400);
   });
 
   it("returns 404 when plan not found", async () => {
-    const service = {
+    // RLS returning null (plan not visible to caller) and physically-missing
+    // plan must both surface as 404 — the client can't tell them apart and
+    // shouldn't be able to.
+    const supabase = {
       from: vi.fn(() => ({
         select: vi.fn().mockReturnValue({
           eq: vi.fn().mockReturnValue({
@@ -87,14 +91,18 @@ describe("GET /api/plans/[id]", () => {
 
     const response = await GET(request, {
       user: { id: USER_ID },
-      serviceClient: service,
+      serviceClient: {},
+      supabase,
       params: Promise.resolve({ id: PLAN_ID }),
     } as never);
 
     expect(response.status).toBe(404);
   });
 
-  it("returns plan with anchor and invitees on happy path", async () => {
+  it("reads the plan + invitees through the RLS-scoped client", async () => {
+    // Regression guard: the plan read must go through `supabase` (RLS)
+    // so non-members can't fetch private/foreign plans by UUID.
+    // The anchor + profile rows stay on `serviceClient` (public-ish data).
     const plan = {
       id: PLAN_ID,
       anchor_type: "event",
@@ -104,7 +112,7 @@ describe("GET /api/plans/[id]", () => {
       status: "planning",
     };
 
-    const service = {
+    const supabase = {
       from: vi.fn((table: string) => {
         if (table === "plans") {
           return {
@@ -115,6 +123,19 @@ describe("GET /api/plans/[id]", () => {
             }),
           };
         }
+        if (table === "plan_invitees") {
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockResolvedValue({ data: [], error: null }),
+            }),
+          };
+        }
+        return {};
+      }),
+    };
+
+    const serviceClient = {
+      from: vi.fn((table: string) => {
         if (table === "events") {
           return {
             select: vi.fn().mockReturnValue({
@@ -127,13 +148,6 @@ describe("GET /api/plans/[id]", () => {
             }),
           };
         }
-        if (table === "plan_invitees") {
-          return {
-            select: vi.fn().mockReturnValue({
-              eq: vi.fn().mockResolvedValue({ data: [], error: null }),
-            }),
-          };
-        }
         if (table === "profiles") {
           return {
             select: vi.fn().mockReturnValue({
@@ -141,7 +155,7 @@ describe("GET /api/plans/[id]", () => {
             }),
           };
         }
-        return { select: vi.fn().mockReturnValue({ eq: vi.fn().mockReturnValue({ maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }) }) }) };
+        return {};
       }),
     };
 
@@ -151,7 +165,8 @@ describe("GET /api/plans/[id]", () => {
 
     const response = await GET(request, {
       user: { id: USER_ID },
-      serviceClient: service,
+      serviceClient,
+      supabase,
       params: Promise.resolve({ id: PLAN_ID }),
     } as never);
 
@@ -160,6 +175,12 @@ describe("GET /api/plans/[id]", () => {
     expect(body.plan.id).toBe(PLAN_ID);
     expect(body.anchor).toBeDefined();
     expect(Array.isArray(body.invitees)).toBe(true);
+
+    // Plan + invitee reads routed through supabase (RLS), never serviceClient
+    expect(supabase.from).toHaveBeenCalledWith("plans");
+    expect(supabase.from).toHaveBeenCalledWith("plan_invitees");
+    expect(serviceClient.from).not.toHaveBeenCalledWith("plans");
+    expect(serviceClient.from).not.toHaveBeenCalledWith("plan_invitees");
   });
 });
 

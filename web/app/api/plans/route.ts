@@ -120,7 +120,12 @@ const ListQuerySchema = z.object({
   anchor_place_id: z.coerce.number().int().positive().optional(),
 });
 
-export const GET = withAuth(async (request: NextRequest, { user, serviceClient }) => {
+// GET reads go through the RLS-scoped `supabase` client (not `serviceClient`):
+// the plans + plan_invitees RLS policies encode the visibility rules
+// (creator | invitee | public | friends-of-creator) and must do the filtering.
+// `share_token` is intentionally omitted from the list SELECT — tokens are
+// the share gate, so only the creator should see them (via the detail route).
+export const GET = withAuth(async (request: NextRequest, { user, supabase }) => {
   const rl = await applyRateLimit(request, RATE_LIMITS.read, getClientIdentifier(request));
   if (rl) return rl;
 
@@ -131,11 +136,11 @@ export const GET = withAuth(async (request: NextRequest, { user, serviceClient }
   }
   const { scope, status, anchor_event_id, anchor_place_id } = parsed.data;
 
-  let query = serviceClient
+  let query = supabase
     .from("plans")
     .select(`
       id, creator_id, portal_id, anchor_type, anchor_event_id, anchor_place_id, anchor_series_id,
-      status, starts_at, started_at, ended_at, visibility, title, note, share_token, created_at
+      status, starts_at, started_at, ended_at, visibility, title, note, created_at
     `)
     .order("starts_at", { ascending: status === "upcoming" });
 
@@ -148,7 +153,7 @@ export const GET = withAuth(async (request: NextRequest, { user, serviceClient }
   if (anchor_place_id) query = query.eq("anchor_place_id", anchor_place_id as never);
 
   if (scope === "mine") {
-    const { data: invitedIn } = await serviceClient
+    const { data: invitedIn } = await supabase
       .from("plan_invitees")
       .select("plan_id")
       .eq("user_id", user.id as never)
@@ -158,7 +163,6 @@ export const GET = withAuth(async (request: NextRequest, { user, serviceClient }
       ? query.or(`creator_id.eq.${user.id},id.in.(${invitedIds.join(",")})`)
       : query.eq("creator_id", user.id as never);
   }
-  // scope=friends relies on RLS for plan visibility
 
   const { data, error } = await query;
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
