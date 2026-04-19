@@ -210,6 +210,9 @@ export async function POST(request: NextRequest, context: RouteContext) {
     portalScopedEventIds.length === 0
       ? Promise.resolve([])
       : serviceClient
+          // Strategy A: compat view kept as-is. No status filter applied here —
+          // the caller receives all RSVP statuses and displays them to the
+          // authenticated user. No FK hints. Read-only.
           .from("event_rsvps")
           .select("event_id, status")
           .eq("user_id", user.id)

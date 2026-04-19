@@ -113,6 +113,8 @@ export async function GET(request: Request) {
         let goingCounts: Record<number, number> = {};
 
         if (eventIds.length > 0) {
+          // Reads the event_rsvps compat view (safe: only filters 'going' status, no FK hints).
+          // Temporary bridge — Phase 7 removes the view.
           const { data: rsvpData } = await supabase
             .from("event_rsvps")
             .select("event_id")

@@ -112,25 +112,51 @@ export const GET = withAuth(async (request, { user, serviceClient }) => {
 
   // Strategy 2: Users who RSVP'd to same events (fill up to 10)
   if (suggestions.length < 10) {
+    // Fetch current user's event-anchored plans (going or interested) via plan_invitees
     const { data: myRsvps } = await serviceClient
-      .from("event_rsvps")
-      .select("event_id")
+      .from("plan_invitees")
+      .select(`
+        rsvp_status,
+        plan:plans!inner (
+          anchor_event_id, anchor_type
+        )
+      `)
       .eq("user_id", user.id)
-      .order("created_at", { ascending: false })
+      .in("rsvp_status", ["going", "interested"])
+      .eq("plan.anchor_type", "event")
+      .order("updated_at", { ascending: false })
       .limit(20);
 
     if (myRsvps && myRsvps.length > 0) {
-      const eventIds = (myRsvps as Array<{ event_id: number }>).map((r) => r.event_id);
+      type MyRsvpRow = {
+        rsvp_status: string;
+        plan: { anchor_event_id: number | null; anchor_type: string } | null;
+      };
+      const eventIds = (myRsvps as unknown as MyRsvpRow[])
+        .map((r) => r.plan?.anchor_event_id)
+        .filter((id): id is number => id != null);
 
+      // Find other users who are going/interested in those same events
       const { data: coAttendees } = await serviceClient
-        .from("event_rsvps")
-        .select("user_id")
-        .in("event_id", eventIds)
+        .from("plan_invitees")
+        .select(`
+          user_id,
+          plan:plans!inner (
+            anchor_event_id, anchor_type
+          )
+        `)
+        .in("rsvp_status", ["going", "interested"])
+        .eq("plan.anchor_type", "event")
+        .in("plan.anchor_event_id", eventIds)
         .neq("user_id", user.id)
         .limit(50);
 
+      type CoAttendeeRow = {
+        user_id: string;
+        plan: { anchor_event_id: number | null; anchor_type: string } | null;
+      };
       const attendeeCounts = new Map<string, number>();
-      for (const a of (coAttendees || []) as Array<{ user_id: string }>) {
+      for (const a of (coAttendees || []) as unknown as CoAttendeeRow[]) {
         if (!excludeIds.has(a.user_id) && !seenIds.has(a.user_id)) {
           attendeeCounts.set(a.user_id, (attendeeCounts.get(a.user_id) || 0) + 1);
         }

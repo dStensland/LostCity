@@ -44,9 +44,9 @@ type OrganizationData = {
 
 // Query result types
 type RsvpRow = {
-  id: number;
-  status: string;
-  created_at: string;
+  plan_id: string;
+  rsvp_status: string;
+  invited_at: string;
   user: ProfileData | null;
   event: EventData | null;
 };
@@ -127,21 +127,25 @@ export async function GET(request: NextRequest) {
   // Fetch activities from multiple sources in parallel
   // Optimized: Combined user and venue follows into single query
   const [rsvpsResult, followsResult, savedEventsResult] = await Promise.all([
-    // 1. RSVPs - friends going to events (main activity source)
+    // 1. RSVPs - friends going to events via plan_invitees -> plans -> events
     supabase
-      .from("event_rsvps")
+      .from("plan_invitees")
       .select(`
-        id,
-        status,
-        created_at,
-        user:profiles!event_rsvps_user_id_fkey(id, username, display_name, avatar_url),
-        event:events!event_rsvps_event_id_fkey(id, title, start_date, start_time, is_all_day, category:category_id, image_url, venue:places(name))
+        plan_id,
+        rsvp_status,
+        invited_at,
+        user:profiles!plan_invitees_user_id_fkey(id, username, display_name, avatar_url),
+        plan:plans!inner(
+          anchor_type,
+          event:events!plans_anchor_event_id_fkey(id, title, start_date, start_time, is_all_day, category:category_id, image_url, venue:places(name))
+        )
       `)
       .in("user_id", friendIds)
-      .in("status", ["going", "interested"])
-      .gte("created_at", thirtyDaysAgo)
-      .lt("created_at", cursorDate ? cursorDate.toISOString() : now)
-      .order("created_at", { ascending: false })
+      .in("rsvp_status", ["going", "maybe"])
+      .eq("plan.anchor_type" as never, "event")
+      .gte("invited_at", thirtyDaysAgo)
+      .lt("invited_at", cursorDate ? cursorDate.toISOString() : now)
+      .order("invited_at", { ascending: false })
       .limit(limit),
 
     // 2. Follows - friends following venues OR organizations (exclude user-to-user follows)
@@ -185,15 +189,24 @@ export async function GET(request: NextRequest) {
   // Process RSVPs
   if (rsvpsResult.data) {
     for (const row of rsvpsResult.data) {
-      const rsvp = row as unknown as RsvpRow;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const raw = row as unknown as any;
+      // Flatten plan_invitees -> plans join into RsvpRow shape
+      const rsvp: RsvpRow = {
+        plan_id: raw.plan_id,
+        rsvp_status: raw.rsvp_status,
+        invited_at: raw.invited_at,
+        user: raw.user,
+        event: raw.plan?.event ?? null,
+      };
       if (!rsvp.user || !rsvp.event) continue;
       activities.push({
-        id: `rsvp-${rsvp.id}`,
+        id: `rsvp-${rsvp.plan_id}`,
         activity_type: "rsvp",
-        created_at: rsvp.created_at,
+        created_at: rsvp.invited_at,
         user: rsvp.user,
         event: rsvp.event,
-        metadata: { status: rsvp.status },
+        metadata: { status: rsvp.rsvp_status },
       });
     }
   }

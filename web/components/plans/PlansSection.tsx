@@ -1,13 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { usePlans } from "@/lib/hooks/usePlans";
+import { useMyPlans } from "@/lib/hooks/useUserPlans";
 import { PlanCard } from "./PlanCard";
 import { PlanCreator } from "./PlanCreator";
 import { PlanDetailView } from "./PlanDetailView";
 
 export function PlansSection() {
-  const { data, isLoading } = usePlans();
+  const { data, isLoading } = useMyPlans();
   const [showCreator, setShowCreator] = useState(false);
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
 

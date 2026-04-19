@@ -1,7 +1,19 @@
 "use client";
 
 import Link from "next/link";
-import type { PlanItem } from "@/lib/hooks/usePlans";
+// PlanItem: local type — the new plans model has no items array;
+// this component is preserved for backward compatibility
+type PlanItem = {
+  id: string;
+  title: string;
+  sort_order: number;
+  event_id: number | null;
+  venue_id: number | null;
+  note: string | null;
+  start_time: string | null;
+  event?: { id: number; title: string; start_date: string; start_time: string | null } | null;
+  venue?: { id: number; name: string; slug: string | null } | null;
+};
 import { format, parseISO } from "date-fns";
 
 interface PlanItemRowProps {

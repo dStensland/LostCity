@@ -114,55 +114,66 @@ export async function GET(request: Request) {
     const startDate = format(new Date(), "yyyy-MM-dd");
     const endDate = format(addMonths(new Date(), 6), "yyyy-MM-dd");
 
-    // Type for RSVP query result
+    // Strategy B rewrite: plan_invitees + plans WHERE anchor_type='event'.
+    // The compat view (event_rsvps) lacks FK hints (events!inner / places!left).
+    // Only 'going' maps from rsvp_status; 'interested' does not exist in the
+    // new schema. The iCal feed marks 'going' → CONFIRMED, everything else
+    // TENTATIVE — since we now only surface 'going', all exported events are CONFIRMED.
     type FeedRsvpRow = {
-      status: string;
-      event: {
-        id: number;
-        title: string;
-        start_date: string;
-        start_time: string | null;
-        end_date: string | null;
-        end_time: string | null;
-        is_all_day: boolean;
-        description: string | null;
-        source_url: string | null;
-        venue: {
-          name: string;
-          address: string | null;
-          city: string | null;
-          state: string | null;
+      rsvp_status: string;
+      plan: {
+        anchor_event_id: number | null;
+        event: {
+          id: number;
+          title: string;
+          start_date: string;
+          start_time: string | null;
+          end_date: string | null;
+          end_time: string | null;
+          is_all_day: boolean;
+          description: string | null;
+          source_url: string | null;
+          venue: {
+            name: string;
+            address: string | null;
+            city: string | null;
+            state: string | null;
+          } | null;
         } | null;
       };
     };
 
-    // Fetch user's "going" and "interested" RSVPs
+    // Fetch user's "going" plan_invitees for event-anchored plans
     const { data: rsvps, error } = await supabase
-      .from("event_rsvps")
+      .from("plan_invitees")
       .select(`
-        status,
-        event:events!inner(
-          id,
-          title,
-          start_date,
-          start_time,
-          end_date,
-          end_time,
-          is_all_day,
-          description,
-          source_url,
-          venue:places!left(
-            name,
-            address,
-            city,
-            state
+        rsvp_status,
+        plan:plans!inner(
+          anchor_event_id,
+          event:events!plans_anchor_event_id_fkey(
+            id,
+            title,
+            start_date,
+            start_time,
+            end_date,
+            end_time,
+            is_all_day,
+            description,
+            source_url,
+            venue:places(
+              name,
+              address,
+              city,
+              state
+            )
           )
         )
       `)
       .eq("user_id", authenticatedUserId)
-      .in("status", ["going", "interested"])
-      .gte("event.start_date", startDate)
-      .lte("event.start_date", endDate) as { data: FeedRsvpRow[] | null; error: Error | null };
+      .eq("rsvp_status", "going")
+      .eq("plan.anchor_type", "event" as never)
+      .gte("plan.event.start_date", startDate as never)
+      .lte("plan.event.start_date", endDate as never) as { data: FeedRsvpRow[] | null; error: Error | null };
 
     if (error) {
       logger.error("Error fetching calendar feed events:", error);
@@ -170,9 +181,13 @@ export async function GET(request: Request) {
     }
 
     // Generate iCal content
-    const events = (rsvps || []).map((rsvp) => {
-      const event = rsvp.event;
-      const icalStatus = rsvp.status === "going" ? "CONFIRMED" : "TENTATIVE";
+    // After the plan_invitees rewrite, only 'going' invitees are fetched.
+    // All exported events are therefore CONFIRMED.
+    const events = (rsvps || [])
+      .filter((rsvp) => rsvp.plan?.event !== null && rsvp.plan?.event !== undefined)
+      .map((rsvp) => {
+      const event = rsvp.plan.event as NonNullable<typeof rsvp.plan.event>;
+      const icalStatus = rsvp.rsvp_status === "going" ? "CONFIRMED" : "TENTATIVE";
 
       const location = event.venue
         ? [event.venue.name, event.venue.address, event.venue.city && event.venue.state ? `${event.venue.city}, ${event.venue.state}` : event.venue.city || event.venue.state]

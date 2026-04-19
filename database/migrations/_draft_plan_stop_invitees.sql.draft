@@ -1,0 +1,11 @@
+-- DRAFT — not applied. See _draft_README.md for activation instructions.
+-- Purpose: per-stop RSVP (invitee can go to stops 1+2 but skip stop 3).
+
+CREATE TABLE plan_stop_invitees (
+  stop_id       uuid NOT NULL REFERENCES plan_stops(id) ON DELETE CASCADE,
+  user_id       uuid NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  rsvp_status   text NOT NULL DEFAULT 'invited'
+    CHECK (rsvp_status IN ('invited','going','maybe','declined')),
+  responded_at  timestamptz,
+  PRIMARY KEY (stop_id, user_id)
+);

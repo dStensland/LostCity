@@ -1,123 +1,156 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient, getUser } from "@/lib/supabase/server";
-import { createServiceClient } from "@/lib/supabase/service";
+import { z } from "zod";
+import { withAuthAndParams } from "@/lib/api-middleware";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 
-type RouteContext = { params: Promise<{ id: string }> };
+export const runtime = "nodejs";
 
-// GET /api/plans/:id — plan detail with items + participants
-export async function GET(request: NextRequest, context: RouteContext) {
-  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.read, getClientIdentifier(request));
-  if (rateLimitResult) return rateLimitResult;
+const PatchSchema = z.object({
+  title: z.string().max(140).nullable().optional(),
+  note: z.string().max(280).nullable().optional(),
+  visibility: z.enum(["private", "friends", "public"]).optional(),
+  starts_at: z.string().datetime().optional(),
+  status: z.enum(["active", "ended", "cancelled"]).optional(),
+});
 
-  const user = await getUser();
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+const ParamsSchema = z.object({ id: z.string().uuid() });
+
+type Params = { id: string };
+
+export const GET = withAuthAndParams<Params>(
+  async (request, { serviceClient, params }) => {
+    const rl = await applyRateLimit(request, RATE_LIMITS.read, getClientIdentifier(request));
+    if (rl) return rl;
+
+    const paramParsed = ParamsSchema.safeParse(params);
+    if (!paramParsed.success) {
+      return NextResponse.json({ error: "Invalid plan id" }, { status: 400 });
+    }
+
+    const { data: plan, error: pErr } = await serviceClient
+      .from("plans").select("*").eq("id", paramParsed.data.id as never).maybeSingle();
+    if (pErr) return NextResponse.json({ error: pErr.message }, { status: 500 });
+    if (!plan) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+    const p = plan as {
+      id: string;
+      anchor_type: "event" | "place" | "series";
+      anchor_event_id: number | null;
+      anchor_place_id: number | null;
+      anchor_series_id: string | null;
+    };
+
+    const anchor: Record<string, unknown> = {};
+    if (p.anchor_type === "event" && p.anchor_event_id) {
+      const { data } = await serviceClient.from("events")
+        .select("id, title, start_date, image_url")
+        .eq("id", p.anchor_event_id as never).maybeSingle();
+      anchor.event = data;
+    } else if (p.anchor_type === "place" && p.anchor_place_id) {
+      const { data } = await serviceClient.from("places")
+        .select("id, name, slug, image_url, neighborhood")
+        .eq("id", p.anchor_place_id as never).maybeSingle();
+      anchor.place = data;
+    } else if (p.anchor_type === "series" && p.anchor_series_id) {
+      const { data } = await serviceClient.from("series")
+        .select("id, title, slug")
+        .eq("id", p.anchor_series_id as never).maybeSingle();
+      anchor.series = data;
+    }
+
+    const { data: invRaw } = await serviceClient
+      .from("plan_invitees")
+      .select("plan_id, user_id, rsvp_status, invited_by, invited_at, responded_at, seen_at")
+      .eq("plan_id", paramParsed.data.id as never);
+    const inv = (invRaw as Array<{ user_id: string }> | null) ?? [];
+    const userIds = inv.map((i) => i.user_id);
+    const { data: profRaw } = await serviceClient
+      .from("profiles")
+      .select("id, username, display_name, avatar_url")
+      .in("id", userIds as never);
+    const profiles = (profRaw as Array<{ id: string }> | null) ?? [];
+    const pMap = new Map(profiles.map((prof) => [prof.id, prof]));
+    const invitees = inv.map((i) => ({ ...i, profile: pMap.get(i.user_id) ?? null }));
+
+    return NextResponse.json({ plan, anchor, invitees });
   }
+);
 
-  const { id } = await context.params;
-  const supabase = await createClient();
+export const PATCH = withAuthAndParams<Params, { body: typeof PatchSchema }>(
+  { body: PatchSchema },
+  async (request, { user, serviceClient, params, validated }) => {
+    const rl = await applyRateLimit(request, RATE_LIMITS.write, getClientIdentifier(request));
+    if (rl) return rl;
 
-  const { data: plan, error } = await supabase
-    .from("plans")
-    .select(`
-      id, title, description, plan_date, plan_time, status, share_token, created_at, updated_at,
-      creator:profiles!plans_creator_id_fkey(id, username, display_name, avatar_url),
-      items:plan_items(
-        id, title, sort_order, event_id, venue_id, note, start_time, created_at,
-        event:events(id, title, start_date, start_time),
-        venue:places(id, name, slug, image_url, neighborhood)
-      ),
-      participants:plan_participants(
-        id, status, responded_at, created_at,
-        user:profiles!plan_participants_user_id_fkey(id, username, display_name, avatar_url)
-      ),
-      suggestions:plan_suggestions(
-        id, suggestion_type, content, status, created_at,
-        user:profiles!plan_suggestions_user_id_fkey(id, username, display_name, avatar_url)
-      )
-    `)
-    .eq("id", id)
-    .single();
+    const paramParsed = ParamsSchema.safeParse(params);
+    if (!paramParsed.success) {
+      return NextResponse.json({ error: "Invalid plan id" }, { status: 400 });
+    }
 
-  if (error || !plan) {
-    return NextResponse.json({ error: "Plan not found" }, { status: 404 });
+    const body = validated.body;
+
+    const { data: existing } = await serviceClient
+      .from("plans").select("creator_id, status").eq("id", paramParsed.data.id as never).maybeSingle();
+    if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    const e = existing as { creator_id: string; status: string };
+    if (e.creator_id !== user.id) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+
+    const updates: Record<string, unknown> = { updated_by: user.id };
+    if (body.title !== undefined) updates.title = body.title;
+    if (body.note !== undefined) updates.note = body.note;
+    if (body.visibility) updates.visibility = body.visibility;
+    if (body.starts_at) updates.starts_at = body.starts_at;
+
+    if (body.status) {
+      const valid: Record<string, string[]> = {
+        planning: ["active", "cancelled"],
+        active: ["ended", "cancelled"],
+      };
+      if (!valid[e.status]?.includes(body.status)) {
+        return NextResponse.json(
+          { error: `Invalid transition ${e.status} -> ${body.status}` },
+          { status: 400 }
+        );
+      }
+      updates.status = body.status;
+      if (body.status === "active") updates.started_at = new Date().toISOString();
+      if (body.status === "ended") updates.ended_at = new Date().toISOString();
+      if (body.status === "cancelled") updates.cancelled_at = new Date().toISOString();
+    }
+
+    const { error: uErr } = await serviceClient
+      .from("plans").update(updates as never).eq("id", paramParsed.data.id as never);
+    if (uErr) return NextResponse.json({ error: uErr.message }, { status: 500 });
+    return NextResponse.json({ ok: true });
   }
+);
 
-  return NextResponse.json({ plan });
-}
+export const DELETE = withAuthAndParams<Params>(
+  async (request, { user, serviceClient, params }) => {
+    const rl = await applyRateLimit(request, RATE_LIMITS.write, getClientIdentifier(request));
+    if (rl) return rl;
 
-// PATCH /api/plans/:id — update plan (creator only)
-export async function PATCH(request: NextRequest, context: RouteContext) {
-  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write, getClientIdentifier(request));
-  if (rateLimitResult) return rateLimitResult;
+    const paramParsed = ParamsSchema.safeParse(params);
+    if (!paramParsed.success) {
+      return NextResponse.json({ error: "Invalid plan id" }, { status: 400 });
+    }
 
-  const user = await getUser();
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const { data: existing } = await serviceClient
+      .from("plans").select("creator_id").eq("id", paramParsed.data.id as never).maybeSingle();
+    if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    if ((existing as { creator_id: string }).creator_id !== user.id) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    const { error: cErr } = await serviceClient
+      .from("plans")
+      .update({
+        status: "cancelled",
+        cancelled_at: new Date().toISOString(),
+        updated_by: user.id,
+      } as never)
+      .eq("id", paramParsed.data.id as never);
+    if (cErr) return NextResponse.json({ error: cErr.message }, { status: 500 });
+    return NextResponse.json({ ok: true });
   }
-
-  const { id } = await context.params;
-  const body = await request.json();
-  const { title, description, plan_date, plan_time, status } = body;
-
-  const serviceClient = createServiceClient();
-
-  // Verify creator
-  const { data: plan } = await serviceClient
-    .from("plans")
-    .select("creator_id")
-    .eq("id", id)
-    .single();
-
-  if (!plan || (plan as { creator_id: string }).creator_id !== user.id) {
-    return NextResponse.json({ error: "Not authorized" }, { status: 403 });
-  }
-
-  const updates: Record<string, unknown> = { updated_at: new Date().toISOString() };
-  if (title !== undefined) updates.title = title;
-  if (description !== undefined) updates.description = description;
-  if (plan_date !== undefined) updates.plan_date = plan_date;
-  if (plan_time !== undefined) updates.plan_time = plan_time;
-  if (status !== undefined) updates.status = status;
-
-  const { error } = await serviceClient
-    .from("plans")
-    .update(updates as never)
-    .eq("id", id);
-
-  if (error) {
-    return NextResponse.json({ error: "Failed to update" }, { status: 500 });
-  }
-
-  return NextResponse.json({ success: true });
-}
-
-// DELETE /api/plans/:id — delete plan (creator only)
-export async function DELETE(request: NextRequest, context: RouteContext) {
-  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write, getClientIdentifier(request));
-  if (rateLimitResult) return rateLimitResult;
-
-  const user = await getUser();
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const { id } = await context.params;
-  const serviceClient = createServiceClient();
-
-  // Verify creator
-  const { data: plan } = await serviceClient
-    .from("plans")
-    .select("creator_id")
-    .eq("id", id)
-    .single();
-
-  if (!plan || (plan as { creator_id: string }).creator_id !== user.id) {
-    return NextResponse.json({ error: "Not authorized" }, { status: 403 });
-  }
-
-  await serviceClient.from("plans").delete().eq("id", id);
-
-  return NextResponse.json({ success: true });
-}
+);

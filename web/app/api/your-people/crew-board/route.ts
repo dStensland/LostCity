@@ -48,23 +48,27 @@ export const GET = withAuth(async (request, { user, serviceClient }) => {
   const endStr = endOfWeek.toISOString().split("T")[0];
 
   const { data: rsvpData } = await serviceClient
-    .from("event_rsvps")
+    .from("plan_invitees")
     .select(`
       user_id,
-      status,
-      event:events!event_rsvps_event_id_fkey(
-        id, title, start_date, start_time, image_url,
-        venue:places(name)
-      ),
-      user:profiles!event_rsvps_user_id_fkey(
+      rsvp_status,
+      user:profiles!plan_invitees_user_id_fkey(
         id, username, display_name, avatar_url
+      ),
+      plan:plans!inner(
+        anchor_type,
+        event:events!plans_anchor_event_id_fkey(
+          id, title, start_date, start_time, image_url,
+          venue:places(name)
+        )
       )
     `)
     .in("user_id", friendIds)
-    .eq("status", "going")
-    .gte("event.start_date", todayStr)
-    .lte("event.start_date", endStr)
-    .order("event.start_date", { ascending: true } as never)
+    .eq("rsvp_status", "going")
+    .eq("plan.anchor_type" as never, "event")
+    .gte("plan.event.start_date" as never, todayStr)
+    .lte("plan.event.start_date" as never, endStr)
+    .order("plan.event.start_date" as never, { ascending: true } as never)
     .limit(50);
 
   // Group by event, then by day
@@ -72,8 +76,9 @@ export const GET = withAuth(async (request, { user, serviceClient }) => {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   for (const rsvp of (rsvpData || []) as any[]) {
-    if (!rsvp.event || !rsvp.user) continue;
-    const eventId = rsvp.event.id;
+    const event = rsvp.plan?.event;
+    if (!event || !rsvp.user) continue;
+    const eventId = event.id;
 
     const existing = eventMap.get(eventId);
     const friend = {
@@ -81,7 +86,7 @@ export const GET = withAuth(async (request, { user, serviceClient }) => {
       username: rsvp.user.username,
       display_name: rsvp.user.display_name,
       avatar_url: rsvp.user.avatar_url,
-      status: rsvp.status,
+      status: rsvp.rsvp_status,
     };
 
     if (existing) {
@@ -92,11 +97,11 @@ export const GET = withAuth(async (request, { user, serviceClient }) => {
     } else {
       eventMap.set(eventId, {
         event_id: eventId,
-        title: rsvp.event.title,
-        start_date: rsvp.event.start_date,
-        start_time: rsvp.event.start_time,
-        image_url: rsvp.event.image_url,
-        venue_name: rsvp.event.venue?.name || null,
+        title: event.title,
+        start_date: event.start_date,
+        start_time: event.start_time,
+        image_url: event.image_url,
+        venue_name: event.venue?.name || null,
         friends: [friend],
       });
     }

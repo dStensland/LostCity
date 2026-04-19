@@ -1,0 +1,17 @@
+-- DRAFT — not applied. See _draft_README.md for activation instructions.
+-- Purpose: multi-stop plans (bar crawls, day trips). Each plan can have 1..N stops.
+
+CREATE TABLE plan_stops (
+  id               uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  plan_id          uuid NOT NULL REFERENCES plans(id) ON DELETE CASCADE,
+  sort_order       integer NOT NULL,
+  anchor_event_id  integer REFERENCES events(id) ON DELETE SET NULL,
+  anchor_place_id  integer REFERENCES places(id) ON DELETE SET NULL,
+  starts_at        timestamptz,
+  title            text CHECK (length(title) <= 140),
+  note             text CHECK (length(note) <= 280),
+  created_at       timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (plan_id, sort_order)
+);
+
+CREATE INDEX idx_plan_stops_plan ON plan_stops (plan_id, sort_order);

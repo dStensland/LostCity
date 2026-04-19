@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCalendar } from "@/lib/calendar/CalendarProvider";
-import { useRespondToPlan } from "@/lib/hooks/usePlans";
+import { useRespondToPlan } from "@/lib/hooks/useUserPlans";
 import type { CalendarPlan } from "@/lib/types/calendar";
 
 interface PlanPreviewSheetProps {
@@ -35,8 +35,8 @@ export function PlanPreviewSheet({ plan }: PlanPreviewSheetProps) {
   const { closeSheet } = useCalendar();
   const respondMutation = useRespondToPlan(plan.id);
 
-  const handleRespond = (status: "accepted" | "declined" | "maybe") => {
-    respondMutation.mutate(status);
+  const handleRespond = (status: "going" | "declined" | "maybe") => {
+    respondMutation.mutate({ rsvp_status: status });
   };
 
   const planDate = new Date(`${plan.plan_date}T00:00:00`);
@@ -172,7 +172,7 @@ export function PlanPreviewSheet({ plan }: PlanPreviewSheetProps) {
         {!plan.is_creator && (
           <div className="flex gap-2">
             <button
-              onClick={() => handleRespond("accepted")}
+              onClick={() => handleRespond("going")}
               disabled={respondMutation.isPending}
               className={`flex-1 min-h-[44px] rounded-lg font-mono text-sm font-medium transition-all disabled:opacity-50 ${
                 plan.participant_status === "accepted"

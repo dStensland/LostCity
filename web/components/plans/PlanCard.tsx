@@ -1,8 +1,7 @@
 "use client";
 
 import { format, parseISO } from "date-fns";
-import { AvatarStack } from "@/components/UserAvatar";
-import type { Plan } from "@/lib/hooks/usePlans";
+import type { Plan } from "@/lib/types/plans";
 
 interface PlanCardProps {
   plan: Plan;
@@ -10,13 +9,8 @@ interface PlanCardProps {
 }
 
 export function PlanCard({ plan, onClick }: PlanCardProps) {
-  const dateStr = format(parseISO(plan.plan_date), "EEE, MMM d");
-  const timeStr = plan.plan_time
-    ? format(parseISO(`2000-01-01T${plan.plan_time}`), "h:mm a")
-    : null;
-
-  const acceptedCount = plan.participants.filter((p) => p.status === "accepted").length;
-  const pendingCount = plan.participants.filter((p) => p.status === "invited").length;
+  const dateStr = format(parseISO(plan.starts_at), "EEE, MMM d");
+  const timeStr = format(parseISO(plan.starts_at), "h:mm a");
 
   return (
     <button
@@ -26,32 +20,24 @@ export function PlanCard({ plan, onClick }: PlanCardProps) {
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
           <h4 className="font-medium text-[var(--cream)] group-hover:text-[var(--coral)] transition-colors truncate">
-            {plan.title}
+            {plan.title ?? "Untitled plan"}
           </h4>
           <p className="font-mono text-xs text-[var(--muted)] mt-0.5">
-            {dateStr}{timeStr ? ` · ${timeStr}` : ""}
+            {dateStr} · {timeStr}
           </p>
-          {plan.items.length > 0 && (
-            <p className="font-mono text-xs text-[var(--soft)] mt-1">
-              {plan.items.length} {plan.items.length === 1 ? "stop" : "stops"}
-              {plan.items[0] && ` · ${plan.items[0].title}`}
-            </p>
-          )}
+          <p className="font-mono text-xs text-[var(--soft)] mt-1 capitalize">
+            {plan.anchor_type} plan · {plan.visibility}
+          </p>
         </div>
         <div className="flex flex-col items-end gap-1.5">
-          <AvatarStack
-            users={plan.participants
-              .filter((p) => p.status === "accepted")
-              .map((p) => ({
-                id: p.user.id,
-                name: p.user.display_name || p.user.username,
-                avatar_url: p.user.avatar_url,
-              }))}
-            max={3}
-            size="xs"
-          />
-          <span className="font-mono text-2xs text-[var(--muted)]">
-            {acceptedCount} in{pendingCount > 0 ? ` · ${pendingCount} pending` : ""}
+          <span className={`inline-block px-2 py-0.5 rounded-full font-mono text-2xs font-bold capitalize ${
+            plan.status === "active"
+              ? "bg-[var(--neon-green)]/15 text-[var(--neon-green)]"
+              : plan.status === "planning"
+              ? "bg-[var(--coral)]/15 text-[var(--coral)]"
+              : "bg-[var(--twilight)] text-[var(--muted)]"
+          }`}>
+            {plan.status}
           </span>
         </div>
       </div>

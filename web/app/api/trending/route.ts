@@ -158,33 +158,56 @@ export async function GET(request: NextRequest) {
 
         const eventIds = events.map((e) => e.id);
 
+    // Both queries use plan_invitees + plans; event_rsvps compat view only exposes 'going' rows.
+    type TrendingInviteeRow = {
+      rsvp_status: string;
+      updated_at: string;
+      plan: { anchor_event_id: number | null; anchor_type: string } | null;
+    };
     const recentRsvpsPromise = supabase
-      .from("event_rsvps")
-      .select("event_id")
-      .in("event_id", eventIds)
-      .gte("created_at", hours48Ago);
+      .from("plan_invitees")
+      .select(`
+        rsvp_status,
+        updated_at,
+        plan:plans!inner (
+          anchor_event_id, anchor_type
+        )
+      `)
+      .eq("plan.anchor_type", "event")
+      .in("plan.anchor_event_id", eventIds)
+      .gte("updated_at", hours48Ago);
     const goingCountsPromise = supabase
-      .from("event_rsvps")
-      .select("event_id")
-      .in("event_id", eventIds)
-      .eq("status", "going");
+      .from("plan_invitees")
+      .select(`
+        rsvp_status,
+        plan:plans!inner (
+          anchor_event_id, anchor_type
+        )
+      `)
+      .eq("rsvp_status", "going")
+      .eq("plan.anchor_type", "event")
+      .in("plan.anchor_event_id", eventIds);
     const [{ data: recentRsvps }, { data: goingCounts }] = await Promise.all([
       recentRsvpsPromise,
       goingCountsPromise,
     ]);
-    const recentRsvpRows = (recentRsvps || []) as Array<{ event_id: number }>;
-    const goingCountRows = (goingCounts || []) as Array<{ event_id: number }>;
+    const recentRsvpRows = (recentRsvps || []) as TrendingInviteeRow[];
+    const goingCountRows = (goingCounts || []) as TrendingInviteeRow[];
 
     // Count recent RSVPs per event
     const recentRsvpCounts: Record<number, number> = {};
-    for (const rsvp of recentRsvpRows) {
-      recentRsvpCounts[rsvp.event_id] = (recentRsvpCounts[rsvp.event_id] || 0) + 1;
+    for (const row of recentRsvpRows) {
+      const eventId = row.plan?.anchor_event_id;
+      if (!eventId) continue;
+      recentRsvpCounts[eventId] = (recentRsvpCounts[eventId] || 0) + 1;
     }
 
     // Count total going per event
     const totalGoingCounts: Record<number, number> = {};
-    for (const rsvp of goingCountRows) {
-      totalGoingCounts[rsvp.event_id] = (totalGoingCounts[rsvp.event_id] || 0) + 1;
+    for (const row of goingCountRows) {
+      const eventId = row.plan?.anchor_event_id;
+      if (!eventId) continue;
+      totalGoingCounts[eventId] = (totalGoingCounts[eventId] || 0) + 1;
     }
 
     // Score events based on recent activity + total interest

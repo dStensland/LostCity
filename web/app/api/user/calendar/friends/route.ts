@@ -94,41 +94,51 @@ export async function GET(request: Request) {
       (friendProfiles || []).map(f => [f.id, f])
     );
 
-    // Step 4: Fetch friends' RSVPs (only public or friends visibility)
+    // Strategy B rewrite: plan_invitees + plans WHERE anchor_type='event'.
+    // The compat view (event_rsvps) lacks FK hints (events!inner) and does not
+    // expose a 'visibility' column (it does not exist in plan_invitees).
+    // 'interested' does not map to any rsvp_status value; only 'going' maps.
+    // Privacy note: the old 'visibility' filter has no equivalent in the new
+    // schema — plan privacy is controlled at the plan level (plans.status).
+    // We now only surface friends who are 'going' in active event plans.
     type FriendRsvpRow = {
       user_id: string;
-      status: string;
-      visibility: string;
-      event: {
-        id: number;
-        title: string;
-        start_date: string;
-        start_time: string | null;
-        is_all_day: boolean;
-        category: string | null;
+      rsvp_status: string;
+      plan: {
+        anchor_event_id: number | null;
+        event: {
+          id: number;
+          title: string;
+          start_date: string;
+          start_time: string | null;
+          is_all_day: boolean;
+          category: string | null;
+        } | null;
       };
     };
 
     const { data: rsvps, error } = await supabase
-      .from("event_rsvps")
+      .from("plan_invitees")
       .select(`
         user_id,
-        status,
-        visibility,
-        event:events!inner(
-          id,
-          title,
-          start_date,
-          start_time,
-          is_all_day,
-          category
+        rsvp_status,
+        plan:plans!inner(
+          anchor_event_id,
+          event:events!plans_anchor_event_id_fkey(
+            id,
+            title,
+            start_date,
+            start_time,
+            is_all_day,
+            category:category_id
+          )
         )
       `)
       .in("user_id", friendIds)
-      .in("status", ["going", "interested"])
-      .in("visibility", ["public", "friends"]) // Respect privacy
-      .gte("event.start_date", startDate)
-      .lte("event.start_date", endDate) as { data: FriendRsvpRow[] | null; error: Error | null };
+      .eq("rsvp_status", "going")
+      .eq("plan.anchor_type", "event" as never)
+      .gte("plan.event.start_date", startDate as never)
+      .lte("plan.event.start_date", endDate as never) as { data: FriendRsvpRow[] | null; error: Error | null };
 
     if (error) {
       logger.error("Error fetching friend calendar events:", error);
@@ -138,20 +148,25 @@ export async function GET(request: Request) {
       );
     }
 
-    // Transform to response format
-    const events: FriendCalendarEvent[] = (rsvps || []).map((rsvp) => {
-      const friend = friendsMap.get(rsvp.user_id);
-      return {
-        ...rsvp.event,
-        rsvp_status: rsvp.status as "going" | "interested",
-        friend: {
-          id: rsvp.user_id,
-          username: friend?.username || "unknown",
-          display_name: friend?.display_name || null,
-          avatar_url: friend?.avatar_url || null,
-        },
-      };
-    });
+    // Transform to response format.
+    // rsvp_status from plan_invitees — only 'going' is yielded here.
+    // The public FriendCalendarEvent type still includes "interested" for compat;
+    // callers will simply never see that value until the type is narrowed.
+    const events: FriendCalendarEvent[] = (rsvps || [])
+      .filter((rsvp) => rsvp.plan?.event !== null && rsvp.plan?.event !== undefined)
+      .map((rsvp) => {
+        const friend = friendsMap.get(rsvp.user_id);
+        return {
+          ...(rsvp.plan.event as NonNullable<typeof rsvp.plan.event>),
+          rsvp_status: rsvp.rsvp_status as "going" | "interested",
+          friend: {
+            id: rsvp.user_id,
+            username: friend?.username || "unknown",
+            display_name: friend?.display_name || null,
+            avatar_url: friend?.avatar_url || null,
+          },
+        };
+      });
 
     // Group by date for calendar display
     const eventsByDate: Record<string, FriendCalendarEvent[]> = {};

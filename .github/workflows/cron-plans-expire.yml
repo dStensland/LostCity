@@ -1,0 +1,68 @@
+name: Plans Expire Sweep
+
+on:
+  schedule:
+    # Sweep stale plans to 'expired' every 15 minutes.
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+
+jobs:
+  expire:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Resolve configuration
+        id: config
+        env:
+          BASE_URL: ${{ secrets.PLANS_EXPIRE_BASE_URL }}
+          API_KEY: ${{ secrets.PLANS_EXPIRE_CRON_API_KEY }}
+        run: |
+          if [ -z "$BASE_URL" ]; then
+            echo "Missing secret PLANS_EXPIRE_BASE_URL"
+            exit 1
+          fi
+          if [ -z "$API_KEY" ]; then
+            echo "Missing secret PLANS_EXPIRE_CRON_API_KEY"
+            exit 1
+          fi
+          echo "base_url=$BASE_URL" >> "$GITHUB_OUTPUT"
+
+      - name: Trigger expire endpoint
+        id: call
+        env:
+          BASE_URL: ${{ steps.config.outputs.base_url }}
+          API_KEY: ${{ secrets.PLANS_EXPIRE_CRON_API_KEY }}
+        run: |
+          set -euo pipefail
+
+          response="$(curl -sS -w '\n%{http_code}' \
+            -X POST "$BASE_URL/api/cron/plans-expire" \
+            -H "Authorization: Bearer $API_KEY" \
+            -H "Content-Type: application/json")"
+
+          status_code="$(echo "$response" | tail -n1)"
+          body="$(echo "$response" | sed '$d')"
+
+          echo "$body" > /tmp/plans_expire_response.json
+          echo "status_code=$status_code" >> "$GITHUB_OUTPUT"
+
+          if [ "$status_code" -lt 200 ] || [ "$status_code" -ge 300 ]; then
+            echo "Expire endpoint failed with status $status_code"
+            cat /tmp/plans_expire_response.json
+            exit 1
+          fi
+
+      - name: Publish summary
+        if: always()
+        run: |
+          echo "## Plans Expire Sweep" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Endpoint status: \`${{ steps.call.outputs.status_code || 'n/a' }}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Triggered at: $(date -u +"%Y-%m-%d %H:%M:%S UTC")" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          if [ -f /tmp/plans_expire_response.json ]; then
+            echo '```json' >> "$GITHUB_STEP_SUMMARY"
+            cat /tmp/plans_expire_response.json >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+          fi

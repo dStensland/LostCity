@@ -736,14 +736,26 @@ export async function GET(request: NextRequest) {
 
             const cIds = sorted.map(e => e.id);
             const { data: cRsvps } = await supabase
-              .from("event_rsvps")
-              .select("event_id, status")
-              .in("event_id", cIds)
-              .in("status", ["going", "interested"]);
+              .from("plan_invitees")
+              .select(`
+                rsvp_status,
+                plan:plans!inner (
+                  anchor_event_id, anchor_type
+                )
+              `)
+              .in("rsvp_status", ["going", "interested"])
+              .eq("plan.anchor_type", "event")
+              .in("plan.anchor_event_id", cIds);
 
+            type CRsvpRow = {
+              rsvp_status: string;
+              plan: { anchor_event_id: number | null; anchor_type: string } | null;
+            };
             const cRsvpCounts = new Map<number, number>();
-            for (const r of (cRsvps || []) as { event_id: number; status: string }[]) {
-              cRsvpCounts.set(r.event_id, (cRsvpCounts.get(r.event_id) || 0) + 1);
+            for (const r of (cRsvps || []) as CRsvpRow[]) {
+              const eid = r.plan?.anchor_event_id;
+              if (!eid) continue;
+              cRsvpCounts.set(eid, (cRsvpCounts.get(eid) || 0) + 1);
             }
 
             const result = sorted.map(({ description: _d, venue_id: _v, ...event }) => {
@@ -933,12 +945,18 @@ export async function GET(request: NextRequest) {
     const venueIds = typedEvents.map(e => e.venue_id).filter((id): id is number => id !== null);
 
     const [rsvpResult, recResult] = await Promise.all([
-      // Fetch RSVP counts for these events
+      // Fetch RSVP counts for these events via plan_invitees + plans
       supabase
-        .from("event_rsvps")
-        .select("event_id, status")
-        .in("event_id", eventIds)
-        .in("status", ["going", "interested"]),
+        .from("plan_invitees")
+        .select(`
+          rsvp_status,
+          plan:plans!inner (
+            anchor_event_id, anchor_type
+          )
+        `)
+        .in("rsvp_status", ["going", "interested"])
+        .eq("plan.anchor_type", "event")
+        .in("plan.anchor_event_id", eventIds),
 
       // Fetch venue recommendation counts
       venueIds.length > 0
@@ -951,13 +969,19 @@ export async function GET(request: NextRequest) {
     ]);
 
     // Aggregate RSVP counts
+    type RsvpRow = {
+      rsvp_status: string;
+      plan: { anchor_event_id: number | null; anchor_type: string } | null;
+    };
     const rsvpCounts = new Map<number, { going: number; interested: number }>();
-    const typedRsvps = (rsvpResult.data || []) as { event_id: number; status: string }[];
+    const typedRsvps = (rsvpResult.data || []) as RsvpRow[];
     for (const rsvp of typedRsvps) {
-      const counts = rsvpCounts.get(rsvp.event_id) || { going: 0, interested: 0 };
-      if (rsvp.status === "going") counts.going++;
-      else if (rsvp.status === "interested") counts.interested++;
-      rsvpCounts.set(rsvp.event_id, counts);
+      const eventId = rsvp.plan?.anchor_event_id;
+      if (!eventId) continue;
+      const counts = rsvpCounts.get(eventId) || { going: 0, interested: 0 };
+      if (rsvp.rsvp_status === "going") counts.going++;
+      else if (rsvp.rsvp_status === "interested") counts.interested++;
+      rsvpCounts.set(eventId, counts);
     }
 
     // Aggregate venue recommendation counts

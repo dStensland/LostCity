@@ -168,6 +168,8 @@ export async function GET(request: Request) {
         sb.from("profiles").select("id, username, display_name, bio, location, website, avatar_url, is_active, created_at, updated_at").eq("id", userId).maybeSingle(),
         sb.from("follows").select("id", { count: "exact", head: true }).eq("followed_user_id", userId),
         sb.from("follows").select("id", { count: "exact", head: true }).eq("follower_id", userId),
+        // Reads the event_rsvps compat view (safe: count-only query, no FK-hint
+        // syntax, no status filter). Temporary bridge — Phase 7 removes the view.
         sb.from("event_rsvps").select("id", { count: "exact", head: true }).eq("user_id", userId),
       ]);
 
