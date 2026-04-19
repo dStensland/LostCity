@@ -42,7 +42,7 @@ export const SeriesIdentity = memo(function SeriesIdentity({
     venueShowtimes.length === 1 ? venueShowtimes[0].venue : null;
 
   const venueUrl = singleVenue
-    ? buildSpotUrl(singleVenue.slug, portalSlug, "page")
+    ? buildSpotUrl(singleVenue.slug, portalSlug, "canonical")
     : null;
 
   return (

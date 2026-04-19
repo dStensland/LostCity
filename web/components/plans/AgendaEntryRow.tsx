@@ -20,7 +20,7 @@ interface AgendaEntryRowProps {
 export function AgendaEntryRow({ event, friendAvatars, portalSlug }: AgendaEntryRowProps) {
   const isSeriesEntry = event.is_recurring || event.source === "subscription";
   const frequencyLabel = event.series_frequency ?? "weekly";
-  const url = buildEventUrl(event.id, portalSlug, "page");
+  const url = buildEventUrl(event.id, portalSlug, "canonical");
 
   return (
     <a
