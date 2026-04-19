@@ -444,9 +444,15 @@ def main() -> int:
         "sample": sweet_one_rows[:10],
     }
 
+    # FIFA match rows get promoted to tentpole AND linked to the
+    # 'fifa-world-cup-26' parent festival in a single pass. The festival_id
+    # link keeps matches out of the Big Stuff month ribbon (loader filters
+    # tentpoles on festival_id IS NULL) so the 8+ Atlanta matches surface
+    # as one parent-festival entry rather than eight competing tentpoles.
+    # Seed migration: 20260418000001_fifa_world_cup_tournament_festival.sql.
     fifa_rows = (
         client.table("events")
-        .select("id,title,start_date,is_tentpole,is_active,source_id")
+        .select("id,title,start_date,is_tentpole,is_active,source_id,festival_id")
         .in_("source_id", [12, 84])
         .ilike("title", "%FIFA World Cup%")
         .gte("start_date", "2026-01-01")
@@ -462,10 +468,15 @@ def main() -> int:
             for row in fifa_rows
             if row.get("id") is not None
             and row.get("is_active") is not False
-            and not bool(row.get("is_tentpole"))
+            and (not bool(row.get("is_tentpole")) or not row.get("festival_id"))
         }
     )
-    updated_fifa = _update_event_flags(client, fifa_ids, {"is_tentpole": True}, apply=apply)
+    updated_fifa = _update_event_flags(
+        client,
+        fifa_ids,
+        {"is_tentpole": True, "festival_id": "fifa-world-cup-26"},
+        apply=apply,
+    )
     summary["tentpole_promotions"]["fifa_world_cup_matches"] = {
         "candidate_count": len(fifa_ids),
         "updated_count": updated_fifa,
