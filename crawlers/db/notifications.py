@@ -72,15 +72,17 @@ def create_event_update_notifications(event_id: int, message: str) -> int:
     client = get_client()
 
     rsvp_result = (
-        client.table("event_rsvps")
-        .select("user_id,status")
-        .eq("event_id", event_id)
+        client.table("plan_invitees")
+        .select("user_id,rsvp_status,plans!inner(anchor_event_id,anchor_type)")
+        .eq("plans.anchor_event_id", event_id)
+        .eq("plans.anchor_type", "event")
+        .in_("rsvp_status", ["going", "maybe"])
         .execute()
     )
     rsvp_users = {
         row["user_id"]
         for row in (rsvp_result.data or [])
-        if row.get("status") in ("going", "interested")
+        if row.get("user_id")
     }
 
     saved_result = (

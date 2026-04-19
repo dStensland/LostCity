@@ -38,7 +38,6 @@ MERGE_PLANS: tuple[MergePlan, ...] = (
 DEPENDENCY_TABLES: tuple[str, ...] = (
     "series",
     "events",
-    "event_rsvps",
     "event_calendar_saves",
 )
 

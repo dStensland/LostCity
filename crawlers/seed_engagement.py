@@ -165,10 +165,11 @@ def main():
 
     # 2. Clear existing engagement for these users
     print("\nClearing existing engagement data...")
-    sb.table("event_rsvps").delete().in_("user_id", user_ids).execute()
+    # plans cascade to plan_invitees; anchor_type='event' plans = RSVPs
+    sb.table("plans").delete().in_("creator_id", user_ids).eq("anchor_type", "event").execute()
     sb.table("recommendations").delete().in_("user_id", user_ids).execute()
     sb.table("saved_items").delete().in_("user_id", user_ids).execute()
-    print("  Cleared RSVPs, recommendations, saved items")
+    print("  Cleared RSVPs (via plans), recommendations, saved items")
 
     # 3. Fetch candidate events for the next 30 days
     today = datetime.now().strftime("%Y-%m-%d")
@@ -183,7 +184,7 @@ def main():
     for cat in categories:
         result = (
             sb.table("events")
-            .select("id, category_id, start_date, title, venue_id, series_id, is_class, image_url")
+            .select("id, category_id, start_date, start_time, title, venue_id, series_id, is_class, image_url, portal_id")
             .eq("category_id", cat)
             .gte("start_date", today)
             .lte("start_date", end_date)
@@ -197,7 +198,7 @@ def main():
         # Also grab some without images for variety
         result2 = (
             sb.table("events")
-            .select("id, category_id, start_date, title, venue_id, series_id, is_class, image_url")
+            .select("id, category_id, start_date, start_time, title, venue_id, series_id, is_class, image_url, portal_id")
             .eq("category_id", cat)
             .gte("start_date", today)
             .lte("start_date", end_date)
@@ -213,7 +214,7 @@ def main():
     # Also fetch classes specifically
     class_result = (
         sb.table("events")
-        .select("id, category_id, start_date, title, venue_id, series_id, is_class, image_url")
+        .select("id, category_id, start_date, start_time, title, venue_id, series_id, is_class, image_url, portal_id")
         .eq("is_class", True)
         .gte("start_date", today)
         .lte("start_date", end_date)
@@ -288,40 +289,78 @@ def main():
         for i, event in enumerate(selected):
             # Power users: all going. Others: 70% going, 30% interested
             if level == "power":
-                status = "going"
+                rsvp_status = "going"
             else:
-                status = "going" if i < len(selected) * 0.7 else "interested"
+                rsvp_status = "going" if i < len(selected) * 0.7 else "interested"
 
             all_rsvps.append({
-                "user_id": user_id,
+                "creator_id": user_id,
                 "event_id": event["id"],
-                "status": status,
-                "visibility": "public",
+                "portal_id": event.get("portal_id"),
+                "starts_at": event.get("start_date"),
+                "rsvp_status": rsvp_status,
                 "created_at": random_past_ts(5),
             })
 
-        going = sum(1 for r in all_rsvps[-len(selected):] if r["status"] == "going")
+        going = sum(1 for r in all_rsvps[-len(selected):] if r["rsvp_status"] == "going")
         interested = len(selected) - going
         print(f"  @{username:20s} {going} going, {interested} interested")
         total_rsvps += len(selected)
 
-    # Insert in batches to avoid timeouts
+    # Two-phase insert: plans first (RETURNING id), then plan_invitees
     if all_rsvps:
         # Dedupe: one RSVP per user+event
         rsvp_keys = set()
         deduped_rsvps = []
         for r in all_rsvps:
-            key = (r["user_id"], r["event_id"])
+            key = (r["creator_id"], r["event_id"])
             if key not in rsvp_keys:
                 rsvp_keys.add(key)
                 deduped_rsvps.append(r)
 
+        now_ts = datetime.utcnow().isoformat() + "Z"
         batch_size = 100
+        total_plans_inserted = 0
+
         for i in range(0, len(deduped_rsvps), batch_size):
             batch = deduped_rsvps[i : i + batch_size]
-            result = sb.table("event_rsvps").upsert(batch, on_conflict="user_id,event_id").execute()
 
-        print(f"\n  Total RSVPs inserted: {len(deduped_rsvps)}")
+            # Phase 1: insert plans rows
+            plans_batch = [
+                {
+                    "creator_id": r["creator_id"],
+                    "portal_id": r["portal_id"],
+                    "anchor_event_id": r["event_id"],
+                    "anchor_type": "event",
+                    "starts_at": r["starts_at"],
+                    "visibility": "friends",
+                    "status": "planning",
+                    "title": "",  # solo RSVP plans have no display title
+                    "created_at": r["created_at"],
+                }
+                for r in batch
+            ]
+            plans_result = sb.table("plans").insert(plans_batch).execute()
+            inserted_plans = plans_result.data or []
+
+            # Phase 2: insert plan_invitees for each created plan
+            # Match back to the batch by position (insert preserves order)
+            invitees_batch = []
+            for plan_row, rsvp in zip(inserted_plans, batch):
+                invitees_batch.append({
+                    "plan_id": plan_row["id"],
+                    "user_id": rsvp["creator_id"],
+                    "rsvp_status": rsvp["rsvp_status"],
+                    "invited_by": rsvp["creator_id"],
+                    "responded_at": now_ts,
+                })
+
+            if invitees_batch:
+                sb.table("plan_invitees").insert(invitees_batch).execute()
+
+            total_plans_inserted += len(inserted_plans)
+
+        print(f"\n  Total RSVPs inserted: {total_plans_inserted}")
 
     # 5. Seed venue recommendations
     print("\n--- Seeding Venue Recommendations ---")
@@ -364,11 +403,11 @@ def main():
         total_recs += len(selected)
 
     if all_recs:
-        # Dedupe by user+venue
+        # Dedupe by user+place
         rec_keys = set()
         deduped_recs = []
         for r in all_recs:
-            key = (r["user_id"], r["venue_id"])
+            key = (r["user_id"], r["place_id"])
             if key not in rec_keys:
                 rec_keys.add(key)
                 deduped_recs.append(r)
@@ -430,7 +469,7 @@ def main():
         save_keys = set()
         deduped_saves = []
         for s in all_saves:
-            key = (s["user_id"], s.get("event_id"), s.get("venue_id"))
+            key = (s["user_id"], s.get("event_id"), s.get("place_id"))
             if key not in save_keys:
                 save_keys.add(key)
                 deduped_saves.append(s)
@@ -447,11 +486,11 @@ def main():
     print("=" * 50)
 
     # Verify counts
-    rsvp_count = sb.table("event_rsvps").select("id", count="exact").execute()
+    rsvp_count = sb.table("plans").select("id", count="exact").eq("anchor_type", "event").execute()
     rec_count = sb.table("recommendations").select("id", count="exact").execute()
     save_count = sb.table("saved_items").select("id", count="exact").execute()
 
-    print(f"  RSVPs:           {rsvp_count.count}")
+    print(f"  RSVPs (plans):   {rsvp_count.count}")
     print(f"  Recommendations: {rec_count.count}")
     print(f"  Saved items:     {save_count.count}")
 
